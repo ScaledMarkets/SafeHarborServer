@@ -29,7 +29,7 @@ GOPATH=$(CURDIR)
 
 src_dir = $(CURDIR)/src
 
-build_dir = $(CURDIR)/bin
+build_dir = $(CURDIR)/../bin
 
 all: compile authcert
 
