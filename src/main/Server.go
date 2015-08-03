@@ -95,21 +95,6 @@ func (server *Server) getHandler() http.Handler {
 func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close() // ensure that request body is always closed.
 
-	// Instantiate an http context here so we can track the error codes
-	// returned by the request router.
-	//ctx := defaultContextManager.context(app, w, r)
-	//defer func() {
-	//	ctxu.GetResponseLogger(ctx).Infof("response completed")
-	//}()
-	//defer defaultContextManager.release(ctx)
-
-	// NOTE: Total hack to get instrumented responsewriter from context.
-	//var err error
-	//w, err = ctxu.GetResponseWriter(ctx)
-	//if err != nil {
-	//	ctxu.GetLogger(ctx).Warnf("response writer not found in context")
-	//}
-
 	// Set a header with the Docker Distribution API Version for all responses.
 	w.Header().Add("Docker-Distribution-API-Version", "registry/2.0")
 	
