@@ -23,7 +23,7 @@ CURDIR?=$(shell pwd)
 
 #GO_LDFLAGS=-ldflags "-X `go list ./version`.Version $(VERSION)"
 
-.PHONY: all compile vm deploy clean info
+.PHONY: all compile authcert vm deploy clean info
 .DEFAULT: all
 
 GOPATH=$(CURDIR)
