@@ -1,6 +1,7 @@
 # Makefile for building the Safe Harbor Server.
 # This does not deploy any servers: it merely complies and packages the code.
 
+
 PRODUCTNAME=Safe Harbor Server
 ORG=Scaled Markets
 VERSION=1.0
