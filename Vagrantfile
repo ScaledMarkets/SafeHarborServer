@@ -39,9 +39,9 @@ Vagrant.configure(2) do |config|
 	SHELL
 
 	# Copy the Cesanta configuration file and credentials to the VM.
-	config.vm.provision "file", source: "auth_config.yml", destination: @CesantaConfDir
-	config.vm.provision "file", source: @LocalKeyPath, destination: @CesantaConfDir
-	config.vm.provision "file", source: @LocalCertPath, destination: @CesantaConfDir
+	config.vm.provision "file", source: "auth_config.yml", destination: "#{@CesantaConfDir}/auth_config.yml"
+	config.vm.provision "file", source: @LocalKeyPath, destination: "#{@CesantaSSLDir}/#{@CesantaServerName}.key"
+	config.vm.provision "file", source: @LocalPemPath, destination: "#{@CesantaSSLDir}/#{@CesantaServerName}.pem"
 	
 	# Create directories needed for installing SafeHarbor.
 	config.vm.provision "shell", inline: <<-SHELL
@@ -55,7 +55,7 @@ Vagrant.configure(2) do |config|
 
 	# Install patch needed by RHEL7/Centos7 to make the vagrant docker provisioner work.
 	config.vm.provision "shell", inline: <<-SHELL
-		yum-config-manager --enable ol7_addons
+		#yum-config-manager --enable ol7_addons
 		groupadd docker
 		usermod -a -G docker vagrant
 	SHELL
@@ -64,7 +64,7 @@ Vagrant.configure(2) do |config|
 	config.vm.provision "docker" do |d|
 		
 		d.run @CesantaServerName, image: @CesantaDockerImage,
-			args: "-p #{@CesantaPort}:#{@CesantaPort} -v /var/log/docker_auth:/logs -v #{@CesantaConfDir}:/config:ro -v #{@CesantaSSLDir}:/ssl",
+			args: "-p #{@CesantaPort}:#{@CesantaPort} -v /var/log/docker_auth:/logs -v #{@CesantaConfDir}:/config:ro -v #{@CesantaSSLDir}:/ssl --restart=always",
 			cmd: "/config/auth_config.yml"
 		
 		#d.run @SafeHarborServerName, image: @SafeHarborDockerImage,

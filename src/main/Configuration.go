@@ -19,6 +19,7 @@ type Configuration struct {
 	ipaddr string
 	port string
 	LocalAuthCertPath string
+	LocalRootCertPath string // may be null
 	AuthServerName string
 	AuthPort string
 	AuthCertPath string
@@ -57,6 +58,9 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	
 	config.LocalAuthCertPath, exists = entries["LOCAL_AUTH_CERT_PATH"]
 	if ! exists { return nil, fmt.Errorf("Did not find LOCAL_AUTH_CERT_PATH in configuration") }
+	
+	config.LocalRootCertPath, exists = entries["LOCAL_ROOT_CERT_PATH"]
+	if ! exists { return nil, fmt.Errorf("Did not find LOCAL_ROOT_CERT_PATH in configuration") }
 	
 	config.AuthServerName, exists = entries["AUTH_SERVER_DNS_NAME"]
 	if ! exists { return nil, fmt.Errorf("Did not find AUTH_SERVER_DNS_NAME in configuration") }

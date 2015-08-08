@@ -53,8 +53,14 @@ func main() {
 	
 	
 	//TEST
+	// scope="repository:husseingalal/hello:push"
+    // - match: {account: "admin", type: "myrepo", name="hello-world"}
+    //    actions: ["push"]
 	fmt.Println("Testing authorized")
-	if server.authorized("abc", "def", "ghi") {
+	var service string = "Auth Service"
+	var scope string = "hello-world:push"
+	var account string = "admin"
+	if server.authorized(service, scope, account) {
 		fmt.Println("Authorized")
 	} else {
 		fmt.Println("Unauthorized")

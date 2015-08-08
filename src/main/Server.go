@@ -31,10 +31,32 @@ type Server struct {
  */
 func NewServer(config Configuration) *Server {
 	
-	// Read certificate file at config.LocalAuthCertPath
-	file, err := os.Open(config.LocalAuthCertPath)
+	// Read certificate files and add certs to cert pool.
+	var certPool *x509.CertPool = x509.NewCertPool()
+	var rootCert *x509.Certificate = nil
+	if config.LocalRootCertPath != "" {
+		rootCert = getCert(config.LocalRootCertPath)
+		certPool.AddCert(rootCert)
+	}
+	var authCert *x509.Certificate = getCert(config.LocalAuthCertPath)
+	certPool.AddCert(authCert)
+	
+	// Construct a Server with the configuration and cert pool.
+	var server *Server = &Server{
+		Config:  config,
+		certPool: certPool,
+	}
+	return server
+}
+
+/*******************************************************************************
+ * 
+ */
+func getCert(certPath string) *x509.Certificate {
+	
+	file, err := os.Open(certPath)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("Could not open certificate at %s", config.LocalAuthCertPath))
+		fmt.Println(fmt.Sprintf("Could not open certificate at %s", certPath))
 		panic(err)
 	}
 	defer func() {
@@ -44,8 +66,9 @@ func NewServer(config Configuration) *Server {
 	}()
 	var fileInfo os.FileInfo
 	fileInfo, err = file.Stat()
-	fileLength := fileInfo.Size()
-	asn1DataBuf := make([]byte, fileLength)
+	if err != nil { panic(err) }
+	var fileLength = fileInfo.Size()
+	var asn1DataBuf = make([]byte, fileLength)
 	var n int
 	n, err = file.Read(asn1DataBuf)
 	if err != nil && err != io.EOF {
@@ -63,16 +86,7 @@ func NewServer(config Configuration) *Server {
 	}
 	// to do:....check signature and CRL
 	
-	// Create a certificate pool and add the certificate to it.
-	var certPool *x509.CertPool = x509.NewCertPool()
-	certPool.AddCert(cert)
-	
-	// Construct a Server with the configuration and cert pool.
-	var server *Server = &Server{
-		Config:  config,
-		certPool: certPool,
-	}
-	return server
+	return cert
 }
 
 /*******************************************************************************
@@ -127,15 +141,17 @@ func (server *Server) authorized(service string, scope string, account string) b
 	var client *http.Client = &http.Client{Transport: tr}
 	
 	// Access auth server and get response.
+	//.....Not sure this is right. See here:
+	// https://www.socketloop.com/references/golang-crypto-tls-server-and-connectionstate-functions-example
 	var err error;
 	var resp *http.Response
-	var url string = fmt.Sprintf("http://%s:%s/v2/token/?service=%s&scope=%s&account=%s",
+	var url string = fmt.Sprintf("https://%s:%s/v2/token/?service=%s&scope=%s&account=%s",
 			server.Config.AuthServerName, server.Config.AuthPort,
 			service, scope, account)
 	resp, err = client.Get(url)
 	if err != nil {
 		fmt.Println("Error")
-		fmt.Println(err.Error())
+		panic(err)
 		return false
 	}
 	
