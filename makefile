@@ -8,6 +8,8 @@ VERSION=1.0
 BUILD=1234
 EXECNAME=SafeHarborServer
 CesantaServerName = docker_auth
+
+# Certificate related values:
 CesantaServerIPAddr = 127.0.0.1
 LocalKeyPath = $(CesantaServerName).key
 LocalPemPath = $(CesantaServerName).pem
@@ -40,6 +42,7 @@ $(build_dir):
 
 $(build_dir)/$(EXECNAME): $(build_dir) $(src_dir)/main
 
+# 'make compile' builds the executable, which is placed in <build_dir>.
 compile: $(build_dir)/$(EXECNAME)
 	@echo GOPATH=$(GOPATH)
 	go build -o $(build_dir)/$(EXECNAME) main
@@ -54,7 +57,7 @@ cacert:
 extfile: extfile.cnf
 	(echo subjectAltName = IP:$(CesantaServerIPAddr)) > extfile.cnf
 
-
+# 'make authcert' will make all requied certs. The user will be prompted for values.
 # https://stackoverflow.com/questions/22666163/golang-tls-with-selfsigned-certificate
 # https://serverfault.com/questions/611120/failed-tls-handshake-does-not-contain-any-ip-sans
 # https://github.com/elastic/logstash-forwarder/issues/221
