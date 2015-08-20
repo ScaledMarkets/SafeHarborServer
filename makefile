@@ -20,7 +20,7 @@ LocalCertPath = $(CesantaServerName).crt
 
 SHELL = /bin/sh
 
-CURDIR?=$(shell pwd)
+CURDIR=$(shell pwd)
 
 #GO_LDFLAGS=-ldflags "-X `go list ./version`.Version $(VERSION)"
 
@@ -31,7 +31,7 @@ src_dir = $(CURDIR)/src
 
 build_dir = $(CURDIR)/../bin
 
-GOPATH=$(CURDIR)
+GOPATH = $(CURDIR)
 
 all: compile authcert
 
@@ -41,6 +41,7 @@ $(build_dir):
 $(build_dir)/$(EXECNAME): $(build_dir) $(src_dir)/main
 
 compile: $(build_dir)/$(EXECNAME)
+	@echo GOPATH=$(GOPATH)
 	go build -o $(build_dir)/$(EXECNAME) main
 
 cacert:

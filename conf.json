@@ -1,4 +1,5 @@
 {
+	"SERVICE": "Auth Service",
     "IPADDR": "127.0.0.1",
     "PORT": "6000",
     "LOCAL_AUTH_CERT_PATH": "docker_auth.crt",

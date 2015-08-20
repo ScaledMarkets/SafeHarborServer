@@ -24,8 +24,8 @@ acl:
   #
   # E.g.,
   # scope="repository:husseingalal/hello:push"
+  #        type      :name              :actions
   # Admin has full access to everything.
-  #- match: {account: "admin", type: "respository", name:"hello-world"}
-  - match: {account: "admin", name: "hello-world"}
-    actions: ["push"]
+  - match: {account: "admin", type: "repository", name: "*"}
+    actions: ["push,create-user"]
   # Access is denied by default.

@@ -1,12 +1,11 @@
+/*******************************************************************************
+ * Program configuration. A configuration is built by parsing a configuration. The
+ * main function retrieves the path of the configuration file and creates a reader
+ * that is passed to the newConfiguration function here. That function parses the
+ * file, creates, and returns a configuration struct.
+ */
+
 package main
-
-/*
-Program configuration. A configuration is built by parsing a configuration. The
-main function retrieves the path of the configuration file and creates a reader
-that is passed to the newConfiguration function here. That function parses the
-file, creates, and returns a configuration struct.
-*/
-
 
 import (
 	"os"
@@ -16,6 +15,7 @@ import (
 )
 
 type Configuration struct {
+	service string
 	ipaddr string
 	port string
 	LocalAuthCertPath string
@@ -49,6 +49,9 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	fmt.Println("Parsed configuration file")
 
 	var exists bool
+	
+	config.service, exists = entries["SERVICE"]
+	if ! exists { return nil, fmt.Errorf("Did not find SERVICE in configuration") }
 	
 	config.ipaddr, exists = entries["IPADDR"]
 	if ! exists { return nil, fmt.Errorf("Did not find IPADDR in configuration") }
