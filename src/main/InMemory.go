@@ -1,5 +1,21 @@
 /*******************************************************************************
  * In-memory implementation of the methods defined in Persist.go.
+ *
+ * There are three parts to this file:
+ *    Definition of the Client type "InMemClient".
+ *    Definition of each data object type, as defined in the slide "Access Control Model"
+ *      of the design,
+ *      https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
+ *    Some utility methods.
+ *
+ * The Group, Permission, Repo, Dockerfile, Image, User, and Realm have
+ * asGroupDesc, asPermissionDesc, asRepoDesc, asDockerfileDesc, asImageDesc,
+ * asUserDesc, and asRealmDesc methods, respectively - these methods construct
+ * instances of GroupDesc, PermissionDesc, RepoDesc, DockerfileDesc, ImageDesc,
+ * and so on. These methods are a convenient way of constructing the return values
+ * that are needed by the handler methods defined in the API (slides titled
+ * "SafeHarbor REST API" of the desgin), which are implemented by the functions
+ * in Handlers.go.
  */
 
 package main
@@ -13,7 +29,8 @@ func NewInMemClient() *InMemClient {
 	return &InMemClient{}
 }
 
-/*******************************************************************************
+/****************************** Client Type ************************************
+ ******************************************************************************/
  * The Client type, and methods required by the Client interface in Persist.go.
  */
 type InMemClient struct {
@@ -62,8 +79,11 @@ func (client *InMemClient) dbCreateDockerImage() *InMemDockerImage {
 	return nil
 }
 
+/******************************** Data Types ***********************************
+ ******************************************************************************/
+
 /*******************************************************************************
- * 
+ * Base type that is included in each data type as an anonymous field.
  */
 type InMemPersistObj struct {
 	Id string
@@ -179,6 +199,9 @@ type InMemDockerImage struct {
 func (dockerImage *InMemDockerImage) Clone() *InMemDockerImage {
 	return &InMemDockerImage{}
 }
+
+/****************************** Utility Methods ********************************
+ ******************************************************************************/
 
 /*******************************************************************************
  * 

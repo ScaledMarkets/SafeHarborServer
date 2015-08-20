@@ -1,5 +1,15 @@
 /*******************************************************************************
  * The data types needed by the handler functions.
+ * This file implements the types defined in slide
+ *    "Type Definitions For REST Calls and Responses"
+ * of the design,
+ *    https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
+ * All types have these:
+ *    A New<type> function - Creates a new instance of the type.
+ *    A Get<type> function - Constructs an instance from data provided in a map.
+ *    A asResponse method - Returns a string representation of the instance,
+ *      suitable for writing to an HTTP response body. The format is defined in
+ *      the design in the slide "API REST Binding".
  */
 
 package main
@@ -11,7 +21,7 @@ import (
 )
 
 /*******************************************************************************
- * 
+ * All types defined here include this type as a go "anonymous field".
  */
 type BaseType struct {
 }
