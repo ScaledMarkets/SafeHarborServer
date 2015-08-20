@@ -30,7 +30,7 @@ func NewInMemClient() *InMemClient {
 }
 
 /****************************** Client Type ************************************
- ******************************************************************************/
+ *******************************************************************************
  * The Client type, and methods required by the Client interface in Persist.go.
  */
 type InMemClient struct {
