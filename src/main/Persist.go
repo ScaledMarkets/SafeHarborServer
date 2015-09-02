@@ -26,10 +26,12 @@ type PersistObj interface {
 
 type Group interface {
 	PersistObj
+	getName() string
 }
 
 type User interface {
 	PersistObj
+	getName() string
 }
 
 type ACLEntry interface {
@@ -47,11 +49,19 @@ type Resource interface {
 
 type Realm interface {
 	Resource
+	getName() string
 	getFileDirectory() string
+	hasUserWithId(string) bool
+	hasGroupWithId(string) bool
+	hasRepoWithId(string) bool
+	getUserByName(string) User
+	getGroupByName(string) Group
+	getRepoByName(string) Repo
 }
 
 type Repo interface {
 	Resource
+	getName() string
 	getFileDirectory() string
 }
 

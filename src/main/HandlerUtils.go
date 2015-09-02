@@ -23,8 +23,8 @@ func (server *Server) createUniqueSessionId() string {
 }
 
 /*******************************************************************************
- * Encrypt the specified string. For now, just return the string. Need to complete
- * this to use the Server's private key.
+ * Encrypt the specified string. For now, just return the string.
+ * ....To do: Need to complete this to use the Server's private key.
  */
 func encrypt(s string) string {
 	return s
@@ -46,34 +46,6 @@ func createUniqueFilename(dir string, basename string) (string, error) {
 }
 
 /*******************************************************************************
- * Write the specified map to stdout.
- */
-func printMap(m map[string][]string) {
-	fmt.Println("Map:")
-	for k, v := range m {
-		fmt.Println(k, ":")
-		for i := range v {
-			fmt.Println("\t", v[i])
-		}
-	}
-}
-
-/*******************************************************************************
- * Write the specified map to stdout.
- */
-func printFileMap(m map[string][]*multipart.FileHeader) {
-	fmt.Println("FileHeader Map:")
-	for k, headers := range m {
-		fmt.Println("Name:", k, "FileHeaders:")
-		for i := range headers {
-			fmt.Println("Filename:", headers[i].Filename)
-			printMap(headers[i].Header)
-			fmt.Println()
-		}
-	}
-}
-
-/*******************************************************************************
  * 
  */
 func fileExists(path string) bool {
@@ -87,4 +59,32 @@ func fileExists(path string) bool {
 		fmt.Println(err.Error())
 	}
 	return (err == nil)
+}
+
+/*******************************************************************************
+ * Write the specified map to stdout. This is a diagnostic method.
+ */
+func printMap(m map[string][]string) {
+	fmt.Println("Map:")
+	for k, v := range m {
+		fmt.Println(k, ":")
+		for i := range v {
+			fmt.Println("\t", v[i])
+		}
+	}
+}
+
+/*******************************************************************************
+ * Write the specified map to stdout. This is a diagnostic method.
+ */
+func printFileMap(m map[string][]*multipart.FileHeader) {
+	fmt.Println("FileHeader Map:")
+	for k, headers := range m {
+		fmt.Println("Name:", k, "FileHeaders:")
+		for i := range headers {
+			fmt.Println("Filename:", headers[i].Filename)
+			printMap(headers[i].Header)
+			fmt.Println()
+		}
+	}
 }

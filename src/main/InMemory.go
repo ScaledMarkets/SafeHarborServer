@@ -53,18 +53,31 @@ func (persObj *InMemPersistObj) getId() string {
 type InMemGroup struct {
 	InMemPersistObj
 	RealmId string
+	Name string
 	aclEntryIds []string
 }
 
-func (client *InMemClient) dbCreateGroup(realmId string) *InMemGroup {
+func (client *InMemClient) dbCreateGroup(realmId string, name string) (*InMemGroup, error) {
+	
+	// Check if a group with that name already exists within the realm.
+	var realm Realm = client.getRealm(realmId)
+	if realm == nil { return nil, errors.New(fmt.Sprintf(
+		"Unidentified realm for realm Id %s", realmId))
+	}
+	if realm.getGroupByName(name) != nil { return nil, errors.New(
+		fmt.Sprintf("Group named %s already exists within realm %s", name,
+			client.getRealm(realmId).getName()))
+	}
+	
 	var groupId string = createUniqueDbObjectId()
 	var newGroup = &InMemGroup{
 		InMemPersistObj: InMemPersistObj{Id: groupId},
 		RealmId: realmId,
+		Name: name,
 	}
 	fmt.Println("Created Group")
 	allObjects[groupId] = newGroup
-	return newGroup
+	return newGroup, nil
 }
 
 //func (group *InMemGroup) getId() string {
@@ -72,11 +85,22 @@ func (client *InMemClient) dbCreateGroup(realmId string) *InMemGroup {
 //}
 
 func (client *InMemClient) getGroup(id string) Group {
-	return Group(client.getPersistentObject(id))
+	return client.getPersistentObject(id).(Group)
+}
+
+func (group *InMemGroup) getName() string {
+	return group.Name
 }
 
 func (group *InMemGroup) getACLEntryIds() []string {
 	return group.aclEntryIds
+}
+
+func (group *InMemGroup) asGroupDesc() *GroupDesc {
+	return &GroupDesc{
+		RealmId: group.RealmId,
+		Name: group.Name,
+	}
 }
 
 /*******************************************************************************
@@ -89,7 +113,7 @@ type InMemUser struct {
 	ACLEntryIds []string
 }
 
-func (client *InMemClient) dbCreateUser(name string, realmId string) *InMemUser {
+func (client *InMemClient) dbCreateUser(name string, realmId string) (*InMemUser, error) {
 	var userId string = createUniqueDbObjectId()
 	var newUser *InMemUser = &InMemUser{
 		InMemPersistObj: InMemPersistObj{Id: userId},
@@ -98,11 +122,12 @@ func (client *InMemClient) dbCreateUser(name string, realmId string) *InMemUser 
 	}
 	fmt.Println("Created user")
 	allObjects[userId] = newUser
-	return newUser
+	return newUser, nil
 }
 
 func (client *InMemClient) getUser(id string) User {
-	return User(client.getPersistentObject(id))
+	return client.getPersistentObject(id).(User)
+	//return User(client.getPersistentObject(id))
 }
 
 func (user *InMemUser) getName() string {
@@ -124,7 +149,7 @@ type InMemACLEntry struct {
 }
 
 func (client *InMemClient) dbCreateACLEntry(resourceId string, identityId string,
-	permissionMask []bool) *InMemACLEntry {
+	permissionMask []bool) (*InMemACLEntry, error) {
 	var obj PersistObj = client.getPersistentObject(resourceId)
 	var acl ACL
 	var isType bool
@@ -139,7 +164,7 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, identityId string
 	}
 	fmt.Println("Created ACLEntry")
 	allObjects[aclEntryId] = newACLEntry
-	return newACLEntry
+	return newACLEntry, nil
 }
 
 func (client *InMemClient) getACLEntry(id string) ACLEntry {
@@ -171,7 +196,7 @@ type InMemACL struct {
 	ACLEntryIds []string
 }
 
-func (client *InMemClient) dbCreateACL(resourceId string) *InMemACL {
+func (client *InMemClient) dbCreateACL(resourceId string) (*InMemACL, error) {
 	var aclId = createUniqueDbObjectId()
 	var newACL *InMemACL = &InMemACL{
 		InMemPersistObj: InMemPersistObj{Id: aclId},
@@ -179,12 +204,12 @@ func (client *InMemClient) dbCreateACL(resourceId string) *InMemACL {
 	}
 	fmt.Println("Created ACL, id=", aclId)
 	allObjects[aclId] = newACL
-	return newACL
+	return newACL, nil
 }
 
-func (acl *InMemACL) getId() string {
-	return acl.Id
-}
+//func (acl *InMemACL) getId() string {
+//	return acl.Id
+//}
 
 func (client *InMemClient) getACL(id string) ACL {
 	var acl ACL
@@ -215,7 +240,7 @@ type InMemRealm struct {
 	FileDirectory string  // where this realm's files are stored
 }
 
-func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) *InMemRealm {
+func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) (*InMemRealm, error) {
 	var realmId string = createUniqueDbObjectId()
 	var newRealm *InMemRealm = &InMemRealm{
 		InMemPersistObj: InMemPersistObj{Id: realmId},
@@ -223,7 +248,10 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) *InMemRealm {
 		ACLId: "",
 		FileDirectory: client.assignRealmFileDir(realmId),
 	}
-	var acl *InMemACL = client.dbCreateACL(realmId)
+	var err error
+	var acl *InMemACL
+	acl, err = client.dbCreateACL(realmId)
+	if err != nil { return nil, err }
 	newRealm.ACLId = acl.Id
 	fmt.Println("Created realm")
 	allObjects[realmId] = newRealm
@@ -233,12 +261,12 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) *InMemRealm {
 		fmt.Println("newRealm is a", reflect.TypeOf(newRealm))
 		fmt.Println("allObjects[", realmId, "] is a", reflect.TypeOf(allObjects[realmId]))
 	}
-	return newRealm
+	return newRealm, nil
 }
 
-func (realm *InMemRealm) getId() string {
-	return realm.Id
-}
+//func (realm *InMemRealm) getId() string {
+//	return realm.Id
+//}
 
 func (realm *InMemRealm) getFileDirectory() string {
 	fmt.Println("getFileDirectory...")
@@ -256,6 +284,10 @@ func (client *InMemClient) getRealm(id string) Realm {
 		panic(errors.New("Internal error: object is an unexpected type"))
 	}
 	return realm
+}
+
+func (realm *InMemRealm) getName() string {
+	return realm.Name
 }
 
 func (realm *InMemRealm) getUserIds() []string {
@@ -282,6 +314,87 @@ func (realm *InMemRealm) asRealmDesc() *RealmDesc {
 	return NewRealmDesc(realm.Id, realm.Name)
 }
 
+func (realm *InMemRealm) hasUserWithId(userId string) bool {
+	var obj PersistObj = allObjects[userId]
+	if obj == nil { return false }
+	_, isUser := obj.(User)
+	if ! isUser { return false }
+	
+	for _, id := range realm.UserIds {
+		if id == userId { return true }
+	}
+	return false
+}
+
+func (realm *InMemRealm) hasGroupWithId(groupId string) bool {
+	var obj PersistObj = allObjects[groupId]
+	if obj == nil { return false }
+	_, isGroup := obj.(Group)
+	if ! isGroup { return false }
+	
+	for _, id := range realm.GroupIds {
+		if id == groupId { return true }
+	}
+	return false
+}
+
+func (realm *InMemRealm) hasRepoWithId(repoId string) bool {
+	var obj PersistObj = allObjects[repoId]
+	if obj == nil { return false }
+	_, isRepo := obj.(Repo)
+	if ! isRepo { return false }
+	
+	for _, id := range realm.RepoIds {
+		if id == repoId { return true }
+	}
+	return false
+}
+
+func (realm *InMemRealm) getUserByName(userName string) User {
+	for _, id := range realm.UserIds {
+		var obj PersistObj = allObjects[id]
+		if obj == nil { panic(errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s does not exist", id)))
+		}
+		user, isUser := obj.(User)
+		if ! isUser { panic(errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s is not a User", id)))
+		}
+		if user.getName() == userName { return user }
+	}
+	return nil
+}
+
+func (realm *InMemRealm) getGroupByName(groupName string) Group {
+	for _, id := range realm.GroupIds {
+		var obj PersistObj = allObjects[id]
+		if obj == nil { panic(errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s does not exist", id)))
+		}
+		group, isGroup := obj.(Group)
+		if ! isGroup { panic(errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s is not a Group", id)))
+		}
+		if group.getName() == groupName { return group }
+	}
+	return nil
+}
+
+func (realm *InMemRealm) getRepoByName(repoName string) Repo {
+	for _, id := range realm.RepoIds {
+		var obj PersistObj = allObjects[id]
+		if obj == nil { panic(errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s does not exist", id)))
+		}
+		repo, isRepo := obj.(Repo)
+		if ! isRepo { panic(errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s is not a Repo", id)))
+		}
+		if repo.getName() == repoName { return repo }
+	}
+	return nil
+}
+
 /*******************************************************************************
  * 
  */
@@ -295,7 +408,7 @@ type InMemRepo struct {
 	FileDirectory string  // where this repo's files are stored
 }
 
-func (client *InMemClient) dbCreateRepo(realmId string, name string) *InMemRepo {
+func (client *InMemClient) dbCreateRepo(realmId string, name string) (*InMemRepo, error) {
 	var repoId string = createUniqueDbObjectId()
 	var newRepo *InMemRepo = &InMemRepo{
 		InMemPersistObj: InMemPersistObj{Id: repoId},
@@ -304,15 +417,22 @@ func (client *InMemClient) dbCreateRepo(realmId string, name string) *InMemRepo 
 		ACLId: "",
 		FileDirectory: client.assignRepoFileDir(realmId, repoId),
 	}
-	var acl *InMemACL = client.dbCreateACL(repoId)
+	var err error
+	var acl *InMemACL
+	acl, err = client.dbCreateACL(repoId)
+	if err != nil { return nil, err }
 	newRepo.ACLId = acl.Id
 	fmt.Println("Created repo")
 	allObjects[repoId] = newRepo
-	return newRepo
+	return newRepo, nil
 }
 
-func (repo *InMemRepo) getId() string {
-	return repo.Id
+//func (repo *InMemRepo) getId() string {
+//	return repo.Id
+//}
+
+func (repo *InMemRepo) getName() string {
+	return repo.Name
 }
 
 func (repo *InMemRepo) getFileDirectory() string {
@@ -372,7 +492,7 @@ type InMemDockerfile struct {
 }
 
 func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
-	filepath string) *InMemDockerfile {
+	filepath string) (*InMemDockerfile, error) {
 	var dockerfileId string = createUniqueDbObjectId()
 	var newDockerfile *InMemDockerfile = &InMemDockerfile{
 		InMemPersistObj: InMemPersistObj{Id: dockerfileId},
@@ -380,16 +500,19 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 		Name: name,
 		ACLId: "",
 	}
-	var acl *InMemACL = client.dbCreateACL(dockerfileId)
+	var err error
+	var acl *InMemACL
+	acl, err = client.dbCreateACL(dockerfileId)
+	if err != nil { return nil, err }
 	newDockerfile.ACLId = acl.Id
 	fmt.Println("Created Dockerfile")
 	allObjects[dockerfileId] = newDockerfile
-	return newDockerfile
+	return newDockerfile, nil
 }
 
-func (dockerfile *InMemDockerfile) getId() string {
-	return dockerfile.Id
-}
+//func (dockerfile *InMemDockerfile) getId() string {
+//	return dockerfile.Id
+//}
 
 func (client *InMemClient) getDockerfile(id string) Dockerfile {
 	var dockerfile Dockerfile
@@ -433,23 +556,26 @@ type InMemDockerImage struct {
 }
 
 func (client *InMemClient) dbCreateDockerImage(repoId string,
-	filepath string) *InMemDockerImage {
+	filepath string) (*InMemDockerImage, error) {
 	var imageId string = createUniqueDbObjectId()
 	var newDockerImage *InMemDockerImage = &InMemDockerImage{
 		InMemPersistObj: InMemPersistObj{Id: imageId},
 		RepoId: repoId,
 		ACLId: "",
 	}
-	var acl *InMemACL = client.dbCreateACL(imageId)
+	var err error
+	var acl *InMemACL
+	acl, err = client.dbCreateACL(imageId)
+	if err != nil { return nil, err }
 	newDockerImage.ACLId = acl.Id
 	fmt.Println("Created DockerImage")
 	allObjects[imageId] = newDockerImage
-	return newDockerImage
+	return newDockerImage, nil
 }
 
-func (image *InMemDockerImage) getId() string {
-	return image.Id
-}
+//func (image *InMemDockerImage) getId() string {
+//	return image.Id
+//}
 
 func (client *InMemClient) getDockerImage(id string) DockerImage {
 	var image DockerImage

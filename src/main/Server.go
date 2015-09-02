@@ -100,8 +100,10 @@ func NewServer() *Server {
 	
 	
 	// Temporary for testing - remove! ********************
-	var testRealm *InMemRealm =server.dbClient.dbCreateRealm(NewRealmInfo("testrealm"))
-	var testUser1 *InMemUser = server.dbClient.dbCreateUser("testuser1", testRealm.Id)
+	var testRealm *InMemRealm
+	testRealm, err =server.dbClient.dbCreateRealm(NewRealmInfo("testrealm"))
+	var testUser1 *InMemUser
+	testUser1, err = server.dbClient.dbCreateUser("testuser1", testRealm.Id)
 	fmt.Printf("User", testUser1.Name, "created")
 	// ****************************************************
 	

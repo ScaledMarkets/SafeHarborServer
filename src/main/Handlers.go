@@ -50,7 +50,9 @@ func logout(server *Server, sessionToken *SessionToken, values url.Values,
 func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	var userInfo *UserInfo = GetUserInfo(values)
+	var err error
+	var userInfo *UserInfo
+	userInfo, err = GetUserInfo(values)
 	
 	// Authorize the request, based on the authenticated identity.
 	if ! server.authorized(server.sessions[sessionToken.UniqueSessionId],
@@ -67,7 +69,9 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	// Create the user account.
 	var username string = userInfo.Username
 	var realmId string = userInfo.RealmId
-	var newUser *InMemUser = server.dbClient.dbCreateUser(username, realmId)
+	var newUser *InMemUser
+	newUser, err = server.dbClient.dbCreateUser(username, realmId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	return &UserDesc{
 		Id: newUser.Id,
@@ -100,7 +104,21 @@ func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
+
+	var err error
+	var realmId string
+	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	var groupName string
+	groupName, err = GetRequiredPOSTFieldValue(values, "Name")
+	if err != nil { return NewFailureDesc(err.Error()) }
+
+	var group *InMemGroup
+	group, err = server.dbClient.dbCreateGroup(realmId, groupName)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	return group.asGroupDesc()
 }
 
 /*******************************************************************************
@@ -145,10 +163,16 @@ func remGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func createRealm(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	var realmInfo *RealmInfo = GetRealmInfo(values)
-	if realmInfo == nil { fmt.Println("realmInfo is nil") }
+	var err error
+	var realmInfo *RealmInfo
+	realmInfo, err = GetRealmInfo(values)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
 	fmt.Println("Creating realm ", realmInfo.Name)
-	var realm *InMemRealm = server.dbClient.dbCreateRealm(realmInfo)
+	var realm *InMemRealm
+	realm, err = server.dbClient.dbCreateRealm(realmInfo)
+	if err != nil { return NewFailureDesc(err.Error()) }
+
 	fmt.Println("Created realm", realmInfo.Name)
 	return realm.asRealmDesc()
 }
@@ -213,6 +237,14 @@ func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+
+
+	// Perform a Lynis scan.
+	// https://cisofy.com/lynis/
+	// https://cisofy.com/lynis/plugins/docker-containers/
+
+
 	return nil
 }
 
@@ -223,10 +255,19 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	fmt.Println("Creating repo...")
-	var realmId string = GetRequiredPOSTFieldValue(values, "RealmId")
-	var repoName string = GetRequiredPOSTFieldValue(values, "Name")
+	var err error
+	var realmId string
+	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+
+	var repoName string
+	repoName, err = GetRequiredPOSTFieldValue(values, "Name")
+	if err != nil { return NewFailureDesc(err.Error()) }
+
 	fmt.Println("Creating repo", repoName)
-	var repo *InMemRepo = server.dbClient.dbCreateRepo(realmId, repoName)
+	var repo *InMemRepo
+	repo, err = server.dbClient.dbCreateRepo(realmId, repoName)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Created repo")
 	return repo.asRepoDesc()
 }
@@ -296,19 +337,13 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	file, err = header.Open()
 	if err != nil { return NewFailureDesc(err.Error()) }
 	if file == nil { return NewFailureDesc("Internal Error") }	
-	fmt.Println("A")
 	
 	// Identify the repo.
 	var repoId string = values["RepoId"][0]
-	fmt.Println("A.1")
 	if repoId == "" { return NewFailureDesc("No HTTP parameter found for RepoId") }
-	fmt.Println("A.2")
 	var dbClient = server.dbClient
-	fmt.Println("A.3")
 	var repo Repo = dbClient.getRepo(repoId)
-	fmt.Println("A.4")
 	if repo == nil { return NewFailureDesc("Repo does not exist") }
-	fmt.Println("B")
 	
 	// Identify the user.
 	var userid string = sessionToken.authenticatedUserid
@@ -320,41 +355,32 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	
 	// Create a filename for the new file.
 	var filepath = repo.getFileDirectory() + "/" + filename
-	fmt.Println("C")
 	if fileExists(filepath) {
 		filepath, err = createUniqueFilename(repo.getFileDirectory(), filename)
-		fmt.Println("C.1")
 		if err != nil {
 			fmt.Println(err.Error())
 			return NewFailureDesc(err.Error())
 		}
-		fmt.Println("C.2")
 	}
-	fmt.Println("D")
 	if fileExists(filepath) {
 		fmt.Println("********Internal error: file exists but it should not:")
-		fmt.Println(filepath)
-	} else {
-		fmt.Println("Does not exist:")
 		fmt.Println(filepath)
 	}
 	
 	// Save the file data to a permanent file.
 	var bytes []byte
 	bytes, err = ioutil.ReadAll(file)
-	fmt.Println("D.1")
 	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
-	fmt.Println("D.2")
 	if err != nil {
 		fmt.Println(err.Error())
 		return NewFailureDesc(err.Error())
 	}
 	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
-	fmt.Println("E")
 	
 	// Add the file to the specified repo's set of Dockerfiles.
-	var dockerfile *InMemDockerfile = dbClient.dbCreateDockerfile(repo.getId(), filename, filepath)
-	fmt.Println("F")
+	var dockerfile *InMemDockerfile
+	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), filename, filepath)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	// Create an ACL entry for the new file.
 	dbClient.dbCreateACLEntry(dockerfile.Id, userid,
@@ -379,6 +405,10 @@ func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Va
  */
 func buildDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	// Run docker client on the server.
+
+
 	return nil
 }
 

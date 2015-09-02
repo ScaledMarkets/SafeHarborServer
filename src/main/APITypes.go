@@ -85,10 +85,17 @@ func NewCredentials(uid string, pwd string) *Credentials {
 	}
 }
 
-func GetCredentials(values url.Values) *Credentials {
-	var userid string = GetRequiredPOSTFieldValue(values, "userid")
-	var pswd string = GetRequiredPOSTFieldValue(values, "pswd")
-	return NewCredentials(userid, pswd)
+func GetCredentials(values url.Values) (*Credentials, error) {
+	var err error
+	var userid string
+	userid, err = GetRequiredPOSTFieldValue(values, "userid")
+	if err != nil { return nil, err }
+	
+	var pswd string
+	pswd, err = GetRequiredPOSTFieldValue(values, "pswd")
+	if err != nil { return nil, err }
+	
+	return NewCredentials(userid, pswd), nil
 }
 
 func (creds *Credentials) asResponse() string {
@@ -120,10 +127,12 @@ func (sessionToken *SessionToken) asResponse() string {
  */
 type GroupDesc struct {
 	BaseType
+	RealmId string
+	Name string
 }
 
 func (groupDesc *GroupDesc) asResponse() string {
-	return ""
+	return fmt.Sprintf("RealmId=%s\r\nName=%s\r\n", groupDesc.RealmId, groupDesc.Name)
 }
 
 /*******************************************************************************
@@ -142,10 +151,17 @@ func NewUserInfo(name string, realmId string) *UserInfo {
 	}
 }
 
-func GetUserInfo(values url.Values) *UserInfo {
-	var name string = GetRequiredPOSTFieldValue(values, "Username")
-	var realmId string = GetRequiredPOSTFieldValue(values, "RealmId")
-	return NewUserInfo(name, realmId)
+func GetUserInfo(values url.Values) (*UserInfo, error) {
+	var err error
+	var name string
+	name, err = GetRequiredPOSTFieldValue(values, "Username")
+	if err != nil { return nil, err }
+	
+	var realmId string
+	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
+	if err != nil { return nil, err }
+	
+	return NewUserInfo(name, realmId), nil
 }
 
 func (userInfo *UserInfo) asResponse() string {
@@ -201,9 +217,12 @@ func NewRealmInfo(name string) *RealmInfo {
 	}
 }
 
-func GetRealmInfo(values url.Values) *RealmInfo {
-	var name = GetRequiredPOSTFieldValue(values, "Name")
-	return NewRealmInfo(name)
+func GetRealmInfo(values url.Values) (*RealmInfo, error) {
+	var err error
+	var name string
+	name, err = GetRequiredPOSTFieldValue(values, "Name")
+	if err != nil { return nil, err }
+	return NewRealmInfo(name), nil
 }
 
 func (realmInfo *RealmInfo) asResponse() string {
@@ -291,8 +310,8 @@ func GetPOSTFieldValue(values url.Values, name string) string {
 /*******************************************************************************
  * 
  */
-func GetRequiredPOSTFieldValue(values url.Values, name string) string {
+func GetRequiredPOSTFieldValue(values url.Values, name string) (string, error) {
 	var value string = GetPOSTFieldValue(values, name)
-	if value == "" { panic(errors.New(fmt.Sprintf("POST field not found: %s", name))) }
-	return value
+	if value == "" { return "", errors.New(fmt.Sprintf("POST field not found: %s", name)) }
+	return value, nil
 }
