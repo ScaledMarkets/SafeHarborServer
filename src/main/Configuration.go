@@ -1,8 +1,8 @@
 /*******************************************************************************
  * Program configuration. A configuration is built by parsing a configuration. The
- * main function retrieves the path of the configuration file and creates a reader
- * that is passed to the newConfiguration function here. That function parses the
- * file, creates, and returns a configuration struct.
+ * getConfiguration function (in Server.go) retrieves the path of the configuration 
+ * file and creates a File that is passed to the NewConfiguration function here. That
+ * function parses the file, creates, and returns a configuration struct.
  */
 
 package main
@@ -12,6 +12,7 @@ import (
 	"io"
 	"fmt"
 	"encoding/json"
+	"strings"
 )
 
 type Configuration struct {
@@ -24,6 +25,7 @@ type Configuration struct {
 	AuthPort string
 	AuthCertPath string
 	AuthKeyPath string
+	FileRepoRootPath string // where Dockerfiles, images, etc. are stored
 }
 
 /*******************************************************************************
@@ -76,6 +78,10 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	
 	config.AuthKeyPath, exists = entries["AUTH_KEY_PATH"]
 	if ! exists { return nil, fmt.Errorf("Did not find AUTH_KEY_PATH in configuration") }
+	
+	config.FileRepoRootPath, exists = entries["FILE_REPOSITORY_ROOT"]
+	if ! exists { return nil, fmt.Errorf("Did not find FILE_REPOSITORY_ROOT in configuration") }
+	config.FileRepoRootPath = strings.TrimRight(config.FileRepoRootPath, "/ ")
 	
 	fmt.Println("Configuration values obtained")
 	return config, nil

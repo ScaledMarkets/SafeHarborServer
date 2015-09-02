@@ -62,7 +62,7 @@ extfile: extfile.cnf
 # https://serverfault.com/questions/611120/failed-tls-handshake-does-not-contain-any-ip-sans
 # https://github.com/elastic/logstash-forwarder/issues/221
 # Note: On Mac, openssl.cnf is in /System/Library/OpenSSL
-authcert: extfile scaledmarkets.key scaledmarkets.pem
+authcert: extfile.cnf scaledmarkets.key scaledmarkets.pem
 	sudo openssl req -nodes -keyout $(LocalKeyPath) -out req.pem -newkey rsa:2048
 	sudo openssl x509 -req -days 365 -in req.pem -out $(LocalPemPath) \
 		-CA scaledmarkets.pem -CAkey scaledmarkets.key -CAcreateserial \

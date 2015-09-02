@@ -10,19 +10,18 @@ import (
 )
 
 type Client interface {
-	CreateGroup() *Group
-	CreateUser() *User
-	CreateACLEntry() *ACLEntry
-	CreateACL() *ACL
-	CreateRealm() *Realm
-	CreateRepo() *Repo
-	CreateDockerfile() *Dockerfile
-	CreateDockerImage() *DockerImage
+	CreateGroup() Group
+	CreateUser() User
+	CreateACLEntry() ACLEntry
+	CreateACL() ACL
+	CreateRealm() Realm
+	CreateRepo() Repo
+	CreateDockerfile() Dockerfile
+	CreateDockerImage() DockerImage
 }
 
 type PersistObj interface {
-	Delete()
-	Clone() *PersistObj
+	getId() string
 }
 
 type Group interface {
@@ -41,22 +40,25 @@ type ACL interface {
 	PersistObj
 }
 
-type Realm interface {
+type Resource interface {
 	PersistObj
+	getACL() ACL
+}
+
+type Realm interface {
+	Resource
+	getFileDirectory() string
 }
 
 type Repo interface {
-	PersistObj
-}
-
-type RepoItem interface {
-	PersistObj
+	Resource
+	getFileDirectory() string
 }
 
 type Dockerfile interface {
-	RepoItem
+	Resource
 }
 
 type DockerImage interface {
-	RepoItem
+	Resource
 }

@@ -7,5 +7,6 @@
     "AUTH_SERVER_DNS_NAME": "127.0.0.1",
     "AUTH_PORT": "5001",
     "AUTH_CERT_PATH": "/home/vagrant/auth_server/config/ssl/docker_auth.crt",
-    "AUTH_KEY_PATH": "/home/vagrant/auth_server/config/ssl/docker_auth.key"
+    "AUTH_KEY_PATH": "/home/vagrant/auth_server/config/ssl/docker_auth.key",
+    "FILE_REPOSITORY_ROOT": "/Users/cliffordberg/Documents/ScaledMarkets/SafeHarbor/SafeHarborServer/Repositories"
 }

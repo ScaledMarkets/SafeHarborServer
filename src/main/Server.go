@@ -7,13 +7,17 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"mime/multipart"
 	"net/url"
 	"io"
+	//"io/ioutil"
+	//"path/filepath"
 	"os"
 	"strings"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	//"strconv"
 )
 
 /*******************************************************************************
@@ -55,7 +59,10 @@ func NewServer() *Server {
 		dispatcher: dispatcher,
 	}
 	
-	server.dbClient = NewInMemClient()
+	// Verify that the file repository exists.
+	if ! fileExists(server.Config.FileRepoRootPath) { panic(err) }
+	
+	server.dbClient = NewInMemClient(server)
 	
 	dispatcher.server = server
 	
@@ -90,6 +97,13 @@ func NewServer() *Server {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	
+	
+	// Temporary for testing - remove! ********************
+	var testRealm *InMemRealm =server.dbClient.dbCreateRealm(NewRealmInfo("testrealm"))
+	var testUser1 *InMemUser = server.dbClient.dbCreateUser("testuser1", testRealm.Id)
+	fmt.Printf("User", testUser1.Name, "created")
+	// ****************************************************
 	
 	return server
 }
@@ -162,23 +176,11 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	// Authenitcate session or user.
 	var sessionToken *SessionToken = nil
 	
-	/***********************
-	 Commented out until I complete the authentication mechanism with Cesanta.
-	var sessionId = getSessionId(httpReq)
-	if sessionId != "" {
-		sessionToken = server.validateSessionId(sessionId)
-	}
-	if sessionToken == nil { // authenticate basic credentials
-		var creds *Credentials = getSessionBasicAuthCreds(httpReq)
-		if creds != nil {
-			sessionToken = server.authenticated(creds)
-		}
-	}
+	sessionToken = server.authenticateRequest(httpReq)
 	if sessionToken == nil { //return authent failure
 		writer.WriteHeader(401)
 		return
 	}
-	***********************/
 	
 	server.dispatch(sessionToken, writer, httpReq)
 }
@@ -224,10 +226,31 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 	
 	// Retrieve the request name and arguments from the HTTP request.
 	var reqName string = strings.Trim(httpReq.URL.Path, "/ ")
-	if err := httpReq.ParseForm(); err != nil { panic(err) }
+	var err error
+	if err = httpReq.ParseForm(); err != nil { panic(err) }
 	var values url.Values = httpReq.PostForm  // map[string]string
+	var files map[string][]*multipart.FileHeader = nil
 	
-	server.dispatcher.handleRequest(sessionToken, writer, reqName, values)
+	// Check if the POST is multipart/form-data.
+	// https://golang.org/pkg/net/http/#Request.MultipartReader
+	// http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4
+	var mpReader *multipart.Reader
+	mpReader, err = httpReq.MultipartReader()
+	if mpReader != nil { // has multipart data
+		// We require all multipart requests to include one (and only one) file part.
+		fmt.Println("has multipart data...")
+		
+		// https://golang.org/pkg/mime/multipart/#Reader.ReadForm
+		var form *multipart.Form
+		form, err = mpReader.ReadForm(10000)
+		if err != nil { panic(err) }
+		
+		values = form.Value
+		files = form.File
+	}
+	
+	fmt.Println("Calling handleRequest")
+	server.dispatcher.handleRequest(sessionToken, writer, reqName, values, files)
 }
 
 /*******************************************************************************
@@ -258,6 +281,34 @@ func (server *Server) connectToAuthServer() {
 	}
 	server.client = &http.Client{Transport: tr}
 }
+
+/*******************************************************************************
+ * 
+ */
+func (server *Server) authenticateRequest(httpReq *http.Request) *SessionToken {
+	var sessionToken *SessionToken = nil
+	
+	/***********************
+	Commented out until I complete the authentication mechanism with Cesanta.
+	var sessionId = getSessionId(httpReq)
+	if sessionId != "" {
+		sessionToken = server.validateSessionId(sessionId)
+	}
+	if sessionToken == nil { // authenticate basic credentials
+		var creds *Credentials = getSessionBasicAuthCreds(httpReq)
+		if creds != nil {
+			sessionToken = server.authenticated(creds)
+		}
+	}
+	***********************/
+	// Temporary code - 
+	var sessionId string = server.createUniqueSessionId()
+	sessionToken = NewSessionToken(sessionId, "testuser1")
+	//........Remove the above two lines!!!!!!!!!
+	
+	return sessionToken
+}
+
 
 /*******************************************************************************
  * Verify that the credentials match a registered user. If so, return a session

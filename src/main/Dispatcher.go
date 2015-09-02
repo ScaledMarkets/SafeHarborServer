@@ -6,17 +6,20 @@ package main
 
 import (
 	"net/http"
+	"mime/multipart"
 	"net/url"
 	"io"
 	"fmt"
+	"errors"
 )
 
 /*******************************************************************************
- * All request handlers are of this type.
+ * All request handler functions are of this type.
  * The string arguments are in pairs, where the first is the name of the arg,
  * and the second is the string value.
  */
-type ReqHandlerFuncType func (*Server, *SessionToken, url.Values) ResponseInterfaceType
+type ReqHandlerFuncType func (*Server, *SessionToken, url.Values,
+	map[string][]*multipart.FileHeader) RespIntfTp
 
 /*******************************************************************************
  * The Dispatcher is a singleton struct that contains a map from request name
@@ -28,10 +31,14 @@ type Dispatcher struct {
 }
 
 /*******************************************************************************
- * 
+ * Create a new dispatcher for dispatching to REST handlers. This is often
+ * called "muxing", but the implementation here is simpler, clearer and more
+ * maintainable, and faster.
  */
 func NewDispatcher() *Dispatcher {
 
+	// Map of REST request names to handler functions. These functions are all
+	// defined in Handlers.go.
 	hdlrs := map[string]ReqHandlerFuncType{
 		"authenticate": authenticate,
 		"logout": logout,
@@ -43,7 +50,6 @@ func NewDispatcher() *Dispatcher {
 		"getGroupUsers": getGroupUsers,
 		"addGroupUser": addGroupUser,
 		"remGroupUser": remGroupUser,
-		//"createRealm": xyz,
 		"createRealm": createRealm,
 		"deleteRealm": deleteRealm,
 		"addRealmUser": addRealmUser,
@@ -61,7 +67,6 @@ func NewDispatcher() *Dispatcher {
 		"replaceDockerfile": replaceDockerfile,
 		"buildDockerfile": buildDockerfile,
 		"downloadImage": downloadImage,
-		"sendImage": sendImage,
 	}
 	
 	var dispatcher *Dispatcher = &Dispatcher{
@@ -72,12 +77,13 @@ func NewDispatcher() *Dispatcher {
 	return dispatcher
 }
 
-
 /*******************************************************************************
- * Invoke the method specified by the REST request.
+ * Invoke the method specified by the REST request. This is called by the
+ * Server dispatch method.
  */
 func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
-	w http.ResponseWriter, reqName string, values url.Values) {
+	w http.ResponseWriter, reqName string, values url.Values,
+	files map[string][]*multipart.FileHeader) {
 
 	fmt.Printf("Dispatcher: handleRequest for '%s'\n", reqName)
 	var handler, found = dispatcher.handlers[reqName]
@@ -91,8 +97,17 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 		return
 	}
 	fmt.Println("Calling handler")
-	var result ResponseInterfaceType = handler(dispatcher.server, sessionToken, values)
+	var result RespIntfTp = handler(dispatcher.server, sessionToken, values, files)
 	fmt.Println("Returning result:", result.asResponse())
+	
+	// Detect whether an error occurred.
+	failureDesc, isType := result.(*FailureDesc)
+	if isType {
+		http.Error(w, failureDesc.Reason, failureDesc.HTTPCode)
+		fmt.Printf("Error:", failureDesc.Reason)
+		return
+	}
+	
 	returnOkResponse(w, result)
 	fmt.Printf("Handled %s\n", reqName)
 }
@@ -101,7 +116,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
  * Generate a 200 HTTP response by converting the result into a
  * string consisting of name=value lines.
  */
-func returnOkResponse(writer http.ResponseWriter, result ResponseInterfaceType) {
+func returnOkResponse(writer http.ResponseWriter, result RespIntfTp) {
 	var response string = result.asResponse()
 	fmt.Println("Response:")
 	fmt.Println(response)
@@ -114,5 +129,5 @@ func returnOkResponse(writer http.ResponseWriter, result ResponseInterfaceType) 
  * 
  */
 func respondNoSuchMethod(w http.ResponseWriter, methodName string) {
-	//....
+	panic(errors.New("No such method," + methodName))
 }

@@ -26,7 +26,7 @@ import (
 type BaseType struct {
 }
 
-type ResponseInterfaceType interface {
+type RespIntfTp interface {  // response interface type
 	asResponse() string
 }
 
@@ -34,7 +34,7 @@ func (b *BaseType) asResponse() string {
 	return ""
 }
 
-var _ ResponseInterfaceType = &BaseType{}
+var _ RespIntfTp = &BaseType{}
 
 /*******************************************************************************
  * 
@@ -46,19 +46,27 @@ type Result struct {
 }
 
 func (result *Result) asResponse() string {
-	return fmt.Sprintf("Status=%s\nMessage=%s", result.Status, result.Message)
+	return fmt.Sprintf("Status=%s\r\nMessage=%s", result.Status, result.Message)
 }
 
 /*******************************************************************************
- * 
+ * All handlers return a FailureDesc if they detect an error.
  */
 type FailureDesc struct {
 	BaseType
-	reason string
+	Reason string
+	HTTPCode int
+}
+
+func NewFailureDesc(reason string) *FailureDesc {
+	return &FailureDesc{
+		Reason: reason,
+		HTTPCode: 500,
+	}
 }
 
 func (failureDesc *FailureDesc) asResponse() string {
-	return ""
+	return fmt.Sprintf("Reason=%s\r\nHTTPCode=%d", failureDesc.Reason, failureDesc.HTTPCode)
 }
 
 /*******************************************************************************
@@ -123,22 +131,25 @@ func (groupDesc *GroupDesc) asResponse() string {
  */
 type UserInfo struct {
 	BaseType
-	Id string
+	Username string
+	RealmId string
 }
 
-func NewUserInfo(id string) *UserInfo {
+func NewUserInfo(name string, realmId string) *UserInfo {
 	return &UserInfo{
-		Id: id,
+		Username: name,
+		RealmId: realmId,
 	}
 }
 
 func GetUserInfo(values url.Values) *UserInfo {
-	var id string = GetRequiredPOSTFieldValue(values, "Id")
-	return NewUserInfo(id)
+	var name string = GetRequiredPOSTFieldValue(values, "Username")
+	var realmId string = GetRequiredPOSTFieldValue(values, "RealmId")
+	return NewUserInfo(name, realmId)
 }
 
 func (userInfo *UserInfo) asResponse() string {
-	return ""
+	return fmt.Sprintf("Username=%s\r\nRealmId=%s\r\n", userInfo.Username, userInfo.RealmId)
 }
 
 /*******************************************************************************
@@ -146,11 +157,14 @@ func (userInfo *UserInfo) asResponse() string {
  */
 type UserDesc struct {
 	BaseType
-	UserId string
+	Id string
+	Username string
+	RealmId string
 }
 
 func (userDesc *UserDesc) asResponse() string {
-	return ""
+	return fmt.Sprintf("Id=%s\r\nUsername=%s\r\nGroupId=%s\r\n", userDesc.Id,
+		userDesc.Username, userDesc.RealmId)
 }
 
 /*******************************************************************************
@@ -170,7 +184,7 @@ func NewRealmDesc(id string, name string) *RealmDesc {
 }
 
 func (realmDesc *RealmDesc) asResponse() string {
-	return fmt.Sprintf("Id=%s\nName=%s\n", realmDesc.Id, realmDesc.Name)
+	return fmt.Sprintf("Id=%s\r\nName=%s\r\n", realmDesc.Id, realmDesc.Name)
 }
 
 /*******************************************************************************
@@ -215,7 +229,7 @@ func NewRepoDesc(id string, realmId string, name string) *RepoDesc {
 }
 
 func (repoDesc *RepoDesc) asResponse() string {
-	return fmt.Sprintf("Id=%s\nRealmId=%s\nName=%s\n",
+	return fmt.Sprintf("Id=%s\r\nRealmId=%s\r\nName=%s\r\n",
 		repoDesc.Id, repoDesc.RealmId, repoDesc.Name)
 }
 
@@ -224,10 +238,22 @@ func (repoDesc *RepoDesc) asResponse() string {
  */
 type DockerfileDesc struct {
 	BaseType
+	Id string
+	RepoId string
+	Name string
+}
+
+func NewDockerfileDesc(id string, repoId string, name string) *DockerfileDesc {
+	return &DockerfileDesc{
+		Id: id,
+		RepoId: repoId,
+		Name: name,
+	}
 }
 
 func (dockerfileDesc *DockerfileDesc) asResponse() string {
-	return ""
+	return fmt.Sprintf("Id=%s\r\nRepoId=%s\r\nName=%s\r\n",
+		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.Name)
 }
 
 /*******************************************************************************
