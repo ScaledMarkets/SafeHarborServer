@@ -275,6 +275,18 @@ func (dockerfileDesc *DockerfileDesc) asResponse() string {
 		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.Name)
 }
 
+type DockerfileDescs []*DockerfileDesc
+
+func (dockerfileDescs DockerfileDescs) asResponse() string {
+	var response string = ""
+	var firstTime bool = true
+	for _, desc := range dockerfileDescs {
+		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		response = response + desc.asResponse()
+	}
+	return response
+}
+
 /*******************************************************************************
  * 
  */

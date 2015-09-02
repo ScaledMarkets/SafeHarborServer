@@ -444,7 +444,6 @@ func (client *InMemClient) getRepo(id string) Repo {
 	var repo Repo
 	var isType bool
 	repo, isType = allObjects[id].(Repo)
-	fmt.Println("getRepo.A")
 	if ! isType {
 		fmt.Println("***********allObjects[", id, "] is a", reflect.TypeOf(allObjects[id]))
 		panic(errors.New("************Internal error: object is an unexpected type"))
@@ -467,6 +466,10 @@ func (repo *InMemRepo) getDockerfileIds() []string {
 
 func (repo *InMemRepo) getDockerImageIds() []string {
 	return repo.DockerImageIds
+}
+
+func (repo *InMemRepo) addDockerfile(dockerfile Dockerfile) {
+	repo.DockerfileIds = append(repo.DockerfileIds, dockerfile.getId())
 }
 
 func (repo *InMemRepo) getACL() ACL {
@@ -507,6 +510,14 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	newDockerfile.ACLId = acl.Id
 	fmt.Println("Created Dockerfile")
 	allObjects[dockerfileId] = newDockerfile
+	
+	// Add to the Repo's list of Dockerfiles.
+	var repo Repo = client.getRepo(repoId)
+	if repo == nil { return nil, errors.New(fmt.Sprintf(
+		"Repo with Id %s not found", repoId))
+	}
+	repo.addDockerfile(newDockerfile)
+	
 	return newDockerfile, nil
 }
 

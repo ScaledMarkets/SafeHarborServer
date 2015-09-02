@@ -296,7 +296,40 @@ func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
+
+	var err error
+	var repoId string
+	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
+	fmt.Println("A")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	var repo Repo = server.dbClient.getRepo(repoId)
+	fmt.Println("B")
+	if repo == nil { return NewFailureDesc(fmt.Sprintf(
+		"Repo with Id %s not found", repoId)) }
+	
+	var dockerfileIds []string = repo.getDockerfileIds()
+	fmt.Println("C")
+	
+	var result DockerfileDescs
+	for _, id := range dockerfileIds {
+		
+		fmt.Println("D1")
+		var dockerfile Dockerfile = server.dbClient.getDockerfile(id)
+		fmt.Println("D2")
+		if dockerfile == nil { return NewFailureDesc(fmt.Sprintf(
+			"Internal error: no Dockerfile found for Id %s", id))
+		}
+		fmt.Println("D3")
+		var desc *DockerfileDesc = dockerfile.asDockerfileDesc()
+		fmt.Println("D4")
+		// Add to result
+		result = append(result, desc)
+		fmt.Println("D5")
+	}
+
+	fmt.Println("E")
+	return result
 }
 
 /*******************************************************************************
@@ -339,7 +372,8 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	if file == nil { return NewFailureDesc("Internal Error") }	
 	
 	// Identify the repo.
-	var repoId string = values["RepoId"][0]
+	var repoId string
+	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
 	if repoId == "" { return NewFailureDesc("No HTTP parameter found for RepoId") }
 	var dbClient = server.dbClient
 	var repo Repo = dbClient.getRepo(repoId)

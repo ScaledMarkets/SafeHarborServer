@@ -63,10 +63,15 @@ type Repo interface {
 	Resource
 	getName() string
 	getFileDirectory() string
+	getRealm() Realm
+	getDockerfileIds() []string
+	getDockerImageIds() []string
+	addDockerfile(Dockerfile)
 }
 
 type Dockerfile interface {
 	Resource
+	asDockerfileDesc() *DockerfileDesc
 }
 
 type DockerImage interface {
