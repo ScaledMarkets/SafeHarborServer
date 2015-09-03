@@ -53,10 +53,12 @@ func NewDispatcher() *Dispatcher {
 		"createRealm": createRealm,
 		"deleteRealm": deleteRealm,
 		"addRealmUser": addRealmUser,
+		"remRealmUser": remRealmUser,
+		"getRealmUser": getRealmUser,
 		"getRealmGroups": getRealmGroups,
-		"addRealmGroup": addRealmGroup,
 		"getRealmRepos": getRealmRepos,
 		"getMyRealms": getMyRealms,
+		"getAllRealms": getAllRealms,
 		"scanImage": scanImage,
 		"createRepo": createRepo,
 		"deleteRepo": deleteRepo,
@@ -67,6 +69,9 @@ func NewDispatcher() *Dispatcher {
 		"replaceDockerfile": replaceDockerfile,
 		"buildDockerfile": buildDockerfile,
 		"downloadImage": downloadImage,
+		"setPermission": setPermission,
+		"addPermission": addPermission,
+		"remPermission": remPermission,
 	}
 	
 	var dispatcher *Dispatcher = &Dispatcher{

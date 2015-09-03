@@ -46,7 +46,7 @@ type Result struct {
 }
 
 func (result *Result) asResponse() string {
-	return fmt.Sprintf("Status=%s\r\nMessage=%s", result.Status, result.Message)
+	return fmt.Sprintf("Status=%d\r\nMessage=%s", result.Status, result.Message)
 }
 
 /*******************************************************************************
@@ -129,10 +129,24 @@ type GroupDesc struct {
 	BaseType
 	RealmId string
 	Name string
+	GroupId string
 }
 
 func (groupDesc *GroupDesc) asResponse() string {
-	return fmt.Sprintf("RealmId=%s\r\nName=%s\r\n", groupDesc.RealmId, groupDesc.Name)
+	return fmt.Sprintf("RealmId=%s\r\nName=%s\r\nGroupId=%s\r\n",
+		groupDesc.RealmId, groupDesc.Name, groupDesc.GroupId)
+}
+
+type GroupDescs []*GroupDesc
+
+func (groupDescs GroupDescs) asResponse() string {
+	var response string = ""
+	var firstTime bool = true
+	for _, desc := range groupDescs {
+		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		response = response + desc.asResponse()
+	}
+	return response
 }
 
 /*******************************************************************************
@@ -140,32 +154,39 @@ func (groupDesc *GroupDesc) asResponse() string {
  */
 type UserInfo struct {
 	BaseType
-	Username string
+	UserId string
+	UserName string
 	RealmId string
 }
 
-func NewUserInfo(name string, realmId string) *UserInfo {
+func NewUserInfo(userid string, name string, realmId string) *UserInfo {
 	return &UserInfo{
-		Username: name,
+		UserId: userid,
+		UserName: name,
 		RealmId: realmId,
 	}
 }
 
 func GetUserInfo(values url.Values) (*UserInfo, error) {
 	var err error
+	var userid string
+	userid, err = GetRequiredPOSTFieldValue(values, "UserId")
+	if err != nil { return nil, err }
+	
 	var name string
-	name, err = GetRequiredPOSTFieldValue(values, "Username")
+	name, err = GetRequiredPOSTFieldValue(values, "UserName")
 	if err != nil { return nil, err }
 	
 	var realmId string
 	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
 	if err != nil { return nil, err }
 	
-	return NewUserInfo(name, realmId), nil
+	return NewUserInfo(userid, name, realmId), nil
 }
 
 func (userInfo *UserInfo) asResponse() string {
-	return fmt.Sprintf("Username=%s\r\nRealmId=%s\r\n", userInfo.Username, userInfo.RealmId)
+	return fmt.Sprintf("UserId=%s\r\nUserName=%s\r\nRealmId=%s\r\n",
+		userInfo.UserId, userInfo.UserName, userInfo.RealmId)
 }
 
 /*******************************************************************************
@@ -174,13 +195,26 @@ func (userInfo *UserInfo) asResponse() string {
 type UserDesc struct {
 	BaseType
 	Id string
-	Username string
+	UserId string
+	UserName string
 	RealmId string
 }
 
 func (userDesc *UserDesc) asResponse() string {
-	return fmt.Sprintf("Id=%s\r\nUsername=%s\r\nGroupId=%s\r\n", userDesc.Id,
-		userDesc.Username, userDesc.RealmId)
+	return fmt.Sprintf("Id=%s\r\nUserId=%s\r\nUserName=%s\r\nGroupId=%s\r\n",
+		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId)
+}
+
+type UserDescs []*UserDesc
+
+func (userDescs UserDescs) asResponse() string {
+	var response string = ""
+	var firstTime bool = true
+	for _, desc := range userDescs {
+		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		response = response + desc.asResponse()
+	}
+	return response
 }
 
 /*******************************************************************************
@@ -201,6 +235,18 @@ func NewRealmDesc(id string, name string) *RealmDesc {
 
 func (realmDesc *RealmDesc) asResponse() string {
 	return fmt.Sprintf("Id=%s\r\nName=%s\r\n", realmDesc.Id, realmDesc.Name)
+}
+
+type RealmDescs []*RealmDesc
+
+func (realmDescs RealmDescs) asResponse() string {
+	var response string = ""
+	var firstTime bool = true
+	for _, desc := range realmDescs {
+		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		response = response + desc.asResponse()
+	}
+	return response
 }
 
 /*******************************************************************************
@@ -252,6 +298,18 @@ func (repoDesc *RepoDesc) asResponse() string {
 		repoDesc.Id, repoDesc.RealmId, repoDesc.Name)
 }
 
+type RepoDescs []*RepoDesc
+
+func (repoDescs RepoDescs) asResponse() string {
+	var response string = ""
+	var firstTime bool = true
+	for _, desc := range repoDescs {
+		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		response = response + desc.asResponse()
+	}
+	return response
+}
+
 /*******************************************************************************
  * 
  */
@@ -296,6 +354,18 @@ type ImageDesc struct {
 
 func (imageDesc *ImageDesc) asResponse() string {
 	return ""
+}
+
+type ImageDescs []*ImageDesc
+
+func (imageDescs ImageDescs) asResponse() string {
+	var response string = ""
+	var firstTime bool = true
+	for _, desc := range imageDescs {
+		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		response = response + desc.asResponse()
+	}
+	return response
 }
 
 /*******************************************************************************

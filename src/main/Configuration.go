@@ -13,16 +13,17 @@ import (
 	"fmt"
 	"encoding/json"
 	"strings"
+	"strconv"
 )
 
 type Configuration struct {
 	service string
 	ipaddr string
-	port string
+	port int
 	LocalAuthCertPath string
 	LocalRootCertPath string // may be null
 	AuthServerName string
-	AuthPort string
+	AuthPort int
 	AuthCertPath string
 	AuthKeyPath string
 	FileRepoRootPath string // where Dockerfiles, images, etc. are stored
@@ -58,8 +59,11 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	config.ipaddr, exists = entries["IPADDR"]
 	if ! exists { return nil, fmt.Errorf("Did not find IPADDR in configuration") }
 	
-	config.port, exists = entries["PORT"]
+	var portStr string
+	portStr, exists = entries["PORT"]
 	if ! exists { return nil, fmt.Errorf("Did not find PORT in configuration") }
+	config.port, err = strconv.Atoi(portStr)
+	if err != nil { return nil, fmt.Errorf("PORT value in configuration is not an integer") }
 	
 	config.LocalAuthCertPath, exists = entries["LOCAL_AUTH_CERT_PATH"]
 	if ! exists { return nil, fmt.Errorf("Did not find LOCAL_AUTH_CERT_PATH in configuration") }
@@ -70,8 +74,10 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	config.AuthServerName, exists = entries["AUTH_SERVER_DNS_NAME"]
 	if ! exists { return nil, fmt.Errorf("Did not find AUTH_SERVER_DNS_NAME in configuration") }
 	
-	config.AuthPort, exists = entries["AUTH_PORT"]
+	portStr, exists = entries["AUTH_PORT"]
 	if ! exists { return nil, fmt.Errorf("Did not find AUTH_PORT in configuration") }
+	config.AuthPort, err = strconv.Atoi(portStr)
+	if err != nil { return nil, fmt.Errorf("AUTH_PORT value in configuration is not an integer") }
 	
 	config.AuthCertPath, exists = entries["AUTH_CERT_PATH"]
 	if ! exists { return nil, fmt.Errorf("Did not find AUTH_CERT_PATH in configuration") }

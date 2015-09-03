@@ -27,11 +27,19 @@ type PersistObj interface {
 type Group interface {
 	PersistObj
 	getName() string
+	getACLEntryIds() []string
+	getUserObjIds() []string
+	hasUserWithId(string) bool
+	addUser(string) error
 }
 
 type User interface {
 	PersistObj
+	getRealmId() string
+	getUserId() string
 	getName() string
+	getACLEntryIds() []string
+	asUserDesc() *UserDesc
 }
 
 type ACLEntry interface {
@@ -57,6 +65,7 @@ type Realm interface {
 	getUserByName(string) User
 	getGroupByName(string) Group
 	getRepoByName(string) Repo
+	getUserObjIds() []string
 }
 
 type Repo interface {

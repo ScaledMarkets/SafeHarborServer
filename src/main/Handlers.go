@@ -50,12 +50,15 @@ func logout(server *Server, sessionToken *SessionToken, values url.Values,
 func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
+	fmt.Println("createUser.A")
+
 	var err error
 	var userInfo *UserInfo
 	userInfo, err = GetUserInfo(values)
+	fmt.Println("createUser.B")
 	
 	// Authorize the request, based on the authenticated identity.
-	if ! server.authorized(server.sessions[sessionToken.UniqueSessionId],
+	if ! server.authService.authorized(server.sessions[sessionToken.UniqueSessionId],
 		"admin",  // this 'resource' is onwed by the admin account
 		"repository",
 		"*",  // the scope is the entire repository
@@ -67,21 +70,24 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	}
 	
 	// Create the user account.
-	var username string = userInfo.Username
+	var userId string = userInfo.UserId
+	var userName string = userInfo.UserName
 	var realmId string = userInfo.RealmId
 	var newUser *InMemUser
-	newUser, err = server.dbClient.dbCreateUser(username, realmId)
+	newUser, err = server.dbClient.dbCreateUser(userId, userName, realmId)
 	if err != nil { return NewFailureDesc(err.Error()) }
+	fmt.Println("createUser.C")
 	
 	return &UserDesc{
 		Id: newUser.Id,
-		Username: username,
+		UserId: userId,
+		UserName: userName,
 		RealmId: realmId,
 	}
 }
 
 /*******************************************************************************
- * Arguments: UserId
+ * Arguments: UserObjId
  * Returns: Result
  */
 func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
@@ -90,7 +96,7 @@ func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 }
 
 /*******************************************************************************
- * Arguments: UserId
+ * Arguments: UserObjId
  * Returns: []GroupDesc
  */
 func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
@@ -136,20 +142,62 @@ func deleteGroup(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func getGroupUsers(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
+	
+	var err error
+	var groupId string
+	groupId, err = GetRequiredPOSTFieldValue(values, "GroupId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	var group Group = server.dbClient.getGroup(groupId)
+	if group == nil { return NewFailureDesc(fmt.Sprintf(
+		"No group with Id %s", groupId))
+	}
+	var userObjIds []string = group.getUserObjIds()
+	var userDescs UserDescs
+	for _, id := range userObjIds {
+		var user User = server.dbClient.getUser(id)
+		if user == nil { return NewFailureDesc(fmt.Sprintf(
+			"Internal error: No user with Id %s", id))
+		}
+		var userDesc *UserDesc = user.asUserDesc()
+		userDescs = append(userDescs, userDesc)
+	}
+	
+	return userDescs
 }
 
 /*******************************************************************************
- * Arguments: GroupId, UserId
+ * Arguments: GroupId, UserObjId
  * Returns: Result
  */
 func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
+	
+	var err error
+	var groupId string
+	groupId, err = GetRequiredPOSTFieldValue(values, "GroupId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	var userObjId string
+	userObjId, err = GetRequiredPOSTFieldValue(values, "UserObjId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	var group Group = server.dbClient.getGroup(groupId)
+	if group == nil { return NewFailureDesc(fmt.Sprintf(
+		"No group with Id %s", groupId))
+	}
+
+	err = group.addUser(userObjId)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	return &Result{
+		Status: 200,
+		Message: "User added to group",
+	}
 }
 
 /*******************************************************************************
- * Arguments: GroupId, UserId
+ * Arguments: GroupId, UserObjId
  * Returns: Result
  */
 func remGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
@@ -187,10 +235,28 @@ func deleteRealm(server *Server, sessionToken *SessionToken, values url.Values,
 }
 
 /*******************************************************************************
- * Arguments: RealmId, UserId
+ * Arguments: RealmId, UserObjId
  * Returns: Result
  */
 func addRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	return nil
+}
+
+/*******************************************************************************
+ * Arguments: RealmId, UserObjId
+ * Returns: Result
+ */
+func remRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	return nil
+}
+
+/*******************************************************************************
+ * Arguments: UserId
+ * Returns: UserDesc
+ */
+func getRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	return nil
 }
@@ -205,15 +271,6 @@ func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Value
 }
 
 /*******************************************************************************
- * Arguments: RealmId, GroupId
- * Returns: Result
- */
-func addRealmGroup(server *Server, sessionToken *SessionToken, values url.Values,
-	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
-}
-
-/*******************************************************************************
  * Arguments: RealmId
  * Returns: []RepoDesc
  */
@@ -223,10 +280,19 @@ func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values
 }
 
 /*******************************************************************************
- * Arguments: UserId
+ * Arguments: UserObjId
  * Returns: []RealmDesc
  */
 func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	return nil
+}
+
+/*******************************************************************************
+ * Arguments: (none)
+ * Returns: []RealmDesc
+ */
+func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	return nil
 }
@@ -446,7 +512,7 @@ func downloadImage(server *Server, sessionToken *SessionToken, values url.Values
 }
 
 /*******************************************************************************
- * Arguments: userId or groupId, repoId or dockerfileId or imageId, PermissionMask
+ * Arguments: userObjId or groupId, repoId or dockerfileId or imageId, PermissionMask
  * Returns: PermissionDesc
  */
 func setPermission(server *Server, sessionToken *SessionToken, values url.Values,
@@ -455,7 +521,7 @@ func setPermission(server *Server, sessionToken *SessionToken, values url.Values
 }
 
 /*******************************************************************************
- * Arguments: userId or groupId, repoId or dockerfileId or imageId, PermissionMask
+ * Arguments: userObjId or groupId, repoId or dockerfileId or imageId, PermissionMask
  * Returns: PermissionDesc
  */
 func addPermission(server *Server, sessionToken *SessionToken, values url.Values,
@@ -464,7 +530,7 @@ func addPermission(server *Server, sessionToken *SessionToken, values url.Values
 }
 
 /*******************************************************************************
- * Arguments: userId or groupId, repoId or dockerfileId or imageId, PermissionMask
+ * Arguments: userObjId or groupId, repoId or dockerfileId or imageId, PermissionMask
  * Returns: PermissionDesc
  */
 func remPermission(server *Server, sessionToken *SessionToken, values url.Values,

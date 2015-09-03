@@ -55,6 +55,7 @@ type InMemGroup struct {
 	RealmId string
 	Name string
 	aclEntryIds []string
+	UserObjIds []string
 }
 
 func (client *InMemClient) dbCreateGroup(realmId string, name string) (*InMemGroup, error) {
@@ -74,6 +75,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string) (*InMemGro
 		InMemPersistObj: InMemPersistObj{Id: groupId},
 		RealmId: realmId,
 		Name: name,
+		//UserIds: 
 	}
 	fmt.Println("Created Group")
 	allObjects[groupId] = newGroup
@@ -96,10 +98,44 @@ func (group *InMemGroup) getACLEntryIds() []string {
 	return group.aclEntryIds
 }
 
+func (group *InMemGroup) getUserObjIds() []string {
+	return group.UserObjIds
+}
+
+func (group *InMemGroup) hasUserWithId(userObjId string) bool {
+	var obj PersistObj = allObjects[userObjId]
+	if obj == nil { return false }
+	_, isUser := obj.(User)
+	if ! isUser { return false }
+	
+	for _, id := range group.UserObjIds {
+		if id == userObjId { return true }
+	}
+	return false
+}
+
+func (group *InMemGroup) addUser(userObjId string) error {
+	if group.hasUserWithId(userObjId) { return errors.New(fmt.Sprintf(
+		"User with object Id %s is already in group", userObjId))
+	}
+	
+	var obj PersistObj = allObjects[userObjId]
+	if obj == nil { return errors.New(fmt.Sprintf(
+		"Object with Id %s does not exist", userObjId))
+	}
+	_, isUser := obj.(User)
+	if ! isUser { return errors.New(fmt.Sprintf(
+		"Object with Id %s is not a User", userObjId))
+	}
+	group.UserObjIds = append(group.UserObjIds, userObjId)
+	return nil
+}
+
 func (group *InMemGroup) asGroupDesc() *GroupDesc {
 	return &GroupDesc{
 		RealmId: group.RealmId,
 		Name: group.Name,
+		GroupId: group.Id,
 	}
 }
 
@@ -109,19 +145,24 @@ func (group *InMemGroup) asGroupDesc() *GroupDesc {
 type InMemUser struct {
 	InMemPersistObj
 	RealmId string
+	UserId string
 	Name string
 	ACLEntryIds []string
+	GroupIds []string
 }
 
-func (client *InMemClient) dbCreateUser(name string, realmId string) (*InMemUser, error) {
-	var userId string = createUniqueDbObjectId()
+func (client *InMemClient) dbCreateUser(userId string, name string,
+	realmId string) (*InMemUser, error) {
+	
+	var userObjId string = createUniqueDbObjectId()
 	var newUser *InMemUser = &InMemUser{
-		InMemPersistObj: InMemPersistObj{Id: userId},
+		InMemPersistObj: InMemPersistObj{Id: userObjId},
 		RealmId: realmId,
+		UserId: userId,
 		Name: name,
 	}
 	fmt.Println("Created user")
-	allObjects[userId] = newUser
+	allObjects[userObjId] = newUser
 	return newUser, nil
 }
 
@@ -130,12 +171,33 @@ func (client *InMemClient) getUser(id string) User {
 	//return User(client.getPersistentObject(id))
 }
 
+func (user *InMemUser) getRealmId() string {
+	return user.RealmId
+}
+
+func (user *InMemUser) getUserId() string {
+	return user.UserId
+}
+
 func (user *InMemUser) getName() string {
 	return user.Name
 }
 
 func (user *InMemUser) getACLEntryIds() []string {
 	return user.ACLEntryIds
+}
+
+func (user *InMemUser) getGroupIds() []string {
+	return user.GroupIds
+}
+
+func (user *InMemUser) asUserDesc() *UserDesc {
+	return &UserDesc{
+		Id: user.Id,
+		UserId: user.UserId,
+		UserName: user.Name,
+		RealmId: user.RealmId,
+	}
 }
 
 /*******************************************************************************
@@ -234,7 +296,7 @@ type InMemRealm struct {
 	InMemPersistObj
 	Name string
 	ACLId string
-	UserIds []string
+	UserObjIds []string
 	GroupIds []string
 	RepoIds []string
 	FileDirectory string  // where this realm's files are stored
@@ -290,8 +352,8 @@ func (realm *InMemRealm) getName() string {
 	return realm.Name
 }
 
-func (realm *InMemRealm) getUserIds() []string {
-	return realm.UserIds
+func (realm *InMemRealm) getUserObjIds() []string {
+	return realm.UserObjIds
 }
 
 func (realm *InMemRealm) getGroupIds() []string {
@@ -314,14 +376,14 @@ func (realm *InMemRealm) asRealmDesc() *RealmDesc {
 	return NewRealmDesc(realm.Id, realm.Name)
 }
 
-func (realm *InMemRealm) hasUserWithId(userId string) bool {
-	var obj PersistObj = allObjects[userId]
+func (realm *InMemRealm) hasUserWithId(userObjId string) bool {
+	var obj PersistObj = allObjects[userObjId]
 	if obj == nil { return false }
 	_, isUser := obj.(User)
 	if ! isUser { return false }
 	
-	for _, id := range realm.UserIds {
-		if id == userId { return true }
+	for _, id := range realm.UserObjIds {
+		if id == userObjId { return true }
 	}
 	return false
 }
@@ -351,7 +413,7 @@ func (realm *InMemRealm) hasRepoWithId(repoId string) bool {
 }
 
 func (realm *InMemRealm) getUserByName(userName string) User {
-	for _, id := range realm.UserIds {
+	for _, id := range realm.UserObjIds {
 		var obj PersistObj = allObjects[id]
 		if obj == nil { panic(errors.New(fmt.Sprintf(
 			"Internal error: obj with Id %s does not exist", id)))
