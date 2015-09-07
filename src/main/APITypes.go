@@ -201,7 +201,7 @@ type UserDesc struct {
 }
 
 func (userDesc *UserDesc) asResponse() string {
-	return fmt.Sprintf("Id=%s\r\nUserId=%s\r\nUserName=%s\r\nGroupId=%s\r\n",
+	return fmt.Sprintf("Id=%s\r\nUserId=%s\r\nUserName=%s\r\nRealmId=%s\r\n",
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId)
 }
 

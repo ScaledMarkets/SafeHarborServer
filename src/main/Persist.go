@@ -52,12 +52,13 @@ type ACL interface {
 
 type Resource interface {
 	PersistObj
+	getName() string
 	getACL() ACL
 }
 
 type Realm interface {
 	Resource
-	getName() string
+	//getName() string
 	getFileDirectory() string
 	hasUserWithId(string) bool
 	hasGroupWithId(string) bool
@@ -70,7 +71,7 @@ type Realm interface {
 
 type Repo interface {
 	Resource
-	getName() string
+	//getName() string
 	getFileDirectory() string
 	getRealm() Realm
 	getDockerfileIds() []string
@@ -80,9 +81,11 @@ type Repo interface {
 
 type Dockerfile interface {
 	Resource
+	getFilePath() string
 	asDockerfileDesc() *DockerfileDesc
 }
 
 type DockerImage interface {
 	Resource
+	getDockerImageId()
 }

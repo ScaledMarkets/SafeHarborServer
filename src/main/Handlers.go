@@ -14,6 +14,7 @@ import (
 	//"bufio"
 	"io/ioutil"
 	"os"
+	//...."os/exec"
 	"strconv"
 )
 
@@ -153,7 +154,7 @@ func getGroupUsers(server *Server, sessionToken *SessionToken, values url.Values
 		"No group with Id %s", groupId))
 	}
 	var userObjIds []string = group.getUserObjIds()
-	var userDescs UserDescs
+	var userDescs UserDescs = make([]*UserDesc, 1)
 	for _, id := range userObjIds {
 		var user User = server.dbClient.getUser(id)
 		if user == nil { return NewFailureDesc(fmt.Sprintf(
@@ -373,7 +374,7 @@ func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Value
 		"Repo with Id %s not found", repoId)) }
 	
 	var dockerfileIds []string = repo.getDockerfileIds()	
-	var result DockerfileDescs
+	var result DockerfileDescs = make([]*DockerfileDesc, 1)
 	for _, id := range dockerfileIds {
 		
 		var dockerfile Dockerfile = server.dbClient.getDockerfile(id)
@@ -430,6 +431,7 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	// Identify the repo.
 	var repoId string
 	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if repoId == "" { return NewFailureDesc("No HTTP parameter found for RepoId") }
 	var dbClient = server.dbClient
 	var repo Repo = dbClient.getRepo(repoId)
@@ -493,14 +495,73 @@ func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Va
  * Arguments: RepoId, DockerfileId
  * Returns: ImageDesc
  */
+ /*
 func buildDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	// Run docker client on the server.
+	var repoId string
+	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if repoId == "" { return NewFailureDesc("No HTTP parameter found for RepoId") }
 
+	// Identify the Dockerfile.
+	dockerfileId, err = GetRequiredPOSTFieldValue(values, "DockerfileId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if dockerfileId == "" { return NewFailureDesc("No HTTP parameter found for DockerfileId") }
+	var dbClient = server.dbClient
+	var dockerfile Dockerfile = dbClient.getDockerfile(dockerfileId)
+	var dockerfileName string = dockerfile.getName()
 
-	return nil
-}
+	// Create a temporary directory to serve as the build context.
+	var fileMode FileMode = 0777
+	var tempDirName string
+	tempDirName, err = ioutil.TempDir("", "")
+	tempDirPath = os.TempDir() + "/" + tempDirName
+	defer os.RemoveAll(tempDirPath)
+
+	// Copy dockerfile to that directory.
+	var in, out *os.File
+	in, err = os.Open(dockerfile.getFilePath())
+	if err != nil { return NewFailureDesc(err.Error()) }
+	out, err = os.Create(tempDirPath + "/" + dockerfileName)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	_, err = io.Copy(out, in)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	err := out.Close()
+	if err != nil { return NewFailureDesc(err.Error()) }
+		
+	// Create a the docker build command.
+	// https://docs.docker.com/reference/commandline/build/
+    var cmd *exec.Cmd= exec.Command("docker", "build", dir, "--file=" + dockerfileName)
+    var stdout io.ReadCloser
+    var stderr io.ReadCloser
+    stdout, err = cmd.StdoutPipe()
+	if err != nil { return NewFailureDesc(err.Error()) }
+    stderr, err = cmd.StderrPipe()
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	// Execute the command in the temporary directory.
+	// This initiates processing of the dockerfile.
+	err = Chdir(tempDirPath)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	err = cmd.Start()
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	// Retrieve the ids of the images that were created.
+	// To do this, we must parse the output, looking for the image ids that
+	// are output after each RUN command.
+	//....
+	
+	var imageDescs ImageDescs = make([]*ImageDesc, 1)
+	for each docker image dockerImageId created {
+	
+		// Add a record for the image to the database.
+		var image *InMemDockerImage = dbClient.dbCreateDockerImage(repoId, dockerImageId)
+		imageDescs.append(imageDescs, image.asImageDesc())
+	}
+	
+	return imageDescs
+}*/
 
 /*******************************************************************************
  * Arguments: ImageId

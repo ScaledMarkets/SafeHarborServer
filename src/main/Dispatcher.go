@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"io"
 	"fmt"
-	"errors"
+	//...."errors"
 )
 
 /*******************************************************************************
@@ -67,7 +67,7 @@ func NewDispatcher() *Dispatcher {
 		"getImages": getImages,
 		"addDockerfile": addDockerfile,
 		"replaceDockerfile": replaceDockerfile,
-		"buildDockerfile": buildDockerfile,
+		//...."buildDockerfile": buildDockerfile,
 		"downloadImage": downloadImage,
 		"setPermission": setPermission,
 		"addPermission": addPermission,
@@ -87,14 +87,14 @@ func NewDispatcher() *Dispatcher {
  * Server dispatch method.
  */
 func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
-	w http.ResponseWriter, reqName string, values url.Values,
+	headers http.Header, w http.ResponseWriter, reqName string, values url.Values,
 	files map[string][]*multipart.FileHeader) {
 
 	fmt.Printf("Dispatcher: handleRequest for '%s'\n", reqName)
 	var handler, found = dispatcher.handlers[reqName]
 	if ! found {
 		fmt.Printf("No method found, %s\n", reqName)
-		respondNoSuchMethod(w, reqName)
+		respondNoSuchMethod(headers, w, reqName)
 		return
 	}
 	if handler == nil {
@@ -113,7 +113,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 		return
 	}
 	
-	returnOkResponse(w, result)
+	returnOkResponse(headers, w, result)
 	fmt.Printf("Handled %s\n", reqName)
 }
 
@@ -121,11 +121,16 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
  * Generate a 200 HTTP response by converting the result into a
  * string consisting of name=value lines.
  */
-func returnOkResponse(writer http.ResponseWriter, result RespIntfTp) {
+func returnOkResponse(headers http.Header, writer http.ResponseWriter, result RespIntfTp) {
 	var response string = result.asResponse()
 	fmt.Println("Response:")
 	fmt.Println(response)
+	// http://www.html5rocks.com/en/tutorials/cors/#toc-adding-cors-support-to-the-server
 	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	writer.Header().Set("Access-Control-Allow-Origin", "*")
+	writer.Header().Set("Access-Control-Allow-Credentials", "false")
+	//writer.Header().Set("Access-Control-Expose-Headers",
+
 	writer.WriteHeader(http.StatusOK)
 	io.WriteString(writer, response)
 }
@@ -133,6 +138,8 @@ func returnOkResponse(writer http.ResponseWriter, result RespIntfTp) {
 /*******************************************************************************
  * 
  */
-func respondNoSuchMethod(w http.ResponseWriter, methodName string) {
-	panic(errors.New("No such method," + methodName))
+func respondNoSuchMethod(headers http.Header, writer http.ResponseWriter, methodName string) {
+	
+	writer.WriteHeader(404)
+	io.WriteString(writer, "No such method," + methodName)
 }

@@ -554,6 +554,7 @@ type InMemDockerfile struct {
 	RepoId string
 	Name string
 	ACLId string
+	FilePath string
 }
 
 func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
@@ -564,6 +565,7 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 		RepoId: repoId,
 		Name: name,
 		ACLId: "",
+		FilePath: filepath,
 	}
 	var err error
 	var acl *InMemACL
@@ -615,6 +617,10 @@ func (dockerfile *InMemDockerfile) getACL() ACL {
 	return acl
 }
 
+func (dockerfile *InMemDockerfile) getFilePath() string {
+	return dockerfile.FilePath
+}
+
 func (dockerfile *InMemDockerfile) asDockerfileDesc() *DockerfileDesc {
 	return NewDockerfileDesc(dockerfile.Id, dockerfile.RepoId, dockerfile.Name)
 }
@@ -624,17 +630,20 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() *DockerfileDesc {
  */
 type InMemDockerImage struct {
 	InMemPersistObj
+	Name string
 	RepoId string
 	ACLId string
+	DockerImageId string  // id in the local docker repo
 }
 
 func (client *InMemClient) dbCreateDockerImage(repoId string,
-	filepath string) (*InMemDockerImage, error) {
+	dockerImageId string) (*InMemDockerImage, error) {
 	var imageId string = createUniqueDbObjectId()
 	var newDockerImage *InMemDockerImage = &InMemDockerImage{
 		InMemPersistObj: InMemPersistObj{Id: imageId},
 		RepoId: repoId,
 		ACLId: "",
+		DockerImageId: dockerImageId,
 	}
 	var err error
 	var acl *InMemACL
@@ -649,6 +658,10 @@ func (client *InMemClient) dbCreateDockerImage(repoId string,
 //func (image *InMemDockerImage) getId() string {
 //	return image.Id
 //}
+
+func (image *InMemDockerImage) getName() string {
+	return image.Name
+}
 
 func (client *InMemClient) getDockerImage(id string) DockerImage {
 	var image DockerImage
@@ -672,6 +685,10 @@ func (image *InMemDockerImage) getACL() ACL {
 	acl, isType = allObjects[image.ACLId].(ACL)
 	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
 	return acl
+}
+
+func (image *InMemDockerImage) getDockerImageId() string {
+	return image.DockerImageId
 }
 
 

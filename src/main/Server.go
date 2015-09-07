@@ -29,7 +29,6 @@ type Server struct {
 	tcpListener net.Listener
 	dbClient *InMemClient
 	http.Handler
-	//AuthSvc AuthorizationService
 	certPool *x509.CertPool
 	authService *AuthService
 	dispatcher *Dispatcher
@@ -201,9 +200,23 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 
 	fmt.Println("Dispatching request")
 	
-	// Retrieve the request name and arguments from the HTTP request.
+	if httpReq.Method != "POST" {  // dispatch to an error handler.
+		respondMethodNotSupported(writer, httpReq.Method)
+		return
+	}
+	
+	// Retrieve the request name from the HTTP request.
 	var reqName string = strings.Trim(httpReq.URL.Path, "/ ")
 	var err error
+	
+	// Authorization for a request should be performed using only the intersection
+	// of the authority of the user and the requesting origin(s). 
+	// Thus, if the request origin is the SafeHarbor Web App origin, we merely
+	// need to authorize the user; otherwise, we deny. In the future we should
+	// allow users to register trusted origins.
+	
+	var headers http.Header = httpReq.Header  // map[string][]string
+	
 	if err = httpReq.ParseForm(); err != nil { panic(err) }
 	var values url.Values = httpReq.PostForm  // map[string]string
 	var files map[string][]*multipart.FileHeader = nil
@@ -227,7 +240,7 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 	}
 	
 	fmt.Println("Calling handleRequest")
-	server.dispatcher.handleRequest(sessionToken, writer, reqName, values, files)
+	server.dispatcher.handleRequest(sessionToken, headers, writer, reqName, values, files)
 }
 
 /*******************************************************************************
@@ -290,4 +303,13 @@ func newTCPListener(ipaddr string, port int) (net.Listener, error) {
  */
 type tcpKeepAliveListener struct {
 	*net.TCPListener
+}
+
+
+/*******************************************************************************
+ * 
+ */
+func respondMethodNotSupported(writer http.ResponseWriter, methodName string) {
+	writer.WriteHeader(405)
+	io.WriteString(writer, "HTTP method not supported:" + methodName)
 }
