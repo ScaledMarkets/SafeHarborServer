@@ -12,9 +12,10 @@ import (
 	"fmt"
 	//"errors"
 	//"bufio"
+	"io"
 	"io/ioutil"
 	"os"
-	//...."os/exec"
+	"os/exec"
 	"strconv"
 )
 
@@ -411,7 +412,7 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	
 	fmt.Println("addDockerfile handler")
 	
-	printMap(values)
+	//printMap(values)
 	//printFileMap(files)
 	
 	var headers []*multipart.FileHeader = files["filename"]
@@ -492,19 +493,20 @@ func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Va
 }
 
 /*******************************************************************************
- * Arguments: RepoId, DockerfileId
+ * Arguments: RepoId, DockerfileId, ImageName
  * Returns: ImageDesc
  */
- /*
-func buildDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
+func execDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
 	var repoId string
+	var err error
 	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	if repoId == "" { return NewFailureDesc("No HTTP parameter found for RepoId") }
 
 	// Identify the Dockerfile.
+	var dockerfileId string
 	dockerfileId, err = GetRequiredPOSTFieldValue(values, "DockerfileId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	if dockerfileId == "" { return NewFailureDesc("No HTTP parameter found for DockerfileId") }
@@ -512,11 +514,19 @@ func buildDockerfile(server *Server, sessionToken *SessionToken, values url.Valu
 	var dockerfile Dockerfile = dbClient.getDockerfile(dockerfileId)
 	var dockerfileName string = dockerfile.getName()
 
+	var imageName string
+	imageName, err = GetRequiredPOSTFieldValue(values, "ImageName")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if imageName == "" { return NewFailureDesc("No HTTP parameter found for ImageName") }
+	if ! localDockerImageNameIsValid(imageName) {
+		return NewFailureDesc(fmt.Sprintf("Image name '%s' is not valid - must be " +
+			"of format <name>[:<tag>]", imageName))
+	}
+
 	// Create a temporary directory to serve as the build context.
-	var fileMode FileMode = 0777
 	var tempDirName string
 	tempDirName, err = ioutil.TempDir("", "")
-	tempDirPath = os.TempDir() + "/" + tempDirName
+	var tempDirPath = os.TempDir() + "/" + tempDirName
 	defer os.RemoveAll(tempDirPath)
 
 	// Copy dockerfile to that directory.
@@ -527,41 +537,32 @@ func buildDockerfile(server *Server, sessionToken *SessionToken, values url.Valu
 	if err != nil { return NewFailureDesc(err.Error()) }
 	_, err = io.Copy(out, in)
 	if err != nil { return NewFailureDesc(err.Error()) }
-	err := out.Close()
+	err = out.Close()
 	if err != nil { return NewFailureDesc(err.Error()) }
 		
 	// Create a the docker build command.
 	// https://docs.docker.com/reference/commandline/build/
-    var cmd *exec.Cmd= exec.Command("docker", "build", dir, "--file=" + dockerfileName)
-    var stdout io.ReadCloser
-    var stderr io.ReadCloser
-    stdout, err = cmd.StdoutPipe()
-	if err != nil { return NewFailureDesc(err.Error()) }
-    stderr, err = cmd.StderrPipe()
-	if err != nil { return NewFailureDesc(err.Error()) }
+	// REPOSITORY                      TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
+	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
+	// Image id format: <hash>[:TAG]
+	
+    var cmd *exec.Cmd = exec.Command("docker", "build", tempDirPath,
+    	"--file=" + dockerfileName, "--tag=" + imageName)
 	
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
-	err = Chdir(tempDirPath)
+	err = os.Chdir(tempDirPath)
 	if err != nil { return NewFailureDesc(err.Error()) }
-	err = cmd.Start()
-	if err != nil { return NewFailureDesc(err.Error()) }
+	var cmderr error
+	_, cmderr = cmd.CombinedOutput()
+	if cmderr != nil { return NewFailureDesc(err.Error()) }
 	
-	// Retrieve the ids of the images that were created.
-	// To do this, we must parse the output, looking for the image ids that
-	// are output after each RUN command.
-	//....
+	// Add a record for the image to the database.
+	var image *InMemDockerImage
+	image, err = dbClient.dbCreateDockerImage(repoId, imageName)
 	
-	var imageDescs ImageDescs = make([]*ImageDesc, 1)
-	for each docker image dockerImageId created {
-	
-		// Add a record for the image to the database.
-		var image *InMemDockerImage = dbClient.dbCreateDockerImage(repoId, dockerImageId)
-		imageDescs.append(imageDescs, image.asImageDesc())
-	}
-	
-	return imageDescs
-}*/
+	return image.asDockerImageDesc()
+}
 
 /*******************************************************************************
  * Arguments: ImageId

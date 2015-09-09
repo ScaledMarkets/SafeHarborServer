@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"io"
 	"fmt"
-	//...."errors"
+	//"errors"
 )
 
 /*******************************************************************************
@@ -67,7 +67,7 @@ func NewDispatcher() *Dispatcher {
 		"getImages": getImages,
 		"addDockerfile": addDockerfile,
 		"replaceDockerfile": replaceDockerfile,
-		//...."buildDockerfile": buildDockerfile,
+		"execDockerfile": execDockerfile,
 		"downloadImage": downloadImage,
 		"setPermission": setPermission,
 		"addPermission": addPermission,

@@ -348,17 +348,34 @@ func (dockerfileDescs DockerfileDescs) asResponse() string {
 /*******************************************************************************
  * 
  */
-type ImageDesc struct {
+type DockerImageDesc struct {
 	BaseType
+	ImageName string
+	DockerImageId string
 }
 
-func (imageDesc *ImageDesc) asResponse() string {
+func NewDockerImageDesc(name string, dockerId string) *DockerImageDesc {
+	return &DockerImageDesc{
+		ImageName: name,
+		DockerImageId: dockerId,
+	}
+}
+
+func (imageDesc *DockerImageDesc) getImageName() string {
+	return imageDesc.ImageName
+}
+
+func (imageDesc *DockerImageDesc) getDockerImageId() string {
+	return imageDesc.DockerImageId
+}
+
+func (imageDesc *DockerImageDesc) asResponse() string {
 	return ""
 }
 
-type ImageDescs []*ImageDesc
+type DockerImageDescs []*DockerImageDesc
 
-func (imageDescs ImageDescs) asResponse() string {
+func (imageDescs DockerImageDescs) asResponse() string {
 	var response string = ""
 	var firstTime bool = true
 	for _, desc := range imageDescs {

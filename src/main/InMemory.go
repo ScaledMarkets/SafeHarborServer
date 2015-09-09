@@ -691,6 +691,10 @@ func (image *InMemDockerImage) getDockerImageId() string {
 	return image.DockerImageId
 }
 
+func (image *InMemDockerImage) asDockerImageDesc() *DockerImageDesc {
+	return NewDockerImageDesc(image.Name, image.DockerImageId)
+}
+
 
 /****************************** Utility Methods ********************************
  ******************************************************************************/

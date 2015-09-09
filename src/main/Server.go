@@ -200,7 +200,7 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 
 	fmt.Println("Dispatching request")
 	
-	if httpReq.Method != "POST" {  // dispatch to an error handler.
+	if strings.ToUpper(httpReq.Method) != "POST" {  // dispatch to an error handler.
 		respondMethodNotSupported(writer, httpReq.Method)
 		return
 	}
