@@ -21,4 +21,4 @@ vagrant ssh -c docker run $SafeHarborDockerImage \
 	--name SafeHarborServer
 	-p $SafeHarborPort:$SafeHarborPort \
 	-e $SafeHarborConfEnvVarName=$SafeHarborConfPath \
-	$SafeHarborExecPath
+	SafeHarborServer
