@@ -8,7 +8,7 @@ See https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wf
 
 ## To Deploy
 1. Go to the deploy/<target-OS> directory.
-2. Run vagrant up
+2. Run <code>vagrant up</code>
 3. Log into the server using vagrant ssh.
 4. Run make -f certs.mk
 5. Edit conf.json
