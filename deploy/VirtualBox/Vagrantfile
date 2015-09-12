@@ -2,26 +2,27 @@
 # This includes the Cesanta authorization server.
 # Note: This vagrantfile depends on the env variables defined in safeharbor.conf
 
-@vmboxurl = "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_centos-7.0_chef-provisionerless.box"
+# Standard settings - these should not need to change.
+@CesantaServerName = "docker_auth"
+@SafeHarborDir = "/home/vagrant/safeharbor"
+@SafeHarborServerName = "SafeHarbor"
+@SafeHarborExecutable = "SafeHarborServer"
 
+# Variables set by the environment.
+@vmboxurl = ENV['vmboxurl']
 @CesantaPort = ENV['CesantaPort']
 @CesantaConfDir = ENV['CesantaConfDir']
 @CesantaSSLDir = ENV['CesantaSSLDir']
-CesantaServerName = "docker_auth"
 @CesantaDockerImage = ENV['CesantaDockerImage']
-LocalPrivateKeyPath = $CesantaServerName.key
-LocalPemPath = $CesantaServerName.pem
-LocalCertPath = $CesantaServerName.crt
-
 @SafeHarborPort = ENV['SafeHarborPort']
-SafeHarborDir = "/home/vagrant/safeharbor"
-SafeHarborServerName = "SafeHarbor"
-SafeHarborExecutable="SafeHarborServer"
-@SafeHarborConfEnvVarName=ENV['SafeHarborConfEnvVarName']
 @SafeHarborConfPath = ENV['SafeHarborConfPath']
-#@SafeHarborDockerImage = ENV['SafeHarborDockerImage']....
-#SafeHarborPackageName= ....
-#@SafeHarborExecPath=ENV['SafeHarborExecPath']
+@SafeHarborDockerImage = ENV['SafeHarborDockerImage']
+@SafeHarborPackageName = ENV['SafeHarborPackageName']
+
+# Derived - do not change.
+@LocalPrivateKeyPath = "#{@CesantaServerName}.key"
+@LocalPemPath = "#{@CesantaServerName}.pem"
+@LocalCertPath = "#{@CesantaServerName}.crt"
 
 Vagrant.configure(2) do |config|
 
@@ -68,7 +69,7 @@ Vagrant.configure(2) do |config|
 		d.pull_images @CesantaDockerImage
 		
 		# Install the SafeHarborServer.
-		....
+		#....
 	end
 
 end

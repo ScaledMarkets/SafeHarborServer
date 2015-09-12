@@ -2,6 +2,10 @@
 
 source $(dirname $0)/safeharbor.conf
 
+# Name of the env variable that SafeHarborServer expects to be set to point to
+# the SafeHarborServer conf.json file.
+export SafeHarborConfEnvVarName=SAFEHARBOR_CONFIGURATION_PATH
+
 # Run the auth server
 vagrant ssh -c docker run $CesantaDockerImage \
 	--name CesantaAuthServer
