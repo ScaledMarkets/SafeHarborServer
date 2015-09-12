@@ -14,6 +14,7 @@ See https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wf
 5. Run <code>make -f certs.mk</code>
 6. Edit <code>conf.json</code>
 7. Edit <code>auth_config.yml</code>
+8. Log out of the server.
 
 ## To Start
 <code>./start.sh</code>
