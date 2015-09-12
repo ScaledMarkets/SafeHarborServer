@@ -3,8 +3,8 @@ Server that provides REST API for the SafeHarbor system.
 ## Design and REST API
 See https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
 ## To Build Code
-1. Go to the build/Centos directory.
-2. Run vagrant up
+1. Go to the <code>build/Centos</code> directory.
+2. Run <code>vagrant up</code>
 
 ## To Deploy
 1. Go to the <code>deploy/</code>(target-OS) directory.
