@@ -8,10 +8,10 @@ See https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wf
 
 ## To Deploy
 1. Go to the <code>deploy/</code>(target-OS) directory.
-2. Edit <code>safeharbor.conf</code>.
-3. Run <code>./deploy.sh</code>
-4. Log into the server using <code>vagrant ssh</code>.
-5. Run <code>make -f certs.mk</code>
+2. Run <code>make -f certs.mk</code>
+3. Edit <code>safeharbor.conf</code>.
+4. Run <code>./deploy.sh</code>
+5. Log into the server using <code>vagrant ssh</code>.
 6. Edit <code>conf.json</code>
 7. Edit <code>auth_config.yml</code>
 8. Log out of the server.
