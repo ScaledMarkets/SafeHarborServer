@@ -82,8 +82,8 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	config.AuthCertPath, exists = entries["AUTH_CERT_PATH"]
 	if ! exists { return nil, fmt.Errorf("Did not find AUTH_CERT_PATH in configuration") }
 	
-	config.AuthKeyPath, exists = entries["AUTH_KEY_PATH"]
-	if ! exists { return nil, fmt.Errorf("Did not find AUTH_KEY_PATH in configuration") }
+	config.AuthKeyPath, exists = entries["AUTH_PRIVATE_KEY_PATH"]
+	if ! exists { return nil, fmt.Errorf("Did not find AUTH_PRIVATE_KEY_PATH in configuration") }
 	
 	config.FileRepoRootPath, exists = entries["FILE_REPOSITORY_ROOT"]
 	if ! exists { return nil, fmt.Errorf("Did not find FILE_REPOSITORY_ROOT in configuration") }

@@ -61,7 +61,10 @@ func NewServer() *Server {
 	}
 	
 	// Verify that the file repository exists.
-	if ! fileExists(server.Config.FileRepoRootPath) { panic(err) }
+	if ! fileExists(server.Config.FileRepoRootPath) {
+		fmt.Println("Repository directory not found:", server.Config.FileRepoRootPath)
+		return nil
+	}
 	
 	server.dbClient = NewInMemClient(server)
 	
@@ -78,7 +81,7 @@ func NewServer() *Server {
 	}
 
 	// Instantiate a TCP socker listener.
-	fmt.Println("...Creating socket listener on port ", config.port, "...")
+	fmt.Println("...Creating socket listener on port", config.port, "...")
 	server.tcpListener, err = newTCPListener(config.ipaddr, config.port)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -266,7 +269,10 @@ func getConfiguration() (*Configuration, error) {
 	configurationPath := os.Getenv("SAFEHARBOR_CONFIGURATION_PATH")
 
 	if configurationPath == "" {
-		return nil, fmt.Errorf("configuration path unspecified")
+		configurationPath = "conf.json"  // try the default location
+		file, err := os.Open(configurationPath)
+		_, err = file.Stat()
+		if err != nil { return nil, fmt.Errorf("configuration path unspecified") }
 	}
 
 	var file *os.File

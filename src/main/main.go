@@ -7,12 +7,14 @@ package main
 
 import (
 	"fmt"
+	"os"
 )
 
 func main() {
 	
 	fmt.Println("Creating SafeHarbor server...")
 	var server *Server = NewServer()
+	if server == nil { os.Exit(1) }
 
 	// Temporary for testing - remove! ********************
 	var testRealm *InMemRealm

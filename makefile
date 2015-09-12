@@ -7,13 +7,6 @@ ORG=Scaled Markets
 VERSION=1.0
 BUILD=1234
 EXECNAME=SafeHarborServer
-CesantaServerName = docker_auth
-
-# Certificate related values:
-CesantaServerIPAddr = 127.0.0.1
-LocalKeyPath = $(CesantaServerName).key
-LocalPemPath = $(CesantaServerName).pem
-LocalCertPath = $(CesantaServerName).crt
 
 .DELETE_ON_ERROR:
 .ONESHELL:
@@ -46,34 +39,6 @@ $(build_dir)/$(EXECNAME): $(build_dir) $(src_dir)/main
 compile: $(build_dir)/$(EXECNAME)
 	@echo GOPATH=$(GOPATH)
 	go build -o $(build_dir)/$(EXECNAME) main
-
-cacert:
-	sudo openssl req -x509 -nodes -newkey rsa:2048 \
-		-keyout scaledmarkets.key -out scaledmarkets.pem
-	sudo openssl x509 -outform der -in scaledmarkets.pem -out scaledmarkets.crt
-
-# This is needed because if a TLS server is identified by IP address, then that
-# IP address must be defined in the cert as a Subject Alternative Name (SAN).
-extfile: extfile.cnf
-	(echo subjectAltName = IP:$(CesantaServerIPAddr)) > extfile.cnf
-
-# 'make authcert' will make all requied certs. The user will be prompted for values.
-# https://stackoverflow.com/questions/22666163/golang-tls-with-selfsigned-certificate
-# https://serverfault.com/questions/611120/failed-tls-handshake-does-not-contain-any-ip-sans
-# https://github.com/elastic/logstash-forwarder/issues/221
-# Note: On Mac, openssl.cnf is in /System/Library/OpenSSL
-authcert: extfile.cnf scaledmarkets.key scaledmarkets.pem
-	sudo openssl req -nodes -keyout $(LocalKeyPath) -out req.pem -newkey rsa:2048
-	sudo openssl x509 -req -days 365 -in req.pem -out $(LocalPemPath) \
-		-CA scaledmarkets.pem -CAkey scaledmarkets.key -CAcreateserial \
-		-extfile extfile.cnf
-	sudo openssl x509 -outform der -in $(LocalPemPath) -out $(LocalCertPath)
-	sudo chmod 740 $(LocalKeyPath)
-	sudo chmod 740 $(LocalPemPath)
-	# use 'password' as PEM passphrase.
-
-showcert:
-	openssl x509 -in $(LocalPemPath) -noout -text
 
 clean:
 	rm -r -f $(build_dir)
