@@ -8,7 +8,7 @@ See https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wf
 
 ## To Deploy
 1. Go to the <code>deploy/</code>(target-OS) directory.
-2. Run <code>make -f certs.mk</code>
+2. Run <code>make -f ../../certs.mk</code>
 3. Edit <code>safeharbor.conf</code>.
 4. Run <code>./deploy.sh</code>
 5. Log into the server using <code>vagrant ssh</code>.
