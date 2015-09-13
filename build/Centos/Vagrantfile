@@ -1,13 +1,15 @@
 # Build the box in which SafeHarborServer is compiled for Centos.
 # This box is not part of the deployment.
 
+@vmboxname = "Opscode centos-7.0"
 @vmboxurl = "http://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_centos-7.0_chef-provisionerless.box"
 
 Vagrant.configure(2) do |config|
 
 	# Configure the OS.
-	config.vm.box = "SafeHarborCentosBuildBox"
+	config.vm.box = @vmboxname
 	config.vm.box_url = @vmboxurl
+	config.vm.hostname = "SafeHarborCentosBuildBox"
 	
 	# Install the go tools.
 	config.vm.provision "shell", inline: <<-SHELL

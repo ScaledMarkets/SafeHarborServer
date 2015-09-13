@@ -7,18 +7,28 @@ source $(dirname $0)/safeharbor.conf
 export SafeHarborConfEnvVarName=SAFEHARBOR_CONFIGURATION_PATH
 
 # Run the auth server
-vagrant ssh -c docker run $CesantaDockerImage \
-	--name CesantaAuthServer
+vagrant ssh -c "docker run \
+	--name docker_auth \
+	--rm \
+	--restart=always \
 	-p $CesantaPort:$CesantaPort \
 	-v /var/log/docker_auth:/logs \
 	-v $CesantaConfDir:/config:ro \
 	-v $CesantaSSLDir:/ssl \
 	--restart=always \
-	/config/auth_config.yml
-		
+	$CesantaDockerImage /config/auth_config.yml" &
+
+#echo Auth server started in container
+
 # Run the SafeHarborServer.
-vagrant ssh -c docker run $SafeHarborDockerImage \
-	--name SafeHarborServer
+vagrant ssh -c "docker run \
+	--name SafeHarborServer \
+	--rm \
+	--restart=always \
 	-p $SafeHarborPort:$SafeHarborPort \
+	-v /home/vagrant/safeharbor:/safeharbor \
 	-e $SafeHarborConfEnvVarName=$SafeHarborConfPath \
-	SafeHarborServer
+	-w /safeharbor \
+	$SafeHarborDockerImage /safeharbor/SafeHarborServer" &
+
+echo SafeHarborServer started in container
