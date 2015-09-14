@@ -36,7 +36,7 @@ Vagrant.configure(2) do |config|
 		cp SafeHarborServer/*.example package
 		cp SafeHarborServer/certs.mk package
 		cp SafeHarborServer/scaledmarkets.crt package
-		yum install zip
+		sudo yum install zip
 		cd package; zip safeharborserver *
 		mv safeharborserver.zip /vagrant
 	SHELL

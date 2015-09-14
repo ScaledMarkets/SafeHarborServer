@@ -112,9 +112,36 @@ func (server *Server) start() {
 }
 
 /*******************************************************************************
- * 
+ * Gracefully stop the server. No work in progress is aborted.
  */
 func (server *Server) stop() {
+	fmt.Println("...Stopping service...")
+	server.stopAcceptingRequests()
+	server.waitUntilNoRequestsInProgress()
+	fmt.Println("...stop.")
+	os.Exit(0)
+}
+
+/*******************************************************************************
+ * 
+ */
+func (server *Server) stopAcceptingRequests() {
+	// Set flag for dispatcher that no more requests should be accepted.
+	// ....
+}
+
+/*******************************************************************************
+ * Blocks until the set of dispatched requests is empty.
+ */
+func (server *Server) waitUntilNoRequestsInProgress() {
+	// ....
+}
+
+/*******************************************************************************
+ * 
+ */
+func (server *Server) resumeAcceptingRequests() {
+	// ....
 }
 
 /*******************************************************************************

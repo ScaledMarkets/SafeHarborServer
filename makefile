@@ -1,5 +1,6 @@
 # Makefile for building the Safe Harbor Server.
 # This does not deploy any servers: it merely complies and packages the code.
+# Testing is not done by this makefile - see separate project "TestSafeHarborServer".
 
 
 PRODUCTNAME=Safe Harbor Server
