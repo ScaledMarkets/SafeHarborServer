@@ -10,7 +10,6 @@ export SafeHarborConfEnvVarName=SAFEHARBOR_CONFIGURATION_PATH
 vagrant ssh -c "docker run \
 	--name docker_auth \
 	--detach \
-	--rm \
 	--restart=always \
 	-p $CesantaPort:$CesantaPort \
 	-v /var/log/docker_auth:/logs \
@@ -23,7 +22,6 @@ vagrant ssh -c "docker run \
 vagrant ssh -c "docker run \
 	--name SafeHarborServer \
 	--detach \
-	--rm \
 	--restart=always \
 	-p $SafeHarborPort:$SafeHarborPort \
 	-v /home/vagrant/safeharbor:/safeharbor \
