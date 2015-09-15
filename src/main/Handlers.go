@@ -20,6 +20,18 @@ import (
 )
 
 /*******************************************************************************
+ * Arguments: (none)
+ * Returns: Result
+ */
+func ping(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	return &Result{
+		Status: 200,
+		Message: "Server is up",
+	}
+}
+
+/*******************************************************************************
  * Arguments: Credentials
  * Returns: SessionToken
  */

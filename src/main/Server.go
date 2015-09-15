@@ -230,45 +230,52 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 
 	fmt.Println("Dispatching request")
 	
-	if strings.ToUpper(httpReq.Method) != "POST" {  // dispatch to an error handler.
+	var err error
+	var httpMethod string = strings.ToUpper(httpReq.Method)
+	var reqName string = strings.Trim(httpReq.URL.Path, "/ ")
+	var headers http.Header = httpReq.Header  // map[string][]string
+	var values url.Values
+	var files map[string][]*multipart.FileHeader = nil
+	
+	if httpMethod == "GET" {
+		
+		if err = httpReq.ParseForm(); err != nil { panic(err) }
+		values = httpReq.Form  // map[string]string
+		
+	} else if httpMethod == "POST" {  // dispatch to an error handler.
+	
+		// Authorization for a request should be performed using only the intersection
+		// of the authority of the user and the requesting origin(s). 
+		// Thus, if the request origin is the SafeHarbor Web App origin, we merely
+		// need to authorize the user; otherwise, we deny. In the future we should
+		// allow users to register trusted origins.
+		
+		if err = httpReq.ParseForm(); err != nil { panic(err) }
+		values = httpReq.PostForm  // map[string]string
+		
+		// Check if the POST is multipart/form-data.
+		// https://golang.org/pkg/net/http/#Request.MultipartReader
+		// http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4
+		var mpReader *multipart.Reader
+		mpReader, err = httpReq.MultipartReader()
+		if mpReader != nil { // has multipart data
+			// We require all multipart requests to include one (and only one) file part.
+			fmt.Println("has multipart data...")
+			
+			// https://golang.org/pkg/mime/multipart/#Reader.ReadForm
+			var form *multipart.Form
+			form, err = mpReader.ReadForm(10000)
+			if err != nil { panic(err) }
+			
+			values = form.Value
+			files = form.File
+		}
+
+	} else {
 		respondMethodNotSupported(writer, httpReq.Method)
 		return
 	}
-	
-	// Retrieve the request name from the HTTP request.
-	var reqName string = strings.Trim(httpReq.URL.Path, "/ ")
-	var err error
-	
-	// Authorization for a request should be performed using only the intersection
-	// of the authority of the user and the requesting origin(s). 
-	// Thus, if the request origin is the SafeHarbor Web App origin, we merely
-	// need to authorize the user; otherwise, we deny. In the future we should
-	// allow users to register trusted origins.
-	
-	var headers http.Header = httpReq.Header  // map[string][]string
-	
-	if err = httpReq.ParseForm(); err != nil { panic(err) }
-	var values url.Values = httpReq.PostForm  // map[string]string
-	var files map[string][]*multipart.FileHeader = nil
-	
-	// Check if the POST is multipart/form-data.
-	// https://golang.org/pkg/net/http/#Request.MultipartReader
-	// http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4
-	var mpReader *multipart.Reader
-	mpReader, err = httpReq.MultipartReader()
-	if mpReader != nil { // has multipart data
-		// We require all multipart requests to include one (and only one) file part.
-		fmt.Println("has multipart data...")
-		
-		// https://golang.org/pkg/mime/multipart/#Reader.ReadForm
-		var form *multipart.Form
-		form, err = mpReader.ReadForm(10000)
-		if err != nil { panic(err) }
-		
-		values = form.Value
-		files = form.File
-	}
-	
+
 	fmt.Println("Calling handleRequest")
 	server.dispatcher.handleRequest(sessionToken, headers, writer, reqName, values, files)
 }

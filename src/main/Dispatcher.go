@@ -40,6 +40,7 @@ func NewDispatcher() *Dispatcher {
 	// Map of REST request names to handler functions. These functions are all
 	// defined in Handlers.go.
 	hdlrs := map[string]ReqHandlerFuncType{
+		"ping": ping,
 		"authenticate": authenticate,
 		"logout": logout,
 		"createUser": createUser,
