@@ -29,6 +29,15 @@ type InMemClient struct {
 }
 
 func NewInMemClient(server *Server) *InMemClient {
+	
+	// Remove the file repository - this is an in-memory implementation so we
+	// want to start empty.
+	var err error = os.RemoveAll(server.Config.FileRepoRootPath)
+	
+	// Recreate the file repository, but empty.
+	os.mkdir(server.Config.FileRepoRootPath, 0770)
+	
+	// Create and return a new InMemClient.
 	return &InMemClient{
 		Server: server,
 	}

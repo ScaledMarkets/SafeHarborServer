@@ -25,6 +25,8 @@ import (
  */
 func ping(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	fmt.Println("ping request received")
 	return &Result{
 		Status: 200,
 		Message: "Server is up",
@@ -536,9 +538,8 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	}
 
 	// Create a temporary directory to serve as the build context.
-	var tempDirName string
-	tempDirName, err = ioutil.TempDir("", "")
-	var tempDirPath = os.TempDir() + "/" + tempDirName
+	var tempDirPath string
+	tempDirPath, err = ioutil.TempDir("", "")
 	defer os.RemoveAll(tempDirPath)
 
 	// Copy dockerfile to that directory.
