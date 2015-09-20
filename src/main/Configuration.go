@@ -86,7 +86,7 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	if ! exists { return nil, fmt.Errorf("Did not find AUTH_PRIVATE_KEY_PATH in configuration") }
 	
 	config.FileRepoRootPath, exists = entries["FILE_REPOSITORY_ROOT"]
-	if ! exists { config.FileRepoRootPath = "Repository" ) }
+	if ! exists { config.FileRepoRootPath = "Repository" }
 	config.FileRepoRootPath = strings.TrimRight(config.FileRepoRootPath, "/ ")
 	
 	fmt.Println("Configuration values obtained")

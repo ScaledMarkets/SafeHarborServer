@@ -33,9 +33,10 @@ func NewInMemClient(server *Server) *InMemClient {
 	// Remove the file repository - this is an in-memory implementation so we
 	// want to start empty.
 	var err error = os.RemoveAll(server.Config.FileRepoRootPath)
+	if err != nil { fmt.Println(err.Error()) }
 	
 	// Recreate the file repository, but empty.
-	os.mkdir(server.Config.FileRepoRootPath, 0770)
+	os.Mkdir(server.Config.FileRepoRootPath, 0770)
 	
 	// Create and return a new InMemClient.
 	return &InMemClient{
