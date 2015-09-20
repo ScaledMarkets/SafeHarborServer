@@ -513,6 +513,8 @@ func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Va
 func execDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
+	fmt.Println("Entered execDockerfile")
+	
 	var repoId string
 	var err error
 	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
@@ -527,6 +529,7 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	var dbClient = server.dbClient
 	var dockerfile Dockerfile = dbClient.getDockerfile(dockerfileId)
 	var dockerfileName string = dockerfile.getName()
+	fmt.Println("Dockerfile name =", dockerfileName)
 
 	var imageName string
 	imageName, err = GetRequiredPOSTFieldValue(values, "ImageName")
@@ -536,11 +539,13 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 		return NewFailureDesc(fmt.Sprintf("Image name '%s' is not valid - must be " +
 			"of format <name>[:<tag>]", imageName))
 	}
+	fmt.Println("Image name =", imageName)
 
 	// Create a temporary directory to serve as the build context.
 	var tempDirPath string
 	tempDirPath, err = ioutil.TempDir("", "")
 	defer os.RemoveAll(tempDirPath)
+	fmt.Println("Temp directory = ", tempDirPath)
 
 	// Copy dockerfile to that directory.
 	var in, out *os.File
@@ -552,6 +557,7 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	if err != nil { return NewFailureDesc(err.Error()) }
 	err = out.Close()
 	if err != nil { return NewFailureDesc(err.Error()) }
+	fmt.Println("Copied Dockerfile to temp directory")
 		
 	// Create a the docker build command.
 	// https://docs.docker.com/reference/commandline/build/
@@ -569,10 +575,12 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	var cmderr error
 	_, cmderr = cmd.CombinedOutput()
 	if cmderr != nil { return NewFailureDesc(err.Error()) }
+	fmt.Println("Performed docker command")
 	
 	// Add a record for the image to the database.
 	var image *InMemDockerImage
 	image, err = dbClient.dbCreateDockerImage(repoId, imageName)
+	fmt.Println("Created docker image object")
 	
 	return image.asDockerImageDesc()
 }
