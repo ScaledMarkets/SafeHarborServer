@@ -325,7 +325,7 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	// Perform a Lynis scan.
 	// https://cisofy.com/lynis/
 	// https://cisofy.com/lynis/plugins/docker-containers/
-
+	// /usr/local/lynis/lynis -c --checkupdate --quiet --auditor "SafeHarbor" > ....
 
 	return nil
 }
@@ -559,19 +559,20 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Copied Dockerfile to temp directory")
 		
+	err = os.Chdir(tempDirPath)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
 	// Create a the docker build command.
 	// https://docs.docker.com/reference/commandline/build/
 	// REPOSITORY                      TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
 	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
 	// Image id format: <hash>[:TAG]
 	
-    var cmd *exec.Cmd = exec.Command("docker", "build", tempDirPath,
+    var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "build", tempDirPath,
     	"--file=" + dockerfileName, "--tag=" + imageName)
 	
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
-	err = os.Chdir(tempDirPath)
-	if err != nil { return NewFailureDesc(err.Error()) }
 	var cmderr error
 	_, cmderr = cmd.CombinedOutput()
 	if cmderr != nil { return NewFailureDesc(err.Error()) }
