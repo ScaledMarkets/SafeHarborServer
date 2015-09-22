@@ -565,7 +565,7 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	
 	var cmd *exec.Cmd
 	
-	cmd = exec.Command("echo Hi")
+	cmd = exec.Command("echo", "Hi")
 	err = cmd.Start()
 	if err == nil {
 		err = cmd.Wait()
