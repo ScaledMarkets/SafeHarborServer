@@ -592,7 +592,10 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
 	var cmderr error
-	_, cmderr = cmd.CombinedOutput()
+	cmderr = cmd.Start()
+	//_, cmderr = cmd.CombinedOutput()
+	if cmderr != nil { return NewFailureDesc(err.Error()) }
+	cmderr = cmd.Wait()
 	if cmderr != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Performed docker command")
 	
