@@ -568,8 +568,8 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
 	// Image id format: <hash>[:TAG]
 	
-    var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "build", tempDirPath,
-    	"--file=" + dockerfileName, "--tag=" + imageName)
+    var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "build",
+    	"--file=" + dockerfileName, "--tag=" + imageName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
