@@ -562,13 +562,31 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	err = os.Chdir(tempDirPath)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
+	
+	var cmd *exec.Cmd
+	
+	cmd = exec.Command("echo Hi")
+	err = cmd.Start()
+	if err == nil {
+		err = cmd.Wait()
+		if err == nil {
+			fmt.Println("Finished echo")
+		} else {
+			fmt.Println("After Wait", err.Error())
+		}
+	} else {
+		fmt.Println("After Start,", err.Error())
+	}
+	
+	
+	
 	// Create a the docker build command.
 	// https://docs.docker.com/reference/commandline/build/
 	// REPOSITORY                      TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
 	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
 	// Image id format: <hash>[:TAG]
 	
-    var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "build",
+    cmd = exec.Command("/usr/bin/docker", "build",
     	"--file=" + dockerfileName, "--tag=" + imageName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
