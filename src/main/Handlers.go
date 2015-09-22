@@ -593,16 +593,18 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	// This initiates processing of the dockerfile.
 	var cmderr error
 	cmderr = cmd.Start()
+	fmt.Println("Started processing dockerfile...")
 	//_, cmderr = cmd.CombinedOutput()
 	if cmderr != nil { return NewFailureDesc(err.Error()) }
 	cmderr = cmd.Wait()
+	fmt.Println("...finished processing dockerfile.")
 	if cmderr != nil { return NewFailureDesc(err.Error()) }
-	fmt.Println("Performed docker command")
+	fmt.Println("Performed docker command successfully.")
 	
 	// Add a record for the image to the database.
 	var image *InMemDockerImage
 	image, err = dbClient.dbCreateDockerImage(repoId, imageName)
-	fmt.Println("Created docker image object")
+	fmt.Println("Created docker image object.")
 	
 	return image.asDockerImageDesc()
 }
