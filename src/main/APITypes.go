@@ -370,7 +370,8 @@ func (imageDesc *DockerImageDesc) getDockerImageId() string {
 }
 
 func (imageDesc *DockerImageDesc) asResponse() string {
-	return ""
+	return fmt.Sprintf("ImageName=%s\r\nDockerImageId=%s\r\n",
+		imageDesc.ImageName, imageDesc.DockerImageId)
 }
 
 type DockerImageDescs []*DockerImageDesc
