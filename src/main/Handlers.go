@@ -598,7 +598,7 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	//if err != nil { return NewFailureDesc(err.Error()) }
 	//err = cmd.Wait()
 	fmt.Println("...finished processing dockerfile.")
-	fmt.Println(output)
+	fmt.Println(string(output))
 	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Performed docker command successfully.")
 	
