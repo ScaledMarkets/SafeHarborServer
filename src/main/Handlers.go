@@ -587,16 +587,18 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	// Image id format: <hash>[:TAG]
 	
     cmd = exec.Command("/usr/bin/docker", "build",
-    	"--file=" + dockerfileName, "--tag=" + imageName, tempDirPath)
+    	"--file", dockerfileName, "--tag", imageName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
-	err = cmd.Start()
-	fmt.Println("Started processing dockerfile...")
-	//_, cmderr = cmd.CombinedOutput()
-	if err != nil { return NewFailureDesc(err.Error()) }
-	err = cmd.Wait()
+	//err = cmd.Start()
+	var output []byte
+	output, err = cmd.CombinedOutput()
+	//fmt.Println("Started processing dockerfile...")
+	//if err != nil { return NewFailureDesc(err.Error()) }
+	//err = cmd.Wait()
 	fmt.Println("...finished processing dockerfile.")
+	fmt.Println(output)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Performed docker command successfully.")
 	
