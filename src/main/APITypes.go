@@ -350,19 +350,15 @@ func (dockerfileDescs DockerfileDescs) asResponse() string {
  */
 type DockerImageDesc struct {
 	BaseType
-	ImageName string
+	ObjId string
 	DockerImageId string
 }
 
-func NewDockerImageDesc(name string, dockerId string) *DockerImageDesc {
+func NewDockerImageDesc(objId string, dockerId string) *DockerImageDesc {
 	return &DockerImageDesc{
-		ImageName: name,
+		ObjId: objId,
 		DockerImageId: dockerId,
 	}
-}
-
-func (imageDesc *DockerImageDesc) getImageName() string {
-	return imageDesc.ImageName
 }
 
 func (imageDesc *DockerImageDesc) getDockerImageId() string {
@@ -370,8 +366,8 @@ func (imageDesc *DockerImageDesc) getDockerImageId() string {
 }
 
 func (imageDesc *DockerImageDesc) asResponse() string {
-	return fmt.Sprintf("ImageName=%s\r\nDockerImageId=%s\r\n",
-		imageDesc.ImageName, imageDesc.DockerImageId)
+	return fmt.Sprintf("ObjId=%s\r\nDockerImageId=%s\r\n",
+		imageDesc.ObjId, imageDesc.DockerImageId)
 }
 
 type DockerImageDescs []*DockerImageDesc

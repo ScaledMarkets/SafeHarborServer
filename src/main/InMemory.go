@@ -640,7 +640,7 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() *DockerfileDesc {
  */
 type InMemDockerImage struct {
 	InMemPersistObj
-	Name string
+	//Name string
 	RepoId string
 	ACLId string
 	DockerImageId string  // id in the local docker repo
@@ -669,9 +669,9 @@ func (client *InMemClient) dbCreateDockerImage(repoId string,
 //	return image.Id
 //}
 
-func (image *InMemDockerImage) getName() string {
-	return image.Name
-}
+//func (image *InMemDockerImage) getName() string {
+//	return image.Name
+//}
 
 func (client *InMemClient) getDockerImage(id string) DockerImage {
 	var image DockerImage
@@ -702,7 +702,7 @@ func (image *InMemDockerImage) getDockerImageId() string {
 }
 
 func (image *InMemDockerImage) asDockerImageDesc() *DockerImageDesc {
-	return NewDockerImageDesc(image.Name, image.DockerImageId)
+	return NewDockerImageDesc(image.Id, image.DockerImageId)
 }
 
 
