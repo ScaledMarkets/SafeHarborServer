@@ -88,6 +88,10 @@ func NewServer() *Server {
 		os.Exit(1);
 	}
 	
+	// Verify that the docker daemon is running, and start it if not.
+	// sudo service docker start
+	// ....
+	
 	
 	//....To do: Install a ^C signal handler, to gracefully shut down.
 	//....To do: Ensure that request handlers are re-entrant (or guarded re-entrant).

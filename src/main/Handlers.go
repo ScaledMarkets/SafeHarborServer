@@ -584,7 +584,15 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	fmt.Println("...finished processing dockerfile.")
 	fmt.Println(outputStr)
 	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
-	fmt.Println("Performed docker command successfully.")
+	fmt.Println("Performed docker build command successfully.")
+	
+	var imageId string = parseImageIdFromDockerBuildOutput(outputStr)
+	if imageId == "" { return NewFailureDesc("No image produced") }
+	cmd = exec.Command("/usr/bin/docker", "tag", imageId, imageName)
+	output, err = cmd.CombinedOutput()
+	outputStr = string(output)
+	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
+	fmt.Println("Tagged docker image successfully.")
 	
 	// Add a record for the image to the database.
 	var image *InMemDockerImage

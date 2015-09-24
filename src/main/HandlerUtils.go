@@ -134,3 +134,19 @@ func localDockerImageNameIsValid(name string) bool {
 	
 	return true
 }
+
+/*******************************************************************************
+ * Parse the output of a docker build command and return the ID of the image
+ * that was created at the end. If none found, return "".
+ */
+func parseImageIdFromDockerBuildOutput(outputStr string) string {
+	var lines []string = strings.Split(outputStr, "\n")
+	for i := len(lines)-1; i >= 0; i-- {
+		var parts = strings.Split(lines[i], " ")
+		if len(parts) != 3 { continue }
+		if parts[0] != "Successfully" { continue }
+		if parts[1] != "built" { continue }
+		return strings.Trim(parts[2], " \r")
+	}
+	return ""
+}
