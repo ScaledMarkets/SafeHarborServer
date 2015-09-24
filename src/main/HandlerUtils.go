@@ -150,3 +150,14 @@ func parseImageIdFromDockerBuildOutput(outputStr string) string {
 	}
 	return ""
 }
+
+/*******************************************************************************
+ * Check that repository name component matches "[a-z0-9]+(?:[._-][a-z0-9]+)*".
+ * I.e., first char is a-z or 0-9, and remaining chars (if any) are those or
+ * a period, underscore, or dash.
+ */
+func nameConformsToDockerRules(name string) bool {
+	var a = strings.TrimLeft(name, "abcdefghijklmnopqrstuvwxyz0123456789")
+	var b = strings.TrimRight(a, "abcdefghijklmnopqrstuvwxyz0123456789._-")
+	return len(b) == 0
+}

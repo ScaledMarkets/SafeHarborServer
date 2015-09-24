@@ -540,7 +540,12 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 			"of format <name>[:<tag>]", imageName))
 	}
 	fmt.Println("Image name =", imageName)
-
+	
+	// Verify that the image name conforms to Docker's requirements.
+	if ! nameConformsToDockerRules(imageName) {
+		return NewFailureDesc("Name '" + imageName + "' does not match docker's rules: [a-z0-9]+(?:[._-][a-z0-9]+)*")
+	}
+	
 	// Create a temporary directory to serve as the build context.
 	var tempDirPath string
 	tempDirPath, err = ioutil.TempDir("", "")
@@ -569,8 +574,8 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	// Image id format: <hash>[:TAG]
 	
 	var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "build",
-    	"--file", dockerfileName, tempDirPath)
-    	//"--file", dockerfileName, "--tag", imageName, tempDirPath)
+    	//"--file", dockerfileName, tempDirPath)
+    	"--file", dockerfileName, "--tag", imageName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
@@ -586,14 +591,14 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
 	fmt.Println("Performed docker build command successfully.")
 	
-	var imageId string = parseImageIdFromDockerBuildOutput(outputStr)
-	if imageId == "" { return NewFailureDesc("No image produced") }
-	cmd = exec.Command("/usr/bin/docker", "tag", imageId, imageName)
-	fmt.Println("Tagging image", imageId, "with name", imageName)
-	output, err = cmd.CombinedOutput()
-	outputStr = string(output)
-	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
-	fmt.Println("Tagged docker image successfully.")
+//	var imageId string = parseImageIdFromDockerBuildOutput(outputStr)
+//	if imageId == "" { return NewFailureDesc("No image produced") }
+//	cmd = exec.Command("/usr/bin/docker", "tag", imageId, imageName)
+//	fmt.Println("Tagging image", imageId, "with name", imageName)
+//	output, err = cmd.CombinedOutput()
+//	outputStr = string(output)
+//	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
+//	fmt.Println("Tagged docker image successfully.")
 	
 	// Add a record for the image to the database.
 	var image *InMemDockerImage
