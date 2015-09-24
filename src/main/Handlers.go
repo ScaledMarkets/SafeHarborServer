@@ -589,6 +589,7 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	var imageId string = parseImageIdFromDockerBuildOutput(outputStr)
 	if imageId == "" { return NewFailureDesc("No image produced") }
 	cmd = exec.Command("/usr/bin/docker", "tag", imageId, imageName)
+	fmt.Println("Tagging image", imageId, "with name", imageName)
 	output, err = cmd.CombinedOutput()
 	outputStr = string(output)
 	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
