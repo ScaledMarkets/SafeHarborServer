@@ -92,6 +92,9 @@ func NewServer() *Server {
 	// sudo service docker start
 	// ....
 	
+	// Verify that system has python 2.
+	// ....
+	
 	
 	//....To do: Install a ^C signal handler, to gracefully shut down.
 	//....To do: Ensure that request handlers are re-entrant (or guarded re-entrant).

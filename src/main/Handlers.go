@@ -321,7 +321,9 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
 
-
+	// https://github.com/baude/image-scanner
+	// https://github.com/baude
+	
 	// Perform a Lynis scan.
 	// https://cisofy.com/lynis/
 	// https://cisofy.com/lynis/plugins/docker-containers/
@@ -574,31 +576,17 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	// Image id format: <hash>[:TAG]
 	
 	var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "build",
-    	//"--file", dockerfileName, tempDirPath)
     	"--file", dockerfileName, "--tag", imageName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
-	//err = cmd.Start()
 	var output []byte
 	output, err = cmd.CombinedOutput()
 	var outputStr string = string(output)
-	//fmt.Println("Started processing dockerfile...")
-	//if err != nil { return NewFailureDesc(err.Error()) }
-	//err = cmd.Wait()
 	fmt.Println("...finished processing dockerfile.")
 	fmt.Println(outputStr)
 	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
 	fmt.Println("Performed docker build command successfully.")
-	
-//	var imageId string = parseImageIdFromDockerBuildOutput(outputStr)
-//	if imageId == "" { return NewFailureDesc("No image produced") }
-//	cmd = exec.Command("/usr/bin/docker", "tag", imageId, imageName)
-//	fmt.Println("Tagging image", imageId, "with name", imageName)
-//	output, err = cmd.CombinedOutput()
-//	outputStr = string(output)
-//	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
-//	fmt.Println("Tagged docker image successfully.")
 	
 	// Add a record for the image to the database.
 	var image *InMemDockerImage
