@@ -9,15 +9,25 @@ package main
 import (
 )
 
-type Client interface {
-	CreateGroup() Group
-	CreateUser() User
-	CreateACLEntry() ACLEntry
-	CreateACL() ACL
-	CreateRealm() Realm
-	CreateRepo() Repo
-	CreateDockerfile() Dockerfile
-	CreateDockerImage() DockerImage
+type DBClient interface {
+	dbCreateGroup(string, string) (Group, error)
+	dbCreateUser(string, string, string) (User, error)
+	dbCreateACLEntry(string, string, []bool) (ACLEntry, error)
+	dbCreateACL(string) (ACL, error)
+	dbCreateRealm(*RealmInfo) (Realm, error)
+	dbCreateRepo(string, string) (Repo, error)
+	dbCreateDockerfile(string, string, string) (Dockerfile, error)
+	dbCreateDockerImage(string, string) (DockerImage, error)
+	dbGetAllRealmIds() []string
+	getGroup(string) Group
+	getUser(string) User
+	getACLEntry(string) ACLEntry
+	getACL(string) ACL
+	getRealm(string) Realm
+	getRepo(string) Repo
+	getDockerfile(string) Dockerfile
+	getDockerImage(string) DockerImage
+	init()
 }
 
 type PersistObj interface {
@@ -31,6 +41,7 @@ type Group interface {
 	getUserObjIds() []string
 	hasUserWithId(string) bool
 	addUser(string) error
+	asGroupDesc() *GroupDesc
 }
 
 type User interface {
@@ -92,6 +103,6 @@ type Dockerfile interface {
 
 type DockerImage interface {
 	Resource
-	getDockerImageId()
+	getDockerImageId() string
 	asDockerImageDesc() *DockerImageDesc
 }

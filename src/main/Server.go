@@ -27,7 +27,7 @@ type Server struct {
 	Config *Configuration
 	httpServer *http.Server
 	tcpListener net.Listener
-	dbClient *InMemClient
+	dbClient DBClient
 	http.Handler
 	certPool *x509.CertPool
 	authService *AuthService

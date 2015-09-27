@@ -57,32 +57,49 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 	if ! strings.HasPrefix(containers, "Error") {
 		return NewFailureDesc(containers)
 	}
+	fmt.Println("Containers are:")
+	fmt.Println(containers)
+	
 	cmd = exec.Command("/usr/bin/docker", "kill", containers)
 	output, _ = cmd.CombinedOutput()
 	var outputStr string = string(output)
 	if ! strings.HasPrefix(outputStr, "Error") {
 		return NewFailureDesc(outputStr)
 	}
+	fmt.Println("All containers were signalled to stop")
+	
 	cmd = exec.Command("/usr/bin/docker", "rm", containers)
 	output, _ = cmd.CombinedOutput()
 	outputStr = string(output)
 	if ! strings.HasPrefix(outputStr, "Error") {
 		return NewFailureDesc(outputStr)
 	}
+	fmt.Println("All containers were removed")
 	
-	// Remove all docker images.
-	// docker rmi $(docker list images -a -q)
-	cmd = exec.Command("/usr/bin/docker", "list", "images", "-a", "-q")
-	output, _ = cmd.CombinedOutput()
-	var images string = string(output)
-	if ! strings.HasPrefix(images, "Error") {
-		return NewFailureDesc(images)
-	}
-	cmd = exec.Command("/usr/bin/docker", "rmi", images)
-	output, _ = cmd.CombinedOutput()
-	outputStr = string(output)
-	if ! strings.HasPrefix(outputStr, "Error") {
-		return NewFailureDesc(outputStr)
+	// Remove all of the docker images that were created by SafeHarborServer.
+	var dbClient DBClient = server.dbClient
+	for _, realmId := range dbClient.dbGetAllRealmIds() {
+		var realm Realm = dbClient.getRealm(realmId)
+		
+		for _, repoId := range realm.getRepoIds() {
+			var repo Repo = dbClient.getRepo(repoId)
+			
+			for _, imageId := range repo.getDockerImageIds() {
+				
+				var image DockerImage = dbClient.getDockerImage(imageId)
+				var imageName string = image.getName()
+				
+				// Remove the image.
+				cmd = exec.Command("/usr/bin/docker", "rmi", imageName)
+				output, _ = cmd.CombinedOutput()
+				outputStr = string(output)
+				if ! strings.HasPrefix(outputStr, "Error") {
+					return NewFailureDesc(
+						"While removing image " + imageName + ": " + outputStr)
+				}
+				fmt.Println("Removed image", imageName)
+			}
+		}
 	}
 	
 	// Remove and re-create the repository directory.
@@ -144,12 +161,12 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	var userId string = userInfo.UserId
 	var userName string = userInfo.UserName
 	var realmId string = userInfo.RealmId
-	var newUser *InMemUser
+	var newUser User
 	newUser, err = server.dbClient.dbCreateUser(userId, userName, realmId)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	return &UserDesc{
-		Id: newUser.Id,
+		Id: newUser.getId(),
 		UserId: userId,
 		UserName: userName,
 		RealmId: realmId,
@@ -190,7 +207,7 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	groupName, err = GetRequiredPOSTFieldValue(values, "Name")
 	if err != nil { return NewFailureDesc(err.Error()) }
 
-	var group *InMemGroup
+	var group Group
 	group, err = server.dbClient.dbCreateGroup(realmId, groupName)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
@@ -287,7 +304,7 @@ func createRealm(server *Server, sessionToken *SessionToken, values url.Values,
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	fmt.Println("Creating realm ", realmInfo.Name)
-	var realm *InMemRealm
+	var realm Realm
 	realm, err = server.dbClient.dbCreateRealm(realmInfo)
 	if err != nil { return NewFailureDesc(err.Error()) }
 
@@ -471,7 +488,7 @@ func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	if err != nil { return NewFailureDesc(err.Error()) }
 
 	fmt.Println("Creating repo", repoName)
-	var repo *InMemRepo
+	var repo Repo
 	repo, err = server.dbClient.dbCreateRepo(realmId, repoName)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Created repo")
@@ -631,12 +648,12 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
 	
 	// Add the file to the specified repo's set of Dockerfiles.
-	var dockerfile *InMemDockerfile
+	var dockerfile Dockerfile
 	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), filename, filepath)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	// Create an ACL entry for the new file.
-	dbClient.dbCreateACLEntry(dockerfile.Id, userid,
+	dbClient.dbCreateACLEntry(dockerfile.getId(), userid,
 		[]bool{ true, true, true, true, true } )
 	fmt.Println("Created ACL entry")
 	
@@ -740,7 +757,7 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	fmt.Println("Performed docker build command successfully.")
 	
 	// Add a record for the image to the database.
-	var image *InMemDockerImage
+	var image DockerImage
 	image, err = dbClient.dbCreateDockerImage(repoId, imageName)
 	fmt.Println("Created docker image object.")
 	
