@@ -53,7 +53,7 @@ func NewResult(status int, message string) *Result {
 }
 
 func (result *Result) asResponse() string {
-	return fmt.Sprintf("{\"Status\"=\"%d\",\"Message\"=\"%s\"}",
+	return fmt.Sprintf("{\"Status\": \"%d\",\"Message\": \"%s\"}",
 		result.Status, result.Message)
 }
 
@@ -74,7 +74,7 @@ func NewFailureDesc(reason string) *FailureDesc {
 }
 
 func (failureDesc *FailureDesc) asResponse() string {
-	return fmt.Sprintf("{\"Reason\"=\"%s\", \"HTTPCode\"=\"%d\"}",
+	return fmt.Sprintf("{\"Reason\": \"%s\", \"HTTPCode\": \"%d\"}",
 		failureDesc.Reason, failureDesc.HTTPCode)
 }
 
@@ -142,7 +142,7 @@ type GroupDesc struct {
 }
 
 func (groupDesc *GroupDesc) asResponse() string {
-	return fmt.Sprintf("{\"RealmId\"=\"%s\", \"Name\"=\"%s\", \"GroupId\"=\"%s\"}",
+	return fmt.Sprintf("{\"RealmId\": \"%s\", \"Name\": \"%s\", \"GroupId\": \"%s\"}",
 		groupDesc.RealmId, groupDesc.Name, groupDesc.GroupId)
 }
 
@@ -195,7 +195,7 @@ func GetUserInfo(values url.Values) (*UserInfo, error) {
 }
 
 func (userInfo *UserInfo) asResponse() string {
-	return fmt.Sprintf("{\"UserId\"=\"%s\", \"UserName\"=\"%s\", \"RealmId\"=\"%s\"}",
+	return fmt.Sprintf("{\"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\"}",
 		userInfo.UserId, userInfo.UserName, userInfo.RealmId)
 }
 
@@ -211,7 +211,7 @@ type UserDesc struct {
 }
 
 func (userDesc *UserDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\"=\"%s\", \"UserId\"=\"%s\", \"UserName\"=\"%s\", \"RealmId\"=\"%s\"}",
+	return fmt.Sprintf("{\"Id\": \"%s\", \"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\"}",
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId)
 }
 
@@ -245,7 +245,7 @@ func NewRealmDesc(id string, name string) *RealmDesc {
 }
 
 func (realmDesc *RealmDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\"=\"%s\", \"Name\"=\"%s\"}", realmDesc.Id, realmDesc.Name)
+	return fmt.Sprintf("{\"Id\": \"%s\", \"Name\": \"%s\"}", realmDesc.Id, realmDesc.Name)
 }
 
 type RealmDescs []*RealmDesc
@@ -284,7 +284,7 @@ func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 }
 
 func (realmInfo *RealmInfo) asResponse() string {
-	return fmt.Sprintf("{\"Name\"=\"%s\"}", realmInfo.Name)
+	return fmt.Sprintf("{\"Name\": \"%s\"}", realmInfo.Name)
 }
 
 /*******************************************************************************
@@ -306,7 +306,7 @@ func NewRepoDesc(id string, realmId string, name string) *RepoDesc {
 }
 
 func (repoDesc *RepoDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\"=\"%s\", \"RealmId\"=\"%s\", \"Name\"=\"%s\"}",
+	return fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", \"Name\": \"%s\"}",
 		repoDesc.Id, repoDesc.RealmId, repoDesc.Name)
 }
 
@@ -342,7 +342,7 @@ func NewDockerfileDesc(id string, repoId string, name string) *DockerfileDesc {
 }
 
 func (dockerfileDesc *DockerfileDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\"=\"%s\", \"RepoId\"=\"%s\", \"Name\"=\"%s\"}",
+	return fmt.Sprintf("{\"Id\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\"}",
 		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.Name)
 }
 
@@ -380,7 +380,7 @@ func (imageDesc *DockerImageDesc) getDockerImageId() string {
 }
 
 func (imageDesc *DockerImageDesc) asResponse() string {
-	return fmt.Sprintf("{\"ObjId\"=\"%s\", \"DockerImageId\"=\"%s\"}",
+	return fmt.Sprintf("{\"ObjId\": \"%s\", \"DockerImageId\": \"%s\"}",
 		imageDesc.ObjId, imageDesc.DockerImageId)
 }
 
