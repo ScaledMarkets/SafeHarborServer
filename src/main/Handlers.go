@@ -635,7 +635,6 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	var output []byte
 	output, err = cmd.CombinedOutput()
 	var outputStr string = string(output)
-	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
 	if ! strings.HasPrefix(outputStr, "Error") {
 		return NewFailureDesc("An image with name " + imageName + " already exists.")
 	}
