@@ -30,18 +30,47 @@ type InMemClient struct {
 
 func NewInMemClient(server *Server) *InMemClient {
 	
+	// Create and return a new InMemClient.
+	var client = &InMemClient{
+		Server: server,
+	}
+	
+	client.init()
+	return client
+}
+
+/*******************************************************************************
+ * Initilize the client object. This can be called later to reset the client's
+ * state (i.e., to erase all objects).
+ */
+func (client *InMemClient) init() {
+	
+	// Initialize global variables.
+	allRealmIds = make([]string, 0)
+	allObjects = make(map[string]PersistObj)
+
 	// Remove the file repository - this is an in-memory implementation so we
 	// want to start empty.
-	var err error = os.RemoveAll(server.Config.FileRepoRootPath)
+	var err error = os.RemoveAll(client.Server.Config.FileRepoRootPath)
 	if err != nil { fmt.Println(err.Error()) }
 	
 	// Recreate the file repository, but empty.
-	os.Mkdir(server.Config.FileRepoRootPath, 0770)
+	os.Mkdir(client.Server.Config.FileRepoRootPath, 0770)
+
 	
-	// Create and return a new InMemClient.
-	return &InMemClient{
-		Server: server,
+	
+	// Temporary for testing - remove! ********************
+	var testRealm *InMemRealm
+	testRealm, err = client.dbCreateRealm(NewRealmInfo("testrealm"))
+	if err != nil {
+		fmt.Println(err.Error())
+		panic(err)
 	}
+	var testUser1 *InMemUser
+	testUser1, err = client.dbCreateUser("testuser1", "Test User", testRealm.Id)
+	fmt.Println("User", testUser1.Name, "created, id=", testUser1.Id)
+	// ****************************************************
+	
 }
 
 /*******************************************************************************
@@ -312,7 +341,7 @@ type InMemRealm struct {
 	FileDirectory string  // where this realm's files are stored
 }
 
-var allRealmIds []string = make([]string, 0)
+var allRealmIds []string
 
 func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) (*InMemRealm, error) {
 	
@@ -770,7 +799,7 @@ func createUniqueDbObjectId() string {
 
 var uniqueId int64 = 5
 
-var allObjects map[string]PersistObj = make(map[string]PersistObj)
+var allObjects map[string]PersistObj
 
 /*******************************************************************************
  * Return the persistent object that is identified by the specified unique id.

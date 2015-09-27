@@ -41,6 +41,7 @@ func NewDispatcher() *Dispatcher {
 	// defined in Handlers.go.
 	hdlrs := map[string]ReqHandlerFuncType{
 		"ping": ping,
+		"clearAll": clearAll,
 		"authenticate": authenticate,
 		"logout": logout,
 		"createUser": createUser,

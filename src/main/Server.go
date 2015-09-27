@@ -33,12 +33,13 @@ type Server struct {
 	authService *AuthService
 	dispatcher *Dispatcher
 	sessions map[string]*Credentials  // map session key to Credentials.
+	Debug bool
 }
 
 /*******************************************************************************
  * Create a Server structure. This includes reading in the auth server cert.
  */
-func NewServer() *Server {
+func NewServer(debug bool) *Server {
 	
 	// Read configuration. (Defined in a JSON file.)
 	fmt.Println("Reading configuration")
@@ -55,6 +56,7 @@ func NewServer() *Server {
 	
 	// Construct a Server with the configuration and cert pool.
 	var server *Server = &Server{
+		Debug: debug,
 		Config:  config,
 		certPool: certPool,
 		dispatcher: dispatcher,
@@ -307,20 +309,19 @@ func getCerts(config *Configuration) *x509.CertPool {
  Read the configuration file and return a new Configuration struct.
  */
 func getConfiguration() (*Configuration, error) {
+	
 	configurationPath := os.Getenv("SAFEHARBOR_CONFIGURATION_PATH")
 
 	if configurationPath == "" {
 		configurationPath = "conf.json"  // try the default location
-		file, err := os.Open(configurationPath)
-		_, err = file.Stat()
-		if err != nil { return nil, fmt.Errorf("configuration path unspecified") }
 	}
 
 	var file *os.File
 	var err error
+
 	file, err = os.Open(configurationPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Could not open configuration file (usually conf.json)")
 	}
 
 	defer file.Close()

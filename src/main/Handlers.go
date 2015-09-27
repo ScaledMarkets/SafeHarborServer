@@ -35,6 +35,63 @@ func ping(server *Server, sessionToken *SessionToken, values url.Values,
 }
 
 /*******************************************************************************
+ * Arguments: (none)
+ * Returns: Result
+ */
+func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	
+	fmt.Println("clearAll")
+	
+	if ! server.Debug {
+		return NewFailureDesc("Not in debug mode - returning from clearAll")
+	}
+	
+	// Kill all docker containers:
+	// docker kill $(docker ps -a -q)
+	// docker rm $(docker ps -a -q)
+	var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "ps", "-a", "-q")
+	var output []byte
+	output, _ = cmd.CombinedOutput()
+	var containers string = string(output)
+	if ! strings.HasPrefix(containers, "Error") {
+		return NewFailureDesc(containers)
+	}
+	cmd = exec.Command("/usr/bin/docker", "kill", containers)
+	output, _ = cmd.CombinedOutput()
+	var outputStr string = string(output)
+	if ! strings.HasPrefix(outputStr, "Error") {
+		return NewFailureDesc(outputStr)
+	}
+	cmd = exec.Command("/usr/bin/docker", "rm", containers)
+	output, _ = cmd.CombinedOutput()
+	outputStr = string(output)
+	if ! strings.HasPrefix(outputStr, "Error") {
+		return NewFailureDesc(outputStr)
+	}
+	
+	// Remove all docker images.
+	// docker rmi $(docker list images -a -q)
+	cmd = exec.Command("/usr/bin/docker", "list", "images", "-a", "-q")
+	output, _ = cmd.CombinedOutput()
+	var images string = string(output)
+	if ! strings.HasPrefix(images, "Error") {
+		return NewFailureDesc(images)
+	}
+	cmd = exec.Command("/usr/bin/docker", "rmi", images)
+	output, _ = cmd.CombinedOutput()
+	outputStr = string(output)
+	if ! strings.HasPrefix(outputStr, "Error") {
+		return NewFailureDesc(outputStr)
+	}
+	
+	// Remove and re-create the repository directory.
+	server.dbClient.init()
+	
+	return NewResult(200, "Persistent state reset")
+}
+
+/*******************************************************************************
  * Arguments: Credentials
  * Returns: SessionToken
  */

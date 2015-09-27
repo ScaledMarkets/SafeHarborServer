@@ -53,7 +53,8 @@ func NewResult(status int, message string) *Result {
 }
 
 func (result *Result) asResponse() string {
-	return fmt.Sprintf("Status=%d\r\nMessage=%s", result.Status, result.Message)
+	return fmt.Sprintf("{\"Status\"=\"%d\",\"Message\"=\"%s\"}",
+		result.Status, result.Message)
 }
 
 /*******************************************************************************
@@ -73,7 +74,8 @@ func NewFailureDesc(reason string) *FailureDesc {
 }
 
 func (failureDesc *FailureDesc) asResponse() string {
-	return fmt.Sprintf("Reason=%s\r\nHTTPCode=%d", failureDesc.Reason, failureDesc.HTTPCode)
+	return fmt.Sprintf("{\"Reason\"=\"%s\", \"HTTPCode\"=\"%d\"}",
+		failureDesc.Reason, failureDesc.HTTPCode)
 }
 
 /*******************************************************************************
@@ -106,7 +108,7 @@ func GetCredentials(values url.Values) (*Credentials, error) {
 }
 
 func (creds *Credentials) asResponse() string {
-	return ""
+	return "{}"
 }
 
 /*******************************************************************************
@@ -126,7 +128,7 @@ func NewSessionToken(sessionId string, userid string) *SessionToken {
 }
 
 func (sessionToken *SessionToken) asResponse() string {
-	return ""
+	return "{}"
 }
 
 /*******************************************************************************
@@ -140,19 +142,20 @@ type GroupDesc struct {
 }
 
 func (groupDesc *GroupDesc) asResponse() string {
-	return fmt.Sprintf("RealmId=%s\r\nName=%s\r\nGroupId=%s\r\n",
+	return fmt.Sprintf("{\"RealmId\"=\"%s\", \"Name\"=\"%s\", \"GroupId\"=\"%s\"}",
 		groupDesc.RealmId, groupDesc.Name, groupDesc.GroupId)
 }
 
 type GroupDescs []*GroupDesc
 
 func (groupDescs GroupDescs) asResponse() string {
-	var response string = ""
+	var response string = "[\n"
 	var firstTime bool = true
 	for _, desc := range groupDescs {
-		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		if firstTime { firstTime = false } else { response = ",\n" + response }
 		response = response + desc.asResponse()
 	}
+	response = response + "]"
 	return response
 }
 
@@ -192,7 +195,7 @@ func GetUserInfo(values url.Values) (*UserInfo, error) {
 }
 
 func (userInfo *UserInfo) asResponse() string {
-	return fmt.Sprintf("UserId=%s\r\nUserName=%s\r\nRealmId=%s\r\n",
+	return fmt.Sprintf("{\"UserId\"=\"%s\", \"UserName\"=\"%s\", \"RealmId\"=\"%s\"}",
 		userInfo.UserId, userInfo.UserName, userInfo.RealmId)
 }
 
@@ -208,19 +211,20 @@ type UserDesc struct {
 }
 
 func (userDesc *UserDesc) asResponse() string {
-	return fmt.Sprintf("Id=%s\r\nUserId=%s\r\nUserName=%s\r\nRealmId=%s\r\n",
+	return fmt.Sprintf("{\"Id\"=\"%s\", \"UserId\"=\"%s\", \"UserName\"=\"%s\", \"RealmId\"=\"%s\"}",
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId)
 }
 
 type UserDescs []*UserDesc
 
 func (userDescs UserDescs) asResponse() string {
-	var response string = ""
+	var response string = "["
 	var firstTime bool = true
 	for _, desc := range userDescs {
-		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		if firstTime { firstTime = false } else { response = ",\n" + response }
 		response = response + desc.asResponse()
 	}
+	response = response + "]"
 	return response
 }
 
@@ -241,18 +245,19 @@ func NewRealmDesc(id string, name string) *RealmDesc {
 }
 
 func (realmDesc *RealmDesc) asResponse() string {
-	return fmt.Sprintf("Id=%s\r\nName=%s\r\n", realmDesc.Id, realmDesc.Name)
+	return fmt.Sprintf("{\"Id\"=\"%s\", \"Name\"=\"%s\"}", realmDesc.Id, realmDesc.Name)
 }
 
 type RealmDescs []*RealmDesc
 
 func (realmDescs RealmDescs) asResponse() string {
-	var response string = ""
+	var response string = "["
 	var firstTime bool = true
 	for _, desc := range realmDescs {
-		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		if firstTime { firstTime = false } else { response = ",\n" + response }
 		response = response + desc.asResponse()
 	}
+	response = response + "]"
 	return response
 }
 
@@ -279,7 +284,7 @@ func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 }
 
 func (realmInfo *RealmInfo) asResponse() string {
-	return fmt.Sprintf("Name=%s", realmInfo.Name)
+	return fmt.Sprintf("{\"Name\"=\"%s\"}", realmInfo.Name)
 }
 
 /*******************************************************************************
@@ -301,19 +306,20 @@ func NewRepoDesc(id string, realmId string, name string) *RepoDesc {
 }
 
 func (repoDesc *RepoDesc) asResponse() string {
-	return fmt.Sprintf("Id=%s\r\nRealmId=%s\r\nName=%s\r\n",
+	return fmt.Sprintf("{\"Id\"=\"%s\", \"RealmId\"=\"%s\", \"Name\"=\"%s\"}",
 		repoDesc.Id, repoDesc.RealmId, repoDesc.Name)
 }
 
 type RepoDescs []*RepoDesc
 
 func (repoDescs RepoDescs) asResponse() string {
-	var response string = ""
+	var response string = "["
 	var firstTime bool = true
 	for _, desc := range repoDescs {
-		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		if firstTime { firstTime = false } else { response = ",\n" + response }
 		response = response + desc.asResponse()
 	}
+	response = response + "]"
 	return response
 }
 
@@ -336,19 +342,20 @@ func NewDockerfileDesc(id string, repoId string, name string) *DockerfileDesc {
 }
 
 func (dockerfileDesc *DockerfileDesc) asResponse() string {
-	return fmt.Sprintf("Id=%s\r\nRepoId=%s\r\nName=%s\r\n",
+	return fmt.Sprintf("{\"Id\"=\"%s\", \"RepoId\"=\"%s\", \"Name\"=\"%s\"}",
 		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.Name)
 }
 
 type DockerfileDescs []*DockerfileDesc
 
 func (dockerfileDescs DockerfileDescs) asResponse() string {
-	var response string = ""
+	var response string = "["
 	var firstTime bool = true
 	for _, desc := range dockerfileDescs {
-		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		if firstTime { firstTime = false } else { response = ",\n" + response }
 		response = response + desc.asResponse()
 	}
+	response = response + "]"
 	return response
 }
 
@@ -373,19 +380,20 @@ func (imageDesc *DockerImageDesc) getDockerImageId() string {
 }
 
 func (imageDesc *DockerImageDesc) asResponse() string {
-	return fmt.Sprintf("ObjId=%s\r\nDockerImageId=%s\r\n",
+	return fmt.Sprintf("{\"ObjId\"=\"%s\", \"DockerImageId\"=\"%s\"}",
 		imageDesc.ObjId, imageDesc.DockerImageId)
 }
 
 type DockerImageDescs []*DockerImageDesc
 
 func (imageDescs DockerImageDescs) asResponse() string {
-	var response string = ""
+	var response string = "["
 	var firstTime bool = true
 	for _, desc := range imageDescs {
-		if firstTime { firstTime = false } else { response = "\r\n" + response }
+		if firstTime { firstTime = false } else { response = ",\n" + response }
 		response = response + desc.asResponse()
 	}
+	response = response + "]"
 	return response
 }
 

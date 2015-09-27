@@ -12,22 +12,30 @@ import (
 
 func main() {
 	
+	var debug bool = false
+	
+	if len(os.Args) > 1 {
+		if os.Args[1] == "--debug" {
+			debug = true
+		} else
+		if os.Args[1] == "--help" {
+			usage()
+			os.Exit(0)
+		} else
+		{
+			usage()
+			os.Exit(2)
+		}
+	}
+	
 	fmt.Println("Creating SafeHarbor server...")
-	var server *Server = NewServer()
+	var server *Server = NewServer(debug)
 	if server == nil { os.Exit(1) }
 
-	// Temporary for testing - remove! ********************
-	var testRealm *InMemRealm
-	var err error
-	testRealm, err = server.dbClient.dbCreateRealm(NewRealmInfo("testrealm"))
-	if err != nil {
-		fmt.Println(err.Error())
-		panic(err)
-	}
-	var testUser1 *InMemUser
-	testUser1, err = server.dbClient.dbCreateUser("testuser1", "Test User", testRealm.Id)
-	fmt.Println("User", testUser1.Name, "created, id=", testUser1.Id)
-	// ****************************************************
-	
 	server.start()
 }
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage: %s [--debug]\n", os.Args[0])
+}
+
