@@ -60,13 +60,13 @@ func NewServer() *Server {
 		dispatcher: dispatcher,
 	}
 	
-	// Verify that the file repository exists.
+	server.dbClient = NewInMemClient(server)
+	
+	// Ensure that the file repository exists.
 	if ! fileExists(server.Config.FileRepoRootPath) {
-		fmt.Println("Repository directory not found:", server.Config.FileRepoRootPath)
+		fmt.Println("Repository does not exist,", server.Config.FileRepoRootPath)
 		return nil
 	}
-	
-	server.dbClient = NewInMemClient(server)
 	
 	dispatcher.server = server
 	

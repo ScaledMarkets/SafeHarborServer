@@ -67,6 +67,10 @@ type Realm interface {
 	getGroupByName(string) Group
 	getRepoByName(string) Repo
 	getUserObjIds() []string
+	getRepoIds() []string
+	addUser(string) error
+	getUserByUserId(string) User
+	asRealmDesc() *RealmDesc
 }
 
 type Repo interface {
@@ -77,6 +81,7 @@ type Repo interface {
 	getDockerfileIds() []string
 	getDockerImageIds() []string
 	addDockerfile(Dockerfile)
+	asRepoDesc() *RepoDesc
 }
 
 type Dockerfile interface {
@@ -88,4 +93,5 @@ type Dockerfile interface {
 type DockerImage interface {
 	Resource
 	getDockerImageId()
+	asDockerImageDesc() *DockerImageDesc
 }

@@ -45,6 +45,13 @@ type Result struct {
 	Message string
 }
 
+func NewResult(status int, message string) *Result {
+	return &Result{
+		Status: status,
+		Message: message,
+	}
+}
+
 func (result *Result) asResponse() string {
 	return fmt.Sprintf("Status=%d\r\nMessage=%s", result.Status, result.Message)
 }

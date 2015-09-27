@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 )
 
 /*******************************************************************************
@@ -66,12 +67,9 @@ func logout(server *Server, sessionToken *SessionToken, values url.Values,
 func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	fmt.Println("createUser.A")
-
 	var err error
 	var userInfo *UserInfo
 	userInfo, err = GetUserInfo(values)
-	fmt.Println("createUser.B")
 	
 	// Authorize the request, based on the authenticated identity.
 	if ! server.authService.authorized(server.sessions[sessionToken.UniqueSessionId],
@@ -92,7 +90,6 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	var newUser *InMemUser
 	newUser, err = server.dbClient.dbCreateUser(userId, userName, realmId)
 	if err != nil { return NewFailureDesc(err.Error()) }
-	fmt.Println("createUser.C")
 	
 	return &UserDesc{
 		Id: newUser.Id,
@@ -169,7 +166,7 @@ func getGroupUsers(server *Server, sessionToken *SessionToken, values url.Values
 		"No group with Id %s", groupId))
 	}
 	var userObjIds []string = group.getUserObjIds()
-	var userDescs UserDescs = make([]*UserDesc, 1)
+	var userDescs UserDescs = make([]*UserDesc, 0)
 	for _, id := range userObjIds {
 		var user User = server.dbClient.getUser(id)
 		if user == nil { return NewFailureDesc(fmt.Sprintf(
@@ -256,7 +253,22 @@ func deleteRealm(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func addRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
+
+	var err error
+	var realmId string
+	var userObjId string
+	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	userObjId, err = GetRequiredPOSTFieldValue(values, "UserObjId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	var realm Realm
+	realm = server.dbClient.getRealm(realmId)
+	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
+	
+	err = realm.addUser(userObjId)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	return NewResult(200, "User added to realm")
 }
 
 /*******************************************************************************
@@ -269,12 +281,28 @@ func remRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 }
 
 /*******************************************************************************
- * Arguments: UserId
+ * Arguments: RealmId, UserId
  * Returns: UserDesc
  */
 func getRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
+
+	var err error
+	var realmId string
+	var userId string
+	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	userId, err = GetRequiredPOSTFieldValue(values, "UserId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	var realm Realm
+	realm = server.dbClient.getRealm(realmId)
+	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
+	
+	var user User = realm.getUserByUserId(userId)
+	if user == nil { return NewFailureDesc("User with user id " + userId +
+		" in realm " + realm.getName() + " not found.") }
+	return user.asUserDesc()
 }
 
 /*******************************************************************************
@@ -292,7 +320,31 @@ func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Value
  */
 func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
+	
+	var err error
+	var realmId string
+	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	var realm Realm
+	realm = server.dbClient.getRealm(realmId)
+	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
+	
+	var repoIds []string = realm.getRepoIds()
+	
+	var result RepoDescs = make([]*RepoDesc, 0)
+	for _, id := range repoIds {
+		
+		var repo Repo = server.dbClient.getRepo(id)
+		if repo == nil { return NewFailureDesc(fmt.Sprintf(
+			"Internal error: no Repo found for Id %s", id))
+		}
+		var desc *RepoDesc = repo.asRepoDesc()
+		// Add to result
+		result = append(result, desc)
+	}
+
+	return result
 }
 
 /*******************************************************************************
@@ -310,7 +362,20 @@ func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
+	
+	var realmIds []string = server.dbClient.dbGetAllRealmIds()
+	
+	var result RealmDescs = make([]*RealmDesc, 0)
+	for _, realmId := range realmIds {
+		
+		var realm Realm = server.dbClient.getRealm(realmId)
+		if realm == nil { return NewFailureDesc(fmt.Sprintf(
+			"Internal error: no Realm found for Id %s", realmId))
+		}
+		var desc *RealmDesc = realm.asRealmDesc()
+		result = append(result, desc)
+	}
+	return result
 }
 
 /*******************************************************************************
@@ -391,7 +456,7 @@ func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Value
 		"Repo with Id %s not found", repoId)) }
 	
 	var dockerfileIds []string = repo.getDockerfileIds()	
-	var result DockerfileDescs = make([]*DockerfileDesc, 1)
+	var result DockerfileDescs = make([]*DockerfileDesc, 0)
 	for _, id := range dockerfileIds {
 		
 		var dockerfile Dockerfile = server.dbClient.getDockerfile(id)
@@ -408,11 +473,33 @@ func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Value
 
 /*******************************************************************************
  * Arguments: RepoId
- * Returns: []ImageDesc
+ * Returns: []DockerImageDesc
  */
 func getImages(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
+
+	var err error
+	var repoId string
+	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	var repo Repo = server.dbClient.getRepo(repoId)
+	if repo == nil { return NewFailureDesc(fmt.Sprintf(
+		"Repo with Id %s not found", repoId)) }
+	
+	var imageIds []string = repo.getDockerImageIds()
+	var result DockerImageDescs = make([]*DockerImageDesc, 0)
+	for _, id := range imageIds {
+		
+		var dockerImage DockerImage = server.dbClient.getDockerImage(id)
+		if dockerImage == nil { return NewFailureDesc(fmt.Sprintf(
+			"Internal error: no DockerImage found for Id %s", id))
+		}
+		var imageDesc *DockerImageDesc = dockerImage.asDockerImageDesc()
+		result = append(result, imageDesc)
+	}
+	
+	return result
 }
 
 /*******************************************************************************
@@ -510,7 +597,7 @@ func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Va
 
 /*******************************************************************************
  * Arguments: RepoId, DockerfileId, ImageName
- * Returns: ImageDesc
+ * Returns: DockerfileImageDesc
  */
 func execDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
@@ -543,10 +630,19 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	}
 	fmt.Println("Image name =", imageName)
 	
-	// Verify that the image name conforms to Docker's requirements.
-	if ! nameConformsToDockerRules(imageName) {
-		return NewFailureDesc("Name '" + imageName + "' does not match docker's rules: [a-z0-9]+(?:[._-][a-z0-9]+)*")
+	// Check if am image with that name already exists.
+	var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "inspect", imageName)
+	var output []byte
+	output, err = cmd.CombinedOutput()
+	var outputStr string = string(output)
+	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
+	if ! strings.HasPrefix(outputStr, "Error") {
+		return NewFailureDesc("An image with name " + imageName + " already exists.")
 	}
+	
+	// Verify that the image name conforms to Docker's requirements.
+	err = nameConformsToSafeHarborImageNameRules(imageName)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	// Create a temporary directory to serve as the build context.
 	var tempDirPath string
@@ -575,14 +671,13 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
 	// Image id format: <hash>[:TAG]
 	
-	var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "build",
+	cmd = exec.Command("/usr/bin/docker", "build",
     	"--file", dockerfileName, "--tag", imageName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
-	var output []byte
 	output, err = cmd.CombinedOutput()
-	var outputStr string = string(output)
+	outputStr = string(output)
 	fmt.Println("...finished processing dockerfile.")
 	fmt.Println(outputStr)
 	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }

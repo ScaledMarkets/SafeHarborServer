@@ -312,14 +312,24 @@ type InMemRealm struct {
 	FileDirectory string  // where this realm's files are stored
 }
 
+var allRealmIds []string = make([]string, 0)
+
 func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) (*InMemRealm, error) {
-	var realmId string = createUniqueDbObjectId()
+	
+	var realmId string = client.getRealmIdByName(realmInfo.Name)
+	if realmId != "" {
+		return nil, errors.New("A realm with name " + realmInfo.Name + " already exists")
+	}
+	realmId = createUniqueDbObjectId()
 	var newRealm *InMemRealm = &InMemRealm{
 		InMemPersistObj: InMemPersistObj{Id: realmId},
 		Name: realmInfo.Name,
 		ACLId: "",
 		FileDirectory: client.assignRealmFileDir(realmId),
 	}
+	
+	allRealmIds = append(allRealmIds, realmId)
+	
 	var err error
 	var acl *InMemACL
 	acl, err = client.dbCreateACL(realmId)
@@ -334,6 +344,18 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) (*InMemRealm, err
 		fmt.Println("allObjects[", realmId, "] is a", reflect.TypeOf(allObjects[realmId]))
 	}
 	return newRealm, nil
+}
+
+func (client *InMemClient) dbGetAllRealmIds() []string {
+	return allRealmIds
+}
+
+func (client *InMemClient) getRealmIdByName(name string) string {
+	for _, realmId := range allRealmIds {
+		var realm Realm = client.getRealm(realmId)
+		if realm.getName() == name { return realmId }
+	}
+	return ""
 }
 
 //func (realm *InMemRealm) getId() string {
@@ -366,12 +388,26 @@ func (realm *InMemRealm) getUserObjIds() []string {
 	return realm.UserObjIds
 }
 
-func (realm *InMemRealm) getGroupIds() []string {
-	return realm.GroupIds
-}
-
 func (realm *InMemRealm) getRepoIds() []string {
 	return realm.RepoIds
+}
+
+func (realm *InMemRealm) addUser(userObjId string) error {
+	
+	var user User
+	var isType bool
+	user, isType = allObjects[userObjId].(User)
+	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
+	if user == nil { return errors.New("Could not identify user with obj Id " + userObjId) }
+	if user.getRealmId() != "" {
+		return errors.New("User with obj Id " + userObjId + " belongs to another realm")
+	}
+	realm.UserObjIds = append(realm.UserObjIds, userObjId)
+	return nil
+}
+
+func (realm *InMemRealm) getGroupIds() []string {
+	return realm.GroupIds
 }
 
 func (realm *InMemRealm) getACL() ACL {
@@ -433,6 +469,21 @@ func (realm *InMemRealm) getUserByName(userName string) User {
 			"Internal error: obj with Id %s is not a User", id)))
 		}
 		if user.getName() == userName { return user }
+	}
+	return nil
+}
+
+func (realm *InMemRealm) getUserByUserId(userId string) User {
+	for _, id := range realm.UserObjIds {
+		var obj PersistObj = allObjects[id]
+		if obj == nil { panic(errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s does not exist", id)))
+		}
+		user, isUser := obj.(User)
+		if ! isUser { panic(errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s is not a User", id)))
+		}
+		if user.getUserId() == userId { return user }
 	}
 	return nil
 }

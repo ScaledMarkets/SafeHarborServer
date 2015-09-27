@@ -152,12 +152,30 @@ func parseImageIdFromDockerBuildOutput(outputStr string) string {
 }
 
 /*******************************************************************************
+ * Verify that the specified name conforms to the name rules for images that
+ * users attempt to store. We also require that a name not contain periods,
+ * because we use periods to separate images into SafeHarbore namespaces within
+ * a realm. If rules are satisfied, return nil; otherwise, return an error.
+ */
+func nameConformsToSafeHarborImageNameRules(name string) error {
+	var err error = nameConformsToDockerRules(name)
+	if err != nil { return err }
+	if strings.Contains(name, ".") { return errors.New(
+		"SafeHarbor does not allow periods in image names: " + name)
+	}
+	return nil
+}
+
+/*******************************************************************************
  * Check that repository name component matches "[a-z0-9]+(?:[._-][a-z0-9]+)*".
  * I.e., first char is a-z or 0-9, and remaining chars (if any) are those or
- * a period, underscore, or dash.
+ * a period, underscore, or dash. If rules are satisfied, return nil; otherwise,
+ * return an error.
  */
-func nameConformsToDockerRules(name string) bool {
+func nameConformsToDockerRules(name string) error {
 	var a = strings.TrimLeft(name, "abcdefghijklmnopqrstuvwxyz0123456789")
 	var b = strings.TrimRight(a, "abcdefghijklmnopqrstuvwxyz0123456789._-")
-	return len(b) == 0
+	if len(b) == 0 { return nil }
+	return errors.New("Image name '" + name + "' does not conform to docker image name rules: " +
+		"[a-z0-9]+(?:[._-][a-z0-9]+)*")
 }
