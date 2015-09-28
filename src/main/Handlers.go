@@ -77,17 +77,21 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 	fmt.Println("All containers were removed")
 	
 	// Remove all of the docker images that were created by SafeHarborServer.
+	fmt.Println("Removing docker images that were created by SafeHarbor:")
 	var dbClient DBClient = server.dbClient
 	for _, realmId := range dbClient.dbGetAllRealmIds() {
 		var realm Realm = dbClient.getRealm(realmId)
+		fmt.Println("For realm " + realm.getName() + ":")
 		
 		for _, repoId := range realm.getRepoIds() {
 			var repo Repo = dbClient.getRepo(repoId)
+			fmt.Println("\tFor repo " + repo.getName() + ":")
 			
 			for _, imageId := range repo.getDockerImageIds() {
 				
 				var image DockerImage = dbClient.getDockerImage(imageId)
 				var imageName string = image.getName()
+				fmt.Println("\t\tRemoving image " + imageName + ":")
 				
 				// Remove the image.
 				cmd = exec.Command("/usr/bin/docker", "rmi", imageName)
@@ -97,12 +101,13 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 					return NewFailureDesc(
 						"While removing image " + imageName + ": " + outputStr)
 				}
-				fmt.Println("Removed image", imageName)
+				fmt.Println("\t\tRemoved image", imageName)
 			}
 		}
 	}
 	
 	// Remove and re-create the repository directory.
+	fmt.Println("Initializing database...")
 	server.dbClient.init()
 	
 	return NewResult(200, "Persistent state reset")
