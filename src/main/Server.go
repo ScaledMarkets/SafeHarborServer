@@ -39,7 +39,7 @@ type Server struct {
 /*******************************************************************************
  * Create a Server structure. This includes reading in the auth server cert.
  */
-func NewServer(debug bool) *Server {
+func NewServer(debug bool, port int, adapter string) *Server {
 	
 	// Read configuration. (Defined in a JSON file.)
 	fmt.Println("Reading configuration")
@@ -48,6 +48,45 @@ func NewServer(debug bool) *Server {
 	config, err = getConfiguration()
 	if err != nil {
 		panic(err)
+	}
+	
+	// Override conf.json with any command line options.
+	if port != 0 { config.port = port }
+	if adapter != "" { config.netIntfName = adapter }
+	
+	// Determine the IP address.
+	var intfs []net.Interface
+	intfs, err = net.Interfaces()
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil
+	}
+	for _, intf := range intfs {
+		fmt.Println("Examining interface " + intf.Name)
+		if intf.Name == config.netIntfName {
+			var addrs []net.Addr
+			addrs, err = intf.Addrs()
+			if err != nil {
+				fmt.Println(err.Error())
+				return nil
+			}
+			for _, addr := range addrs {
+				fmt.Println("\tExamining address " + addr.String())
+				config.ipaddr = strings.Split(addr.String(), "/")[0]
+				var ip net.IP = net.ParseIP(config.ipaddr)
+				if ip.To4() == nil {
+					fmt.Println("\t\tskipping")
+					continue // skip IP6 addresses
+				}
+				fmt.Println("Found " + addr.String() + " on network " + addr.Network());
+				break
+			}
+			break
+		}
+	}
+	if config.ipaddr == "" {
+		fmt.Println("Did not find an IP4 address for network interface " + config.netIntfName)
+		return nil
 	}
 	
 	var certPool *x509.CertPool = getCerts(config)

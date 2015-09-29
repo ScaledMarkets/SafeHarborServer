@@ -8,34 +8,38 @@ package main
 import (
 	"fmt"
 	"os"
+	"flag"
 )
 
 func main() {
 	
-	var debug bool = false
+	var debug *bool = flag.Bool("debug", false, "Run in debug mode: this enables the clearAll REST method.")
+	var help *bool = flag.Bool("help", false, "Provide help instructions.")
+	var port *int = flag.Int("port", 0, "The TCP port on which the SafeHarborServer should listen. If not set, then the value is taken from the conf.json file.")
+	var adapter *string = flag.String("adapter", "", "Network adapter to use (e.g., eth0)")
 	
-	if len(os.Args) > 1 {
-		if os.Args[1] == "--debug" {
-			debug = true
-		} else
-		if os.Args[1] == "--help" {
-			usage()
-			os.Exit(0)
-		} else
-		{
-			usage()
-			os.Exit(2)
-		}
+	flag.Parse()
+	
+	if flag.NArg() > 0 {
+		usage()
+		os.Exit(2)
+	}
+	
+	if *help {
+		usage()
+		os.Exit(0)
 	}
 	
 	fmt.Println("Creating SafeHarbor server...")
-	var server *Server = NewServer(debug)
+	var server *Server = NewServer(*debug, *port, *adapter)
 	if server == nil { os.Exit(1) }
 
 	server.start()
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [--debug]\n", os.Args[0])
+	
+	fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", os.Args[0])
+	flag.PrintDefaults()
 }
 

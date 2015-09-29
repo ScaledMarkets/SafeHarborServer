@@ -19,6 +19,7 @@ import (
 type Configuration struct {
 	service string
 	ipaddr string
+	netIntfName string // e.g., eth0, en1, etc.
 	port int
 	LocalAuthCertPath string
 	LocalRootCertPath string // may be null
@@ -56,8 +57,8 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	config.service, exists = entries["SERVICE"]
 	if ! exists { return nil, fmt.Errorf("Did not find SERVICE in configuration") }
 	
-	config.ipaddr, exists = entries["IPADDR"]
-	if ! exists { return nil, fmt.Errorf("Did not find IPADDR in configuration") }
+	config.netIntfName, exists = entries["INTFNAME"]
+	if ! exists { return nil, fmt.Errorf("Did not find INTFNAME in configuration") }
 	
 	var portStr string
 	portStr, exists = entries["PORT"]
