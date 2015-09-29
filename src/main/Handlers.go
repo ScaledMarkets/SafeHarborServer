@@ -63,17 +63,17 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 	cmd = exec.Command("/usr/bin/docker", "kill", containers)
 	output, _ = cmd.CombinedOutput()
 	var outputStr string = string(output)
-	if strings.HasPrefix(outputStr, "Error") {
-		return NewFailureDesc(outputStr)
-	}
+	//if strings.HasPrefix(outputStr, "Error") {
+	//	return NewFailureDesc(outputStr)
+	//}
 	fmt.Println("All containers were signalled to stop")
 	
 	cmd = exec.Command("/usr/bin/docker", "rm", containers)
 	output, _ = cmd.CombinedOutput()
 	outputStr = string(output)
-	if strings.HasPrefix(outputStr, "Error") {
-		return NewFailureDesc(outputStr)
-	}
+	//if strings.HasPrefix(outputStr, "Error") {
+	//	return NewFailureDesc(outputStr)
+	//}
 	fmt.Println("All containers were removed")
 	
 	// Remove all of the docker images that were created by SafeHarborServer.
@@ -98,10 +98,10 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 				output, _ = cmd.CombinedOutput()
 				outputStr = string(output)
 				if ! strings.HasPrefix(outputStr, "Error") {
-					return NewFailureDesc(
-						"While removing image " + imageName + ": " + outputStr)
+					fmt.Println("While removing image " + imageName + ": " + outputStr)
+				} else {
+					fmt.Println("\t\tRemoved image", imageName)
 				}
-				fmt.Println("\t\tRemoved image", imageName)
 			}
 		}
 	}
