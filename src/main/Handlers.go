@@ -63,7 +63,7 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 	cmd = exec.Command("/usr/bin/docker", "kill", containers)
 	output, _ = cmd.CombinedOutput()
 	var outputStr string = string(output)
-	if ! strings.HasPrefix(outputStr, "Error") {
+	if strings.HasPrefix(outputStr, "Error") {
 		return NewFailureDesc(outputStr)
 	}
 	fmt.Println("All containers were signalled to stop")
@@ -71,7 +71,7 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 	cmd = exec.Command("/usr/bin/docker", "rm", containers)
 	output, _ = cmd.CombinedOutput()
 	outputStr = string(output)
-	if ! strings.HasPrefix(outputStr, "Error") {
+	if strings.HasPrefix(outputStr, "Error") {
 		return NewFailureDesc(outputStr)
 	}
 	fmt.Println("All containers were removed")
