@@ -54,7 +54,7 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 	var output []byte
 	output, _ = cmd.CombinedOutput()
 	var containers string = string(output)
-	if ! strings.HasPrefix(containers, "Error") {
+	if strings.HasPrefix(containers, "Error") {
 		return NewFailureDesc(containers)
 	}
 	fmt.Println("Containers are:")
