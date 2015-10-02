@@ -251,11 +251,20 @@ func (realmDesc *RealmDesc) asResponse() string {
 type RealmDescs []*RealmDesc
 
 func (realmDescs RealmDescs) asResponse() string {
+	
+	fmt.Println("APITypes.asResponse():")
+	
+	
+	
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range realmDescs {
 		if firstTime { firstTime = false } else { response = ",\n" + response }
+		
 		response = response + desc.asResponse()
+		
+		fmt.Println("response=", response)
+		
 	}
 	response = response + "]"
 	return response
