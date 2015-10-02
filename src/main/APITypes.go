@@ -259,7 +259,7 @@ func (realmDescs RealmDescs) asResponse() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range realmDescs {
-		if firstTime { firstTime = false } else { response = ",\n" + response }
+		if firstTime { firstTime = false } else { response = response + ",\n" }
 		
 		response = response + desc.asResponse()
 		
