@@ -455,6 +455,12 @@ func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 		result = append(result, desc)
 	}
 	
+	
+	fmt.Println("At end of handler: retrieved all realms:")
+	for _, r := range result {
+		fmt.Println("\t" + r.Name + ", " + r.Id)
+	}
+	
 	return result
 }
 
