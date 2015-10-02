@@ -83,6 +83,10 @@ type InMemPersistObj struct {
 
 var _ PersistObj = &InMemPersistObj{}
 
+func NewInMemPersistObj() InMemPersistObj {
+	return InMemPersistObj{Id: ""}
+}
+
 func (persObj *InMemPersistObj) getId() string {
 	return persObj.Id
 }
@@ -90,11 +94,76 @@ func (persObj *InMemPersistObj) getId() string {
 /*******************************************************************************
  * 
  */
+type InMemACL struct {
+	ACLEntryIds []string
+}
+
+func NewInMemACL() InMemACL {
+	return InMemACL{
+		ACLEntryIds: make([]string, 0),
+	}
+}
+
+func (acl *InMemACL) getACLEntryIds() []string {
+	return acl.ACLEntryIds
+}
+
+func (acl *InMemACL) addACLEntry(entry ACLEntry) {
+	acl.ACLEntryIds = append(acl.ACLEntryIds, entry.getId())
+}
+
+/*******************************************************************************
+ * 
+ */
+type InMemResource struct {
+	InMemACL
+	Name string
+}
+
+func NewInMemResource(name string) InMemResource {
+	return InMemResource{
+		InMemACL: NewInMemACL(),
+		Name: name,
+	}
+}
+
+func (resource *InMemResource) getName() string {
+	return resource.Name
+}
+
+/*******************************************************************************
+ * 
+ */
+type InMemParty struct {
+	Name string
+	ACLEntryIds []string
+}
+
+func NewInMemParty() InMemParty {
+	return InMemParty{
+		ACLEntryIds: make([]string, 0),
+	}
+}
+
+func (party *InMemParty) getName() string {
+	return party.Name
+}
+
+func (party *InMemParty) getACLEntryIds() []string {
+	return party.ACLEntryIds
+}
+
+func (party *InMemParty) addACLEntry(entry ACLEntry) {
+	party.ACLEntryIds = append(party.ACLEntryIds, entry.getId())
+}
+
+/*******************************************************************************
+ * 
+ */
 type InMemGroup struct {
 	InMemPersistObj
+	InMemParty
 	RealmId string
-	Name string
-	aclEntryIds []string
 	UserObjIds []string
 }
 
@@ -113,29 +182,21 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string) (Group, er
 	var groupId string = createUniqueDbObjectId()
 	var newGroup = &InMemGroup{
 		InMemPersistObj: InMemPersistObj{Id: groupId},
+		InMemParty: InMemParty{ACLEntryIds: make([]string, 0)},
 		RealmId: realmId,
-		Name: name,
-		//UserIds: 
+		UserObjIds: make([]string, 0),
 	}
+	
+	// Add to parent realm's list
+	realm.addGroup(newGroup)
+	
 	fmt.Println("Created Group")
 	allObjects[groupId] = newGroup
 	return newGroup, nil
 }
 
-//func (group *InMemGroup) getId() string {
-//	return group.Id
-//}
-
 func (client *InMemClient) getGroup(id string) Group {
 	return client.getPersistentObject(id).(Group)
-}
-
-func (group *InMemGroup) getName() string {
-	return group.Name
-}
-
-func (group *InMemGroup) getACLEntryIds() []string {
-	return group.aclEntryIds
 }
 
 func (group *InMemGroup) getUserObjIds() []string {
@@ -154,7 +215,7 @@ func (group *InMemGroup) hasUserWithId(userObjId string) bool {
 	return false
 }
 
-func (group *InMemGroup) addUser(userObjId string) error {
+func (group *InMemGroup) addUserId(userObjId string) error {
 	if group.hasUserWithId(userObjId) { return errors.New(fmt.Sprintf(
 		"User with object Id %s is already in group", userObjId))
 	}
@@ -171,6 +232,10 @@ func (group *InMemGroup) addUser(userObjId string) error {
 	return nil
 }
 
+func (group *InMemGroup) addUser(user User) {
+	group.UserObjIds = append(group.UserObjIds, user.getId())
+}
+
 func (group *InMemGroup) asGroupDesc() *GroupDesc {
 	return &GroupDesc{
 		RealmId: group.RealmId,
@@ -184,23 +249,29 @@ func (group *InMemGroup) asGroupDesc() *GroupDesc {
  */
 type InMemUser struct {
 	InMemPersistObj
+	InMemParty
 	RealmId string
 	UserId string
-	Name string
-	ACLEntryIds []string
 	GroupIds []string
 }
 
 func (client *InMemClient) dbCreateUser(userId string, name string,
 	realmId string) (User, error) {
 	
+	var realm Realm = client.getRealm(realmId)
+	if realm == nil { return nil, errors.New("Realm with Id " + realmId + " not found") }
 	var userObjId string = createUniqueDbObjectId()
 	var newUser *InMemUser = &InMemUser{
 		InMemPersistObj: InMemPersistObj{Id: userObjId},
+		InMemParty: InMemParty{ACLEntryIds: make([]string, 0)},
 		RealmId: realmId,
 		UserId: userId,
-		Name: name,
+		GroupIds: make([]string, 0),
 	}
+	
+	// Add to parent realm's list.
+	realm.addUser(newUser)
+	
 	fmt.Println("Created user")
 	allObjects[userObjId] = newUser
 	return newUser, nil
@@ -217,14 +288,6 @@ func (user *InMemUser) getRealmId() string {
 
 func (user *InMemUser) getUserId() string {
 	return user.UserId
-}
-
-func (user *InMemUser) getName() string {
-	return user.Name
-}
-
-func (user *InMemUser) getACLEntryIds() []string {
-	return user.ACLEntryIds
 }
 
 func (user *InMemUser) getGroupIds() []string {
@@ -245,44 +308,59 @@ func (user *InMemUser) asUserDesc() *UserDesc {
  */
 type InMemACLEntry struct {
 	InMemPersistObj
-	ACLId string
-	IdentityId string
+	ResourceId string
+	PartyId string
 	PermissionMask []bool
 }
 
-func (client *InMemClient) dbCreateACLEntry(resourceId string, identityId string,
+func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	permissionMask []bool) (ACLEntry, error) {
-	var obj PersistObj = client.getPersistentObject(resourceId)
-	var acl ACL
+	
+	var resource Resource
+	var party Party
 	var isType bool
-	acl, isType = obj.(Resource)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
+	var obj PersistObj = client.getPersistentObject(resourceId)
+	resource, isType = obj.(Resource)
+	if ! isType { panic(errors.New("Internal error: object is not a Resource")) }
+	obj = client.getPersistentObject(partyId)
+	party, isType = obj.(Party)
+	if ! isType { panic(errors.New("Internal error: object is not a Party")) }
 	var aclEntryId = createUniqueDbObjectId()
 	var newACLEntry *InMemACLEntry = &InMemACLEntry{
 		InMemPersistObj: InMemPersistObj{Id: aclEntryId},
-		ACLId: acl.getId(),
-		IdentityId: identityId,
+		ResourceId: resource.getId(),
+		PartyId: partyId,
 		PermissionMask: permissionMask,
 	}
 	fmt.Println("Created ACLEntry")
 	allObjects[aclEntryId] = newACLEntry
+	resource.addACLEntry(newACLEntry)  // Add to resource's ACL
+	party.addACLEntry(newACLEntry)  // Add to user or group's ACL
 	return newACLEntry, nil
 }
 
 func (client *InMemClient) getACLEntry(id string) ACLEntry {
-	return ACLEntry(client.getPersistentObject(id))
-}
-
-func (entry *InMemACLEntry) getACL() ACL {
-	var acl ACL
+	var aclEntry ACLEntry
 	var isType bool
-	acl, isType = allObjects[entry.ACLId].(ACL)
+	aclEntry, isType = client.getPersistentObject(id).(ACLEntry)
 	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return acl
+	return aclEntry
 }
 
-func (entry *InMemACLEntry) getIdentity() PersistObj {
-	return allObjects[entry.IdentityId]
+func (entry *InMemACLEntry) getResourceId() string {
+	return entry.ResourceId
+}
+
+func (entry *InMemACLEntry) getPartyId() string {
+	return entry.PartyId
+}
+
+func (entry *InMemACLEntry) getParty() Party {
+	var party Party
+	var isType bool
+	party, isType = allObjects[entry.PartyId].(Party)
+	if ! isType { panic(errors.New("Internal error: object is not a Party")) }
+	return party
 }
 
 func (entry *InMemACLEntry) getPermissionMask() []bool {
@@ -292,50 +370,9 @@ func (entry *InMemACLEntry) getPermissionMask() []bool {
 /*******************************************************************************
  * 
  */
-type InMemACL struct {
-	InMemPersistObj
-	ResourceId string
-	ACLEntryIds []string
-}
-
-func (client *InMemClient) dbCreateACL(resourceId string) (ACL, error) {
-	var aclId = createUniqueDbObjectId()
-	var newACL *InMemACL = &InMemACL{
-		InMemPersistObj: InMemPersistObj{Id: aclId},
-		ResourceId: resourceId,
-	}
-	fmt.Println("Created ACL, id=", aclId)
-	allObjects[aclId] = newACL
-	return newACL, nil
-}
-
-//func (acl *InMemACL) getId() string {
-//	return acl.Id
-//}
-
-func (client *InMemClient) getACL(id string) ACL {
-	var acl ACL
-	var isType bool
-	acl, isType = allObjects[id].(ACL)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return acl
-}
-
-func (acl *InMemACL) getResource() PersistObj {
-	return allObjects[acl.ResourceId]
-}
-
-func (acl *InMemACL) getACLEntryIds() []string {
-	return acl.ACLEntryIds
-}
-
-/*******************************************************************************
- * 
- */
 type InMemRealm struct {
 	InMemPersistObj
-	Name string
-	ACLId string
+	InMemResource
 	UserObjIds []string
 	GroupIds []string
 	RepoIds []string
@@ -353,18 +390,14 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) (Realm, error) {
 	realmId = createUniqueDbObjectId()
 	var newRealm *InMemRealm = &InMemRealm{
 		InMemPersistObj: InMemPersistObj{Id: realmId},
-		Name: realmInfo.Name,
-		ACLId: "",
+		InMemResource: NewInMemResource(realmInfo.Name),
+		GroupIds: make([]string, 0),
+		RepoIds: make([]string, 0),
 		FileDirectory: client.assignRealmFileDir(realmId),
 	}
 	
 	allRealmIds = append(allRealmIds, realmId)
 	
-	var err error
-	var acl ACL
-	acl, err = client.dbCreateACL(realmId)
-	if err != nil { return nil, err }
-	newRealm.ACLId = acl.getId()
 	fmt.Println("Created realm")
 	allObjects[realmId] = newRealm
 	_, isType := allObjects[realmId].(Realm)
@@ -388,10 +421,6 @@ func (client *InMemClient) getRealmIdByName(name string) string {
 	return ""
 }
 
-//func (realm *InMemRealm) getId() string {
-//	return realm.Id
-//}
-
 func (realm *InMemRealm) getFileDirectory() string {
 	fmt.Println("getFileDirectory...")
 	return realm.FileDirectory
@@ -410,10 +439,6 @@ func (client *InMemClient) getRealm(id string) Realm {
 	return realm
 }
 
-func (realm *InMemRealm) getName() string {
-	return realm.Name
-}
-
 func (realm *InMemRealm) getUserObjIds() []string {
 	return realm.UserObjIds
 }
@@ -422,7 +447,7 @@ func (realm *InMemRealm) getRepoIds() []string {
 	return realm.RepoIds
 }
 
-func (realm *InMemRealm) addUser(userObjId string) error {
+func (realm *InMemRealm) addUserId(userObjId string) error {
 	
 	var user User
 	var isType bool
@@ -440,12 +465,16 @@ func (realm *InMemRealm) getGroupIds() []string {
 	return realm.GroupIds
 }
 
-func (realm *InMemRealm) getACL() ACL {
-	var acl ACL
-	var isType bool
-	acl, isType = allObjects[realm.ACLId].(ACL)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return acl
+func (realm *InMemRealm) addUser(user User) {
+	realm.UserObjIds = append(realm.UserObjIds, user.getId())
+}
+
+func (realm *InMemRealm) addGroup(group Group) {
+	realm.GroupIds = append(realm.GroupIds, group.getId())
+}
+
+func (realm *InMemRealm) addRepo(repo Repo) {
+	realm.RepoIds = append(realm.RepoIds, repo.getId())
 }
 
 func (realm *InMemRealm) asRealmDesc() *RealmDesc {
@@ -553,39 +582,28 @@ func (realm *InMemRealm) getRepoByName(repoName string) Repo {
  */
 type InMemRepo struct {
 	InMemPersistObj
+	InMemResource
 	RealmId string
-	Name string
-	ACLId string
 	DockerfileIds []string
 	DockerImageIds []string
 	FileDirectory string  // where this repo's files are stored
 }
 
 func (client *InMemClient) dbCreateRepo(realmId string, name string) (Repo, error) {
+	var realm Realm = client.getRealm(realmId)
 	var repoId string = createUniqueDbObjectId()
 	var newRepo *InMemRepo = &InMemRepo{
 		InMemPersistObj: InMemPersistObj{Id: repoId},
+		InMemResource: NewInMemResource(name),
 		RealmId: realmId,
-		Name: name,
-		ACLId: "",
+		DockerfileIds: make([]string, 0),
+		DockerImageIds: make([]string, 0),
 		FileDirectory: client.assignRepoFileDir(realmId, repoId),
 	}
-	var err error
-	var acl ACL
-	acl, err = client.dbCreateACL(repoId)
-	if err != nil { return nil, err }
-	newRepo.ACLId = acl.getId()
 	fmt.Println("Created repo")
 	allObjects[repoId] = newRepo
+	realm.addRepo(newRepo)  // Add it to the realm.
 	return newRepo, nil
-}
-
-//func (repo *InMemRepo) getId() string {
-//	return repo.Id
-//}
-
-func (repo *InMemRepo) getName() string {
-	return repo.Name
 }
 
 func (repo *InMemRepo) getFileDirectory() string {
@@ -625,12 +643,8 @@ func (repo *InMemRepo) addDockerfile(dockerfile Dockerfile) {
 	repo.DockerfileIds = append(repo.DockerfileIds, dockerfile.getId())
 }
 
-func (repo *InMemRepo) getACL() ACL {
-	var acl ACL
-	var isType bool
-	acl, isType = allObjects[repo.ACLId].(ACL)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return acl
+func (repo *InMemRepo) addDockerImage(image DockerImage) {
+	repo.DockerImageIds = append(repo.DockerImageIds, image.getId())
 }
 
 func (repo *InMemRepo) asRepoDesc() *RepoDesc {
@@ -642,9 +656,8 @@ func (repo *InMemRepo) asRepoDesc() *RepoDesc {
  */
 type InMemDockerfile struct {
 	InMemPersistObj
+	InMemResource
 	RepoId string
-	Name string
-	ACLId string
 	FilePath string
 }
 
@@ -653,16 +666,10 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	var dockerfileId string = createUniqueDbObjectId()
 	var newDockerfile *InMemDockerfile = &InMemDockerfile{
 		InMemPersistObj: InMemPersistObj{Id: dockerfileId},
+		InMemResource: NewInMemResource(name),
 		RepoId: repoId,
-		Name: name,
-		ACLId: "",
 		FilePath: filepath,
 	}
-	var err error
-	var acl ACL
-	acl, err = client.dbCreateACL(dockerfileId)
-	if err != nil { return nil, err }
-	newDockerfile.ACLId = acl.getId()
 	fmt.Println("Created Dockerfile")
 	allObjects[dockerfileId] = newDockerfile
 	
@@ -675,10 +682,6 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	
 	return newDockerfile, nil
 }
-
-//func (dockerfile *InMemDockerfile) getId() string {
-//	return dockerfile.Id
-//}
 
 func (client *InMemClient) getDockerfile(id string) Dockerfile {
 	var dockerfile Dockerfile
@@ -696,18 +699,6 @@ func (dockerfile *InMemDockerfile) getRepo() Repo {
 	return repo
 }
 
-func (dockerfile *InMemDockerfile) getName() string {
-	return dockerfile.Name
-}
-
-func (dockerfile *InMemDockerfile) getACL() ACL {
-	var acl ACL
-	var isType bool
-	acl, isType = allObjects[dockerfile.ACLId].(ACL)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return acl
-}
-
 func (dockerfile *InMemDockerfile) getFilePath() string {
 	return dockerfile.FilePath
 }
@@ -721,33 +712,32 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() *DockerfileDesc {
  */
 type InMemDockerImage struct {
 	InMemPersistObj
-	//Name string
+	InMemResource
 	RepoId string
-	ACLId string
-	DockerImageId string  // id in the local docker repo
 }
 
 func (client *InMemClient) dbCreateDockerImage(repoId string,
-	dockerImageId string) (DockerImage, error) {
+	dockerImageTag string) (DockerImage, error) {
+	
+	var repo Repo
+	var isType bool
+	repo, isType = allObjects[repoId].(Repo)
+	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
+	
 	var imageId string = createUniqueDbObjectId()
 	var newDockerImage *InMemDockerImage = &InMemDockerImage{
 		InMemPersistObj: InMemPersistObj{Id: imageId},
+		InMemResource: NewInMemResource(dockerImageTag),
 		RepoId: repoId,
-		ACLId: "",
-		DockerImageId: dockerImageId,
 	}
-	var err error
-	var acl ACL
-	acl, err = client.dbCreateACL(imageId)
-	if err != nil { return nil, err }
-	newDockerImage.ACLId = acl.getId()
 	fmt.Println("Created DockerImage")
 	allObjects[imageId] = newDockerImage
+	repo.addDockerImage(newDockerImage)  // Add to repo's list.
 	return newDockerImage, nil
 }
 
 func (image *InMemDockerImage) getName() string {
-	return image.DockerImageId
+	return image.Name
 }
 
 func (client *InMemClient) getDockerImage(id string) DockerImage {
@@ -766,20 +756,12 @@ func (image *InMemDockerImage) getRepo() Repo {
 	return repo
 }
 
-func (image *InMemDockerImage) getACL() ACL {
-	var acl ACL
-	var isType bool
-	acl, isType = allObjects[image.ACLId].(ACL)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return acl
-}
-
 func (image *InMemDockerImage) getDockerImageId() string {
-	return image.DockerImageId
+	return image.Name
 }
 
 func (image *InMemDockerImage) asDockerImageDesc() *DockerImageDesc {
-	return NewDockerImageDesc(image.Id, image.DockerImageId)
+	return NewDockerImageDesc(image.Id, image.Name)
 }
 
 

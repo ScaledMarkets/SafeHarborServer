@@ -189,7 +189,7 @@ func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 
 /*******************************************************************************
  * Arguments: UserObjId
- * Returns: []GroupDesc
+ * Returns: []*GroupDesc
  */
 func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
@@ -230,7 +230,7 @@ func deleteGroup(server *Server, sessionToken *SessionToken, values url.Values,
 
 /*******************************************************************************
  * Arguments: GroupId
- * Returns: []UserDesc
+ * Returns: []*UserDesc
  */
 func getGroupUsers(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
@@ -279,7 +279,7 @@ func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 		"No group with Id %s", groupId))
 	}
 
-	err = group.addUser(userObjId)
+	err = group.addUserId(userObjId)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	return &Result{
@@ -345,7 +345,7 @@ func addRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	realm = server.dbClient.getRealm(realmId)
 	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
 	
-	err = realm.addUser(userObjId)
+	err = realm.addUserId(userObjId)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	return NewResult(200, "User added to realm")
 }
@@ -386,7 +386,7 @@ func getRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 
 /*******************************************************************************
  * Arguments: RealmId
- * Returns: []GroupDesc
+ * Returns: []*GroupDesc
  */
 func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
@@ -395,7 +395,7 @@ func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Value
 
 /*******************************************************************************
  * Arguments: RealmId
- * Returns: []RepoDesc
+ * Returns: []*RepoDesc
  */
 func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
@@ -428,7 +428,7 @@ func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values
 
 /*******************************************************************************
  * Arguments: UserObjId
- * Returns: []RealmDesc
+ * Returns: []*RealmDesc
  */
 func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
@@ -437,7 +437,7 @@ func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
 
 /*******************************************************************************
  * Arguments: (none)
- * Returns: []RealmDesc
+ * Returns: []*RealmDesc
  */
 func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
@@ -454,6 +454,7 @@ func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 		var desc *RealmDesc = realm.asRealmDesc()
 		result = append(result, desc)
 	}
+	
 	return result
 }
 
@@ -511,7 +512,7 @@ func deleteRepo(server *Server, sessionToken *SessionToken, values url.Values,
 
 /*******************************************************************************
  * Arguments: RealmId
- * Returns: []RepoDesc
+ * Returns: []*RepoDesc
  */
 func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
@@ -520,7 +521,7 @@ func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 
 /*******************************************************************************
  * Arguments: RepoId
- * Returns: []DockerfileDesc
+ * Returns: []*DockerfileDesc
  */
 func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
@@ -552,7 +553,7 @@ func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Value
 
 /*******************************************************************************
  * Arguments: RepoId
- * Returns: []DockerImageDesc
+ * Returns: []*DockerImageDesc
  */
 func getImages(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {

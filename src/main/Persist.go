@@ -13,7 +13,6 @@ type DBClient interface {
 	dbCreateGroup(string, string) (Group, error)
 	dbCreateUser(string, string, string) (User, error)
 	dbCreateACLEntry(string, string, []bool) (ACLEntry, error)
-	dbCreateACL(string) (ACL, error)
 	dbCreateRealm(*RealmInfo) (Realm, error)
 	dbCreateRepo(string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string) (Dockerfile, error)
@@ -22,7 +21,6 @@ type DBClient interface {
 	getGroup(string) Group
 	getUser(string) User
 	getACLEntry(string) ACLEntry
-	getACL(string) ACL
 	getRealm(string) Realm
 	getRepo(string) Repo
 	getDockerfile(string) Dockerfile
@@ -34,37 +32,45 @@ type PersistObj interface {
 	getId() string
 }
 
-type Group interface {
+/* A Party is a User or a Group. Parties act on Resources. */
+type Party interface {
 	PersistObj
 	getName() string
 	getACLEntryIds() []string
+	addACLEntry(ACLEntry)
+}
+
+type Group interface {
+	Party
 	getUserObjIds() []string
 	hasUserWithId(string) bool
-	addUser(string) error
+	addUserId(string) error
+	addUser(User)
 	asGroupDesc() *GroupDesc
 }
 
 type User interface {
-	PersistObj
+	Party
 	getRealmId() string
 	getUserId() string
-	getName() string
-	getACLEntryIds() []string
 	asUserDesc() *UserDesc
 }
 
 type ACLEntry interface {
 	PersistObj
+	getResourceId() string
+	getPartyId() string
 }
 
 type ACL interface {
 	PersistObj
+	addACLEntry(ACLEntry)
 }
 
+/* A Resource is something that a party can act upon. */
 type Resource interface {
-	PersistObj
+	ACL
 	getName() string
-	getACL() ACL
 }
 
 type Realm interface {
@@ -79,9 +85,12 @@ type Realm interface {
 	getRepoByName(string) Repo
 	getUserObjIds() []string
 	getRepoIds() []string
-	addUser(string) error
+	addUserId(string) error
 	getUserByUserId(string) User
 	asRealmDesc() *RealmDesc
+	addGroup(Group)
+	addUser(User)
+	addRepo(Repo)
 }
 
 type Repo interface {
@@ -92,6 +101,7 @@ type Repo interface {
 	getDockerfileIds() []string
 	getDockerImageIds() []string
 	addDockerfile(Dockerfile)
+	addDockerImage(DockerImage)
 	asRepoDesc() *RepoDesc
 }
 

@@ -365,23 +365,23 @@ func (dockerfileDescs DockerfileDescs) asResponse() string {
 type DockerImageDesc struct {
 	BaseType
 	ObjId string
-	DockerImageId string
+	DockerImageTag string
 }
 
 func NewDockerImageDesc(objId string, dockerId string) *DockerImageDesc {
 	return &DockerImageDesc{
 		ObjId: objId,
-		DockerImageId: dockerId,
+		DockerImageTag: dockerId,
 	}
 }
 
 func (imageDesc *DockerImageDesc) getDockerImageId() string {
-	return imageDesc.DockerImageId
+	return imageDesc.DockerImageTag
 }
 
 func (imageDesc *DockerImageDesc) asResponse() string {
-	return fmt.Sprintf("{\"ObjId\": \"%s\", \"DockerImageId\": \"%s\"}",
-		imageDesc.ObjId, imageDesc.DockerImageId)
+	return fmt.Sprintf("{\"ObjId\": \"%s\", \"DockerImageTag\": \"%s\"}",
+		imageDesc.ObjId, imageDesc.DockerImageTag)
 }
 
 type DockerImageDescs []*DockerImageDesc
