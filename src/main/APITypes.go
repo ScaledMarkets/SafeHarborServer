@@ -152,7 +152,7 @@ func (groupDescs GroupDescs) asResponse() string {
 	var response string = "[\n"
 	var firstTime bool = true
 	for _, desc := range groupDescs {
-		if firstTime { firstTime = false } else { response = ",\n" + response }
+		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.asResponse()
 	}
 	response = response + "]"
@@ -221,7 +221,7 @@ func (userDescs UserDescs) asResponse() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range userDescs {
-		if firstTime { firstTime = false } else { response = ",\n" + response }
+		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.asResponse()
 	}
 	response = response + "]"
@@ -317,7 +317,7 @@ func (repoDescs RepoDescs) asResponse() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range repoDescs {
-		if firstTime { firstTime = false } else { response = ",\n" + response }
+		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.asResponse()
 	}
 	response = response + "]"
@@ -353,7 +353,7 @@ func (dockerfileDescs DockerfileDescs) asResponse() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range dockerfileDescs {
-		if firstTime { firstTime = false } else { response = ",\n" + response }
+		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.asResponse()
 	}
 	response = response + "]"
@@ -391,7 +391,7 @@ func (imageDescs DockerImageDescs) asResponse() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range imageDescs {
-		if firstTime { firstTime = false } else { response = ",\n" + response }
+		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.asResponse()
 	}
 	response = response + "]"
