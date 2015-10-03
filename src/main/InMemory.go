@@ -57,19 +57,18 @@ func (client *InMemClient) init() {
 	// Recreate the file repository, but empty.
 	os.Mkdir(client.Server.Config.FileRepoRootPath, 0770)
 
-	
-	
-	// Temporary for testing - remove! ********************
-	var testRealm Realm
-	testRealm, err = client.dbCreateRealm(NewRealmInfo("testrealm"))
-	if err != nil {
-		fmt.Println(err.Error())
-		panic(err)
+	// For testing only:
+	if client.Server.Debug {
+		var testRealm Realm
+		testRealm, err = client.dbCreateRealm(NewRealmInfo("testrealm"))
+		if err != nil {
+			fmt.Println(err.Error())
+			panic(err)
+		}
+		var testUser1 User
+		testUser1, err = client.dbCreateUser("testuser1", "Test User", testRealm.getId())
+		fmt.Println("User", testUser1.getName(), "created, id=", testUser1.getId())
 	}
-	var testUser1 User
-	testUser1, err = client.dbCreateUser("testuser1", "Test User", testRealm.getId())
-	fmt.Println("User", testUser1.getName(), "created, id=", testUser1.getId())
-	// ****************************************************
 	
 	fmt.Println("Repository initialized")
 }
@@ -611,7 +610,6 @@ func (repo *InMemRepo) getFileDirectory() string {
 }
 
 func (client *InMemClient) getRepo(id string) Repo {
-	fmt.Println("getRepo(", id, ")...")
 	var repo Repo
 	var isType bool
 	repo, isType = allObjects[id].(Repo)
@@ -619,7 +617,6 @@ func (client *InMemClient) getRepo(id string) Repo {
 		fmt.Println("***********allObjects[", id, "] is a", reflect.TypeOf(allObjects[id]))
 		panic(errors.New("************Internal error: object is an unexpected type"))
 	}
-	fmt.Println("getRepo.B")
 	return repo
 }
 

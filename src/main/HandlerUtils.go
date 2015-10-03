@@ -34,14 +34,6 @@ func createUniqueFilename(dir string, basename string) (string, error) {
  */
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
-	if err == nil {
-		fmt.Println("fileExists:")
-		fmt.Println("\t", path)
-	} else {
-		fmt.Println("fileExists - NOT:")
-		fmt.Println("\t", path)
-		fmt.Println(err.Error())
-	}
 	return (err == nil)
 }
 

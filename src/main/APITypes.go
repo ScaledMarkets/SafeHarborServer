@@ -67,6 +67,7 @@ type FailureDesc struct {
 }
 
 func NewFailureDesc(reason string) *FailureDesc {
+	fmt.Println("Creating FailureDesc; reason=" + reason)
 	return &FailureDesc{
 		Reason: reason,
 		HTTPCode: 500,

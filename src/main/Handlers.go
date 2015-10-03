@@ -586,8 +586,7 @@ func getImages(server *Server, sessionToken *SessionToken, values url.Values,
  * Arguments: RepoId, File
  * Returns: DockerfileDesc
  * The File argument is obtained from the values as follows:
- *    The file temp name is stored in values, keyed on "File".
- *    The name specified by the client is keyed on "Filename".
+ *    The name specified by the client is keyed on "filename".
  * The handler should move the file to a permanent name.
  */
 func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
