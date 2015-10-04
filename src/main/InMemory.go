@@ -672,8 +672,9 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	
 	// Add to the Repo's list of Dockerfiles.
 	var repo Repo = client.getRepo(repoId)
-	if repo == nil { return nil, errors.New(fmt.Sprintf(
-		"Repo with Id %s not found", repoId))
+	if repo == nil {
+		fmt.Println("Repo with Id " + repoId + " not found")
+		return nil, errors.New(fmt.Sprintf("Repo with Id %s not found", repoId))
 	}
 	repo.addDockerfile(newDockerfile)
 	
