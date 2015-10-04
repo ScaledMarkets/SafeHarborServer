@@ -329,7 +329,8 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	fmt.Println("dbCreateACLEntry: E")
 	party, isType = obj.(Party)
 	fmt.Println("dbCreateACLEntry: F")
-	if ! isType { panic(errors.New("Internal error: object is not a Party")) }
+	if ! isType { panic(errors.New("Internal error: object is not a Party - it is a " +
+		reflect.TypeOf(obj).String())) }
 	fmt.Println("dbCreateACLEntry: G")
 	var aclEntryId = createUniqueDbObjectId()
 	fmt.Println("dbCreateACLEntry: H")
