@@ -327,6 +327,9 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	fmt.Println("dbCreateACLEntry: D")
 	obj = client.getPersistentObject(partyId)
 	fmt.Println("dbCreateACLEntry: E")
+	if obj == nil {
+		fmt.Println("obj is nil")
+	}
 	party, isType = obj.(Party)
 	fmt.Println("dbCreateACLEntry: F - obj is a " + reflect.TypeOf(obj).String())
 	if ! isType { fmt.Println("Internal error: object is not a Party - it is a " +
