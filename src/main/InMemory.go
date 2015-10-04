@@ -59,12 +59,14 @@ func (client *InMemClient) init() {
 
 	// For testing only:
 	if client.Server.Debug {
+		fmt.Println("Debug mode: creating realm testrealm")
 		var testRealm Realm
 		testRealm, err = client.dbCreateRealm(NewRealmInfo("testrealm"))
 		if err != nil {
 			fmt.Println(err.Error())
 			panic(err)
 		}
+		fmt.Println("Debug mode: creating user testuser1 in realm testrealm")
 		var testUser1 User
 		testUser1, err = client.dbCreateUser("testuser1", "Test User", testRealm.getId())
 		fmt.Println("User", testUser1.getName(), "created, id=", testUser1.getId())
