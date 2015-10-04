@@ -318,13 +318,21 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	var resource Resource
 	var party Party
 	var isType bool
+	fmt.Println("dbCreateACLEntry: A")
 	var obj PersistObj = client.getPersistentObject(resourceId)
+	fmt.Println("dbCreateACLEntry: B")
 	resource, isType = obj.(Resource)
+	fmt.Println("dbCreateACLEntry: C")
 	if ! isType { panic(errors.New("Internal error: object is not a Resource")) }
+	fmt.Println("dbCreateACLEntry: D")
 	obj = client.getPersistentObject(partyId)
+	fmt.Println("dbCreateACLEntry: E")
 	party, isType = obj.(Party)
+	fmt.Println("dbCreateACLEntry: F")
 	if ! isType { panic(errors.New("Internal error: object is not a Party")) }
+	fmt.Println("dbCreateACLEntry: G")
 	var aclEntryId = createUniqueDbObjectId()
+	fmt.Println("dbCreateACLEntry: H")
 	var newACLEntry *InMemACLEntry = &InMemACLEntry{
 		InMemPersistObj: InMemPersistObj{Id: aclEntryId},
 		ResourceId: resource.getId(),
