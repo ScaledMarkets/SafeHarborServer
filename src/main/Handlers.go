@@ -658,6 +658,7 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	// Create an ACL entry for the new file.
+	fmt.Println("Adding ACL entry")
 	dbClient.dbCreateACLEntry(dockerfile.getId(), userid,
 		[]bool{ true, true, true, true, true } )
 	fmt.Println("Created ACL entry")
