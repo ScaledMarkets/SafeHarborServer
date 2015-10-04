@@ -48,6 +48,7 @@ func (client *InMemClient) init() {
 	// Initialize global variables.
 	allRealmIds = make([]string, 0)
 	allObjects = make(map[string]PersistObj)
+	allUsers = make(map[string]User)
 
 	// Remove the file repository - this is an in-memory implementation so we
 	// want to start empty.
