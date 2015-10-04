@@ -171,3 +171,23 @@ func nameConformsToDockerRules(name string) error {
 	return errors.New("Image name '" + name + "' does not conform to docker image name rules: " +
 		"[a-z0-9]+(?:[._-][a-z0-9]+)*")
 }
+
+/*******************************************************************************
+ * If the specified condition is not true, then thrown an exception with the message.
+ */
+func assertThat(condition bool, msg string) {
+	if ! condition {
+		var s string = fmt.Sprintf("ERROR: %s", msg)
+		fmt.Println(s)
+		panic(errors.New(s))
+	}
+}
+
+/*******************************************************************************
+ * 
+ */
+func assertErrIsNil(err error, msg string) {
+	if err == nil { return }
+	fmt.Print(msg)
+	panic(err)
+}

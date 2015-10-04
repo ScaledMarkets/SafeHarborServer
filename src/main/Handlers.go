@@ -10,7 +10,7 @@ import (
 	"mime/multipart"
 	//"net/textproto"
 	"fmt"
-	//"errors"
+	"errors"
 	//"bufio"
 	"io"
 	"io/ioutil"
@@ -623,10 +623,13 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	// Identify the user.
 	var userid string = sessionToken.authenticatedUserid
 	fmt.Println("userid=", userid)
-	
+	var user User = repo.getRealm().getUserByUserId(userid)
+	assertThat(user != nil, "user object cannot be identified from user id " + userid)
 	// Verify that the user is authorized to add to the repo.
 	//....TBD
 	
+	
+
 	
 	// Create a filename for the new file.
 	var filepath = repo.getFileDirectory() + "/" + filename
@@ -638,8 +641,8 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 		}
 	}
 	if fileExists(filepath) {
-		fmt.Println("********Internal error: file exists but it should not:")
-		fmt.Println(filepath)
+		fmt.Println("********Internal error: file exists but it should not:" + filepath)
+		panic(errors.New("********Internal error: file exists but it should not:" + filepath))
 	}
 	
 	// Save the file data to a permanent file.
@@ -657,9 +660,9 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), filename, filepath)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
-	// Create an ACL entry for the new file.
+	// Create an ACL entry for the new file, to allow access by the current user.
 	fmt.Println("Adding ACL entry")
-	dbClient.dbCreateACLEntry(dockerfile.getId(), userid,
+	dbClient.dbCreateACLEntry(dockerfile.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	fmt.Println("Created ACL entry")
 	

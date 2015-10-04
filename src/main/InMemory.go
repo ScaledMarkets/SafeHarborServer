@@ -315,30 +315,20 @@ type InMemACLEntry struct {
 func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	permissionMask []bool) (ACLEntry, error) {
 	
+	assertThat(resourceId != "", "Internal error: resourceId is empty")
+	assertThat(partyId != "", "Internal error: partyId is empty")
 	var resource Resource
 	var party Party
 	var isType bool
-	fmt.Println("dbCreateACLEntry: A")
 	var obj PersistObj = client.getPersistentObject(resourceId)
-	fmt.Println("dbCreateACLEntry: B")
 	resource, isType = obj.(Resource)
-	fmt.Println("dbCreateACLEntry: C")
-	if ! isType { panic(errors.New("Internal error: object is not a Resource")) }
-	fmt.Println("dbCreateACLEntry: D")
+	assertThat(isType, "Internal error: object is not a Resource")
 	obj = client.getPersistentObject(partyId)
-	fmt.Println("dbCreateACLEntry: E")
-	if obj == nil {
-		fmt.Println("obj is nil")
-	}
+	assertThat(obj != nil, "Internal error: obj is nil")
 	party, isType = obj.(Party)
-	fmt.Println("dbCreateACLEntry: F - obj is a " + reflect.TypeOf(obj).String())
-	if ! isType { fmt.Println("Internal error: object is not a Party - it is a " +
-		reflect.TypeOf(obj).String()) }
-	if ! isType { panic(errors.New("Internal error: object is not a Party - it is a " +
-		reflect.TypeOf(obj).String())) }
-	fmt.Println("dbCreateACLEntry: G")
+	assertThat(isType, "Internal error: object is not a Party - it is a " +
+		reflect.TypeOf(obj).String())
 	var aclEntryId = createUniqueDbObjectId()
-	fmt.Println("dbCreateACLEntry: H")
 	var newACLEntry *InMemACLEntry = &InMemACLEntry{
 		InMemPersistObj: InMemPersistObj{Id: aclEntryId},
 		ResourceId: resource.getId(),
