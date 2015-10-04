@@ -13,7 +13,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"time"
-	"errors"
+	//"errors"
 )
 
 type AuthService struct {
@@ -44,8 +44,6 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
 func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionToken {
 	var sessionToken *SessionToken = nil
 	
-	/***********************
-	Commented out until I complete the authentication mechanism with Cesanta.
 	var sessionId = getSessionId(httpReq)
 	if sessionId != "" {
 		sessionToken = authSvc.validateSessionId(sessionId)
@@ -53,13 +51,13 @@ func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionT
 	if sessionToken == nil { // authenticate basic credentials
 		var creds *Credentials = getSessionBasicAuthCreds(httpReq)
 		if creds != nil {
-			sessionToken = authSvc.authenticated(creds)
+			sessionToken = authSvc.authenticateCredentials(creds)
 		}
 	}
-	***********************/
+
 	// Temporary code - 
-	var sessionId string = authSvc.createUniqueSessionId()
-	sessionToken = NewSessionToken(sessionId, "testuser1")
+	//var sessionId string = authSvc.createUniqueSessionId()
+	//sessionToken = NewSessionToken(sessionId, "testuser1")
 	//........Remove the above two lines!!!!!!!!!
 	
 	return sessionToken
@@ -69,14 +67,17 @@ func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionT
  * Verify that the credentials match a registered user. If so, return a session
  * token that can be used to validate subsequent requests.
  */
-func (authSvc *AuthService) authenticated(creds *Credentials) *SessionToken {
+func (authSvc *AuthService) authenticateCredentials(creds *Credentials) *SessionToken {
 	
+	/***************
 	// Access the auth server to authenticate the credentials.
 	if ! authSvc.sendQueryToAuthServer(creds, authSvc.Service,
 		creds.userid, "", "", []string{}) { return nil }
+	***************/
 	
 	var sessionId string = authSvc.createUniqueSessionId()
-	var token *SessionToken = NewSessionToken(sessionId, creds.userid)
+	var token *SessionToken = NewSessionToken(sessionId, creds.UserId)
+	//var token *SessionToken = NewSessionToken(sessionId, creds.userid)
 	
 	// Cache the new session token, so that this Server can recognize it in future
 	// exchanges during this session.
@@ -88,7 +89,7 @@ func (authSvc *AuthService) authenticated(creds *Credentials) *SessionToken {
 /*******************************************************************************
  * Check if the specified account is allowed to have access to the specified
  * resource. This function does not authenticate the
- * account - that is done by authenticated().
+ * account - that is done by authenticateCredentials().
  * https://stackoverflow.com/questions/24496344/golang-send-http-request-with-certificate
  */
 func (authSvc *AuthService) authorized(creds *Credentials, account string, 
@@ -112,7 +113,6 @@ func (authSvc *AuthService) authorized(creds *Credentials, account string,
 func getSessionId(httpReq *http.Request) string {
 	var sessionId string = httpReq.Header["SessionId"][0]
 	if len(sessionId) == 0 { return "" }
-	if len(sessionId) > 1 { panic(errors.New("Ill-formed session id")) }
 	return sessionId
 }
 
@@ -120,9 +120,9 @@ func getSessionId(httpReq *http.Request) string {
  * Return the userid and password from the HTTP header, or nil if not present.
  */
 func getSessionBasicAuthCreds(httpReq *http.Request) *Credentials {
-	userid, password, ok := httpReq.BasicAuth()
+	userId, password, ok := httpReq.BasicAuth()
 	if !ok { return nil }
-	return NewCredentials(userid, password)
+	return NewCredentials(userId, password)
 }
 
 /*******************************************************************************
@@ -133,7 +133,7 @@ func (authSvc *AuthService) validateSessionId(sessionId string) *SessionToken {
 	var credentials *Credentials = authSvc.Sessions[sessionId]
 	if credentials == nil { return nil }
 	
-	return NewSessionToken(sessionId, credentials.userid)
+	return NewSessionToken(sessionId, credentials.UserId)
 }
 
 /*******************************************************************************
@@ -170,13 +170,13 @@ func (authSvc *AuthService) sendQueryToAuthServer(creds *Credentials,
 	var data url.Values = url.Values {
 		"service": []string{service},
 		"scope": []string{scope},
-		"account": []string{creds.userid},
+		"account": []string{creds.UserId},
 	}
 	var reader io.Reader = strings.NewReader(data.Encode())
 	
 	request, err = http.NewRequest("POST", urlstr, reader)
 		if err != nil { panic(err) }
-	request.SetBasicAuth(creds.userid, creds.pswd)
+	request.SetBasicAuth(creds.UserId, creds.Password)
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	var resp *http.Response
 	resp, err = authSvc.AuthClient.Do(request)

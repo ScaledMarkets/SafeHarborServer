@@ -84,14 +84,14 @@ func (failureDesc *FailureDesc) asResponse() string {
  */
 type Credentials struct {
 	BaseType
-	userid string
-	pswd string
+	UserId string
+	Password string
 }
 
 func NewCredentials(uid string, pwd string) *Credentials {
 	return &Credentials{
-		userid: uid,
-		pswd: pwd,
+		UserId: uid,
+		Password: pwd,
 	}
 }
 
@@ -109,7 +109,7 @@ func GetCredentials(values url.Values) (*Credentials, error) {
 }
 
 func (creds *Credentials) asResponse() string {
-	return "{}"
+	return fmt.Sprintf("{\"UserId\": \"%s\"}", creds.UserId)
 }
 
 /*******************************************************************************
@@ -118,18 +118,19 @@ func (creds *Credentials) asResponse() string {
 type SessionToken struct {
 	BaseType
 	UniqueSessionId string
-	authenticatedUserid string
+	AuthenticatedUserid string
 }
 
-func NewSessionToken(sessionId string, userid string) *SessionToken {
+func NewSessionToken(sessionId string, userId string) *SessionToken {
 	return &SessionToken{
 		UniqueSessionId: sessionId,
-		authenticatedUserid: userid,
+		AuthenticatedUserid: userId,
 	}
 }
 
 func (sessionToken *SessionToken) asResponse() string {
-	return "{}"
+	return fmt.Sprintf("{\"UniqueSessionId\": \"%s\", \"AuthenticatedUserid\": \"%s\"}",
+		sessionToken.UniqueSessionId, sessionToken.AuthenticatedUserid)
 }
 
 /*******************************************************************************

@@ -120,10 +120,11 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 func authenticate(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
-	//....var creds *Credentials = GetCredentials(values)
-
-	//....return server.authenticated(creds)
-	return nil
+	var creds *Credentials
+	var err error
+	creds, err = GetCredentials(values)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	return server.authService.authenticateCredentials(creds)
 }
 
 /*******************************************************************************
@@ -621,10 +622,10 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	if repo == nil { return NewFailureDesc("Repo does not exist") }
 	
 	// Identify the user.
-	var userid string = sessionToken.authenticatedUserid
-	fmt.Println("userid=", userid)
-	var user User = repo.getRealm().getUserByUserId(userid)
-	assertThat(user != nil, "user object cannot be identified from user id " + userid)
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	assertThat(user != nil, "user object cannot be identified from user id " + userId)
 	// Verify that the user is authorized to add to the repo.
 	//....TBD
 	

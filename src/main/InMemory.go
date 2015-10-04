@@ -92,6 +92,15 @@ func (persObj *InMemPersistObj) getId() string {
 	return persObj.Id
 }
 
+/*
+ * Return the persistent object that is identified by the specified unique id.
+ * An object's Id is assigned to it by the function that creates the object.
+ */
+func (client *InMemClient) getPersistentObject(id string) PersistObj {
+	return allObjects[id]
+}
+
+
 /*******************************************************************************
  * 
  */
@@ -256,11 +265,20 @@ type InMemUser struct {
 	GroupIds []string
 }
 
+func (client *InMemClient) dbGetUserByUserId(userId string) User {
+	return allUsers[userId]
+}
+
 func (client *InMemClient) dbCreateUser(userId string, name string,
 	realmId string) (User, error) {
 	
+	if allUsers[userId] != nil {
+		return nil, errors.New("A user with Id " + userId + " already exists")
+	}
+	
 	var realm Realm = client.getRealm(realmId)
 	if realm == nil { return nil, errors.New("Realm with Id " + realmId + " not found") }
+	
 	var userObjId string = createUniqueDbObjectId()
 	var newUser *InMemUser = &InMemUser{
 		InMemPersistObj: InMemPersistObj{Id: userObjId},
@@ -471,6 +489,7 @@ func (realm *InMemRealm) getGroupIds() []string {
 }
 
 func (realm *InMemRealm) addUser(user User) {
+	allUsers[user.getUserId()] = user
 	realm.UserObjIds = append(realm.UserObjIds, user.getId())
 }
 
@@ -784,14 +803,7 @@ var uniqueId int64 = 5
 
 var allObjects map[string]PersistObj
 
-/*******************************************************************************
- * Return the persistent object that is identified by the specified unique id.
- * An object's Id is assigned to it by the function that creates the object.
- */
-func (client *InMemClient) getPersistentObject(id string) PersistObj {
-	return allObjects[id]
-}
-
+var allUsers map[string]User
 
 /*******************************************************************************
  * Create a directory for the Dockerfiles, images, and any other files owned

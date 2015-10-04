@@ -10,6 +10,7 @@ import (
 )
 
 type DBClient interface {
+	dbGetUserByUserId(string) User
 	dbCreateGroup(string, string) (Group, error)
 	dbCreateUser(string, string, string) (User, error)
 	dbCreateACLEntry(string, string, []bool) (ACLEntry, error)
