@@ -122,8 +122,11 @@ func (authSvc *AuthService) authorized(creds *Credentials, account string,
  * Returns the session id header value, or "" if there is none.
  */
 func getSessionId(httpReq *http.Request) string {
+	fmt.Println("getSessionId.A")
 	var sessionId string = httpReq.Header["SessionId"][0]
+	fmt.Println("getSessionId.B")
 	if len(sessionId) == 0 { return "" }
+	fmt.Println("getSessionId.C")
 	return sessionId
 }
 
