@@ -267,7 +267,7 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	sessionToken = server.authService.authenticateRequest(httpReq)
 	if sessionToken == nil { //return authent failure
 		fmt.Println("Failed to authenticate - request being denied")
-		writer.WriteHeader(401)
+		respondWithClientError(writer, "Failed to authenticate - request being denied")
 		return
 	}
 	fmt.Println("authenticated request")
