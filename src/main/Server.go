@@ -270,6 +270,7 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 		writer.WriteHeader(401)
 		return
 	}
+	fmt.Println("authenticated request")
 	
 	// Set a header with the API Version for all responses.
 	writer.Header().Set("SafeHarbor-API-Version", "safeharbor/1.0")
