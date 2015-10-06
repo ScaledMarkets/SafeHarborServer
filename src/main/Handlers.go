@@ -10,7 +10,7 @@ import (
 	"mime/multipart"
 	//"net/textproto"
 	"fmt"
-	"errors"
+	//"errors"
 	//"bufio"
 	"io"
 	"io/ioutil"
@@ -643,7 +643,7 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	}
 	if fileExists(filepath) {
 		fmt.Println("********Internal error: file exists but it should not:" + filepath)
-		panic(errors.New("********Internal error: file exists but it should not:" + filepath))
+		return NewFailureDesc("********Internal error: file exists but it should not:" + filepath)
 	}
 	
 	// Save the file data to a permanent file.

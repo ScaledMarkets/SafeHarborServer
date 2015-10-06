@@ -110,7 +110,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 	// Detect whether an error occurred.
 	failureDesc, isType := result.(*FailureDesc)
 	if isType {
-		http.Error(w, failureDesc.Reason, failureDesc.HTTPCode)
+		http.Error(w, failureDesc.asResponse(), failureDesc.HTTPCode)
 		fmt.Printf("Error:", failureDesc.Reason)
 		return
 	}
@@ -127,12 +127,6 @@ func returnOkResponse(headers http.Header, writer http.ResponseWriter, result Re
 	var response string = result.asResponse()
 	fmt.Println("Response:")
 	fmt.Println(response)
-	// http://www.html5rocks.com/en/tutorials/cors/#toc-adding-cors-support-to-the-server
-	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	writer.Header().Set("Access-Control-Allow-Origin", "*")
-	writer.Header().Set("Access-Control-Allow-Credentials", "false")
-	//writer.Header().Set("Access-Control-Expose-Headers",
-
 	writer.WriteHeader(http.StatusOK)
 	io.WriteString(writer, response)
 }

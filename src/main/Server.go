@@ -16,7 +16,7 @@ import (
 	"os"
 	"strings"
 	"crypto/x509"
-	"errors"
+	//"errors"
 	//"strconv"
 )
 
@@ -47,7 +47,8 @@ func NewServer(debug bool, port int, adapter string) *Server {
 	var err error
 	config, err = getConfiguration()
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		return nil
 	}
 	
 	// Override conf.json with any command line options.
@@ -200,32 +201,38 @@ func getCert(certPath string) *x509.Certificate {
 	file, err := os.Open(certPath)
 	if err != nil {
 		fmt.Println(fmt.Sprintf("Could not open certificate at %s", certPath))
-		panic(err)
+		return nil
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			panic(err)
+			fmt.Println(err.Error())
 		}
 	}()
 	var fileInfo os.FileInfo
 	fileInfo, err = file.Stat()
-	if err != nil { panic(err) }
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil
+	}
 	var fileLength = fileInfo.Size()
 	var asn1DataBuf = make([]byte, fileLength)
 	var n int
 	n, err = file.Read(asn1DataBuf)
 	if err != nil && err != io.EOF {
-		panic(err)
+		fmt.Println(err.Error())
+		return nil
 	}
 	if int64(n) != fileLength {
-		panic(errors.New("Number of bytes read for cert does not match file length"))
+		fmt.Println("Number of bytes read for cert does not match file length")
+		return nil
 	}
 	
 	// Construct a certificate from the bytes that were read.
 	var cert *x509.Certificate
 	cert, err = x509.ParseCertificate(asn1DataBuf)
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		return nil
 	}
 	// to do:....check signature and CRL
 	
@@ -254,9 +261,6 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	
 	defer httpReq.Body.Close() // ensure that request body is always closed.
 
-	// Set a header with the Docker Distribution API Version for all responses.
-	writer.Header().Add("SafeHarbor-API-Version", "safeharbor/2.0")
-	
 	// Authenitcate session or user.
 	var sessionToken *SessionToken = nil
 	
@@ -265,6 +269,14 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 		writer.WriteHeader(401)
 		return
 	}
+	
+	// Set a header with the API Version for all responses.
+	writer.Header().Set("SafeHarbor-API-Version", "safeharbor/1.0")
+	// http://www.html5rocks.com/en/tutorials/cors/#toc-adding-cors-support-to-the-server
+	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	writer.Header().Set("Access-Control-Allow-Origin", "*")
+	writer.Header().Set("Access-Control-Allow-Credentials", "false")
+	//writer.Header().Set("Access-Control-Expose-Headers",
 	
 	server.dispatch(sessionToken, writer, httpReq)
 }
@@ -287,7 +299,10 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 	
 	if httpMethod == "GET" {
 		
-		if err = httpReq.ParseForm(); err != nil { panic(err) }
+		if err = httpReq.ParseForm(); err != nil {
+			respondWithClientError(writer, err.Error())
+			return
+		}
 		values = httpReq.Form  // map[string]string
 		
 	} else if httpMethod == "POST" {  // dispatch to an error handler.
@@ -298,7 +313,10 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 		// need to authorize the user; otherwise, we deny. In the future we should
 		// allow users to register trusted origins.
 		
-		if err = httpReq.ParseForm(); err != nil { panic(err) }
+		if err = httpReq.ParseForm(); err != nil {
+			respondWithClientError(writer, err.Error())
+			return
+		}
 		values = httpReq.PostForm  // map[string]string
 		
 		// Check if the POST is multipart/form-data.
@@ -313,7 +331,10 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 			// https://golang.org/pkg/mime/multipart/#Reader.ReadForm
 			var form *multipart.Form
 			form, err = mpReader.ReadForm(10000)
-			if err != nil { panic(err) }
+			if err != nil {
+				respondWithClientError(writer, err.Error())
+				return
+			}
 			
 			values = form.Value
 			files = form.File
@@ -392,11 +413,26 @@ type tcpKeepAliveListener struct {
 	*net.TCPListener
 }
 
-
 /*******************************************************************************
  * 
  */
 func respondMethodNotSupported(writer http.ResponseWriter, methodName string) {
 	writer.WriteHeader(405)
 	io.WriteString(writer, "HTTP method not supported:" + methodName)
+}
+
+/*******************************************************************************
+ * 
+ */
+func respondWithClientError(writer http.ResponseWriter, err string) {
+	writer.WriteHeader(400)
+	io.WriteString(writer, err)
+}
+
+/*******************************************************************************
+ * 
+ */
+func respondWithServerError(writer http.ResponseWriter, err string) {
+	writer.WriteHeader(500)
+	io.WriteString(writer, err)
 }
