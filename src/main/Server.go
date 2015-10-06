@@ -123,7 +123,7 @@ func NewServer(debug bool, port int, adapter string) *Server {
 	}
 
 	// Instantiate a TCP socker listener.
-	fmt.Println("...Creating socket listener on port", config.port, "...")
+	fmt.Println("...Creating socket listener at", config.ipaddr, "port", config.port, "...")
 	server.tcpListener, err = newTCPListener(config.ipaddr, config.port)
 	if err != nil {
 		fmt.Println(err.Error())
