@@ -125,8 +125,11 @@ func getSessionId(httpReq *http.Request) string {
 	fmt.Println("getSessionId.A")
 	assertThat(httpReq != nil, "In getSessionId, httpReq is nil")
 	assertThat(httpReq.Header != nil, "In getSessionId, httpReq.Header is nil")
-	assertThat(httpReq.Header["SessionId"] != nil, "In getSessionId, len(httpReq == 0")
-	assertThat(len(httpReq.Header["SessionId"]) > 0, "In getSessionId, ")
+	
+	if httpReq.Header["SessionId"] == nil { // No authenticated session has been established.
+		return ""
+	}
+	assertThat(len(httpReq.Header["SessionId"]) > 0, "In getSessionId, len(httpReq.Header[SessionId]) == 0")
 	var sessionId string = httpReq.Header["SessionId"][0]
 	fmt.Println("getSessionId.B")
 	if len(sessionId) == 0 { return "" }
