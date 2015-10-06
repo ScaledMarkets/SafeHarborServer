@@ -44,6 +44,7 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
 func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionToken {
 	var sessionToken *SessionToken = nil
 	
+	fmt.Println("authenticating request...")
 	var sessionId = getSessionId(httpReq)
 	if sessionId != "" {
 		sessionToken = authSvc.validateSessionId(sessionId)
