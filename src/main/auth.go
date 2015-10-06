@@ -46,15 +46,25 @@ func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionT
 	
 	fmt.Println("authenticating request...")
 	var sessionId = getSessionId(httpReq)
+	fmt.Println("A")
 	if sessionId != "" {
+		fmt.Println("B")
 		sessionToken = authSvc.validateSessionId(sessionId)
+		fmt.Println("C")
 	}
+	fmt.Println("D")
 	if sessionToken == nil { // authenticate basic credentials
+		fmt.Println("E")
 		var creds *Credentials = getSessionBasicAuthCreds(httpReq)
+		fmt.Println("F")
 		if creds != nil {
+			fmt.Println("G")
 			sessionToken = authSvc.authenticateCredentials(creds)
+			fmt.Println("H")
 		}
+		fmt.Println("I")
 	}
+	fmt.Println("J")
 
 	// Temporary code - 
 	//var sessionId string = authSvc.createUniqueSessionId()
