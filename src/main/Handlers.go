@@ -147,6 +147,8 @@ func logout(server *Server, sessionToken *SessionToken, values url.Values,
 func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	
 	var err error
 	var userInfo *UserInfo
 	userInfo, err = GetUserInfo(values)
@@ -185,6 +187,9 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	
 	return nil
 }
 
@@ -194,6 +199,9 @@ func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	
 	return nil
 }
 
@@ -204,6 +212,8 @@ func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
 func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	
 	var err error
 	var realmId string
 	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
@@ -226,6 +236,9 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func deleteGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
 
@@ -236,6 +249,8 @@ func deleteGroup(server *Server, sessionToken *SessionToken, values url.Values,
 func getGroupUsers(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	var err error
 	var groupId string
 	groupId, err = GetRequiredPOSTFieldValue(values, "GroupId")
@@ -266,6 +281,8 @@ func getGroupUsers(server *Server, sessionToken *SessionToken, values url.Values
 func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	var err error
 	var groupId string
 	groupId, err = GetRequiredPOSTFieldValue(values, "GroupId")
@@ -295,6 +312,9 @@ func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func remGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	
 	return nil
 }
 
@@ -304,6 +324,9 @@ func remGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func createRealm(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+	
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	
 	var err error
 	var realmInfo *RealmInfo
 	realmInfo, err = GetRealmInfo(values)
@@ -324,6 +347,9 @@ func createRealm(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func deleteRealm(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
 
@@ -333,6 +359,8 @@ func deleteRealm(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func addRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
 
 	var err error
 	var realmId string
@@ -357,6 +385,9 @@ func addRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func remRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
 
@@ -366,6 +397,8 @@ func remRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func getRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
 
 	var err error
 	var realmId string
@@ -391,6 +424,9 @@ func getRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
 
@@ -401,6 +437,8 @@ func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Value
 func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	var err error
 	var realmId string
 	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
@@ -433,6 +471,9 @@ func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values
  */
 func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
 
@@ -443,6 +484,8 @@ func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
 func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	var realmIds []string = server.dbClient.dbGetAllRealmIds()
 	
 	var result RealmDescs = make([]*RealmDesc, 0)
@@ -466,6 +509,7 @@ func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
 
 	// https://github.com/baude/image-scanner
 	// https://github.com/baude
@@ -484,6 +528,9 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	fmt.Println("Creating repo...")
 	var err error
 	var realmId string
@@ -508,6 +555,9 @@ func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func deleteRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
 
@@ -517,6 +567,9 @@ func deleteRepo(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
 
@@ -526,6 +579,8 @@ func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
  */
 func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
 
 	var err error
 	var repoId string
@@ -558,6 +613,8 @@ func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Value
  */
 func getImages(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
 
 	var err error
 	var repoId string
@@ -593,6 +650,8 @@ func getImages(server *Server, sessionToken *SessionToken, values url.Values,
 func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	fmt.Println("addDockerfile handler")
 	
 	//printMap(values)
@@ -676,6 +735,9 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
  */
 func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
 
@@ -685,6 +747,8 @@ func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Va
  */
 func execDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
 
 	fmt.Println("Entered execDockerfile")
 	
@@ -780,6 +844,9 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
  */
 func downloadImage(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
 
@@ -789,6 +856,9 @@ func downloadImage(server *Server, sessionToken *SessionToken, values url.Values
  */
 func setPermission(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	
 	return nil
 }
 
@@ -798,6 +868,9 @@ func setPermission(server *Server, sessionToken *SessionToken, values url.Values
  */
 func addPermission(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
 
@@ -807,5 +880,8 @@ func addPermission(server *Server, sessionToken *SessionToken, values url.Values
  */
 func remPermission(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
 	return nil
 }
