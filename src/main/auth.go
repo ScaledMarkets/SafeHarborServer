@@ -39,32 +39,22 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
 }
 
 /*******************************************************************************
- * 
+ * Obtain the session token, if any; return nil otherwise.
  */
 func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionToken {
 	var sessionToken *SessionToken = nil
 	
 	fmt.Println("authenticating request...")
 	var sessionId = getSessionId(httpReq)
-	fmt.Println("A")
 	if sessionId != "" {
-		fmt.Println("B")
 		sessionToken = authSvc.validateSessionId(sessionId)
-		fmt.Println("C")
 	}
-	fmt.Println("D")
-	if sessionToken == nil { // authenticate basic credentials
-		fmt.Println("E")
-		var creds *Credentials = getSessionBasicAuthCreds(httpReq)
-		fmt.Println("F")
-		if creds != nil {
-			fmt.Println("G")
-			sessionToken = authSvc.authenticateCredentials(creds)
-			fmt.Println("H")
-		}
-		fmt.Println("I")
-	}
-	fmt.Println("J")
+	//if sessionToken == nil {
+		//var creds *Credentials = getSessionBasicAuthCreds(httpReq)
+		//if creds != nil {
+		//	sessionToken = authSvc.authenticateCredentials(creds)
+		//}
+	//}
 
 	// Temporary code - 
 	//var sessionId string = authSvc.createUniqueSessionId()
@@ -122,7 +112,6 @@ func (authSvc *AuthService) authorized(creds *Credentials, account string,
  * Returns the session id header value, or "" if there is none.
  */
 func getSessionId(httpReq *http.Request) string {
-	fmt.Println("getSessionId.A")
 	assertThat(httpReq != nil, "In getSessionId, httpReq is nil")
 	assertThat(httpReq.Header != nil, "In getSessionId, httpReq.Header is nil")
 	
@@ -131,9 +120,7 @@ func getSessionId(httpReq *http.Request) string {
 	}
 	assertThat(len(httpReq.Header["SessionId"]) > 0, "In getSessionId, len(httpReq.Header[SessionId]) == 0")
 	var sessionId string = httpReq.Header["SessionId"][0]
-	fmt.Println("getSessionId.B")
 	if len(sessionId) == 0 { return "" }
-	fmt.Println("getSessionId.C")
 	return sessionId
 }
 

@@ -265,12 +265,12 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	var sessionToken *SessionToken = nil
 	
 	sessionToken = server.authService.authenticateRequest(httpReq)
-	if sessionToken == nil { //return authent failure
-		fmt.Println("Failed to authenticate - request being denied")
-		respondWithClientError(writer, "Failed to authenticate - request being denied")
-		return
-	}
-	fmt.Println("authenticated request")
+	//if sessionToken == nil { //return authent failure
+	//	fmt.Println("Failed to authenticate - request being denied")
+	//	respondWithClientError(writer, "Failed to authenticate - request being denied")
+	//	return
+	//}
+	//fmt.Println("authenticated request")
 	
 	// Set a header with the API Version for all responses.
 	writer.Header().Set("SafeHarbor-API-Version", "safeharbor/1.0")
