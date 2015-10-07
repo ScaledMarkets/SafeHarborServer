@@ -104,6 +104,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 		return
 	}
 	fmt.Println("Calling handler")
+	if sessionToken == nil { fmt.Println("handleRequest: Session token is nil") }
 	var result RespIntfTp = handler(dispatcher.server, sessionToken, values, files)
 	fmt.Println("Returning result:", result.asResponse())
 	

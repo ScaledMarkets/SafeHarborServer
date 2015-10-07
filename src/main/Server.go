@@ -265,6 +265,7 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	var sessionToken *SessionToken = nil
 	
 	sessionToken = server.authService.authenticateRequest(httpReq)
+	if sessionToken == nil { fmt.Println("Server.ServeHTTP: Session token is nil") }
 	//if sessionToken == nil { //return authent failure
 	//	fmt.Println("Failed to authenticate - request being denied")
 	//	respondWithClientError(writer, "Failed to authenticate - request being denied")
@@ -291,6 +292,7 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 	writer http.ResponseWriter, httpReq *http.Request) {
 
 	fmt.Println("Dispatching request")
+	if sessionToken == nil { fmt.Println("Server.dispatch: Session token is nil") }
 	
 	var err error
 	var httpMethod string = strings.ToUpper(httpReq.Method)
