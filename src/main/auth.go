@@ -116,15 +116,15 @@ func getSessionId(httpReq *http.Request) string {
 	assertThat(httpReq != nil, "In getSessionId, httpReq is nil")
 	assertThat(httpReq.Header != nil, "In getSessionId, httpReq.Header is nil")
 	
-	if httpReq.Header["SessionId"] == nil { // No authenticated session has been established.
-		fmt.Println("No SessionId header found; headers are:")
+	if httpReq.Header["Session-Id"] == nil { // No authenticated session has been established.
+		fmt.Println("No Session-Id header found; headers are:")
 		for key, val := range httpReq.Header {
 			fmt.Println("\t" + key + ": " + val[0])
 		}
 		return ""
 	}
-	assertThat(len(httpReq.Header["SessionId"]) > 0, "In getSessionId, len(httpReq.Header[SessionId]) == 0")
-	var sessionId string = httpReq.Header["SessionId"][0]
+	assertThat(len(httpReq.Header["Session-Id"]) > 0, "In getSessionId, len(httpReq.Header[Session-Id]) == 0")
+	var sessionId string = httpReq.Header["Session-Id"][0]
 	if len(sessionId) == 0 { return "" }
 	return sessionId
 }
