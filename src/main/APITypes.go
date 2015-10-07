@@ -98,11 +98,11 @@ func NewCredentials(uid string, pwd string) *Credentials {
 func GetCredentials(values url.Values) (*Credentials, error) {
 	var err error
 	var userid string
-	userid, err = GetRequiredPOSTFieldValue(values, "userid")
+	userid, err = GetRequiredPOSTFieldValue(values, "UserId")
 	if err != nil { return nil, err }
 	
 	var pswd string
-	pswd, err = GetRequiredPOSTFieldValue(values, "pswd")
+	pswd, err = GetRequiredPOSTFieldValue(values, "Password")
 	if err != nil { return nil, err }
 	
 	return NewCredentials(userid, pswd), nil
