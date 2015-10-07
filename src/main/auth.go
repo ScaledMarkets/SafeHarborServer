@@ -46,7 +46,7 @@ func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionT
 	
 	fmt.Println("authenticating request...")
 	var sessionId = getSessionId(httpReq)
-	fmt.Println("obtained session id", sessionId)
+	fmt.Println("obtained session id:", sessionId)
 	if sessionId != "" {
 		sessionToken = authSvc.validateSessionId(sessionId)
 	}
@@ -117,6 +117,10 @@ func getSessionId(httpReq *http.Request) string {
 	assertThat(httpReq.Header != nil, "In getSessionId, httpReq.Header is nil")
 	
 	if httpReq.Header["SessionId"] == nil { // No authenticated session has been established.
+		fmt.Println("No SessionId header found; headers are:")
+		for key, val := range httpReq.Header {
+			fmt.Println("\t" + key + ": " + val[0])
+		}
 		return ""
 	}
 	assertThat(len(httpReq.Header["SessionId"]) > 0, "In getSessionId, len(httpReq.Header[SessionId]) == 0")
