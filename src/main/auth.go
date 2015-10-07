@@ -46,6 +46,7 @@ func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionT
 	
 	fmt.Println("authenticating request...")
 	var sessionId = getSessionId(httpReq)
+	fmt.Println("obtained session id", sessionId)
 	if sessionId != "" {
 		sessionToken = authSvc.validateSessionId(sessionId)
 	}
@@ -138,8 +139,13 @@ func getSessionBasicAuthCreds(httpReq *http.Request) *Credentials {
  * the identity of the session's owner.
  */
 func (authSvc *AuthService) validateSessionId(sessionId string) *SessionToken {
+	
 	var credentials *Credentials = authSvc.Sessions[sessionId]
-	if credentials == nil { return nil }
+	
+	if credentials == nil {
+		fmt.Println("No credentials found for session id", sessionId)
+		return nil
+	}
 	
 	return NewSessionToken(sessionId, credentials.UserId)
 }
