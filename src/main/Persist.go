@@ -19,6 +19,8 @@ type DBClient interface {
 	dbCreateDockerfile(string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string) (DockerImage, error)
 	dbGetAllRealmIds() []string
+	getResource(string) Resource
+	getParty(string) Party
 	getGroup(string) Group
 	getUser(string) User
 	getACLEntry(string) ACLEntry

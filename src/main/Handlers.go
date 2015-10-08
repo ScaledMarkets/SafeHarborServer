@@ -194,7 +194,7 @@ func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 }
 
 /*******************************************************************************
- * Arguments: UserObjId
+ * Arguments: 
  * Returns: []*GroupDesc
  */
 func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
@@ -466,7 +466,7 @@ func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values
 }
 
 /*******************************************************************************
- * Arguments: UserObjId
+ * Arguments: 
  * Returns: []*RealmDesc
  */
 func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
@@ -562,7 +562,7 @@ func deleteRepo(server *Server, sessionToken *SessionToken, values url.Values,
 }
 
 /*******************************************************************************
- * Arguments: RealmId
+ * Arguments: 
  * Returns: []*RepoDesc
  */
 func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
@@ -570,7 +570,43 @@ func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 
 	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
 
-	return nil
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	assertThat(user != nil, "user object cannot be identified from user id " + userId)
+	
+	// Traverse the user's ACL entries; form the union of the repos that the user
+	// has explicit access to, and the repos that belong to the realms that the user
+	// has access to.
+	
+	var realms map[string]Realm = make(map[string]Realm)
+	var repos map[string]Repo = make(map[string]Repo)
+	
+	var dbClient DBClient = server.dbClient
+	var aclEntrieIds []string = user.getACLEntryIds()
+	for _, aclEntryId := range aclEntrieIds {
+		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
+		var resourceId string = aclEntry.getResourceId()
+		var resource Resource = dbClient.getResource(resourceId)
+		switch v := resource.(type) {
+			case Realm: realms[v.getId()] = v
+			case Repo: repos[v.getId()] = v
+		}
+	}
+	for _, realm := range realms {
+		// Add all of the repos belonging to realm.
+		for _, repoId := range realm.getRepoIds() {
+			repos[repoId] = dbClient.getRepo(repoId)
+		}
+	}
+	
+	var repoDescs RepoDescs = make([]*RepoDesc, 0)
+	for _, repo := range repos {
+		repoDescs = append(repoDescs, repo.asRepoDesc())
+	}
+	
+	return repoDescs
 }
 
 /*******************************************************************************

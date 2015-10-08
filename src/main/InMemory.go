@@ -142,6 +142,10 @@ func (resource *InMemResource) getName() string {
 	return resource.Name
 }
 
+func (client *InMemClient) getResource(resourceId string) Resource {
+	return client.getPersistentObject(resourceId).(Resource)
+}
+
 /*******************************************************************************
  * 
  */
@@ -158,6 +162,10 @@ func NewInMemParty() InMemParty {
 
 func (party *InMemParty) getName() string {
 	return party.Name
+}
+
+func (client *InMemClient) getParty(partyId string) Party {
+	return client.getPersistentObject(partyId).(Party)
 }
 
 func (party *InMemParty) getACLEntryIds() []string {
