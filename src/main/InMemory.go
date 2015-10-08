@@ -283,7 +283,7 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	var userObjId string = createUniqueDbObjectId()
 	var newUser *InMemUser = &InMemUser{
 		InMemPersistObj: InMemPersistObj{Id: userObjId},
-		InMemParty: InMemParty{ACLEntryIds: make([]string, 0)},
+		InMemParty: InMemParty{Name: name, ACLEntryIds: make([]string, 0)},
 		RealmId: realmId,
 		UserId: userId,
 		GroupIds: make([]string, 0),
