@@ -219,6 +219,24 @@ func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 
 /*******************************************************************************
  * Arguments: 
+ * Returns: UserDesc
+ */
+func getMyInfo(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+
+	return user.asUserDesc()
+}
+
+/*******************************************************************************
+ * Arguments: 
  * Returns: []*GroupDesc
  */
 func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
@@ -618,7 +636,28 @@ func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
 		return NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
 
-	return nil
+	var realms map[string]Realm = make(map[string]Realm)
+	
+	var dbClient DBClient = server.dbClient
+	var aclEntrieIds []string = user.getACLEntryIds()
+	fmt.Println("For each acl entry...")
+	for _, aclEntryId := range aclEntrieIds {
+		fmt.Println("\taclEntryId:", aclEntryId)
+		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
+		var resourceId string = aclEntry.getResourceId()
+		var resource Resource = dbClient.getResource(resourceId)
+		switch v := resource.(type) {
+			case Realm: realms[v.getId()] = v
+				fmt.Println("\t\ta Realm")
+		}
+	}
+	fmt.Println("For each realm...")
+	var realmDescs RealmDescs = make([]*RealmDesc, 0)
+	for _, realm := range realms {
+		fmt.Println("\tappending realm", realm.getName())
+		realmDescs = append(realmDescs, realm.asRealmDesc())
+	}
+	return realmDescs
 }
 
 /*******************************************************************************

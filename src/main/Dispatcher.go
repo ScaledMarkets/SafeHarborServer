@@ -46,6 +46,7 @@ func NewDispatcher() *Dispatcher {
 		"logout": logout,
 		"createUser": createUser,
 		"deleteUser": deleteUser,
+		"getMyInfo": getMyInfo,
 		"getMyGroups": getMyGroups,
 		"createGroup": createGroup,
 		"deleteGroup": deleteGroup,
