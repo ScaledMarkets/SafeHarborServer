@@ -574,7 +574,9 @@ func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	var userId string = sessionToken.AuthenticatedUserid
 	fmt.Println("userid=", userId)
 	var user User = server.dbClient.dbGetUserByUserId(userId)
-	assertThat(user != nil, "user object cannot be identified from user id " + userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
 	
 	// Traverse the user's ACL entries; form the union of the repos that the user
 	// has explicit access to, and the repos that belong to the realms that the user
@@ -585,24 +587,32 @@ func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	
 	var dbClient DBClient = server.dbClient
 	var aclEntrieIds []string = user.getACLEntryIds()
+	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
+		fmt.Println("\taclEntryId:", aclEntryId)
 		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
 		var resourceId string = aclEntry.getResourceId()
 		var resource Resource = dbClient.getResource(resourceId)
 		switch v := resource.(type) {
 			case Realm: realms[v.getId()] = v
+				fmt.Println("\t\ta Realm")
 			case Repo: repos[v.getId()] = v
+				fmt.Println("\t\ta Repo")
 		}
 	}
+	fmt.Println("For each realm...")
 	for _, realm := range realms {
+		fmt.Println("For each repo of realm id", realm.getId(), "...")
 		// Add all of the repos belonging to realm.
 		for _, repoId := range realm.getRepoIds() {
+			fmt.Println("\tadding repoId", repoId)
 			repos[repoId] = dbClient.getRepo(repoId)
 		}
 	}
-	
+	fmt.Println("Creating result...")
 	var repoDescs RepoDescs = make([]*RepoDesc, 0)
 	for _, repo := range repos {
+		fmt.Println("\tappending repo", repo.getName())
 		repoDescs = append(repoDescs, repo.asRepoDesc())
 	}
 	
