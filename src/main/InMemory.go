@@ -380,9 +380,12 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	
 	
 	// DEBUG
+	fmt.Println("***************************")
+	fmt.Println("Added ACL entry for " + party.getName() + "(a " +
+		reflect.TypeOf(party).String() + "), to access " +
+		resource.getName() + " (a " + reflect.TypeOf(resource).String() + ")")
 	_, it := resource.(Realm)
 	if it {
-		fmt.Println("***************************")
 		fmt.Println("rsc is a " + reflect.TypeOf(resource).String())
 		fmt.Println("party is a " + reflect.TypeOf(party).String())
 		var eids []string = party.getACLEntryIds()
@@ -393,11 +396,12 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 		if fnd { fmt.Println("Use has entry for ACL") }
 		if ! fnd { fmt.Println("Use does NOT have entry for ACL") }
 		
-		fmt.Println(fmt.Sprintf("Num of party ACL entries went from %d to %d",
-			pnentrs, len(party.getACLEntryIds())))
-		fmt.Println(fmt.Sprintf("Num of resource ACL entries went from %d to %d",
-			rnentrs, len(resource.getACLEntryIds())))
 	}
+	fmt.Println(fmt.Sprintf("Num of party ACL entries went from %d to %d",
+		pnentrs, len(party.getACLEntryIds())))
+	fmt.Println(fmt.Sprintf("Num of resource ACL entries went from %d to %d",
+		rnentrs, len(resource.getACLEntryIds())))
+	fmt.Println("--------------------------")
 	// END DEBUG
 	
 	
