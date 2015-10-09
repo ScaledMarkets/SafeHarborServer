@@ -373,6 +373,7 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	// DEBUG
 	_, it := resource.(Realm)
 	if it {
+		fmt.Println("***************************")
 		fmt.Println("rsc is a " + reflect.TypeOf(resource).String())
 		fmt.Println("party is a " + reflect.TypeOf(party).String())
 		var eids []string = party.getACLEntryIds()
