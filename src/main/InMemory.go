@@ -368,6 +368,16 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	allObjects[aclEntryId] = newACLEntry
 	resource.addACLEntry(newACLEntry)  // Add to resource's ACL
 	party.addACLEntry(newACLEntry)  // Add to user or group's ACL
+	
+	
+	// DEBUG
+	var rid string = newACLEntry.getResourceId()
+	var rsc Resource = client.getResource(rid)
+	v, it := rsc.(Realm)
+	assertThat(it, "v is not a Realm - it is a " + reflect.TypeOf(v).String())
+	// END DEBUG
+	
+	
 	return newACLEntry, nil
 }
 
