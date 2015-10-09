@@ -357,6 +357,15 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	party, isType = obj.(Party)
 	assertThat(isType, "Internal error: object is not a Party - it is a " +
 		reflect.TypeOf(obj).String())
+	
+	
+	// DEBUG
+	var pnentrs int = len(party.getACLEntryIds())
+	var rnentrs int = len(resource.getACLEntryIds())
+	// END DEBUG
+	
+	
+	
 	var aclEntryId = createUniqueDbObjectId()
 	var newACLEntry *InMemACLEntry = &InMemACLEntry{
 		InMemPersistObj: InMemPersistObj{Id: aclEntryId},
@@ -384,6 +393,10 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 		if fnd { fmt.Println("Use has entry for ACL") }
 		if ! fnd { fmt.Println("Use does NOT have entry for ACL") }
 		
+		fmt.Println(fmt.Sprintf("Num of party ACL entries went from %d to %d",
+			pnentrs, len(party.getACLEntryIds())))
+		fmt.Println(fmt.Sprintf("Num of resource ACL entries went from %d to %d",
+			rnentrs, len(resource.getACLEntryIds())))
 	}
 	// END DEBUG
 	

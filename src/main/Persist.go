@@ -67,6 +67,7 @@ type ACLEntry interface {
 
 type ACL interface {
 	PersistObj
+	getACLEntryIds() []string
 	addACLEntry(ACLEntry)
 }
 
