@@ -371,11 +371,19 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	
 	
 	// DEBUG
-	fmt.Println("A")
-	var rid string = newACLEntry.getResourceId()
-	fmt.Println("B")
-	var rsc Resource = client.getResource(rid)
-	fmt.Println("v is a " + reflect.TypeOf(rsc).String())
+	_, it := resource.(Realm)
+	if it {
+		fmt.Println("rsc is a " + reflect.TypeOf(resource).String())
+		fmt.Println("party is a " + reflect.TypeOf(party).String())
+		var eids []string = party.getACLEntryIds()
+		var fnd bool = false
+		for _, eid := range eids {
+			if eid == aclEntryId { fnd = true; break }
+		}
+		if fnd { fmt.Println("Use has entry for ACL") }
+		if ! fnd { fmt.Println("Use does NOT have entry for ACL") }
+		
+	}
 	// END DEBUG
 	
 	
