@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"reflect"
 )
 
 /*******************************************************************************
@@ -649,6 +650,7 @@ func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
 		switch v := resource.(type) {
 			case Realm: realms[v.getId()] = v
 				fmt.Println("\t\ta Realm")
+			default: fmt.Println("\t\ta " + reflect.TypeOf(v).Name())
 		}
 	}
 	fmt.Println("For each realm...")
