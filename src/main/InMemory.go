@@ -374,7 +374,7 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	var rid string = newACLEntry.getResourceId()
 	var rsc Resource = client.getResource(rid)
 	v, it := rsc.(Realm)
-	assertThat(it, "v is not a Realm - it is a " + reflect.TypeOf(v).String())
+	if ! it { fmt.Println("v is not a Realm - it is a " + reflect.TypeOf(v).String()) }
 	// END DEBUG
 	
 	
