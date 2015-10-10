@@ -461,7 +461,7 @@ func createRealmAnon(server *Server, sessionToken *SessionToken, values url.Valu
 	server.dbClient.dbCreateACLEntry(newRealm.getId(), newUser.getId(),
 		[]bool{ true, true, true, true, true } )
 	
-	newUser.asUserDesc()
+	return newUser.asUserDesc()
 }
 
 /*******************************************************************************
@@ -482,6 +482,7 @@ func getRealmDesc(server *Server, sessionToken *SessionToken, values url.Values,
 	}
 	
 	var err error
+	var realmId string
 	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	var realm Realm = server.dbClient.getRealm(realmId)
@@ -665,7 +666,7 @@ func getRealmUsers(server *Server, sessionToken *SessionToken, values url.Values
 			fmt.Println("Internal error: user with obj Id " + userObjId + " not found")
 			continue
 		}
-		var userDesc UserDesc = user.asUserDesc()
+		var userDesc *UserDesc = user.asUserDesc()
 		userDescs = append(userDescs, userDesc)
 	}
 	return userDescs

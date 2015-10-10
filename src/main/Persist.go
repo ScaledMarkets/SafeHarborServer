@@ -11,7 +11,7 @@ import (
 
 type DBClient interface {
 	dbGetUserByUserId(string) User
-	dbCreateGroup(string, string) (Group, error)
+	dbCreateGroup(string, string, string) (Group, error)
 	dbCreateUser(string, string, string, string, string) (User, error)
 	dbCreateACLEntry(string, string, []bool) (ACLEntry, error)
 	dbCreateRealm(*RealmInfo) (Realm, error)

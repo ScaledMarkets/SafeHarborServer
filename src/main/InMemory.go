@@ -19,6 +19,7 @@ import (
 	"errors"
 	"reflect"
 	"os"
+	"crypto/sha1"
 )
 
 /*******************************************************************************
@@ -70,7 +71,8 @@ func (client *InMemClient) init() {
 		}
 		fmt.Println("Debug mode: creating user testuser1 in realm testrealm")
 		var testUser1 User
-		testUser1, err = client.dbCreateUser("testuser1", "Test User", testRealm.getId())
+		testUser1, err = client.dbCreateUser("testuser1", "Test User", 
+			"testuser@gmail.com", "Password1", testRealm.getId())
 		fmt.Println("User", testUser1.getName(), "created, id=", testUser1.getId())
 	}
 	
@@ -222,6 +224,10 @@ func (client *InMemClient) getGroup(id string) Group {
 	return client.getPersistentObject(id).(Group)
 }
 
+func (group *InMemGroup) getPurpose() string {
+	return group.Purpose
+}
+
 func (group *InMemGroup) getUserObjIds() []string {
 	return group.UserObjIds
 }
@@ -276,7 +282,7 @@ type InMemUser struct {
 	RealmId string
 	UserId string
 	EmailAddress string
-	PasswordHash string
+	PasswordHash [20]byte
 	GroupIds []string
 }
 
@@ -295,13 +301,14 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	if realm == nil { return nil, errors.New("Realm with Id " + realmId + " not found") }
 	
 	var userObjId string = createUniqueDbObjectId()
+	var pswdAsBytes []byte = []byte(pswd)
 	var newUser *InMemUser = &InMemUser{
 		InMemPersistObj: InMemPersistObj{Id: userObjId},
 		InMemParty: InMemParty{Name: name, ACLEntryIds: make([]string, 0)},
 		RealmId: realmId,
 		UserId: userId,
 		EmailAddress: email,
-		PasswordHash: ....,
+		PasswordHash: sha1.Sum(pswdAsBytes),
 		GroupIds: make([]string, 0),
 	}
 	
@@ -530,7 +537,7 @@ func (realm *InMemRealm) addRepo(repo Repo) {
 }
 
 func (realm *InMemRealm) asRealmDesc() *RealmDesc {
-	return NewRealmDesc(realm.Id, realm.Name, realm.OrgFullName)
+	return NewRealmDesc(realm.Id, realm.Name, realm.OrgFullName, realm.AdminUserId)
 }
 
 func (realm *InMemRealm) hasUserWithId(userObjId string) bool {

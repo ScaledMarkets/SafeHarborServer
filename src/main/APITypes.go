@@ -203,7 +203,7 @@ func GetUserInfo(values url.Values) (*UserInfo, error) {
 	if err != nil { return nil, err }
 	
 	var realmId string
-	realmId, err = GetPOSTFieldValue(values, "RealmId") // optional
+	realmId = GetPOSTFieldValue(values, "RealmId") // optional
 	if err != nil { return nil, err }
 	
 	return NewUserInfo(userid, name, email, pswd, realmId), nil
@@ -254,7 +254,7 @@ type RealmDesc struct {
 	AdminUserId string
 }
 
-func NewRealmDesc(id string, name string, orgName string) *RealmDesc {
+func NewRealmDesc(id string, name string, orgName string, adminUserId string) *RealmDesc {
 	return &RealmDesc{
 		Id: id,
 		Name: name,
@@ -302,10 +302,12 @@ func NewRealmInfo(realmName string, orgName string, adminUserId string) *RealmIn
 
 func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 	var err error
-	var name string
+	var name, orgFullName, adminUserId string
 	name, err = GetRequiredPOSTFieldValue(values, "Name")
+	orgFullName, err = GetRequiredPOSTFieldValue(values, "OrgFullName")
+	adminUserId, err = GetRequiredPOSTFieldValue(values, "AdminUserId")
 	if err != nil { return nil, err }
-	return NewRealmInfo(name), nil
+	return NewRealmInfo(name, orgFullName, adminUserId), nil
 }
 
 func (realmInfo *RealmInfo) asResponse() string {
