@@ -186,16 +186,13 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	var newUserId string = userInfo.UserId
 	var newUserName string = userInfo.UserName
 	var realmId string = userInfo.RealmId
+	var email string = userInfo.EmailAddress
+	var pswd string = userInfo.Password
 	var newUser User
-	newUser, err = server.dbClient.dbCreateUser(newUserId, newUserName, realmId)
+	newUser, err = server.dbClient.dbCreateUser(newUserId, newUserName, email, pswd, realmId)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
-	return &UserDesc{
-		Id: newUser.getId(),
-		UserId: newUserId,
-		UserName: newUserName,
-		RealmId: realmId,
-	}
+	return newUser.asUserDesc()
 }
 
 /*******************************************************************************
@@ -282,8 +279,12 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	groupName, err = GetRequiredPOSTFieldValue(values, "Name")
 	if err != nil { return NewFailureDesc(err.Error()) }
 
+	var groupPurpose string
+	groupPurpose, err = GetRequiredPOSTFieldValue(values, "Purpose")
+	if err != nil { return NewFailureDesc(err.Error()) }
+
 	var group Group
-	group, err = server.dbClient.dbCreateGroup(realmId, groupName)
+	group, err = server.dbClient.dbCreateGroup(realmId, groupName, groupPurpose)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	// Add ACL entry to enable the current user to access what he/she just created.
@@ -414,6 +415,82 @@ func remGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 }
 
 /*******************************************************************************
+ * Arguments: RealmInfo, UserInfo
+ * Returns: UserDesc
+ */
+func createRealmAnon(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+
+	// Create new administrative user.
+	var err error
+	var userInfo *UserInfo
+	userInfo, err = GetUserInfo(values)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	var newUserId string = userInfo.UserId
+	var newUserName string = userInfo.UserName
+	var realmId string = userInfo.RealmId
+	var email string = userInfo.EmailAddress
+	var pswd string = userInfo.Password
+
+	var dbClient DBClient = server.dbClient
+	var newUser User
+	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, realmId)
+	if err != nil { return NewFailureDesc("Unable to create user: " + err.Error()) }
+	
+	// Create a realm.
+	var newRealmInfo *RealmInfo
+	newRealmInfo, err = GetRealmInfo(values)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	fmt.Println("Creating realm ", newRealmInfo.Name)
+	var newRealm Realm
+	newRealm, err = server.dbClient.dbCreateRealm(newRealmInfo)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	fmt.Println("Created realm", newRealmInfo.Name)
+
+	// Add ACL entry to enable the current user to access what he/she just created.
+	server.dbClient.dbCreateACLEntry(newRealm.getId(), newUser.getId(),
+		[]bool{ true, true, true, true, true } )
+	
+	newUser.asUserDesc()
+}
+
+/*******************************************************************************
+ * Arguments: RealmId
+ * Returns: RealmDesc
+ */
+func getRealmDesc(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+	
+	var err error
+	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	var realm Realm = server.dbClient.getRealm(realmId)
+	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
+	
+	return realm.asRealmDesc()
+}
+
+/*******************************************************************************
  * Arguments: none
  * Returns: RealmDesc
  */
@@ -439,12 +516,12 @@ func createRealm(server *Server, sessionToken *SessionToken, values url.Values,
 	var realm Realm
 	realm, err = server.dbClient.dbCreateRealm(realmInfo)
 	if err != nil { return NewFailureDesc(err.Error()) }
+	fmt.Println("Created realm", realmInfo.Name)
 
 	// Add ACL entry to enable the current user to access what he/she just created.
 	server.dbClient.dbCreateACLEntry(realm.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	
-	fmt.Println("Created realm", realmInfo.Name)
 	return realm.asRealmDesc()
 }
 
@@ -555,6 +632,43 @@ func getRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	if realmUser == nil { return NewFailureDesc("User with user id " + realmUserId +
 		" in realm " + realm.getName() + " not found.") }
 	return realmUser.asUserDesc()
+}
+
+/*******************************************************************************
+ * Arguments: RealmId
+ * Returns: []*UserDesc
+ */
+func getRealmUsers(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+
+	var realmId string
+	var err error
+	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	var realm Realm = server.dbClient.getRealm(realmId)
+	if realm == nil { return NewFailureDesc("Realm with Id " + realmId + " not found") }
+	var userObjIds []string = realm.getUserObjIds()
+	var userDescs UserDescs = make([]*UserDesc, 0)
+	for _, userObjId := range userObjIds {
+		var user User = server.dbClient.getUser(userObjId)
+		if user == nil {
+			fmt.Println("Internal error: user with obj Id " + userObjId + " not found")
+			continue
+		}
+		var userDesc UserDesc = user.asUserDesc()
+		userDescs = append(userDescs, userDesc)
+	}
+	return userDescs
 }
 
 /*******************************************************************************

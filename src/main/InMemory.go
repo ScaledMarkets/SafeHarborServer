@@ -62,7 +62,8 @@ func (client *InMemClient) init() {
 	if client.Server.Debug {
 		fmt.Println("Debug mode: creating realm testrealm")
 		var testRealm Realm
-		testRealm, err = client.dbCreateRealm(NewRealmInfo("testrealm"))
+		testRealm, err = client.dbCreateRealm(NewRealmInfo(
+			"testrealm", "For Testing", "testuser1"))
 		if err != nil {
 			fmt.Println(err.Error())
 			panic(err)
@@ -182,11 +183,13 @@ func (party *InMemParty) addACLEntry(entry ACLEntry) {
 type InMemGroup struct {
 	InMemPersistObj
 	InMemParty
+	Purpose string
 	RealmId string
 	UserObjIds []string
 }
 
-func (client *InMemClient) dbCreateGroup(realmId string, name string) (Group, error) {
+func (client *InMemClient) dbCreateGroup(realmId string, name string,
+	purpose string) (Group, error) {
 	
 	// Check if a group with that name already exists within the realm.
 	var realm Realm = client.getRealm(realmId)
@@ -202,6 +205,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string) (Group, er
 	var newGroup = &InMemGroup{
 		InMemPersistObj: InMemPersistObj{Id: groupId},
 		InMemParty: InMemParty{ACLEntryIds: make([]string, 0)},
+		Purpose: purpose,
 		RealmId: realmId,
 		UserObjIds: make([]string, 0),
 	}
@@ -271,6 +275,8 @@ type InMemUser struct {
 	InMemParty
 	RealmId string
 	UserId string
+	EmailAddress string
+	PasswordHash string
 	GroupIds []string
 }
 
@@ -279,7 +285,7 @@ func (client *InMemClient) dbGetUserByUserId(userId string) User {
 }
 
 func (client *InMemClient) dbCreateUser(userId string, name string,
-	realmId string) (User, error) {
+	email string, pswd string, realmId string) (User, error) {
 	
 	if allUsers[userId] != nil {
 		return nil, errors.New("A user with Id " + userId + " already exists")
@@ -294,6 +300,8 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 		InMemParty: InMemParty{Name: name, ACLEntryIds: make([]string, 0)},
 		RealmId: realmId,
 		UserId: userId,
+		EmailAddress: email,
+		PasswordHash: ....,
 		GroupIds: make([]string, 0),
 	}
 	
@@ -407,6 +415,8 @@ func (entry *InMemACLEntry) getPermissionMask() []bool {
 type InMemRealm struct {
 	InMemPersistObj
 	InMemResource
+	AdminUserId string
+	OrgFullName string
 	UserObjIds []string
 	GroupIds []string
 	RepoIds []string
@@ -425,6 +435,9 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) (Realm, error) {
 	var newRealm *InMemRealm = &InMemRealm{
 		InMemPersistObj: InMemPersistObj{Id: realmId},
 		InMemResource: NewInMemResource(realmInfo.Name),
+		AdminUserId: realmInfo.AdminUserId,
+		OrgFullName: realmInfo.OrgFullName,
+		UserObjIds: make([]string, 0),
 		GroupIds: make([]string, 0),
 		RepoIds: make([]string, 0),
 		FileDirectory: client.assignRealmFileDir(realmId),
@@ -453,6 +466,10 @@ func (client *InMemClient) getRealmIdByName(name string) string {
 		if realm.getName() == name { return realmId }
 	}
 	return ""
+}
+
+func (realm *InMemRealm) getAdminUserId() string {
+	return realm.AdminUserId
 }
 
 func (realm *InMemRealm) getFileDirectory() string {
@@ -513,7 +530,7 @@ func (realm *InMemRealm) addRepo(repo Repo) {
 }
 
 func (realm *InMemRealm) asRealmDesc() *RealmDesc {
-	return NewRealmDesc(realm.Id, realm.Name)
+	return NewRealmDesc(realm.Id, realm.Name, realm.OrgFullName)
 }
 
 func (realm *InMemRealm) hasUserWithId(userObjId string) bool {

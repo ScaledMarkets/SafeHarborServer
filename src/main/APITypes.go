@@ -140,12 +140,13 @@ type GroupDesc struct {
 	BaseType
 	RealmId string
 	Name string
+	Purpose string
 	GroupId string
 }
 
 func (groupDesc *GroupDesc) asResponse() string {
-	return fmt.Sprintf("{\"RealmId\": \"%s\", \"Name\": \"%s\", \"GroupId\": \"%s\"}",
-		groupDesc.RealmId, groupDesc.Name, groupDesc.GroupId)
+	return fmt.Sprintf("{\"RealmId\": \"%s\", \"Name\": \"%s\", \"GroupId\": \"%s\", \"Purpose\": \"%s\"}",
+		groupDesc.RealmId, groupDesc.Name, groupDesc.GroupId, groupDesc.Purpose)
 }
 
 type GroupDescs []*GroupDesc
@@ -168,13 +169,17 @@ type UserInfo struct {
 	BaseType
 	UserId string
 	UserName string
-	RealmId string
+	EmailAddress string
+	Password string
+	RealmId string  // may be ""
 }
 
-func NewUserInfo(userid string, name string, realmId string) *UserInfo {
+func NewUserInfo(userid, name, email, pswd, realmId string) *UserInfo {
 	return &UserInfo{
 		UserId: userid,
 		UserName: name,
+		EmailAddress: email,
+		Password: pswd,
 		RealmId: realmId,
 	}
 }
@@ -189,16 +194,24 @@ func GetUserInfo(values url.Values) (*UserInfo, error) {
 	name, err = GetRequiredPOSTFieldValue(values, "UserName")
 	if err != nil { return nil, err }
 	
-	var realmId string
-	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
+	var email string
+	email, err = GetRequiredPOSTFieldValue(values, "EmailAddress")
 	if err != nil { return nil, err }
 	
-	return NewUserInfo(userid, name, realmId), nil
+	var pswd string
+	pswd, err = GetRequiredPOSTFieldValue(values, "Password")
+	if err != nil { return nil, err }
+	
+	var realmId string
+	realmId, err = GetPOSTFieldValue(values, "RealmId") // optional
+	if err != nil { return nil, err }
+	
+	return NewUserInfo(userid, name, email, pswd, realmId), nil
 }
 
 func (userInfo *UserInfo) asResponse() string {
-	return fmt.Sprintf("{\"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\"}",
-		userInfo.UserId, userInfo.UserName, userInfo.RealmId)
+	return fmt.Sprintf("{\"UserId\": \"%s\", \"UserName\": \"%s\", \"EmailAddress\": \"%s\", \"RealmId\": \"%s\"}",
+		userInfo.UserId, userInfo.UserName, userInfo.EmailAddress, userInfo.RealmId)
 }
 
 /*******************************************************************************
@@ -237,17 +250,22 @@ type RealmDesc struct {
 	BaseType
 	Id string
 	Name string
+	OrgFullName string
+	AdminUserId string
 }
 
-func NewRealmDesc(id string, name string) *RealmDesc {
+func NewRealmDesc(id string, name string, orgName string) *RealmDesc {
 	return &RealmDesc{
 		Id: id,
 		Name: name,
+		OrgFullName: orgName,
+		AdminUserId: adminUserId,
 	}
 }
 
 func (realmDesc *RealmDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"Name\": \"%s\"}", realmDesc.Id, realmDesc.Name)
+	return fmt.Sprintf("{\"Id\": \"%s\", \"Name\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
+		realmDesc.Id, realmDesc.Name, realmDesc.OrgFullName, realmDesc.AdminUserId)
 }
 
 type RealmDescs []*RealmDesc
@@ -270,11 +288,15 @@ func (realmDescs RealmDescs) asResponse() string {
 type RealmInfo struct {
 	BaseType
 	Name string
+	OrgFullName string
+	AdminUserId string
 }
 
-func NewRealmInfo(name string) *RealmInfo {
+func NewRealmInfo(realmName string, orgName string, adminUserId string) *RealmInfo {
 	return &RealmInfo{
-		Name: name,
+		Name: realmName,
+		OrgFullName: orgName,
+		AdminUserId: adminUserId,
 	}
 }
 
@@ -287,7 +309,8 @@ func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 }
 
 func (realmInfo *RealmInfo) asResponse() string {
-	return fmt.Sprintf("{\"Name\": \"%s\"}", realmInfo.Name)
+	return fmt.Sprintf("{\"Name\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
+		realmInfo.Name, realmInfo.OrgFullName, realmInfo.AdminUserId)
 }
 
 /*******************************************************************************

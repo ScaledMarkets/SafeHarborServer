@@ -12,7 +12,7 @@ import (
 type DBClient interface {
 	dbGetUserByUserId(string) User
 	dbCreateGroup(string, string) (Group, error)
-	dbCreateUser(string, string, string) (User, error)
+	dbCreateUser(string, string, string, string, string) (User, error)
 	dbCreateACLEntry(string, string, []bool) (ACLEntry, error)
 	dbCreateRealm(*RealmInfo) (Realm, error)
 	dbCreateRepo(string, string) (Repo, error)
@@ -45,6 +45,7 @@ type Party interface {
 
 type Group interface {
 	Party
+	getPurpose() string
 	getUserObjIds() []string
 	hasUserWithId(string) bool
 	addUserId(string) error
@@ -80,6 +81,7 @@ type Resource interface {
 type Realm interface {
 	Resource
 	//getName() string
+	getAdminUserId() string
 	getFileDirectory() string
 	hasUserWithId(string) bool
 	hasGroupWithId(string) bool
