@@ -439,14 +439,11 @@ func createRealmAnon(server *Server, sessionToken *SessionToken, values url.Valu
 	if err != nil { return NewFailureDesc(err.Error()) }
 	var newUserId string = userInfo.UserId
 	var newUserName string = userInfo.UserName
-	var realmId string = userInfo.RealmId
+	//var realmId string = userInfo.RealmId  // ignored
 	var email string = userInfo.EmailAddress
 	var pswd string = userInfo.Password
 
 	var dbClient DBClient = server.dbClient
-	var newUser User
-	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, realmId)
-	if err != nil { return NewFailureDesc("Unable to create user: " + err.Error()) }
 	
 	// Create a realm.
 	var newRealmInfo *RealmInfo
@@ -457,6 +454,11 @@ func createRealmAnon(server *Server, sessionToken *SessionToken, values url.Valu
 	newRealm, err = server.dbClient.dbCreateRealm(newRealmInfo)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Created realm", newRealmInfo.Name)
+	
+	// Create a user
+	var newUser User
+	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, newRealm.getId())
+	if err != nil { return NewFailureDesc("Unable to create user: " + err.Error()) }
 
 	// Add ACL entry to enable the current user to access what he/she just created.
 	server.dbClient.dbCreateACLEntry(newRealm.getId(), newUser.getId(),

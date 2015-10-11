@@ -489,6 +489,7 @@ func (client *InMemClient) getRealm(id string) Realm {
 	var realm Realm
 	var isType bool
 	realm, isType = allObjects[id].(Realm)
+	if realm == nil { return nil }
 	if ! isType {
 		fmt.Println("realm is a", reflect.TypeOf(realm))
 		fmt.Println("allObjects[", id, "] is a", reflect.TypeOf(allObjects[id]))
