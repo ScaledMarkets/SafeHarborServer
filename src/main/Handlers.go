@@ -169,6 +169,7 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	var err error
 	var userInfo *UserInfo
 	userInfo, err = GetUserInfo(values)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	// Authorize the request, based on the authenticated identity.
 	if ! server.authService.authorized(server.sessions[sessionToken.UniqueSessionId],
