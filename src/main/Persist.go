@@ -58,6 +58,7 @@ type User interface {
 	getRealmId() string
 	getUserId() string
 	asUserDesc() *UserDesc
+	getGroupIds() []string
 }
 
 type ACLEntry interface {
@@ -94,6 +95,7 @@ type Realm interface {
 	addUserId(string) error
 	getUserByUserId(string) User
 	asRealmDesc() *RealmDesc
+	getGroupIds() []string
 	addGroup(Group)
 	addUser(User)
 	addRepo(Repo)

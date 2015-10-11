@@ -217,44 +217,6 @@ func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 }
 
 /*******************************************************************************
- * Arguments: 
- * Returns: UserDesc
- */
-func getMyInfo(server *Server, sessionToken *SessionToken, values url.Values,
-	files map[string][]*multipart.FileHeader) RespIntfTp {
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
-
-	return user.asUserDesc()
-}
-
-/*******************************************************************************
- * Arguments: 
- * Returns: []*GroupDesc
- */
-func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
-	files map[string][]*multipart.FileHeader) RespIntfTp {
-
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-	
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
-
-	return nil
-}
-
-/*******************************************************************************
  * Arguments: RealmId, <name>
  * Returns: GroupDesc
  */
@@ -692,7 +654,23 @@ func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Value
 		return NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
 
-	return nil
+	var groupDescs GroupDescs = make([]*GroupDesc, 0)
+	var realmId string
+	var err error
+	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	var realm Realm = server.dbClient.getRealm(realmId)
+	if realm == nil { return NewFailureDesc("Realm with Id " + realmId + " not found") }
+	var groupIds []string = realm.getGroupIds()
+	for _, groupId := range groupIds {
+		var group Group = server.dbClient.getGroup(groupId)
+		if group == nil {
+			fmt.Println("Internal error: group with Id " + groupId + " not found")
+			continue
+		}
+		groupDescs = append(groupDescs, group.asGroupDesc())
+	}
+	return groupDescs
 }
 
 /*******************************************************************************
@@ -739,48 +717,6 @@ func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values
 }
 
 /*******************************************************************************
- * Arguments: 
- * Returns: []*RealmDesc
- */
-func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
-	files map[string][]*multipart.FileHeader) RespIntfTp {
-
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
-
-	var realms map[string]Realm = make(map[string]Realm)
-	
-	var dbClient DBClient = server.dbClient
-	var aclEntrieIds []string = user.getACLEntryIds()
-	fmt.Println("For each acl entry...")
-	for _, aclEntryId := range aclEntrieIds {
-		fmt.Println("\taclEntryId:", aclEntryId)
-		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
-		var resourceId string = aclEntry.getResourceId()
-		var resource Resource = dbClient.getResource(resourceId)
-		switch v := resource.(type) {
-			case Realm: realms[v.getId()] = v
-				fmt.Println("\t\ta Realm")
-			default: fmt.Println("\t\ta " + reflect.TypeOf(v).String())
-		}
-	}
-	fmt.Println("For each realm...")
-	var realmDescs RealmDescs = make([]*RealmDesc, 0)
-	for _, realm := range realms {
-		fmt.Println("\tappending realm", realm.getName())
-		realmDescs = append(realmDescs, realm.asRealmDesc())
-	}
-	return realmDescs
-}
-
-/*******************************************************************************
  * Arguments: (none)
  * Returns: []*RealmDesc
  */
@@ -811,34 +747,6 @@ func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	}
 	
 	return result
-}
-
-/*******************************************************************************
- * Arguments: ImageId
- * Returns: ScanResultDesc
- */
-func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
-	files map[string][]*multipart.FileHeader) RespIntfTp {
-
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
-
-	// https://github.com/baude/image-scanner
-	// https://github.com/baude
-	
-	// Perform a Lynis scan.
-	// https://cisofy.com/lynis/
-	// https://cisofy.com/lynis/plugins/docker-containers/
-	// /usr/local/lynis/lynis -c --checkupdate --quiet --auditor "SafeHarbor" > ....
-
-	return nil
 }
 
 /*******************************************************************************
@@ -899,64 +807,6 @@ func deleteRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	}
 
 	return nil
-}
-
-/*******************************************************************************
- * Arguments: 
- * Returns: []*RepoDesc
- */
-func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
-	files map[string][]*multipart.FileHeader) RespIntfTp {
-
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
-	
-	// Traverse the user's ACL entries; form the union of the repos that the user
-	// has explicit access to, and the repos that belong to the realms that the user
-	// has access to.
-	
-	var realms map[string]Realm = make(map[string]Realm)
-	var repos map[string]Repo = make(map[string]Repo)
-	
-	var dbClient DBClient = server.dbClient
-	var aclEntrieIds []string = user.getACLEntryIds()
-	fmt.Println("For each acl entry...")
-	for _, aclEntryId := range aclEntrieIds {
-		fmt.Println("\taclEntryId:", aclEntryId)
-		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
-		var resourceId string = aclEntry.getResourceId()
-		var resource Resource = dbClient.getResource(resourceId)
-		switch v := resource.(type) {
-			case Realm: realms[v.getId()] = v
-				fmt.Println("\t\ta Realm")
-			case Repo: repos[v.getId()] = v
-				fmt.Println("\t\ta Repo")
-		}
-	}
-	fmt.Println("For each realm...")
-	for _, realm := range realms {
-		fmt.Println("For each repo of realm id", realm.getId(), "...")
-		// Add all of the repos belonging to realm.
-		for _, repoId := range realm.getRepoIds() {
-			fmt.Println("\tadding repoId", repoId)
-			repos[repoId] = dbClient.getRepo(repoId)
-		}
-	}
-	fmt.Println("Creating result...")
-	var repoDescs RepoDescs = make([]*RepoDesc, 0)
-	for _, repo := range repos {
-		fmt.Println("\tappending repo", repo.getName())
-		repoDescs = append(repoDescs, repo.asRepoDesc())
-	}
-	
-	return repoDescs
 }
 
 /*******************************************************************************
@@ -1335,6 +1185,322 @@ func remPermission(server *Server, sessionToken *SessionToken, values url.Values
 	if user == nil {
 		return NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
+
+	return nil
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: UserDesc
+ */
+func getMyDesc(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+
+	return user.asUserDesc()
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: []*GroupDesc
+ */
+func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+
+	var groupDescs GroupDescs = make([]*GroupDesc, 0)
+	
+	var groupIds []string = user.getGroupIds()
+	for _, groupId := range groupIds {
+		var group Group = server.dbClient.getGroup(groupId)
+		if group == nil {
+			fmt.Println("Internal error: group with Id " + groupId + " could not be found")
+			continue
+		}
+		groupDescs = append(groupDescs, group.asGroupDesc())
+	}
+	return groupDescs
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: []*RealmDesc
+ */
+func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+
+	var realms map[string]Realm = make(map[string]Realm)
+	
+	var dbClient DBClient = server.dbClient
+	var aclEntrieIds []string = user.getACLEntryIds()
+	fmt.Println("For each acl entry...")
+	for _, aclEntryId := range aclEntrieIds {
+		fmt.Println("\taclEntryId:", aclEntryId)
+		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
+		var resourceId string = aclEntry.getResourceId()
+		var resource Resource = dbClient.getResource(resourceId)
+		switch v := resource.(type) {
+			case Realm: realms[v.getId()] = v
+				fmt.Println("\t\ta Realm")
+			default: fmt.Println("\t\ta " + reflect.TypeOf(v).String())
+		}
+	}
+	fmt.Println("For each realm...")
+	var realmDescs RealmDescs = make([]*RealmDesc, 0)
+	for _, realm := range realms {
+		fmt.Println("\tappending realm", realm.getName())
+		realmDescs = append(realmDescs, realm.asRealmDesc())
+	}
+	return realmDescs
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: []*RepoDesc
+ */
+func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+	
+	// Traverse the user's ACL entries; form the union of the repos that the user
+	// has explicit access to, and the repos that belong to the realms that the user
+	// has access to.
+	
+	var realms map[string]Realm = make(map[string]Realm)
+	var repos map[string]Repo = make(map[string]Repo)
+	
+	var dbClient DBClient = server.dbClient
+	var aclEntrieIds []string = user.getACLEntryIds()
+	fmt.Println("For each acl entry...")
+	for _, aclEntryId := range aclEntrieIds {
+		fmt.Println("\taclEntryId:", aclEntryId)
+		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
+		var resourceId string = aclEntry.getResourceId()
+		var resource Resource = dbClient.getResource(resourceId)
+		switch v := resource.(type) {
+			case Realm: realms[v.getId()] = v
+				fmt.Println("\t\ta Realm")
+			case Repo: repos[v.getId()] = v
+				fmt.Println("\t\ta Repo")
+		}
+	}
+	fmt.Println("For each realm...")
+	for _, realm := range realms {
+		fmt.Println("For each repo of realm id", realm.getId(), "...")
+		// Add all of the repos belonging to realm.
+		for _, repoId := range realm.getRepoIds() {
+			fmt.Println("\tadding repoId", repoId)
+			repos[repoId] = dbClient.getRepo(repoId)
+		}
+	}
+	fmt.Println("Creating result...")
+	var repoDescs RepoDescs = make([]*RepoDesc, 0)
+	for _, repo := range repos {
+		fmt.Println("\tappending repo", repo.getName())
+		repoDescs = append(repoDescs, repo.asRepoDesc())
+	}
+	
+	return repoDescs
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: 
+ */
+func getMyDockerfiles(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+	
+	var realms map[string]Realm = make(map[string]Realm)
+	var repos map[string]Repo = make(map[string]Repo)
+	var dockerfiles map[string]Dockerfile = make(map[string]Dockerfile)
+	
+	var dbClient DBClient = server.dbClient
+	var aclEntrieIds []string = user.getACLEntryIds()
+	fmt.Println("For each acl entry...")
+	for _, aclEntryId := range aclEntrieIds {
+		fmt.Println("\taclEntryId:", aclEntryId)
+		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
+		var resourceId string = aclEntry.getResourceId()
+		var resource Resource = dbClient.getResource(resourceId)
+		switch v := resource.(type) {
+			case Realm: realms[v.getId()] = v
+				fmt.Println("\t\ta Realm")
+			case Repo: repos[v.getId()] = v
+				fmt.Println("\t\ta Repo")
+			case Dockerfile: dockerfiles[v.getId()] = v
+				fmt.Println("\t\ta Dockerfile")
+		}
+	}
+	fmt.Println("For each realm...")
+	for _, realm := range realms {
+		fmt.Println("For each repo of realm id", realm.getId(), "...")
+		// Add all of the repos belonging to realm.
+		for _, repoId := range realm.getRepoIds() {
+			fmt.Println("\tadding repoId", repoId)
+			repos[repoId] = dbClient.getRepo(repoId)
+		}
+	}
+	for _, repo := range repos {
+		for _, dockerfileId := range repo.getDockerfileIds() {
+			dockerfiles[dockerfileId] = dbClient.getDockerfile(dockerfileId)
+		}
+	}
+	
+	fmt.Println("Creating result...")
+	var dockerfileDescs DockerfileDescs = make([]*DockerfileDesc, 0)
+	for _, dockerfile := range dockerfiles {
+		fmt.Println("\tappending dockerfile", dockerfile.getName())
+		dockerfileDescs = append(dockerfileDescs, dockerfile.asDockerfileDesc())
+	}
+	return dockerfileDescs
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: 
+ */
+func getMyDockerImages(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+	
+	var realms map[string]Realm = make(map[string]Realm)
+	var repos map[string]Repo = make(map[string]Repo)
+	var dockerImages map[string]DockerImage = make(map[string]DockerImage)
+	
+	var dbClient DBClient = server.dbClient
+	var aclEntrieIds []string = user.getACLEntryIds()
+	fmt.Println("For each acl entry...")
+	for _, aclEntryId := range aclEntrieIds {
+		fmt.Println("\taclEntryId:", aclEntryId)
+		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
+		var resourceId string = aclEntry.getResourceId()
+		var resource Resource = dbClient.getResource(resourceId)
+		switch v := resource.(type) {
+			case Realm: realms[v.getId()] = v
+				fmt.Println("\t\ta Realm")
+			case Repo: repos[v.getId()] = v
+				fmt.Println("\t\ta Repo")
+			case DockerImage: dockerImages[v.getId()] = v
+				fmt.Println("\t\ta DockerImage")
+		}
+	}
+	fmt.Println("For each realm...")
+	for _, realm := range realms {
+		fmt.Println("For each repo of realm id", realm.getId(), "...")
+		// Add all of the repos belonging to realm.
+		for _, repoId := range realm.getRepoIds() {
+			fmt.Println("\tadding repoId", repoId)
+			repos[repoId] = dbClient.getRepo(repoId)
+		}
+	}
+	for _, repo := range repos {
+		for _, dockerImageId := range repo.getDockerImageIds() {
+			dockerImages[dockerImageId] = dbClient.getDockerImage(dockerImageId)
+		}
+	}
+	
+	fmt.Println("Creating result...")
+	var dockerImageDescs DockerImageDescs = make([]*DockerImageDesc, 0)
+	for _, dockerImage := range dockerImages {
+		fmt.Println("\tappending dockerImage", dockerImage.getName())
+		dockerImageDescs = append(dockerImageDescs, dockerImage.asDockerImageDesc())
+	}
+	return dockerImageDescs
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: 
+ */
+func defineQualityScan(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	return nil
+}
+
+/*******************************************************************************
+ * Arguments: ImageId
+ * Returns: ScanResultDesc
+ */
+func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+
+	// https://github.com/baude/image-scanner
+	// https://github.com/baude
+	// https://developerblog.redhat.com/2015/04/21/introducing-the-atomic-command/
+	
+	// Perform a Lynis scan.
+	// https://cisofy.com/lynis/
+	// https://cisofy.com/lynis/plugins/docker-containers/
+	// /usr/local/lynis/lynis -c --checkupdate --quiet --auditor "SafeHarbor" > ....
+	
+	// Tag the image as having been scanned.
+	
+	
+	
 
 	return nil
 }
