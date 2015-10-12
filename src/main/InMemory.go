@@ -157,8 +157,9 @@ type InMemParty struct {
 	ACLEntryIds []string
 }
 
-func NewInMemParty() InMemParty {
+func NewInMemParty(name string) InMemParty {
 	return InMemParty{
+		Name: name,
 		ACLEntryIds: make([]string, 0),
 	}
 }
@@ -206,7 +207,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	var groupId string = createUniqueDbObjectId()
 	var newGroup = &InMemGroup{
 		InMemPersistObj: InMemPersistObj{Id: groupId},
-		InMemParty: InMemParty{ACLEntryIds: make([]string, 0)},
+		InMemParty: InMemParty{Name: name, ACLEntryIds: make([]string, 0)},
 		Purpose: purpose,
 		RealmId: realmId,
 		UserObjIds: make([]string, 0),
