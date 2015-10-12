@@ -269,6 +269,7 @@ func (group *InMemGroup) asGroupDesc() *GroupDesc {
 	return &GroupDesc{
 		RealmId: group.RealmId,
 		Name: group.Name,
+		Purpose: group.Purpose,
 		GroupId: group.Id,
 	}
 }

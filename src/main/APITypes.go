@@ -138,10 +138,10 @@ func (sessionToken *SessionToken) asResponse() string {
  */
 type GroupDesc struct {
 	BaseType
+	GroupId string
 	RealmId string
 	Name string
 	Purpose string
-	GroupId string
 }
 
 func (groupDesc *GroupDesc) asResponse() string {
