@@ -145,6 +145,16 @@ func (resource *InMemResource) getName() string {
 	return resource.Name
 }
 
+func (resource *InMemResource) getACLEntriesForPartyId(partyId string) []*ACLEntry {
+	var entries []*ACLEntry = make([]ACLEntry, 0)
+	for _, entry := range resource.getACLEntryIds() {
+		if entry.PartyId == partyId {
+			entries = append(entries, entry)
+		}
+	}
+	return entries
+}
+
 func (client *InMemClient) getResource(resourceId string) Resource {
 	return client.getPersistentObject(resourceId).(Resource)
 }
@@ -178,6 +188,16 @@ func (party *InMemParty) getACLEntryIds() []string {
 
 func (party *InMemParty) addACLEntry(entry ACLEntry) {
 	party.ACLEntryIds = append(party.ACLEntryIds, entry.getId())
+}
+
+func (party *InMemParty) getACLEntriesForResourceId(resourceId string) []*ACLEntry {
+	var entries []*ACLEntry = make([]ACLEntry, 0)
+	for _, entry := range party.getACLEntryIds() {
+		if entry.ResourceId == resourceId {
+			entries = append(entries, entry)
+		}
+	}
+	return entries
 }
 
 /*******************************************************************************
@@ -416,6 +436,11 @@ func (entry *InMemACLEntry) getParty() Party {
 
 func (entry *InMemACLEntry) getPermissionMask() []bool {
 	return entry.PermissionMask
+}
+
+func (entry *InMemACLEntry) asPermissionDesc() PermissionDesc {
+	
+	return NewPermissionDesc(entry.ResourceId, entry.PartyId, entry.PermissionMask)
 }
 
 /*******************************************************************************

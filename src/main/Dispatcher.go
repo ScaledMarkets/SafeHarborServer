@@ -73,6 +73,7 @@ func NewDispatcher() *Dispatcher {
 		"setPermission": setPermission,
 		"addPermission": addPermission,
 		"remPermission": remPermission,
+		"getPermission": getPermission,
 		"getMyDesc": getMyDesc,
 		"getMyGroups": getMyGroups,
 		"getMyRealms": getMyRealms,

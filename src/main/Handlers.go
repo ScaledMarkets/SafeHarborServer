@@ -1130,7 +1130,7 @@ func downloadImage(server *Server, sessionToken *SessionToken, values url.Values
 }
 
 /*******************************************************************************
- * Arguments: userObjId or groupId, repoId or dockerfileId or imageId, PermissionMask
+ * Arguments: PartyId, ResourceId, PermissionMask
  * Returns: PermissionDesc
  */
 func setPermission(server *Server, sessionToken *SessionToken, values url.Values,
@@ -1146,11 +1146,40 @@ func setPermission(server *Server, sessionToken *SessionToken, values url.Values
 		return NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
 
-	return nil
+	var partyId string = GetRequiredPOSTFieldValue(values, "PartyId")
+	var resourceId string = GetRequiredPOSTFieldValue(values, "ResourceId")
+	var smask []string = []string{
+		GetRequiredPOSTFieldValue(values, "Create"),
+		GetRequiredPOSTFieldValue(values, "Read"),
+		GetRequiredPOSTFieldValue(values, "Write"),
+		GetRequiredPOSTFieldValue(values, "Execute"),
+		GetRequiredPOSTFieldValue(values, "Delete"),
+	}
+	var mask []bool
+	var err error
+	mask, err = ToBoolAr(smask)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	// Identify the Resource.
+	var dbClient DBClient = server.dbClient
+	var resource Resource = dbClient.getResource(resourceId)
+	if resource == nil { return NewFailureDesc("Unable to identify resource with Id " + resourceId) }
+	
+	// Identify the Party.
+	var party Party = dbClient.getParty(partyId)
+	if party == nil { return NewFailureDesc("Unable to identify party with Id " + partyId) }
+	
+	// Create the ACL entry.
+	var aclEntry ACLEntry
+	var err error
+	aclEntry, err = server.dbClient.dbCreateACLEntry(resourceId, partyId, mask)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	return aclEntry.asPermissionDesc()
 }
 
 /*******************************************************************************
- * Arguments: userObjId or groupId, repoId or dockerfileId or imageId, PermissionMask
+ * Arguments: PartyId, ResourceId, PermissionMask
  * Returns: PermissionDesc
  */
 func addPermission(server *Server, sessionToken *SessionToken, values url.Values,
@@ -1166,11 +1195,46 @@ func addPermission(server *Server, sessionToken *SessionToken, values url.Values
 		return NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
 
-	return nil
+	var partyId string = GetRequiredPOSTFieldValue(values, "PartyId")
+	var resourceId string = GetRequiredPOSTFieldValue(values, "ResourceId")
+	var smask []string = []string{
+		GetRequiredPOSTFieldValue(values, "Create"),
+		GetRequiredPOSTFieldValue(values, "Read"),
+		GetRequiredPOSTFieldValue(values, "Write"),
+		GetRequiredPOSTFieldValue(values, "Execute"),
+		GetRequiredPOSTFieldValue(values, "Delete"),
+	}
+	var mask []bool
+	var err error
+	mask, err = ToBoolAr(smask)
+	if err != nil { return NewFailureDesc(err.Error()) }
+
+	// Identify the Resource.
+	var dbClient DBClient = server.dbClient
+	var resource Resource = dbClient.getResource(resourceId)
+	if resource == nil { return NewFailureDesc("Unable to identify resource with Id " + resourceId) }
+	
+	// Identify the Party.
+	var party Party = dbClient.getParty(partyId)
+	if party == nil { return NewFailureDesc("Unable to identify party with Id " + partyId) }
+	
+	// Apply the mask.
+	var newMask []bool = make([]bool, len(mask))
+	for index, _ := range mask {
+		mask[index] = addMask[index] || mask[index]
+	}
+	
+	// Create the ACL entry.
+	var aclEntry ACLEntry
+	var err error
+	aclEntry, err = server.dbClient.dbCreateACLEntry(resourceId, partyId, newMask)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	return aclEntry.asPermissionDesc()
 }
 
 /*******************************************************************************
- * Arguments: userObjId or groupId, repoId or dockerfileId or imageId, PermissionMask
+ * Arguments: PartyId, ResourceId, PermissionMask
  * Returns: PermissionDesc
  */
 func remPermission(server *Server, sessionToken *SessionToken, values url.Values,
@@ -1187,6 +1251,47 @@ func remPermission(server *Server, sessionToken *SessionToken, values url.Values
 	}
 
 	return nil
+}
+
+/*******************************************************************************
+ * Arguments: PartyId, ResourceId
+ * Returns: PermissionDesc
+ */
+func getPermission(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+
+	var partyId string = GetRequiredPOSTFieldValue(values, "PartyId")
+	var resourceId string = GetRequiredPOSTFieldValue(values, "ResourceId")
+
+	// Identify the Resource.
+	var dbClient DBClient = server.dbClient
+	//var resource Resource = dbClient.getResource(resourceId)
+	//if resource == nil { return NewFailureDesc("Unable to identify resource with Id " + resourceId) }
+	
+	// Identify the Party.
+	var party Party = dbClient.getParty(partyId)
+	if party == nil { return NewFailureDesc("Unable to identify party with Id " + partyId) }
+	
+	// Merge the ACLEntry masks.
+	var aclEntries []ACLEntry = party.getPermissionsForResourceId(resourceId)
+	var mask []bool = make([]bool, 5)
+	for _, aclEntry := range aclEntries {
+		var entryMask []bool = aclEntry.getPermissionMask()
+		for i, v := range mask {
+			mask[i] = mask || entryMask[i]
+		}
+	}
+	return NewPermissionDesc(aclEntryId string, resourceId, partyId, PermissionMask{Mask: mask})
 }
 
 /*******************************************************************************

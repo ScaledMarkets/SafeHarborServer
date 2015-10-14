@@ -428,6 +428,82 @@ func (imageDescs DockerImageDescs) asResponse() string {
 /*******************************************************************************
  * 
  */
+type PermissionMask struct {
+	BaseType
+	Mask []bool
+}
+
+func NewPermissionMask(canCreate, canRead, canWrite, canExec, canDel bool) PermissionMask {
+	return &PermissionMask{
+		Mask: { canCreate, canRead, canWrite, canExec, canDel },
+	}
+}
+
+func (mask *PermissionMask) GetMask() []bool { return Mask }
+
+func (mask *PermissionMask) CanCreate() bool { return Mask[0] }
+func (mask *PermissionMask) CanRead() bool { return Mask[1] }
+func (mask *PermissionMask) CanWrite() bool { return Mask[2] }
+func (mask *PermissionMask) CanExecute() bool { return Mask[3] }
+func (mask *PermissionMask) CanDelete() bool { return Mask[4] }
+
+func (mask *PermissionMask) SetCanCreate(can bool) { Mask[0] }
+func (mask *PermissionMask) SetCanRead(can bool) { Mask[1] }
+func (mask *PermissionMask) SetCanWrite(can bool) { Mask[2] }
+func (mask *PermissionMask) SetCanExecute(can bool) { Mask[3] }
+func (mask *PermissionMask) SetCanDelete(can bool) { Mask[4] }
+
+func (mask *PermissionMask) ToStringArray() []string {
+	var strAr []string = make([]string, len(mask.Mask))
+	for i, val := range mask.Mask {
+		if val { strAr[i] = "true" } else {strAr[i] = false }
+	}
+	return strAr
+}
+
+func ToBoolAr(mask []string) ([]bool, error) {
+	if len(mask) != 5 { return nil, errors.New("Length of mask != 5") }
+	var boolAr []bool = make([]bool, 5)
+	for i, val := range boolAr {
+		if val == "true" { boolAr[i] = true } else { boolAr[i] = false }
+	}
+	return boolAr, nil
+}
+
+func (mask *PermissionMask) asResponse() string {
+	return fmt.Sprintf(
+		"{\"CanCreate\": %d, \"CanRead\": %d, \"CanWrite\": %d, \"CanExecute\": %d, \"CanDelete\": %d}",
+		mask.CanCreate, mask.CanRead, mask.CanWrite, mask.CanExecute, mask.CanDelete)
+}
+
+/*******************************************************************************
+ * 
+ */
+type PermissionDesc struct {
+	BaseType
+	ACLEntryId string
+	ResourceId string
+	PartyId string
+	PermissionMask PermissionMask
+}
+
+func NewPermissionDesc(aclEntryId string, resourceId string, partyId string, permissionMask PermissionMask) {
+	return &PermissionDesc{
+		ACLEntryId: aclEntryId,
+		ResourceId: resourceId,
+		PartyId: partyId,
+		PermissionMask: permissionMask,
+}
+
+func (desc *PermissionDesc) asResponse() string {
+	return fmt.Sprintf(
+		"{\"ACLEntryId\": \"%s\", \"ResourceId\": \"%s\", \"PartyId\": \"%s\", \"CanCreate\": %d, \"CanRead\": %d, \"CanWrite\": %d, \"CanExecute\": %d, \"CanDelete\": %d}",
+		desc.ACLEntryId, desc.ResourceId, desc.PartyId, desc.CanCreate(), desc.CanRead(), desc.CanWrite(), desc.CanExecute(), desc.CanDelete())
+}
+
+/*******************************************************************************
+ * 
+ */
 type ScanResultDesc struct {
 	BaseType
 }
