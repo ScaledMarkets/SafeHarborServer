@@ -41,7 +41,7 @@ type Party interface {
 	getName() string
 	getACLEntryIds() []string
 	addACLEntry(ACLEntry)
-	getACLEntriesForResourceId(string) []*ACLEntry
+	getACLEntryForResourceId(string) ACLEntry
 }
 
 type Group interface {
@@ -67,7 +67,8 @@ type ACLEntry interface {
 	getResourceId() string
 	getPartyId() string
 	getPermissionMask() []bool
-	asPermissionDesc() PermissionDesc
+	setPermissionMask([]bool)
+	asPermissionDesc() *PermissionDesc
 }
 
 type ACL interface {
@@ -80,7 +81,7 @@ type ACL interface {
 type Resource interface {
 	ACL
 	getName() string
-	getACLEntriesForPartyId(string) []*ACLEntry
+	getACLEntryForPartyId(string) ACLEntry
 }
 
 type Realm interface {

@@ -88,8 +88,8 @@ type InMemPersistObj struct {
 
 var _ PersistObj = &InMemPersistObj{}
 
-func NewInMemPersistObj() InMemPersistObj {
-	return InMemPersistObj{Id: ""}
+func NewInMemPersistObj() *InMemPersistObj {
+	return &InMemPersistObj{Id: ""}
 }
 
 func (persObj *InMemPersistObj) getId() string {
@@ -112,8 +112,8 @@ type InMemACL struct {
 	ACLEntryIds []string
 }
 
-func NewInMemACL() InMemACL {
-	return InMemACL{
+func NewInMemACL() *InMemACL {
+	return &InMemACL{
 		ACLEntryIds: make([]string, 0),
 	}
 }
@@ -134,9 +134,9 @@ type InMemResource struct {
 	Name string
 }
 
-func NewInMemResource(name string) InMemResource {
-	return InMemResource{
-		InMemACL: NewInMemACL(),
+func NewInMemResource(name string) *InMemResource {
+	return &InMemResource{
+		InMemACL: *NewInMemACL(),
 		Name: name,
 	}
 }
@@ -145,14 +145,25 @@ func (resource *InMemResource) getName() string {
 	return resource.Name
 }
 
-func (resource *InMemResource) getACLEntriesForPartyId(partyId string) []*ACLEntry {
-	var entries []*ACLEntry = make([]ACLEntry, 0)
-	for _, entry := range resource.getACLEntryIds() {
-		if entry.PartyId == partyId {
-			entries = append(entries, entry)
+func (resource *InMemResource) getACLEntryForPartyId(partyId string) ACLEntry {
+	for _, entryId := range resource.getACLEntryIds() {
+		var obj interface{} = allObjects[entryId]
+		if obj == nil {
+			fmt.Println("Internal error - no object found for Id " + entryId);
+			continue
+		}
+		var entry ACLEntry
+		var isType bool
+		entry, isType = obj.(ACLEntry)
+		if ! isType {
+			fmt.Println("Internal error - object with Id " + entryId + " is not an ACLEntry");
+			continue
+		}
+		if entry.getPartyId() == partyId {
+			return entry
 		}
 	}
-	return entries
+	return nil
 }
 
 func (client *InMemClient) getResource(resourceId string) Resource {
@@ -167,8 +178,8 @@ type InMemParty struct {
 	ACLEntryIds []string
 }
 
-func NewInMemParty(name string) InMemParty {
-	return InMemParty{
+func NewInMemParty(name string) *InMemParty {
+	return &InMemParty{
 		Name: name,
 		ACLEntryIds: make([]string, 0),
 	}
@@ -190,14 +201,25 @@ func (party *InMemParty) addACLEntry(entry ACLEntry) {
 	party.ACLEntryIds = append(party.ACLEntryIds, entry.getId())
 }
 
-func (party *InMemParty) getACLEntriesForResourceId(resourceId string) []*ACLEntry {
-	var entries []*ACLEntry = make([]ACLEntry, 0)
-	for _, entry := range party.getACLEntryIds() {
-		if entry.ResourceId == resourceId {
-			entries = append(entries, entry)
+func (party *InMemParty) getACLEntryForResourceId(resourceId string) ACLEntry {
+	for _, entryId := range party.getACLEntryIds() {
+		var obj interface{} = allObjects[entryId]
+		if obj == nil {
+			fmt.Println("Internal error - no object found for Id " + entryId);
+			continue
+		}
+		var entry ACLEntry
+		var isType bool
+		entry, isType = obj.(ACLEntry)
+		if ! isType {
+			fmt.Println("Internal error - object with Id " + entryId + " is not an ACLEntry");
+			continue
+		}
+		if entry.getResourceId() == resourceId {
+			return entry
 		}
 	}
-	return entries
+	return nil
 }
 
 /*******************************************************************************
@@ -438,9 +460,13 @@ func (entry *InMemACLEntry) getPermissionMask() []bool {
 	return entry.PermissionMask
 }
 
-func (entry *InMemACLEntry) asPermissionDesc() PermissionDesc {
+func (entry *InMemACLEntry) setPermissionMask(mask []bool) {
+	entry.PermissionMask = mask
+}
+
+func (entry *InMemACLEntry) asPermissionDesc() *PermissionDesc {
 	
-	return NewPermissionDesc(entry.ResourceId, entry.PartyId, entry.PermissionMask)
+	return NewPermissionDesc(entry.getId(), entry.ResourceId, entry.PartyId, entry.getPermissionMask())
 }
 
 /*******************************************************************************
@@ -468,7 +494,7 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) (Realm, error) {
 	realmId = createUniqueDbObjectId()
 	var newRealm *InMemRealm = &InMemRealm{
 		InMemPersistObj: InMemPersistObj{Id: realmId},
-		InMemResource: NewInMemResource(realmInfo.Name),
+		InMemResource: *NewInMemResource(realmInfo.Name),
 		AdminUserId: realmInfo.AdminUserId,
 		OrgFullName: realmInfo.OrgFullName,
 		UserObjIds: make([]string, 0),
@@ -681,7 +707,7 @@ func (client *InMemClient) dbCreateRepo(realmId string, name string) (Repo, erro
 	var repoId string = createUniqueDbObjectId()
 	var newRepo *InMemRepo = &InMemRepo{
 		InMemPersistObj: InMemPersistObj{Id: repoId},
-		InMemResource: NewInMemResource(name),
+		InMemResource: *NewInMemResource(name),
 		RealmId: realmId,
 		DockerfileIds: make([]string, 0),
 		DockerImageIds: make([]string, 0),
@@ -751,7 +777,7 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	var dockerfileId string = createUniqueDbObjectId()
 	var newDockerfile *InMemDockerfile = &InMemDockerfile{
 		InMemPersistObj: InMemPersistObj{Id: dockerfileId},
-		InMemResource: NewInMemResource(name),
+		InMemResource: *NewInMemResource(name),
 		RepoId: repoId,
 		FilePath: filepath,
 	}
@@ -813,7 +839,7 @@ func (client *InMemClient) dbCreateDockerImage(repoId string,
 	var imageId string = createUniqueDbObjectId()
 	var newDockerImage *InMemDockerImage = &InMemDockerImage{
 		InMemPersistObj: InMemPersistObj{Id: imageId},
-		InMemResource: NewInMemResource(dockerImageTag),
+		InMemResource: *NewInMemResource(dockerImageTag),
 		RepoId: repoId,
 	}
 	fmt.Println("Created DockerImage")

@@ -433,30 +433,30 @@ type PermissionMask struct {
 	Mask []bool
 }
 
-func NewPermissionMask(canCreate, canRead, canWrite, canExec, canDel bool) PermissionMask {
+func NewPermissionMask(mask []bool) *PermissionMask {
 	return &PermissionMask{
-		Mask: { canCreate, canRead, canWrite, canExec, canDel },
+		Mask: mask,
 	}
 }
 
-func (mask *PermissionMask) GetMask() []bool { return Mask }
+func (mask *PermissionMask) GetMask() []bool { return mask.Mask }
 
-func (mask *PermissionMask) CanCreate() bool { return Mask[0] }
-func (mask *PermissionMask) CanRead() bool { return Mask[1] }
-func (mask *PermissionMask) CanWrite() bool { return Mask[2] }
-func (mask *PermissionMask) CanExecute() bool { return Mask[3] }
-func (mask *PermissionMask) CanDelete() bool { return Mask[4] }
+func (mask *PermissionMask) CanCreate() bool { return mask.Mask[0] }
+func (mask *PermissionMask) CanRead() bool { return mask.Mask[1] }
+func (mask *PermissionMask) CanWrite() bool { return mask.Mask[2] }
+func (mask *PermissionMask) CanExecute() bool { return mask.Mask[3] }
+func (mask *PermissionMask) CanDelete() bool { return mask.Mask[4] }
 
-func (mask *PermissionMask) SetCanCreate(can bool) { Mask[0] }
-func (mask *PermissionMask) SetCanRead(can bool) { Mask[1] }
-func (mask *PermissionMask) SetCanWrite(can bool) { Mask[2] }
-func (mask *PermissionMask) SetCanExecute(can bool) { Mask[3] }
-func (mask *PermissionMask) SetCanDelete(can bool) { Mask[4] }
+func (mask *PermissionMask) SetCanCreate(can bool) { mask.Mask[0] = can }
+func (mask *PermissionMask) SetCanRead(can bool) { mask.Mask[1] = can }
+func (mask *PermissionMask) SetCanWrite(can bool) { mask.Mask[2] = can }
+func (mask *PermissionMask) SetCanExecute(can bool) { mask.Mask[3] = can }
+func (mask *PermissionMask) SetCanDelete(can bool) { mask.Mask[4] = can }
 
 func (mask *PermissionMask) ToStringArray() []string {
 	var strAr []string = make([]string, len(mask.Mask))
 	for i, val := range mask.Mask {
-		if val { strAr[i] = "true" } else {strAr[i] = false }
+		if val { strAr[i] = "true" } else { strAr[i] = "false" }
 	}
 	return strAr
 }
@@ -464,7 +464,7 @@ func (mask *PermissionMask) ToStringArray() []string {
 func ToBoolAr(mask []string) ([]bool, error) {
 	if len(mask) != 5 { return nil, errors.New("Length of mask != 5") }
 	var boolAr []bool = make([]bool, 5)
-	for i, val := range boolAr {
+	for i, val := range mask {
 		if val == "true" { boolAr[i] = true } else { boolAr[i] = false }
 	}
 	return boolAr, nil
@@ -481,18 +481,21 @@ func (mask *PermissionMask) asResponse() string {
  */
 type PermissionDesc struct {
 	BaseType
+	PermissionMask
 	ACLEntryId string
 	ResourceId string
 	PartyId string
-	PermissionMask PermissionMask
 }
 
-func NewPermissionDesc(aclEntryId string, resourceId string, partyId string, permissionMask PermissionMask) {
+func NewPermissionDesc(aclEntryId string, resourceId string, partyId string,
+	permissionMask []bool) *PermissionDesc {
+
 	return &PermissionDesc{
 		ACLEntryId: aclEntryId,
 		ResourceId: resourceId,
 		PartyId: partyId,
-		PermissionMask: permissionMask,
+		PermissionMask: PermissionMask{Mask: permissionMask},
+	}
 }
 
 func (desc *PermissionDesc) asResponse() string {
