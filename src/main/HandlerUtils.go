@@ -191,3 +191,10 @@ func assertErrIsNil(err error, msg string) {
 	fmt.Print(msg)
 	panic(err)
 }
+
+/*******************************************************************************
+ * 
+ */
+func boolToString(b bool) string {
+	if b { return "true" } else { return "false" }	
+}
