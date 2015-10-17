@@ -410,7 +410,9 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(resourceId)
 	resource, isType = obj.(Resource)
-	assertThat(isType, "Internal error: object is not a Resource")
+	assertThat(obj != nil, "Internal error: obj is nil")
+	assertThat(isType, "Internal error: object is not a Resource - it is a " +
+		reflect.TypeOf(obj).String())
 	obj = client.getPersistentObject(partyId)
 	assertThat(obj != nil, "Internal error: obj is nil")
 	party, isType = obj.(Party)
