@@ -347,6 +347,9 @@ func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 	err = group.addUserId(userObjId)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
+	user.addGroupId(groupId)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
 	return &Result{
 		Status: 200,
 		Message: "User added to group",

@@ -377,6 +377,36 @@ func (user *InMemUser) getUserId() string {
 	return user.UserId
 }
 
+func (user *InMemUser) hasGroupWithId(groupId string) bool {
+	var obj PersistObj = allObjects[groupId]
+	if obj == nil { return false }
+	_, isGroup := obj.(Group)
+	if ! isGroup { return false }
+	
+	for _, id := range user.GroupIds {
+		if id == groupId { return true }
+	}
+	return false
+}
+
+func (user *InMemUser) addGroupId(groupId string) error {
+	
+	if user.hasGroupWithId(groupId) { return errors.New(fmt.Sprintf(
+		"Group with object Id %s is already in User's set of groups", groupId))
+	}
+	
+	var obj PersistObj = allObjects[groupId]
+	if obj == nil { return errors.New(fmt.Sprintf(
+		"Object with Id %s does not exist", groupId))
+	}
+	_, isGroup := obj.(Group)
+	if ! isGroup { return errors.New(fmt.Sprintf(
+		"Object with Id %s is not a Group", groupId))
+	}
+	user.GroupIds = append(user.GroupIds, groupId)
+	return nil
+}
+
 func (user *InMemUser) getGroupIds() []string {
 	return user.GroupIds
 }

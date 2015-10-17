@@ -58,7 +58,9 @@ type User interface {
 	Party
 	getRealmId() string
 	getUserId() string
+	hasGroupWithId(string) bool
 	asUserDesc() *UserDesc
+	addGroupId(string) error
 	getGroupIds() []string
 }
 
