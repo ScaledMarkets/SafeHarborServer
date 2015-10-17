@@ -501,7 +501,7 @@ func NewPermissionDesc(aclEntryId string, resourceId string, partyId string,
 func (desc *PermissionDesc) asResponse() string {
 	return fmt.Sprintf(
 		"{\"ACLEntryId\": \"%s\", \"ResourceId\": \"%s\", \"PartyId\": \"%s\", " +
-		"\"CanCreate\": %s, \"CanRead\": %s, \"CanWrite\": %s, \"CanExecute\": %s, \"CanDelete\": %s}",
+		"\"Create\": %s, \"Read\": %s, \"Write\": %s, \"Execute\": %s, \"Delete\": %s}",
 		desc.ACLEntryId, desc.ResourceId, desc.PartyId,
 		boolToString(desc.CanCreate()), boolToString(desc.CanRead()),
 		boolToString(desc.CanWrite()), boolToString(desc.CanExecute()),
