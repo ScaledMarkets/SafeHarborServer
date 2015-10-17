@@ -250,10 +250,6 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	group, err = server.dbClient.dbCreateGroup(realmId, groupName, groupPurpose)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
-	// Add ACL entry to enable the current user to access what he/she just created.
-	server.dbClient.dbCreateACLEntry(group.getId(), user.getId(),
-		[]bool{ true, true, true, true, true } )
-	
 	return group.asGroupDesc()
 }
 
