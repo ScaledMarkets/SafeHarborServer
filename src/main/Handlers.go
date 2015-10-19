@@ -170,8 +170,16 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	var userInfo *UserInfo
 	userInfo, err = GetUserInfo(values)
 	if err != nil { return NewFailureDesc(err.Error()) }
-	
+
 	// Authorize the request, based on the authenticated identity.
+	isAuthorized, err := authorized(server, sessionToken, CreateMask, userInfo.RealmId)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if ! isAuthorized {
+		return NewFailureDesc("Unauthorized: cannot access " + userInfo.RealmId +
+			" to create a user")
+	}
+	
+	// Legacy - uses Cesanta. Probably remove this.
 	if ! server.authService.authorized(server.sessions[sessionToken.UniqueSessionId],
 		"admin",  // this 'resource' is onwed by the admin account
 		"repository",
@@ -1602,7 +1610,7 @@ func defineQualityScan(server *Server, sessionToken *SessionToken, values url.Va
 }
 
 /*******************************************************************************
- * Arguments: ImageId
+ * Arguments: ScriptId, ImageObjId
  * Returns: ScanResultDesc
  */
 func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
@@ -1618,19 +1626,39 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 		return NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
 
-	// https://github.com/baude/image-scanner
-	// https://github.com/baude
-	// https://developerblog.redhat.com/2015/04/21/introducing-the-atomic-command/
+	var scriptId, imageObjId string
+	var err error
+	scriptId, err = GetRequiredPOSTFieldValue(values, "ScriptId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	imageObjId, err = GetRequiredPOSTFieldValue(values, "ImageObjId")
+	if err != nil { return NewFailureDesc(err.Error()) }
 	
-	// Perform a Lynis scan.
+	var dockerImage DockerImage = server.dbClient.getDockerImage(imageObjId)
+	if dockerImage == nil {
+		return NewFailureDesc("Docker image with object Id " + imageObjId + " not found")
+	}
+
+	// Lynis scan:
 	// https://cisofy.com/lynis/
 	// https://cisofy.com/lynis/plugins/docker-containers/
 	// /usr/local/lynis/lynis -c --checkupdate --quiet --auditor "SafeHarbor" > ....
 	
-	// Tag the image as having been scanned.
+	// OpenScap using RedHat/Baude image scanner:
+	// https://github.com/baude/image-scanner
+	// https://github.com/baude
+	// https://developerblog.redhat.com/2015/04/21/introducing-the-atomic-command/
 	
-	
-	
+	var cmd *exec.Cmd = exec.Command("image-scanner-remote.py",
+		"--profile", "localhost", "-s", dockerImage.getDockerImageId())
+	var output []byte
+	output, err = cmd.CombinedOutput()
+	var outputStr string = string(output)
+	if ! strings.HasPrefix(outputStr, "Error") {
+		return NewFailureDesc("Image scan failed: " + outputStr)
+	}
 
-	return nil
+	// Tag the image as having been scanned.
+	// ....
+	
+	return NewScanResultDesc(outputStr)
 }

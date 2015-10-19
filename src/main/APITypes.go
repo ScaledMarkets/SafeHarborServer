@@ -513,10 +513,17 @@ func (desc *PermissionDesc) asResponse() string {
  */
 type ScanResultDesc struct {
 	BaseType
+	Message string
+}
+
+func NewScanResultDesc(msg string) *ScanResultDesc {
+	return &ScanResultDesc{
+		Message: msg,
+	}
 }
 
 func (scanResultDesc *ScanResultDesc) asResponse() string {
-	return ""
+	return fmt.Sprintf("{\"Message\": \"%s\"}", scanResultDesc.Message)
 }
 
 /*******************************************************************************

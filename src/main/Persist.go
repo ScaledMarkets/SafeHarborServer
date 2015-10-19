@@ -62,6 +62,8 @@ type User interface {
 	asUserDesc() *UserDesc
 	addGroupId(string) error
 	getGroupIds() []string
+	
+	//getEventIds() []string
 }
 
 type ACLEntry interface {
@@ -118,16 +120,69 @@ type Repo interface {
 	addDockerfile(Dockerfile)
 	addDockerImage(DockerImage)
 	asRepoDesc() *RepoDesc
+	
+	//getDatasetIds() []string
+	//getFlagIds() []string
 }
 
 type Dockerfile interface {
 	Resource
 	getFilePath() string
 	asDockerfileDesc() *DockerfileDesc
+	
+	//getDockerfileExecEventIds() []string
 }
 
 type DockerImage interface {
 	Resource
+	//ImageCreationEvent
 	getDockerImageId() string
 	asDockerImageDesc() *DockerImageDesc
+	
+	//getScanEventIds() []string
+}
+
+
+
+// For Image Workflow:
+
+type Event interface {
+	When string
+	getUserId() string
+}
+
+type ScanEvent interface {
+	Event
+	Score string
+	getDockerImageId() string
+	getDatasetIds() []string
+}
+
+type ImageCreationEvent {
+	Event
+}
+
+type DockerfileExecEvent {
+	ImageCreationEvent
+	getDockerfileId() string
+}
+
+type UploadEvent {
+	ImageCreationEvent
+}
+
+type Dataset {
+	RepoId string
+	RepoExternalObjPath string
+	//RepoExternalObjId string
+	getRepoId() string
+	getScanEventIds() []string
+}
+
+type Flag {
+	Expr string
+	RepoId string
+	RepoExternalObjPath string
+	RepoExternalObjId string
+	getRepoId() string
 }

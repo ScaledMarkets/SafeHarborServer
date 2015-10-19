@@ -97,12 +97,114 @@ func (authSvc *AuthService) authenticateCredentials(creds *Credentials) *Session
 func (authSvc *AuthService) authorized(creds *Credentials, account string, 
 	scope_type string, scope_name string, scope_actions []string) bool {
 
-	return true
-	//....Remove!!!!!!!!!!!!!!
-
+	return true  //....Remove!!!!!!!!!!!!!!
+	
 
 //	return authSvc.sendQueryToAuthServer(creds, authSvc.Service,
 //		creds.userid, scope_type, scope_name, scope_actions)
+}
+
+/*******************************************************************************
+ * Mask constants, for convenience.
+ */
+const CreateMask []bool = []bool{true, false, false, false, false}
+const ReadMask []bool = []bool{false, true, false, false, false}
+const WriteMask []bool = []bool{false, false, true, false, false}
+const ExecuteMask []bool = []bool{false, false, false, true, false}
+const DeleteMask []bool = []bool{false, false, false, false, true}
+
+
+/*******************************************************************************
+ * At most one field of the actionMask may be true.
+ */
+func authorized(server *Server, sessionToken *SessionToken, actionMask []bool,
+	resourceId string) bool, error {
+
+	/* Rules:
+	
+	A party can access a resource if the party,
+		has an ACL entry for the resource; or,
+		the resource belongs to a repo or realm for which the party has an ACL entry.
+	
+	In this context, a user is a party if the user is explicitly the party or if
+	the user belongs to a group that is explicitly the party.
+	
+	Groups may not belong to other groups.
+	
+	The user must have the required access mode (Create, Read, Write, Exec, Delete).
+	No access mode implies any other access mode.
+	
+	*/
+	
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+
+	// Verify that at most one field of the actionMask is true.
+	var nTrue = 0
+	for _, b := range actionMask {
+		if b {
+			if nTrue == 1 {
+				return false, errors.New("More than one field in mask may not be true")
+			}
+			nTrue++
+		}
+	}
+	
+	// Check if the user or a group that the user belongs to has the permission
+	// that is specified by the actionMask.
+	var party Party = user  // start with the user.
+	var groupIds []string = user.getGroupIds()
+	var i = -1
+	for {
+		var repo Repo
+		var realm Realm
+		if server.partyHasAccess(party, actionMask, resource) ||
+			(((repo = resource.getRepo()) != nil) && server.partyHasAccess(party, actionMask, repo)) ||
+			(((realm resource.getRealm()) != nil) && server.partyHasAccess(party, actionMask, realm)) {
+			return true
+		}
+		
+		i++
+		if i == len(groupIds) { return false }
+		party = server.dbClient.getParty(groupIds[i])  // check user's groups
+		if party == nil {
+			return false, errors.New("Internal error: Party with Id " + groupIds[i] + " not found")
+		}
+	}
+}
+
+/*******************************************************************************
+ * Return true if the party has all of the rights implied by the actionMask, for
+ * the specified Resource, based on the ACLEntries that the resource has. Do not
+ * attempt to determine if the resource's owning Resource has applicable ACLEntries.
+ */
+func (server *Server) getPartyAccess(party *Party, actionMask []bool, resource Resource) bool {
+	
+	var entries []string = party.getACLEntryIds()
+	for _, entryId := range entries {
+		
+		if entryId == resource.getId() {
+			var entry ACLEntry = server.dbClient.getACLEntry(entryId)
+			if entry == nil {
+				fmt.Println("Internal error: ACLEntry with Id " + entryId + " not found")
+				return false
+			}
+			var mask []bool = entry.getPermissionMask()
+			
+			for i, b := range mask {
+				if actionMask[i] && b {
+					return true
+				}
+			}
+			return false
+		}
+	}
+	return false
 }
 
 
