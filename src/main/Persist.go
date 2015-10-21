@@ -86,6 +86,11 @@ type Resource interface {
 	ACL
 	getName() string
 	getACLEntryForPartyId(string) ACLEntry
+	getParentId() string
+	isRealm() bool
+	isRepo() bool
+	isDockerfile() bool
+	isDockerImage() bool
 }
 
 type Realm interface {
@@ -147,42 +152,40 @@ type DockerImage interface {
 // For Image Workflow:
 
 type Event interface {
-	When string
+	getWhen() string
 	getUserId() string
 }
 
 type ScanEvent interface {
 	Event
-	Score string
+	getScore() string
 	getDockerImageId() string
 	getDatasetIds() []string
 }
 
-type ImageCreationEvent {
+type ImageCreationEvent interface {
 	Event
 }
 
-type DockerfileExecEvent {
+type DockerfileExecEvent interface {
 	ImageCreationEvent
 	getDockerfileId() string
 }
 
-type UploadEvent {
+type UploadEvent interface {
 	ImageCreationEvent
 }
 
-type Dataset {
-	RepoId string
-	RepoExternalObjPath string
-	//RepoExternalObjId string
+type Dataset interface {
 	getRepoId() string
+	getRepoExternalObjPath() string
+	//RepoExternalObjId string
 	getScanEventIds() []string
 }
 
-type Flag {
-	Expr string
-	RepoId string
-	RepoExternalObjPath string
-	RepoExternalObjId string
+type Flag interface {
+	getExpr() string
 	getRepoId() string
+	getRepoExternalObjPath() string
+	getRepoExternalObjId() string
 }

@@ -170,6 +170,15 @@ func (client *InMemClient) getResource(resourceId string) Resource {
 	return client.getPersistentObject(resourceId).(Resource)
 }
 
+func (resource *InMemResource) getParentId() string {
+	return ""
+}
+
+func (resource *InMemResource) isRealm() bool { return false }
+func (resource *InMemResource) isRepo() bool { return false }
+func (resource *InMemResource) isDockerfile() bool { return false }
+func (resource *InMemResource) isDockerImage() bool { return false }
+
 /*******************************************************************************
  * 
  */
@@ -722,6 +731,8 @@ func (realm *InMemRealm) getRepoByName(repoName string) Repo {
 	return nil
 }
 
+func (realm *InMemRealm) isRealm() bool { return true }
+
 /*******************************************************************************
  * 
  */
@@ -794,6 +805,12 @@ func (repo *InMemRepo) asRepoDesc() *RepoDesc {
 	return NewRepoDesc(repo.Id, repo.RealmId, repo.Name)
 }
 
+func (repo *InMemRepo) getParentId() string {
+	return repo.RealmId
+}
+
+func (repo *InMemRepo) isRepo() bool { return true }
+
 /*******************************************************************************
  * 
  */
@@ -851,6 +868,12 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() *DockerfileDesc {
 	return NewDockerfileDesc(dockerfile.Id, dockerfile.RepoId, dockerfile.Name)
 }
 
+func (dockerfile *InMemDockerfile) getParentId() string {
+	return dockerfile.RepoId
+}
+
+func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
+
 /*******************************************************************************
  * 
  */
@@ -907,6 +930,12 @@ func (image *InMemDockerImage) getDockerImageId() string {
 func (image *InMemDockerImage) asDockerImageDesc() *DockerImageDesc {
 	return NewDockerImageDesc(image.Id, image.Name)
 }
+
+func (image *InMemDockerImage) getParentId() string {
+	return image.RepoId
+}
+
+func (image *InMemDockerImage) isDockerImage() bool { return true }
 
 
 /****************************** Utility Methods ********************************

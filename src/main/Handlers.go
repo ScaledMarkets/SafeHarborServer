@@ -1632,6 +1632,7 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	if err != nil { return NewFailureDesc(err.Error()) }
 	imageObjId, err = GetRequiredPOSTFieldValue(values, "ImageObjId")
 	if err != nil { return NewFailureDesc(err.Error()) }
+	fmt.Println(scriptId)
 	
 	var dockerImage DockerImage = server.dbClient.getDockerImage(imageObjId)
 	if dockerImage == nil {

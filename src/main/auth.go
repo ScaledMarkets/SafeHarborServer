@@ -13,7 +13,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"time"
-	//"errors"
+	"errors"
 )
 
 type AuthService struct {
@@ -107,18 +107,18 @@ func (authSvc *AuthService) authorized(creds *Credentials, account string,
 /*******************************************************************************
  * Mask constants, for convenience.
  */
-const CreateMask []bool = []bool{true, false, false, false, false}
-const ReadMask []bool = []bool{false, true, false, false, false}
-const WriteMask []bool = []bool{false, false, true, false, false}
-const ExecuteMask []bool = []bool{false, false, false, true, false}
-const DeleteMask []bool = []bool{false, false, false, false, true}
+var CreateMask []bool = []bool{true, false, false, false, false}
+var ReadMask []bool = []bool{false, true, false, false, false}
+var WriteMask []bool = []bool{false, false, true, false, false}
+var ExecuteMask []bool = []bool{false, false, false, true, false}
+var DeleteMask []bool = []bool{false, false, false, false, true}
 
 
 /*******************************************************************************
  * At most one field of the actionMask may be true.
  */
 func authorized(server *Server, sessionToken *SessionToken, actionMask []bool,
-	resourceId string) bool, error {
+	resourceId string) (bool, error) {
 
 	/* Rules:
 	
@@ -141,7 +141,7 @@ func authorized(server *Server, sessionToken *SessionToken, actionMask []bool,
 	fmt.Println("userid=", userId)
 	var user User = server.dbClient.dbGetUserByUserId(userId)
 	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
+		return false, errors.New("user object cannot be identified from user id " + userId)
 	}
 
 	// Verify that at most one field of the actionMask is true.
@@ -158,19 +158,27 @@ func authorized(server *Server, sessionToken *SessionToken, actionMask []bool,
 	// Check if the user or a group that the user belongs to has the permission
 	// that is specified by the actionMask.
 	var party Party = user  // start with the user.
+	var resource Resource = server.dbClient.getResource(resourceId)
+	if resource == nil {
+		return false, errors.New("Resource with Id " + resourceId + " not found")
+	}
 	var groupIds []string = user.getGroupIds()
 	var i = -1
 	for {
-		var repo Repo
-		var realm Realm
+		var parentId string = resource.getParentId()
+		var parent Resource
+		if parentId != "" { parent = server.dbClient.getResource(parentId) }
 		if server.partyHasAccess(party, actionMask, resource) ||
-			(((repo = resource.getRepo()) != nil) && server.partyHasAccess(party, actionMask, repo)) ||
-			(((realm resource.getRealm()) != nil) && server.partyHasAccess(party, actionMask, realm)) {
-			return true
+			(
+				(parent != nil) && 
+				(
+					(parent.isRepo() && server.partyHasAccess(party, actionMask, parent)) ||
+					(parent.isRealm() && server.partyHasAccess(party, actionMask, parent)))) {
+			return true, nil
 		}
 		
 		i++
-		if i == len(groupIds) { return false }
+		if i == len(groupIds) { return false, nil }
 		party = server.dbClient.getParty(groupIds[i])  // check user's groups
 		if party == nil {
 			return false, errors.New("Internal error: Party with Id " + groupIds[i] + " not found")
@@ -183,7 +191,7 @@ func authorized(server *Server, sessionToken *SessionToken, actionMask []bool,
  * the specified Resource, based on the ACLEntries that the resource has. Do not
  * attempt to determine if the resource's owning Resource has applicable ACLEntries.
  */
-func (server *Server) getPartyAccess(party *Party, actionMask []bool, resource Resource) bool {
+func (server *Server) partyHasAccess(party Party, actionMask []bool, resource Resource) bool {
 	
 	var entries []string = party.getACLEntryIds()
 	for _, entryId := range entries {
