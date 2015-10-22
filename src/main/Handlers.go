@@ -172,12 +172,12 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	if err != nil { return NewFailureDesc(err.Error()) }
 
 	// Authorize the request, based on the authenticated identity.
-	isAuthorized, err := authorized(server, sessionToken, CreateMask, userInfo.RealmId)
-	if err != nil { return NewFailureDesc(err.Error()) }
-	if ! isAuthorized {
-		return NewFailureDesc("Unauthorized: cannot access " + userInfo.RealmId +
-			" to create a user")
-	}
+//	isAuthorized, err := authorized(server, sessionToken, CreateMask, userInfo.RealmId)
+//	if err != nil { return NewFailureDesc(err.Error()) }
+//	if ! isAuthorized {
+//		return NewFailureDesc("Unauthorized: cannot access " + userInfo.RealmId +
+//			" to create a user")
+//	}
 	
 	// Legacy - uses Cesanta. Probably remove this.
 	if ! server.authService.authorized(server.sessions[sessionToken.UniqueSessionId],
