@@ -391,16 +391,6 @@ func remGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 func createRealmAnon(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-	
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
-
 	// Create new administrative user.
 	var err error
 	var userInfo *UserInfo
