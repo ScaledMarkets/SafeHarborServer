@@ -125,7 +125,14 @@ func authenticate(server *Server, sessionToken *SessionToken, values url.Values,
 	var err error
 	creds, err = GetCredentials(values)
 	if err != nil { return NewFailureDesc(err.Error()) }
-	return server.authService.authenticateCredentials(creds)
+	var token *SessionToken = server.authService.authenticateCredentials(creds)
+	var user User = server.dbClient.dbGetUserByUserId(token.AuthenticatedUserid)
+	if user == nil {
+		server.authService.invalidateSessionId(token.UniqueSessionId)
+		return NewFailureDesc("User was authenticated but not found in the database")
+	}
+	token.setRealmId(user.getRealmId())
+	return token
 }
 
 /*******************************************************************************
@@ -1638,6 +1645,7 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	// https://github.com/baude/image-scanner
 	// https://github.com/baude
 	// https://developerblog.redhat.com/2015/04/21/introducing-the-atomic-command/
+	// https://aws.amazon.com/partners/redhat/
 	
 	var cmd *exec.Cmd = exec.Command("image-scanner-remote.py",
 		"--profile", "localhost", "-s", dockerImage.getDockerImageId())

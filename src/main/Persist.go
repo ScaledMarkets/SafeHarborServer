@@ -38,6 +38,7 @@ type PersistObj interface {
 /* A Party is a User or a Group. Parties act on Resources. */
 type Party interface {
 	PersistObj
+	getRealmId() string
 	getName() string
 	getACLEntryIds() []string
 	addACLEntry(ACLEntry)
@@ -56,7 +57,6 @@ type Group interface {
 
 type User interface {
 	Party
-	getRealmId() string
 	getUserId() string
 	hasGroupWithId(string) bool
 	asUserDesc() *UserDesc

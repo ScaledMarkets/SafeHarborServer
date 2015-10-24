@@ -184,6 +184,7 @@ func (resource *InMemResource) isDockerImage() bool { return false }
  */
 type InMemParty struct {
 	Name string
+	RealmId string
 	ACLEntryIds []string
 }
 
@@ -200,6 +201,10 @@ func (party *InMemParty) getName() string {
 
 func (client *InMemClient) getParty(partyId string) Party {
 	return client.getPersistentObject(partyId).(Party)
+}
+
+func (party *InMemParty) getRealmId() string {
+	return party.RealmId
 }
 
 func (party *InMemParty) getACLEntryIds() []string {
@@ -332,7 +337,6 @@ func (group *InMemGroup) asGroupDesc() *GroupDesc {
 type InMemUser struct {
 	InMemPersistObj
 	InMemParty
-	RealmId string
 	UserId string
 	EmailAddress string
 	PasswordHash [20]byte
@@ -357,8 +361,7 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	var pswdAsBytes []byte = []byte(pswd)
 	var newUser *InMemUser = &InMemUser{
 		InMemPersistObj: InMemPersistObj{Id: userObjId},
-		InMemParty: InMemParty{Name: name, ACLEntryIds: make([]string, 0)},
-		RealmId: realmId,
+		InMemParty: InMemParty{Name: name, RealmId: realmId, ACLEntryIds: make([]string, 0)},
 		UserId: userId,
 		EmailAddress: email,
 		PasswordHash: sha1.Sum(pswdAsBytes),
@@ -376,10 +379,6 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 func (client *InMemClient) getUser(id string) User {
 	return client.getPersistentObject(id).(User)
 	//return User(client.getPersistentObject(id))
-}
-
-func (user *InMemUser) getRealmId() string {
-	return user.RealmId
 }
 
 func (user *InMemUser) getUserId() string {

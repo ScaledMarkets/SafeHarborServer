@@ -119,18 +119,24 @@ type SessionToken struct {
 	BaseType
 	UniqueSessionId string
 	AuthenticatedUserid string
+	RealmId string
 }
 
 func NewSessionToken(sessionId string, userId string) *SessionToken {
 	return &SessionToken{
 		UniqueSessionId: sessionId,
 		AuthenticatedUserid: userId,
+		RealmId: "",
 	}
 }
 
+func (sessionToken *SessionToken) setRealmId(id string) {
+	sessionToken.RealmId = id
+}
+
 func (sessionToken *SessionToken) asResponse() string {
-	return fmt.Sprintf("{\"UniqueSessionId\": \"%s\", \"AuthenticatedUserid\": \"%s\"}",
-		sessionToken.UniqueSessionId, sessionToken.AuthenticatedUserid)
+	return fmt.Sprintf("{\"UniqueSessionId\": \"%s\", \"AuthenticatedUserid\": \"%s\", \"RealmId\": \"%s\"}",
+		sessionToken.UniqueSessionId, sessionToken.AuthenticatedUserid, sessionToken.RealmId)
 }
 
 /*******************************************************************************

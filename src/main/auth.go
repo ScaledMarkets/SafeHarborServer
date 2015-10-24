@@ -79,13 +79,19 @@ func (authSvc *AuthService) authenticateCredentials(creds *Credentials) *Session
 	
 	var sessionId string = authSvc.createUniqueSessionId()
 	var token *SessionToken = NewSessionToken(sessionId, creds.UserId)
-	//var token *SessionToken = NewSessionToken(sessionId, creds.userid)
 	
 	// Cache the new session token, so that this Server can recognize it in future
 	// exchanges during this session.
 	authSvc.Sessions[sessionId] = creds
 	
 	return token
+}
+
+/*******************************************************************************
+ * Remove the specified session Id from the set of authenticated session Ids.
+ */
+func (authSvc *AuthService) invalidateSessionId(sessionId string) {
+	authSvc.Sessions[sessionId] = nil
 }
 
 /*******************************************************************************
