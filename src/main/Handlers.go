@@ -257,12 +257,12 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	groupName, err = GetRequiredPOSTFieldValue(values, "Name")
 	if err != nil { return NewFailureDesc(err.Error()) }
 
-	var groupPurpose string
-	groupPurpose, err = GetRequiredPOSTFieldValue(values, "Purpose")
+	var groupDescription string
+	groupDescription, err = GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return NewFailureDesc(err.Error()) }
 
 	var group Group
-	group, err = server.dbClient.dbCreateGroup(realmId, groupName, groupPurpose)
+	group, err = server.dbClient.dbCreateGroup(realmId, groupName, groupDescription)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	return group.asGroupDesc()

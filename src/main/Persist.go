@@ -51,7 +51,7 @@ type Party interface {
 
 type Group interface {
 	Party
-	getPurpose() string
+	getDescription() string
 	getUserObjIds() []string
 	hasUserWithId(string) bool
 	addUserId(string) error

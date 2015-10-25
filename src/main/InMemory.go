@@ -259,13 +259,13 @@ func (party *InMemParty) getACLEntryForResourceId(resourceId string) ACLEntry {
 type InMemGroup struct {
 	InMemPersistObj
 	InMemParty
-	Purpose string
+	Description string
 	RealmId string
 	UserObjIds []string
 }
 
 func (client *InMemClient) dbCreateGroup(realmId string, name string,
-	purpose string) (Group, error) {
+	description string) (Group, error) {
 	
 	// Check if a group with that name already exists within the realm.
 	var realm Realm = client.getRealm(realmId)
@@ -281,7 +281,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	var newGroup = &InMemGroup{
 		InMemPersistObj: InMemPersistObj{Id: groupId, Client: client},
 		InMemParty: InMemParty{Name: name, CreationTime: time.Now(), ACLEntryIds: make([]string, 0)},
-		Purpose: purpose,
+		Description: description,
 		RealmId: realmId,
 		UserObjIds: make([]string, 0),
 	}
@@ -298,8 +298,8 @@ func (client *InMemClient) getGroup(id string) Group {
 	return client.getPersistentObject(id).(Group)
 }
 
-func (group *InMemGroup) getPurpose() string {
-	return group.Purpose
+func (group *InMemGroup) getDescription() string {
+	return group.Description
 }
 
 func (group *InMemGroup) getUserObjIds() []string {
@@ -344,7 +344,7 @@ func (group *InMemGroup) asGroupDesc() *GroupDesc {
 		RealmId: group.RealmId,
 		Name: group.Name,
 		CreationDate: FormatTimeAsJavascriptDate(group.CreationTime),
-		Purpose: group.Purpose,
+		Description: group.Description,
 		GroupId: group.Id,
 	}
 }

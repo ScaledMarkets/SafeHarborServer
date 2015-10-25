@@ -163,12 +163,12 @@ type GroupDesc struct {
 	RealmId string
 	Name string
 	CreationDate string
-	Purpose string
+	Description string
 }
 
 func (groupDesc *GroupDesc) asResponse() string {
-	return fmt.Sprintf("{\"RealmId\": \"%s\", \"Name\": \"%s\", \"CreationDate\": \"%s\", \"GroupId\": \"%s\", \"Purpose\": \"%s\"}",
-		groupDesc.RealmId, groupDesc.Name, groupDesc.CreationDate, groupDesc.GroupId, groupDesc.Purpose)
+	return fmt.Sprintf("{\"RealmId\": \"%s\", \"Name\": \"%s\", \"CreationDate\": \"%s\", \"GroupId\": \"%s\", \"Description\": \"%s\"}",
+		groupDesc.RealmId, groupDesc.Name, groupDesc.CreationDate, groupDesc.GroupId, groupDesc.Description)
 }
 
 type GroupDescs []*GroupDesc
