@@ -7,6 +7,7 @@
 package main
 
 import (
+	"time"
 )
 
 type DBClient interface {
@@ -42,6 +43,7 @@ type Party interface {
 	PersistObj
 	getRealmId() string
 	getName() string
+	getCreationTime() time.Time
 	getACLEntryIds() []string
 	addACLEntry(ACLEntry)
 	getACLEntryForResourceId(string) ACLEntry
@@ -87,6 +89,7 @@ type ACL interface {
 type Resource interface {
 	ACL
 	getName() string
+	getCreationTime() time.Time
 	getACLEntryForPartyId(string) ACLEntry
 	getParentId() string
 	isRealm() bool

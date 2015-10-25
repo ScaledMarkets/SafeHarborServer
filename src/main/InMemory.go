@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"os"
 	"crypto/sha1"
+	"time"
 )
 
 /*******************************************************************************
@@ -137,17 +138,23 @@ func (acl *InMemACL) addACLEntry(entry ACLEntry) {
 type InMemResource struct {
 	InMemACL
 	Name string
+	CreationTime time.Time
 }
 
-func NewInMemResource(name string) *InMemResource {
+func NewInMemResource(name string, curTime time.Time) *InMemResource {
 	return &InMemResource{
 		InMemACL: *NewInMemACL(),
 		Name: name,
+		CreationTime: curTime,
 	}
 }
 
 func (resource *InMemResource) getName() string {
 	return resource.Name
+}
+
+func (resource *InMemResource) getCreationTime() time.Time {
+	return resource.CreationTime
 }
 
 func (resource *InMemResource) getACLEntryForPartyId(partyId string) ACLEntry {
@@ -189,6 +196,7 @@ func (resource *InMemResource) isDockerImage() bool { return false }
  */
 type InMemParty struct {
 	Name string
+	CreationTime time.Time
 	RealmId string
 	ACLEntryIds []string
 }
@@ -202,6 +210,10 @@ func NewInMemParty(name string) *InMemParty {
 
 func (party *InMemParty) getName() string {
 	return party.Name
+}
+
+func (party *InMemParty) getCreationTime() time.Time {
+	return party.CreationTime
 }
 
 func (client *InMemClient) getParty(partyId string) Party {
@@ -268,7 +280,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	var groupId string = createUniqueDbObjectId()
 	var newGroup = &InMemGroup{
 		InMemPersistObj: InMemPersistObj{Id: groupId, Client: client},
-		InMemParty: InMemParty{Name: name, ACLEntryIds: make([]string, 0)},
+		InMemParty: InMemParty{Name: name, CreationTime: time.Now(), ACLEntryIds: make([]string, 0)},
 		Purpose: purpose,
 		RealmId: realmId,
 		UserObjIds: make([]string, 0),
@@ -331,6 +343,7 @@ func (group *InMemGroup) asGroupDesc() *GroupDesc {
 	return &GroupDesc{
 		RealmId: group.RealmId,
 		Name: group.Name,
+		CreationDate: FormatTimeAsJavascriptDate(group.CreationTime),
 		Purpose: group.Purpose,
 		GroupId: group.Id,
 	}
@@ -366,7 +379,7 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	var pswdAsBytes []byte = []byte(pswd)
 	var newUser *InMemUser = &InMemUser{
 		InMemPersistObj: InMemPersistObj{Id: userObjId, Client: client},
-		InMemParty: InMemParty{Name: name, RealmId: realmId, ACLEntryIds: make([]string, 0)},
+		InMemParty: InMemParty{Name: name, CreationTime: time.Now(), RealmId: realmId, ACLEntryIds: make([]string, 0)},
 		UserId: userId,
 		EmailAddress: email,
 		PasswordHash: sha1.Sum(pswdAsBytes),
@@ -585,7 +598,7 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo, adminUserId strin
 	realmId = createUniqueDbObjectId()
 	var newRealm *InMemRealm = &InMemRealm{
 		InMemPersistObj: InMemPersistObj{Id: realmId, Client: client},
-		InMemResource: *NewInMemResource(realmInfo.Name),
+		InMemResource: *NewInMemResource(realmInfo.Name, time.Now()),
 		AdminUserId: adminUserId,
 		OrgFullName: realmInfo.OrgFullName,
 		UserObjIds: make([]string, 0),
@@ -800,7 +813,7 @@ func (client *InMemClient) dbCreateRepo(realmId string, name string) (Repo, erro
 	var repoId string = createUniqueDbObjectId()
 	var newRepo *InMemRepo = &InMemRepo{
 		InMemPersistObj: InMemPersistObj{Id: repoId, Client: client},
-		InMemResource: *NewInMemResource(name),
+		InMemResource: *NewInMemResource(name, time.Now()),
 		RealmId: realmId,
 		DockerfileIds: make([]string, 0),
 		DockerImageIds: make([]string, 0),
@@ -876,7 +889,7 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	var dockerfileId string = createUniqueDbObjectId()
 	var newDockerfile *InMemDockerfile = &InMemDockerfile{
 		InMemPersistObj: InMemPersistObj{Id: dockerfileId, Client: client},
-		InMemResource: *NewInMemResource(name),
+		InMemResource: *NewInMemResource(name, time.Now()),
 		RepoId: repoId,
 		FilePath: filepath,
 	}
@@ -944,7 +957,7 @@ func (client *InMemClient) dbCreateDockerImage(repoId string,
 	var imageId string = createUniqueDbObjectId()
 	var newDockerImage *InMemDockerImage = &InMemDockerImage{
 		InMemPersistObj: InMemPersistObj{Id: imageId, Client: client},
-		InMemResource: *NewInMemResource(dockerImageTag),
+		InMemResource: *NewInMemResource(dockerImageTag, time.Now()),
 		RepoId: repoId,
 	}
 	fmt.Println("Created DockerImage")
@@ -1029,4 +1042,13 @@ func (client *InMemClient) assignRepoFileDir(realmId string, repoId string) stri
 	err := os.MkdirAll(path, 0711)
 	if err != nil { panic(err) }
 	return path
+}
+
+/*******************************************************************************
+ * Format the specified Time value into a string that Javascript will parse as
+ * a valid date/time. The string must be in this format:
+ *    2015-10-09 14:45:25.641890879 / YYYY-MM-DD HH:MM:SS
+ */
+func FormatTimeAsJavascriptDate(curTime time.Time) string {
+	return curTime.String()  // Note: this also appends a timezone adj, e.g., "-0700 MST"
 }
