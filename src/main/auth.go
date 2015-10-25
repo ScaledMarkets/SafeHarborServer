@@ -111,16 +111,6 @@ func (authSvc *AuthService) authorized(creds *Credentials, account string,
 }
 
 /*******************************************************************************
- * Mask constants, for convenience.
- */
-var CreateMask []bool = []bool{true, false, false, false, false}
-var ReadMask []bool = []bool{false, true, false, false, false}
-var WriteMask []bool = []bool{false, false, true, false, false}
-var ExecuteMask []bool = []bool{false, false, false, true, false}
-var DeleteMask []bool = []bool{false, false, false, false, true}
-
-
-/*******************************************************************************
  * At most one field of the actionMask may be true.
  */
 func authorized(server *Server, sessionToken *SessionToken, actionMask []bool,

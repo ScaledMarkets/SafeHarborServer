@@ -21,6 +21,21 @@ import (
 )
 
 /*******************************************************************************
+ * Mask constants, for convenience.
+ */
+var CreateMask []bool = []bool{true, false, false, false, false}
+var ReadMask []bool = []bool{false, true, false, false, false}
+var WriteMask []bool = []bool{false, false, true, false, false}
+var ExecuteMask []bool = []bool{false, false, false, true, false}
+var DeleteMask []bool = []bool{false, false, false, false, true}
+
+var CanCreate int = 0
+var CanRead int = 1
+var CanWrite int = 2
+var CanExecute int = 3
+var CanDelete int = 4
+
+/*******************************************************************************
  * All types defined here include this type as a go "anonymous field".
  */
 type BaseType struct {
@@ -229,11 +244,18 @@ type UserDesc struct {
 	UserId string
 	UserName string
 	RealmId string
+	CanModifyTheseRealms []string
 }
 
 func (userDesc *UserDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\"}",
+	var response string = fmt.Sprintf("{\"Id\": \"%s\", \"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\", \"CanModifyTheseRealms\": [",
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId)
+	for i, adminRealmId := range userDesc.CanModifyTheseRealms {
+		if i > 0 { response = response + ", " }
+		response = response + "\"" + adminRealmId + "\""
+	}
+	response = response + "]}"
+	return response
 }
 
 type UserDescs []*UserDesc

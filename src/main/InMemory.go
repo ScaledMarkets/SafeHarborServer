@@ -84,16 +84,21 @@ func (client *InMemClient) init() {
  */
 type InMemPersistObj struct {
 	Id string
+	Client DBClient
 }
 
 var _ PersistObj = &InMemPersistObj{}
 
-func NewInMemPersistObj() *InMemPersistObj {
-	return &InMemPersistObj{Id: ""}
+func (client *InMemClient) NewInMemPersistObj() *InMemPersistObj {
+	return &InMemPersistObj{Id: "", Client: client}
 }
 
 func (persObj *InMemPersistObj) getId() string {
 	return persObj.Id
+}
+
+func (persObj *InMemPersistObj) getDBClient() DBClient {
+	return persObj.Client
 }
 
 /*
@@ -262,7 +267,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	
 	var groupId string = createUniqueDbObjectId()
 	var newGroup = &InMemGroup{
-		InMemPersistObj: InMemPersistObj{Id: groupId},
+		InMemPersistObj: InMemPersistObj{Id: groupId, Client: client},
 		InMemParty: InMemParty{Name: name, ACLEntryIds: make([]string, 0)},
 		Purpose: purpose,
 		RealmId: realmId,
@@ -360,7 +365,7 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	var userObjId string = createUniqueDbObjectId()
 	var pswdAsBytes []byte = []byte(pswd)
 	var newUser *InMemUser = &InMemUser{
-		InMemPersistObj: InMemPersistObj{Id: userObjId},
+		InMemPersistObj: InMemPersistObj{Id: userObjId, Client: client},
 		InMemParty: InMemParty{Name: name, RealmId: realmId, ACLEntryIds: make([]string, 0)},
 		UserId: userId,
 		EmailAddress: email,
@@ -419,12 +424,58 @@ func (user *InMemUser) getGroupIds() []string {
 	return user.GroupIds
 }
 
+func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) []string {
+	// those realms for which user can edit the realm
+	
+	var realmIds []string = make([]string, 0)
+	
+	// Identify the user.
+	var obj PersistObj = client.getPersistentObject(userObjId)
+	if obj == nil {
+		fmt.Println("Object with Id " + userObjId + " not found")
+		return realmIds
+	}
+	var user User
+	var isType bool
+	user, isType = obj.(User)
+	if ! isType {
+		fmt.Println("Internal error: object with Id " + userObjId + " is not a User")
+		return realmIds
+	}
+	
+	// Identify those ACLEntries that are for realms and for which the user has write access.
+	for _, entryId := range user.getACLEntryIds() {
+		var entry ACLEntry = client.getACLEntry(entryId)
+		if entry == nil {
+			fmt.Println("Internal error: object with Id " + entryId + " is not an ACLEntry")
+			continue
+		}
+		var resourceId string = entry.getResourceId()
+		var resource Resource = client.getResource(resourceId)
+		if resource == nil {
+			fmt.Println("Internal error: resource with Id " + resourceId + " not found")
+			continue
+		}
+		if resource.isRealm() {
+			var realm Realm = resource.(Realm)
+			var mask []bool = entry.getPermissionMask()
+			if mask[CanWrite] { // entry has write access for the realm
+				realmIds = append(realmIds, realm.getId())
+			}
+		}
+	}
+	
+	return realmIds
+}
+
 func (user *InMemUser) asUserDesc() *UserDesc {
+	var adminRealmIds []string = user.getDBClient().getRealmsAdministeredByUser(user.getId())
 	return &UserDesc{
 		Id: user.Id,
 		UserId: user.UserId,
 		UserName: user.Name,
 		RealmId: user.RealmId,
+		CanModifyTheseRealms: adminRealmIds,
 	}
 }
 
@@ -458,7 +509,7 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 		reflect.TypeOf(obj).String())
 	var aclEntryId = createUniqueDbObjectId()
 	var newACLEntry *InMemACLEntry = &InMemACLEntry{
-		InMemPersistObj: InMemPersistObj{Id: aclEntryId},
+		InMemPersistObj: InMemPersistObj{Id: aclEntryId, Client: client},
 		ResourceId: resource.getId(),
 		PartyId: partyId,
 		PermissionMask: permissionMask,
@@ -533,7 +584,7 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo, adminUserId strin
 	}
 	realmId = createUniqueDbObjectId()
 	var newRealm *InMemRealm = &InMemRealm{
-		InMemPersistObj: InMemPersistObj{Id: realmId},
+		InMemPersistObj: InMemPersistObj{Id: realmId, Client: client},
 		InMemResource: *NewInMemResource(realmInfo.Name),
 		AdminUserId: adminUserId,
 		OrgFullName: realmInfo.OrgFullName,
@@ -748,7 +799,7 @@ func (client *InMemClient) dbCreateRepo(realmId string, name string) (Repo, erro
 	var realm Realm = client.getRealm(realmId)
 	var repoId string = createUniqueDbObjectId()
 	var newRepo *InMemRepo = &InMemRepo{
-		InMemPersistObj: InMemPersistObj{Id: repoId},
+		InMemPersistObj: InMemPersistObj{Id: repoId, Client: client},
 		InMemResource: *NewInMemResource(name),
 		RealmId: realmId,
 		DockerfileIds: make([]string, 0),
@@ -824,7 +875,7 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	filepath string) (Dockerfile, error) {
 	var dockerfileId string = createUniqueDbObjectId()
 	var newDockerfile *InMemDockerfile = &InMemDockerfile{
-		InMemPersistObj: InMemPersistObj{Id: dockerfileId},
+		InMemPersistObj: InMemPersistObj{Id: dockerfileId, Client: client},
 		InMemResource: *NewInMemResource(name),
 		RepoId: repoId,
 		FilePath: filepath,
@@ -892,7 +943,7 @@ func (client *InMemClient) dbCreateDockerImage(repoId string,
 	
 	var imageId string = createUniqueDbObjectId()
 	var newDockerImage *InMemDockerImage = &InMemDockerImage{
-		InMemPersistObj: InMemPersistObj{Id: imageId},
+		InMemPersistObj: InMemPersistObj{Id: imageId, Client: client},
 		InMemResource: *NewInMemResource(dockerImageTag),
 		RepoId: repoId,
 	}

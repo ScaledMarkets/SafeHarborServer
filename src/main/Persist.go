@@ -28,11 +28,13 @@ type DBClient interface {
 	getRepo(string) Repo
 	getDockerfile(string) Dockerfile
 	getDockerImage(string) DockerImage
+	getRealmsAdministeredByUser(string) []string  // those realms for which user can edit the realm
 	init()
 }
 
 type PersistObj interface {
 	getId() string
+	getDBClient() DBClient
 }
 
 /* A Party is a User or a Group. Parties act on Resources. */
