@@ -342,7 +342,7 @@ func (group *InMemGroup) addUser(user User) {
 func (group *InMemGroup) asGroupDesc() *GroupDesc {
 	return &GroupDesc{
 		RealmId: group.RealmId,
-		Name: group.Name,
+		GroupName: group.Name,
 		CreationDate: FormatTimeAsJavascriptDate(group.CreationTime),
 		Description: group.Description,
 		GroupId: group.Id,
@@ -591,14 +591,14 @@ var allRealmIds []string
 
 func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo, adminUserId string) (Realm, error) {
 	
-	var realmId string = client.getRealmIdByName(realmInfo.Name)
+	var realmId string = client.getRealmIdByName(realmInfo.RealmName)
 	if realmId != "" {
-		return nil, errors.New("A realm with name " + realmInfo.Name + " already exists")
+		return nil, errors.New("A realm with name " + realmInfo.RealmName + " already exists")
 	}
 	realmId = createUniqueDbObjectId()
 	var newRealm *InMemRealm = &InMemRealm{
 		InMemPersistObj: InMemPersistObj{Id: realmId, Client: client},
-		InMemResource: *NewInMemResource(realmInfo.Name, time.Now()),
+		InMemResource: *NewInMemResource(realmInfo.RealmName, time.Now()),
 		AdminUserId: adminUserId,
 		OrgFullName: realmInfo.OrgFullName,
 		UserObjIds: make([]string, 0),

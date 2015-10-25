@@ -161,14 +161,14 @@ type GroupDesc struct {
 	BaseType
 	GroupId string
 	RealmId string
-	Name string
+	GroupName string
 	CreationDate string
 	Description string
 }
 
 func (groupDesc *GroupDesc) asResponse() string {
-	return fmt.Sprintf("{\"RealmId\": \"%s\", \"Name\": \"%s\", \"CreationDate\": \"%s\", \"GroupId\": \"%s\", \"Description\": \"%s\"}",
-		groupDesc.RealmId, groupDesc.Name, groupDesc.CreationDate, groupDesc.GroupId, groupDesc.Description)
+	return fmt.Sprintf("{\"RealmId\": \"%s\", \"GroupName\": \"%s\", \"CreationDate\": \"%s\", \"GroupId\": \"%s\", \"Description\": \"%s\"}",
+		groupDesc.RealmId, groupDesc.GroupName, groupDesc.CreationDate, groupDesc.GroupId, groupDesc.Description)
 }
 
 type GroupDescs []*GroupDesc
@@ -278,7 +278,7 @@ func (userDescs UserDescs) asResponse() string {
 type RealmDesc struct {
 	BaseType
 	Id string
-	Name string
+	RealmName string
 	OrgFullName string
 	AdminUserId string
 }
@@ -286,15 +286,15 @@ type RealmDesc struct {
 func NewRealmDesc(id string, name string, orgName string, adminUserId string) *RealmDesc {
 	return &RealmDesc{
 		Id: id,
-		Name: name,
+		RealmName: name,
 		OrgFullName: orgName,
 		AdminUserId: adminUserId,
 	}
 }
 
 func (realmDesc *RealmDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"Name\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
-		realmDesc.Id, realmDesc.Name, realmDesc.OrgFullName, realmDesc.AdminUserId)
+	return fmt.Sprintf("{\"Id\": \"%s\", \"RealmName\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
+		realmDesc.Id, realmDesc.RealmName, realmDesc.OrgFullName, realmDesc.AdminUserId)
 }
 
 type RealmDescs []*RealmDesc
@@ -316,13 +316,13 @@ func (realmDescs RealmDescs) asResponse() string {
  */
 type RealmInfo struct {
 	BaseType
-	Name string
+	RealmName string
 	OrgFullName string
 }
 
 func NewRealmInfo(realmName string, orgName string) *RealmInfo {
 	return &RealmInfo{
-		Name: realmName,
+		RealmName: realmName,
 		OrgFullName: orgName,
 	}
 }
@@ -330,15 +330,15 @@ func NewRealmInfo(realmName string, orgName string) *RealmInfo {
 func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 	var err error
 	var name, orgFullName string
-	name, err = GetRequiredPOSTFieldValue(values, "Name")
+	name, err = GetRequiredPOSTFieldValue(values, "RealmName")
 	orgFullName, err = GetRequiredPOSTFieldValue(values, "OrgFullName")
 	if err != nil { return nil, err }
 	return NewRealmInfo(name, orgFullName), nil
 }
 
 func (realmInfo *RealmInfo) asResponse() string {
-	return fmt.Sprintf("{\"Name\": \"%s\", \"OrgFullName\": \"%s\"}",
-		realmInfo.Name, realmInfo.OrgFullName)
+	return fmt.Sprintf("{\"RealmName\": \"%s\", \"OrgFullName\": \"%s\"}",
+		realmInfo.RealmName, realmInfo.OrgFullName)
 }
 
 /*******************************************************************************
@@ -348,20 +348,20 @@ type RepoDesc struct {
 	BaseType
 	Id string
 	RealmId string
-	Name string
+	RepoName string
 }
 
 func NewRepoDesc(id string, realmId string, name string) *RepoDesc {
 	return &RepoDesc{
 		Id: id,
 		RealmId: realmId,
-		Name: name,
+		RepoName: name,
 	}
 }
 
 func (repoDesc *RepoDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", \"Name\": \"%s\"}",
-		repoDesc.Id, repoDesc.RealmId, repoDesc.Name)
+	return fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", \"RepoName\": \"%s\"}",
+		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName)
 }
 
 type RepoDescs []*RepoDesc
@@ -384,20 +384,20 @@ type DockerfileDesc struct {
 	BaseType
 	Id string
 	RepoId string
-	Name string
+	DockerfileName string
 }
 
 func NewDockerfileDesc(id string, repoId string, name string) *DockerfileDesc {
 	return &DockerfileDesc{
 		Id: id,
 		RepoId: repoId,
-		Name: name,
+		DockerfileName: name,
 	}
 }
 
 func (dockerfileDesc *DockerfileDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\"}",
-		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.Name)
+	return fmt.Sprintf("{\"Id\": \"%s\", \"RepoId\": \"%s\", \"DockerfileName\": \"%s\"}",
+		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.DockerfileName)
 }
 
 type DockerfileDescs []*DockerfileDesc

@@ -415,11 +415,11 @@ func createRealmAnon(server *Server, sessionToken *SessionToken, values url.Valu
 	var newRealmInfo *RealmInfo
 	newRealmInfo, err = GetRealmInfo(values)
 	if err != nil { return NewFailureDesc(err.Error()) }
-	fmt.Println("Creating realm ", newRealmInfo.Name)
+	fmt.Println("Creating realm ", newRealmInfo.RealmName)
 	var newRealm Realm
 	newRealm, err = server.dbClient.dbCreateRealm(newRealmInfo, newUserId)
 	if err != nil { return NewFailureDesc(err.Error()) }
-	fmt.Println("Created realm", newRealmInfo.Name)
+	fmt.Println("Created realm", newRealmInfo.RealmName)
 	
 	// Create a user
 	var newUser User
@@ -482,11 +482,11 @@ func createRealm(server *Server, sessionToken *SessionToken, values url.Values,
 	realmInfo, err = GetRealmInfo(values)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
-	fmt.Println("Creating realm ", realmInfo.Name)
+	fmt.Println("Creating realm ", realmInfo.RealmName)
 	var realm Realm
 	realm, err = server.dbClient.dbCreateRealm(realmInfo, user.getId())
 	if err != nil { return NewFailureDesc(err.Error()) }
-	fmt.Println("Created realm", realmInfo.Name)
+	fmt.Println("Created realm", realmInfo.RealmName)
 
 	// Add ACL entry to enable the current user to access what he/she just created.
 	server.dbClient.dbCreateACLEntry(realm.getId(), user.getId(),
