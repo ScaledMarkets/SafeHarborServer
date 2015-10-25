@@ -295,30 +295,27 @@ type RealmInfo struct {
 	BaseType
 	Name string
 	OrgFullName string
-	AdminUserId string
 }
 
-func NewRealmInfo(realmName string, orgName string, adminUserId string) *RealmInfo {
+func NewRealmInfo(realmName string, orgName string) *RealmInfo {
 	return &RealmInfo{
 		Name: realmName,
 		OrgFullName: orgName,
-		AdminUserId: adminUserId,
 	}
 }
 
 func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 	var err error
-	var name, orgFullName, adminUserId string
+	var name, orgFullName string
 	name, err = GetRequiredPOSTFieldValue(values, "Name")
 	orgFullName, err = GetRequiredPOSTFieldValue(values, "OrgFullName")
-	adminUserId, err = GetRequiredPOSTFieldValue(values, "AdminUserId")
 	if err != nil { return nil, err }
-	return NewRealmInfo(name, orgFullName, adminUserId), nil
+	return NewRealmInfo(name, orgFullName), nil
 }
 
 func (realmInfo *RealmInfo) asResponse() string {
-	return fmt.Sprintf("{\"Name\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
-		realmInfo.Name, realmInfo.OrgFullName, realmInfo.AdminUserId)
+	return fmt.Sprintf("{\"Name\": \"%s\", \"OrgFullName\": \"%s\"}",
+		realmInfo.Name, realmInfo.OrgFullName)
 }
 
 /*******************************************************************************

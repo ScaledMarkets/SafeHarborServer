@@ -64,7 +64,7 @@ func (client *InMemClient) init() {
 		fmt.Println("Debug mode: creating realm testrealm")
 		var testRealm Realm
 		testRealm, err = client.dbCreateRealm(NewRealmInfo(
-			"testrealm", "For Testing", "testuser1"))
+			"testrealm", "For Testing"), "testuser1")
 		if err != nil {
 			fmt.Println(err.Error())
 			panic(err)
@@ -525,7 +525,7 @@ type InMemRealm struct {
 
 var allRealmIds []string
 
-func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) (Realm, error) {
+func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo, adminUserId string) (Realm, error) {
 	
 	var realmId string = client.getRealmIdByName(realmInfo.Name)
 	if realmId != "" {
@@ -535,7 +535,7 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo) (Realm, error) {
 	var newRealm *InMemRealm = &InMemRealm{
 		InMemPersistObj: InMemPersistObj{Id: realmId},
 		InMemResource: *NewInMemResource(realmInfo.Name),
-		AdminUserId: realmInfo.AdminUserId,
+		AdminUserId: adminUserId,
 		OrgFullName: realmInfo.OrgFullName,
 		UserObjIds: make([]string, 0),
 		GroupIds: make([]string, 0),
