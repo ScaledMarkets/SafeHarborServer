@@ -167,7 +167,7 @@ type GroupDesc struct {
 }
 
 func (groupDesc *GroupDesc) asResponse() string {
-	return fmt.Sprintf("{\"RealmId\": \"%s\", \"GroupName\": \"%s\", \"CreationDate\": \"%s\", \"GroupId\": \"%s\", \"Description\": \"%s\"}",
+	return fmt.Sprintf("{\"RealmId\": \"%s\", \"GroupName\": \"%s\", \"CreationDate\": %s, \"GroupId\": \"%s\", \"Description\": \"%s\"}",
 		groupDesc.RealmId, groupDesc.GroupName, groupDesc.CreationDate, groupDesc.GroupId, groupDesc.Description)
 }
 
