@@ -1050,5 +1050,10 @@ func (client *InMemClient) assignRepoFileDir(realmId string, repoId string) stri
  *    2015-10-09 14:45:25.641890879 / YYYY-MM-DD HH:MM:SS
  */
 func FormatTimeAsJavascriptDate(curTime time.Time) string {
-	return curTime.String()  // Note: this also appends a timezone adj, e.g., "-0700 MST"
+	b, err := curTime.MarshalJSON()
+	if err != nil {
+		fmt.Println(err.Error())
+		return ""
+	}
+	return string(b)  // Note: this outputs RFC 3339 format date/time.
 }
