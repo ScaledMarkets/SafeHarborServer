@@ -320,11 +320,13 @@ type RealmInfo struct {
 	OrgFullName string
 }
 
-func NewRealmInfo(realmName string, orgName string) *RealmInfo {
+func NewRealmInfo(realmName string, orgName string) (*RealmInfo, error) {
+	if realmName == "" { return nil, errors.New("realmName is empty") }
+	if orgName == "" { return nil, errors.New("orgName is empty") }
 	return &RealmInfo{
 		RealmName: realmName,
 		OrgFullName: orgName,
-	}
+	}, nil
 }
 
 func GetRealmInfo(values url.Values) (*RealmInfo, error) {
@@ -333,7 +335,7 @@ func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 	name, err = GetRequiredPOSTFieldValue(values, "RealmName")
 	orgFullName, err = GetRequiredPOSTFieldValue(values, "OrgFullName")
 	if err != nil { return nil, err }
-	return NewRealmInfo(name, orgFullName), nil
+	return NewRealmInfo(name, orgFullName)
 }
 
 func (realmInfo *RealmInfo) asResponse() string {
