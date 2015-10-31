@@ -31,6 +31,7 @@ type DBClient interface {
 	getDockerImage(string) DockerImage
 	getRealmsAdministeredByUser(string) []string  // those realms for which user can edit the realm
 	init()
+	printDatabase()
 }
 
 type PersistObj interface {

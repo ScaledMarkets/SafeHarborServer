@@ -39,6 +39,13 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
 }
 
 /*******************************************************************************
+ * Clear all sessions that are cached in the auth service.
+ */
+func (authSvc *AuthService) clearAllSessions() {
+	authSvc.Sessions = make(map[string]*Credentials)
+}
+
+/*******************************************************************************
  * Obtain the session token, if any; return nil otherwise.
  */
 func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionToken {
@@ -73,8 +80,8 @@ func (authSvc *AuthService) authenticateCredentials(creds *Credentials) *Session
 	
 	/***************
 	// Access the auth server to authenticate the credentials.
-	if ! authSvc.sendQueryToAuthServer(creds, authSvc.Service,
-		creds.userid, "", "", []string{}) { return nil }
+//	if ! authSvc.sendQueryToAuthServer(creds, authSvc.Service,
+//		creds.userid, "", "", []string{}) { return nil }
 	***************/
 	
 	var sessionId string = authSvc.createUniqueSessionId()
@@ -324,6 +331,7 @@ func (authSvc *AuthService) sendQueryToAuthServer(creds *Credentials,
  * (created atomically) to the string prior to encryption.
  */
 func (authSvc *AuthService) createUniqueSessionId() string {
+	// ....Important: randomize this!!!!!!
 	return encrypt(time.Now().Local().String())
 }
 

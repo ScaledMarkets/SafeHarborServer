@@ -14,6 +14,7 @@ import (
 func main() {
 	
 	var debug *bool = flag.Bool("debug", false, "Run in debug mode: this enables the clearAll REST method.")
+	var noauthor *bool = flag.Bool("noauthorization", false, "Disable authorization: access control lists are ignored.")
 	var help *bool = flag.Bool("help", false, "Provide help instructions.")
 	var port *int = flag.Int("port", 0, "The TCP port on which the SafeHarborServer should listen. If not set, then the value is taken from the conf.json file.")
 	var adapter *string = flag.String("adapter", "", "Network adapter to use (e.g., eth0)")
@@ -31,7 +32,7 @@ func main() {
 	}
 	
 	fmt.Println("Creating SafeHarbor server...")
-	var server *Server = NewServer(*debug, *port, *adapter)
+	var server *Server = NewServer(*debug, *noauthor, *port, *adapter)
 	if server == nil { os.Exit(1) }
 
 	server.start()

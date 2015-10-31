@@ -42,6 +42,7 @@ func NewDispatcher() *Dispatcher {
 	hdlrs := map[string]ReqHandlerFuncType{
 		"ping": ping,
 		"clearAll": clearAll,
+		"printDatabase": printDatabase,
 		"authenticate": authenticate,
 		"logout": logout,
 		"createUser": createUser,

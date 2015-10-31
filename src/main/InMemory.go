@@ -592,8 +592,6 @@ type InMemRealm struct {
 	FileDirectory string  // where this realm's files are stored
 }
 
-var allRealmIds []string
-
 func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo, adminUserId string) (Realm, error) {
 	
 	var realmId string = client.getRealmIdByName(realmInfo.RealmName)
@@ -1023,6 +1021,8 @@ var allObjects map[string]PersistObj
 
 var allUsers map[string]User
 
+var allRealmIds []string
+
 /*******************************************************************************
  * Create a directory for the Dockerfiles, images, and any other files owned
  * by the specified realm.
@@ -1061,4 +1061,11 @@ func FormatTimeAsJavascriptDate(curTime time.Time) string {
 		return ""
 	}
 	return string(b)  // Note: this outputs RFC 3339 format date/time.
+}
+
+/*******************************************************************************
+ * Print the database to stdout. Diagnostic.
+ */
+func (client *InMemClient) printDatabase() {
+	fmt.Println("Not implemented yet")
 }

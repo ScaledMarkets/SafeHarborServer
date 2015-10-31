@@ -111,7 +111,28 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 	fmt.Println("Initializing database...")
 	server.dbClient.init()
 	
+	// Clear all session state.
+	server.authService.clearAllSessions()
+	
 	return NewResult(200, "Persistent state reset")
+}
+
+/*******************************************************************************
+ * Arguments: Credentials
+ * Returns: SessionToken
+ */
+func printDatabase(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	
+	fmt.Println("printDatabase")
+	
+	if ! server.Debug {
+		return NewFailureDesc("Not in debug mode - returning from printDatabase")
+	}
+	
+	server.dbClient.printDatabase()
+	
+	return NewResult(200, "Database printed to stdout on server.")
 }
 
 /*******************************************************************************
@@ -165,7 +186,7 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 
 	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
 	
-	// Identify the user.
+	// Identify the current user.
 	var userId string = sessionToken.AuthenticatedUserid
 	fmt.Println("userid=", userId)
 	var user User = server.dbClient.dbGetUserByUserId(userId)
@@ -179,24 +200,26 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	if err != nil { return NewFailureDesc(err.Error()) }
 
 	// Authorize the request, based on the authenticated identity.
-//	isAuthorized, err := authorized(server, sessionToken, CreateMask, userInfo.RealmId)
-//	if err != nil { return NewFailureDesc(err.Error()) }
-//	if ! isAuthorized {
-//		return NewFailureDesc("Unauthorized: cannot access " + userInfo.RealmId +
-//			" to create a user")
-//	}
+	if server.Authorize {
+		isAuthorized, err := authorized(server, sessionToken, CreateMask, userInfo.RealmId)
+		if err != nil { return NewFailureDesc(err.Error()) }
+		if ! isAuthorized {
+			return NewFailureDesc("Unauthorized: cannot access " + userInfo.RealmId +
+				" to create a user")
+		}
+	}
 	
 	// Legacy - uses Cesanta. Probably remove this.
-	if ! server.authService.authorized(server.sessions[sessionToken.UniqueSessionId],
-		"admin",  // this 'resource' is onwed by the admin account
-		"repository",
-		"*",  // the scope is the entire repository
-		[]string{"create-user"}) { // this is the action that is being requested
-	
-		//"registry.docker.com", "repository:samalba/my-app:push", "jlhawn")
-		fmt.Println("Unauthorized: %s, %s, %s")
-		return nil
-	}
+//	if ! server.authService.authorized(server.sessions[sessionToken.UniqueSessionId],
+//		"admin",  // this 'resource' is onwed by the admin account
+//		"repository",
+//		"*",  // the scope is the entire repository
+//		[]string{"create-user"}) { // this is the action that is being requested
+//	
+//		//"registry.docker.com", "repository:samalba/my-app:push", "jlhawn")
+//		fmt.Println("Unauthorized: %s, %s, %s")
+//		return nil
+//	}
 	
 	// Create the user account.
 	var newUserId string = userInfo.UserId

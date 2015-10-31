@@ -33,13 +33,14 @@ type Server struct {
 	authService *AuthService
 	dispatcher *Dispatcher
 	sessions map[string]*Credentials  // map session key to Credentials.
+	Authorize bool
 	Debug bool
 }
 
 /*******************************************************************************
  * Create a Server structure. This includes reading in the auth server cert.
  */
-func NewServer(debug bool, port int, adapter string) *Server {
+func NewServer(debug bool, noauthor bool, port int, adapter string) *Server {
 	
 	// Read configuration. (Defined in a JSON file.)
 	fmt.Println("Reading configuration")
@@ -97,6 +98,7 @@ func NewServer(debug bool, port int, adapter string) *Server {
 	// Construct a Server with the configuration and cert pool.
 	var server *Server = &Server{
 		Debug: debug,
+		Authorize: (! noauthor),
 		Config:  config,
 		certPool: certPool,
 		dispatcher: dispatcher,
