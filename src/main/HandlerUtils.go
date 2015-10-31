@@ -198,3 +198,25 @@ func assertErrIsNil(err error, msg string) {
 func boolToString(b bool) string {
 	if b { return "true" } else { return "false" }	
 }
+
+/*******************************************************************************
+ * Authorize the request, based on the authenticated identity.
+ */
+func authorizeHandlerAction(server *Server, sessionToken *SessionToken,
+	mask []bool, resourceId, attemptedAction string) *FailureDesc {
+	
+	if server.Authorize {
+		isAuthorized, err := authorized(server, sessionToken, mask, resourceId)
+		if err != nil { return NewFailureDesc(err.Error()) }
+		if ! isAuthorized {
+			var resource Resource = server.dbClient.getResource(resourceId)
+			if resource == nil {
+				return NewFailureDesc("Unable to identify resource with Id " + resourceId)
+			}
+			return NewFailureDesc(fmt.Sprintf(
+				"Unauthorized: cannot perform %s on %s", attemptedAction, resource.getName()))
+		}
+	}
+	
+	return nil
+}

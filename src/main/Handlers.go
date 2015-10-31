@@ -199,15 +199,8 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 	userInfo, err = GetUserInfo(values)
 	if err != nil { return NewFailureDesc(err.Error()) }
 
-	// Authorize the request, based on the authenticated identity.
-	if server.Authorize {
-		isAuthorized, err := authorized(server, sessionToken, CreateMask, userInfo.RealmId)
-		if err != nil { return NewFailureDesc(err.Error()) }
-		if ! isAuthorized {
-			return NewFailureDesc("Unauthorized: cannot access " + userInfo.RealmId +
-				" to create a user")
-		}
-	}
+	if failMsg := authorizeHandlerAction(server, sessionToken, CreateMask, userInfo.RealmId,
+		"createUser"); failMsg != nil { return failMsg }
 	
 	// Legacy - uses Cesanta. Probably remove this.
 //	if ! server.authService.authorized(server.sessions[sessionToken.UniqueSessionId],
@@ -284,6 +277,9 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	groupDescription, err = GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return NewFailureDesc(err.Error()) }
 
+	if failMsg := authorizeHandlerAction(server, sessionToken, CreateMask, realmId,
+		"createGroup"); failMsg != nil { return failMsg }
+	
 	var group Group
 	group, err = server.dbClient.dbCreateGroup(realmId, groupName, groupDescription)
 	if err != nil { return NewFailureDesc(err.Error()) }
@@ -333,6 +329,9 @@ func getGroupUsers(server *Server, sessionToken *SessionToken, values url.Values
 	groupId, err = GetRequiredPOSTFieldValue(values, "GroupId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
+	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, groupId,
+		"getGroupUsers"); failMsg != nil { return failMsg }
+	
 	var group Group = server.dbClient.getGroup(groupId)
 	if group == nil { return NewFailureDesc(fmt.Sprintf(
 		"No group with Id %s", groupId))
@@ -376,6 +375,9 @@ func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 	var userObjId string
 	userObjId, err = GetRequiredPOSTFieldValue(values, "UserObjId")
 	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, WriteMask, groupId,
+		"addGroupUser"); failMsg != nil { return failMsg }
 	
 	var group Group = server.dbClient.getGroup(groupId)
 	if group == nil { return NewFailureDesc(fmt.Sprintf(
@@ -477,6 +479,10 @@ func getRealmDesc(server *Server, sessionToken *SessionToken, values url.Values,
 	var realmId string
 	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
 	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, realmId,
+		"getRealmDesc"); failMsg != nil { return failMsg }
+	
 	var realm Realm = server.dbClient.getRealm(realmId)
 	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
 	
@@ -563,6 +569,9 @@ func addRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	userObjId, err = GetRequiredPOSTFieldValue(values, "UserObjId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
+	if failMsg := authorizeHandlerAction(server, sessionToken, WriteMask, realmId,
+		"addRealmUser"); failMsg != nil { return failMsg }
+	
 	var realm Realm
 	realm = server.dbClient.getRealm(realmId)
 	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
@@ -617,6 +626,9 @@ func getRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	realmUserId, err = GetRequiredPOSTFieldValue(values, "UserId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
+	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, realmId,
+		"getRealmUser"); failMsg != nil { return failMsg }
+	
 	var realm Realm
 	realm = server.dbClient.getRealm(realmId)
 	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
@@ -648,6 +660,10 @@ func getRealmUsers(server *Server, sessionToken *SessionToken, values url.Values
 	var err error
 	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
 	if err != nil { return NewFailureDesc(err.Error()) }
+
+	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, realmId,
+		"getRealmUsers"); failMsg != nil { return failMsg }
+		
 	var realm Realm = server.dbClient.getRealm(realmId)
 	if realm == nil { return NewFailureDesc("Realm with Id " + realmId + " not found") }
 	var userObjIds []string = realm.getUserObjIds()
@@ -686,6 +702,10 @@ func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Value
 	var err error
 	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
 	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, realmId,
+		"getRealmGroups"); failMsg != nil { return failMsg }
+	
 	var realm Realm = server.dbClient.getRealm(realmId)
 	if realm == nil { return NewFailureDesc("Realm with Id " + realmId + " not found") }
 	var groupIds []string = realm.getGroupIds()
@@ -721,6 +741,9 @@ func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values
 	var realmId string
 	realmId, err = GetRequiredPOSTFieldValue(values, "RealmId")
 	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, realmId,
+		"getRealmRepos"); failMsg != nil { return failMsg }
 	
 	var realm Realm
 	realm = server.dbClient.getRealm(realmId)
@@ -803,6 +826,9 @@ func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	repoName, err = GetRequiredPOSTFieldValue(values, "Name")
 	if err != nil { return NewFailureDesc(err.Error()) }
 
+	if failMsg := authorizeHandlerAction(server, sessionToken, CreateMask, realmId,
+		"createRepo"); failMsg != nil { return failMsg }
+	
 	fmt.Println("Creating repo", repoName)
 	var repo Repo
 	repo, err = server.dbClient.dbCreateRepo(realmId, repoName)
@@ -858,6 +884,9 @@ func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Value
 	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
+	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, repoId,
+		"getDockerfiles"); failMsg != nil { return failMsg }
+	
 	var repo Repo = server.dbClient.getRepo(repoId)
 	if repo == nil { return NewFailureDesc(fmt.Sprintf(
 		"Repo with Id %s not found", repoId)) }
@@ -899,6 +928,9 @@ func getImages(server *Server, sessionToken *SessionToken, values url.Values,
 	var repoId string
 	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
 	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, repoId,
+		"getImages"); failMsg != nil { return failMsg }
 	
 	var repo Repo = server.dbClient.getRepo(repoId)
 	if repo == nil { return NewFailureDesc(fmt.Sprintf(
@@ -963,15 +995,13 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	if repoId == "" { return NewFailureDesc("No HTTP parameter found for RepoId") }
+
+	if failMsg := authorizeHandlerAction(server, sessionToken, CreateMask, repoId,
+		"addDockerfile"); failMsg != nil { return failMsg }
+	
 	var dbClient = server.dbClient
 	var repo Repo = dbClient.getRepo(repoId)
 	if repo == nil { return NewFailureDesc("Repo does not exist") }
-	
-	// Verify that the user is authorized to add to the repo.
-	//....TBD
-	
-	
-
 	
 	// Create a filename for the new file.
 	var filepath = repo.getFileDirectory() + "/" + filename
@@ -1061,6 +1091,10 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	dockerfileId, err = GetRequiredPOSTFieldValue(values, "DockerfileId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	if dockerfileId == "" { return NewFailureDesc("No HTTP parameter found for DockerfileId") }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, ExecuteMask, dockerfileId,
+		"execDockerfile"); failMsg != nil { return failMsg }
+	
 	var dbClient = server.dbClient
 	var dockerfile Dockerfile = dbClient.getDockerfile(dockerfileId)
 	var dockerfileName string = dockerfile.getName()
@@ -1197,6 +1231,9 @@ func setPermission(server *Server, sessionToken *SessionToken, values url.Values
 	mask, err = ToBoolAr(smask)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
+	if failMsg := authorizeHandlerAction(server, sessionToken, WriteMask, resourceId,
+		"setPermission"); failMsg != nil { return failMsg }
+	
 	// Identify the Resource.
 	var dbClient DBClient = server.dbClient
 	var resource Resource = dbClient.getResource(resourceId)
@@ -1257,6 +1294,9 @@ func addPermission(server *Server, sessionToken *SessionToken, values url.Values
 	mask, err = ToBoolAr(smask)
 	if err != nil { return NewFailureDesc(err.Error()) }
 
+	if failMsg := authorizeHandlerAction(server, sessionToken, WriteMask, resourceId,
+		"addPermission"); failMsg != nil { return failMsg }
+	
 	// Identify the Resource.
 	var dbClient DBClient = server.dbClient
 	var resource Resource = dbClient.getResource(resourceId)
@@ -1327,6 +1367,9 @@ func getPermission(server *Server, sessionToken *SessionToken, values url.Values
 	resourceId, err = GetRequiredPOSTFieldValue(values, "ResourceId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 
+	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, resourceId,
+		"getPermission"); failMsg != nil { return failMsg }
+	
 	// Identify the Resource.
 	var dbClient DBClient = server.dbClient
 	//var resource Resource = dbClient.getResource(resourceId)
@@ -1653,6 +1696,11 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	imageObjId, err = GetRequiredPOSTFieldValue(values, "ImageObjId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println(scriptId)
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, imageObjId,
+		"scanImage"); failMsg != nil { return failMsg }
+	if failMsg := authorizeHandlerAction(server, sessionToken, ExecuteMask, scriptId,
+		"scanImage"); failMsg != nil { return failMsg }
 	
 	var dockerImage DockerImage = server.dbClient.getDockerImage(imageObjId)
 	if dockerImage == nil {
