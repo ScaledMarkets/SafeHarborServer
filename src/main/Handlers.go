@@ -279,7 +279,7 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 		if ! group.hasUserWithId(user.getId()) {
 			fmt.Println("Adding user", user.getName(), "with ObjId", user.getId(),
 				"to group", group.getName(), "with ObjId", group.getId())
-			err = group.addUserId(userId)
+			err = group.addUserId(user.getId())
 			if err != nil { return NewFailureDesc(err.Error()) }
 		} else {
 			fmt.Println("C")
