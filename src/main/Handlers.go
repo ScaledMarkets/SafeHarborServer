@@ -272,8 +272,9 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	if addMe {
 		fmt.Println("addMe...")
 		var userId string = sessionToken.AuthenticatedUserid
+		fmt.Println("userId=" + userId)
 		fmt.Println("A")
-		var user User = server.dbClient.getUser(userId)
+		var user User = server.dbClient.dbGetUserByUserId(userId)
 		fmt.Println("B")
 		if ! group.hasUserWithId(user.getId()) {
 			fmt.Println("Adding user", user.getName(), "with ObjId", user.getId(),
