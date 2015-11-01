@@ -240,6 +240,8 @@ func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
+	fmt.Println("Entered createGroup")
+
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
@@ -258,6 +260,7 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	var addMeStr string = GetPOSTFieldValue(values, "AddMe")
 	var addMe bool = false
 	if addMeStr == "true" { addMe = true }
+	fmt.Println(fmt.Sprintf("AddMe=%s", addMeStr))
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, CreateMask, realmId,
 		"createGroup"); failMsg != nil { return failMsg }
@@ -267,12 +270,13 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	if addMe {
+		fmt.Println("addMe...")
 		var userId string = sessionToken.AuthenticatedUserid
 		var user User = server.dbClient.getUser(userId)
 		if ! group.hasUserWithId(user.getId()) {
 			err = group.addUserId(userId)
 			if err != nil { return NewFailureDesc(err.Error()) }
-		}
+		} else {fmt.Println("User", user.getName() + "is already in group", group.getName())}
 	}
 	
 	return group.asGroupDesc()
