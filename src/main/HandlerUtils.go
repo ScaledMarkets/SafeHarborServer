@@ -200,6 +200,28 @@ func boolToString(b bool) string {
 }
 
 /*******************************************************************************
+ * Authenticate the session token.
+ */
+func authenticateSession(server *Server, sessionToken *SessionToken) *FailureDesc {
+	
+	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+
+	if ! server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
+		return NewFailureDesc("Invalid session Id")
+	}
+	
+	// Identify the user.
+	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("userid=", userId)
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return NewFailureDesc("user object cannot be identified from user id " + userId)
+	}
+	
+	return nil
+}
+
+/*******************************************************************************
  * Authorize the request, based on the authenticated identity.
  */
 func authorizeHandlerAction(server *Server, sessionToken *SessionToken,

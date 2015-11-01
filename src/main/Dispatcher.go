@@ -81,8 +81,13 @@ func NewDispatcher() *Dispatcher {
 		"getMyRepos": getMyRepos,
 		"getMyDockerfiles": getMyDockerfiles,
 		"getMyDockerImages": getMyDockerImages,
-		"defineQualityScan": defineQualityScan,
+		"defineScan": defineScan,
 		"scanImage": scanImage,
+		"getUserEvents": getUserEvents,
+		"getImageEvents": getImageEvents,
+		"getImageStatus": getImageStatus,
+		"getDockerfileEvents": getDockerfileEvents,
+		"defineFlag": defineFlag,
 	}
 	
 	var dispatcher *Dispatcher = &Dispatcher{

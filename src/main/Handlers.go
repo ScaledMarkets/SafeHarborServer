@@ -186,14 +186,8 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 
 	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
 	
-	// Identify the current user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
-
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+	
 	var err error
 	var userInfo *UserInfo
 	userInfo, err = GetUserInfo(values)
@@ -234,15 +228,7 @@ func createUser(server *Server, sessionToken *SessionToken, values url.Values,
 func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-	
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	return nil
 }
@@ -254,15 +240,7 @@ func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-	
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -294,15 +272,7 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 func deleteGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	return nil
 }
@@ -314,15 +284,7 @@ func deleteGroup(server *Server, sessionToken *SessionToken, values url.Values,
 func getGroupUsers(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
 	var groupId string
@@ -357,15 +319,7 @@ func getGroupUsers(server *Server, sessionToken *SessionToken, values url.Values
 func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
 	var groupId string
@@ -387,6 +341,7 @@ func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 	err = group.addUserId(userObjId)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
+	var user User = server.dbClient.getUser(userObjId)
 	user.addGroupId(groupId)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
@@ -403,15 +358,7 @@ func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 func remGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-	
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	return nil
 }
@@ -465,15 +412,7 @@ func createRealmAnon(server *Server, sessionToken *SessionToken, values url.Valu
 func getRealmDesc(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-	
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 	
 	var err error
 	var realmId string
@@ -496,21 +435,14 @@ func getRealmDesc(server *Server, sessionToken *SessionToken, values url.Values,
 func createRealm(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-	
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
 	var realmInfo *RealmInfo
 	realmInfo, err = GetRealmInfo(values)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
+	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
 	fmt.Println("Creating realm ", realmInfo.RealmName)
 	var realm Realm
 	realm, err = server.dbClient.dbCreateRealm(realmInfo, user.getId())
@@ -531,15 +463,7 @@ func createRealm(server *Server, sessionToken *SessionToken, values url.Values,
 func deleteRealm(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	return nil
 }
@@ -551,15 +475,7 @@ func deleteRealm(server *Server, sessionToken *SessionToken, values url.Values,
 func addRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -588,15 +504,7 @@ func addRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 func remRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	return nil
 }
@@ -608,15 +516,7 @@ func remRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 func getRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -646,15 +546,7 @@ func getRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 func getRealmUsers(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var realmId string
 	var err error
@@ -687,15 +579,7 @@ func getRealmUsers(server *Server, sessionToken *SessionToken, values url.Values
 func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var groupDescs GroupDescs = make([]*GroupDesc, 0)
 	var realmId string
@@ -727,15 +611,7 @@ func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Value
 func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -773,15 +649,7 @@ func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values
 func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var realmIds []string = server.dbClient.dbGetAllRealmIds()
 	
@@ -806,15 +674,7 @@ func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	fmt.Println("Creating repo...")
 	var err error
@@ -836,6 +696,7 @@ func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	fmt.Println("Created repo")
 
 	// Add ACL entry to enable the current user to access what he/she just created.
+	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
 	server.dbClient.dbCreateACLEntry(repo.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	
@@ -849,15 +710,7 @@ func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 func deleteRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	return nil
 }
@@ -869,15 +722,7 @@ func deleteRepo(server *Server, sessionToken *SessionToken, values url.Values,
 func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
 	var repoId string
@@ -914,15 +759,7 @@ func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Value
 func getImages(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
 	var repoId string
@@ -961,15 +798,7 @@ func getImages(server *Server, sessionToken *SessionToken, values url.Values,
 func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	fmt.Println("addDockerfile handler")
 	
@@ -1034,6 +863,7 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	
 	// Create an ACL entry for the new file, to allow access by the current user.
 	fmt.Println("Adding ACL entry")
+	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
 	dbClient.dbCreateACLEntry(dockerfile.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	fmt.Println("Created ACL entry")
@@ -1048,15 +878,7 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	return nil
 }
@@ -1068,15 +890,7 @@ func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Va
 func execDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	fmt.Println("Entered execDockerfile")
 	
@@ -1177,15 +991,7 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 func downloadImage(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	return nil
 }
@@ -1197,15 +1003,7 @@ func downloadImage(server *Server, sessionToken *SessionToken, values url.Values
 func setPermission(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-	
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	// Get the mask that we will use to overwrite the current mask.
 	var partyId string
@@ -1262,15 +1060,7 @@ func setPermission(server *Server, sessionToken *SessionToken, values url.Values
 func addPermission(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	// Get the mask that we will be adding to the current mask.
 	var partyId string
@@ -1329,15 +1119,7 @@ func addPermission(server *Server, sessionToken *SessionToken, values url.Values
 func remPermission(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	return nil
 }
@@ -1349,15 +1131,7 @@ func remPermission(server *Server, sessionToken *SessionToken, values url.Values
 func getPermission(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var partyId string
 	var err error
@@ -1415,18 +1189,11 @@ func getMyDesc(server *Server, sessionToken *SessionToken, values url.Values,
 func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-	
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var groupDescs GroupDescs = make([]*GroupDesc, 0)
 	
+	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
 	var groupIds []string = user.getGroupIds()
 	for _, groupId := range groupIds {
 		var group Group = server.dbClient.getGroup(groupId)
@@ -1446,19 +1213,12 @@ func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
 func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var realms map[string]Realm = make(map[string]Realm)
 	
 	var dbClient DBClient = server.dbClient
+	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
 	var aclEntrieIds []string = user.getACLEntryIds()
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
@@ -1488,15 +1248,7 @@ func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
 func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 	
 	// Traverse the user's ACL entries; form the union of the repos that the user
 	// has explicit access to, and the repos that belong to the realms that the user
@@ -1506,6 +1258,7 @@ func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	var repos map[string]Repo = make(map[string]Repo)
 	
 	var dbClient DBClient = server.dbClient
+	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
 	var aclEntrieIds []string = user.getACLEntryIds()
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
@@ -1546,21 +1299,14 @@ func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 func getMyDockerfiles(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 	
 	var realms map[string]Realm = make(map[string]Realm)
 	var repos map[string]Repo = make(map[string]Repo)
 	var dockerfiles map[string]Dockerfile = make(map[string]Dockerfile)
 	
 	var dbClient DBClient = server.dbClient
+	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
 	var aclEntrieIds []string = user.getACLEntryIds()
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
@@ -1608,21 +1354,14 @@ func getMyDockerfiles(server *Server, sessionToken *SessionToken, values url.Val
 func getMyDockerImages(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 	
 	var realms map[string]Realm = make(map[string]Realm)
 	var repos map[string]Repo = make(map[string]Repo)
 	var dockerImages map[string]DockerImage = make(map[string]DockerImage)
 	
 	var dbClient DBClient = server.dbClient
+	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
 	var aclEntrieIds []string = user.getACLEntryIds()
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
@@ -1667,7 +1406,7 @@ func getMyDockerImages(server *Server, sessionToken *SessionToken, values url.Va
  * Arguments: 
  * Returns: 
  */
-func defineQualityScan(server *Server, sessionToken *SessionToken, values url.Values,
+func defineScan(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 	return nil
 }
@@ -1679,15 +1418,7 @@ func defineQualityScan(server *Server, sessionToken *SessionToken, values url.Va
 func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
-
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var scriptId, imageObjId string
 	var err error
@@ -1731,4 +1462,64 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	// ....
 	
 	return NewScanResultDesc(outputStr)
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: 
+ */
+func getUserEvents(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
+	return nil
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: 
+ */
+func getImageEvents(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
+	return nil
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: 
+ */
+func getImageStatus(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
+	return nil
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: 
+ */
+func getDockerfileEvents(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
+	return nil
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: 
+ */
+func defineFlag(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
+	return nil
 }

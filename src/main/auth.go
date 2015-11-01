@@ -336,6 +336,14 @@ func (authSvc *AuthService) createUniqueSessionId() string {
 }
 
 /*******************************************************************************
+ * Validate session Id: return true if valid, false otherwise.
+ */
+func (authSvc *AuthService) sessionIdIsValid(sessionId string) bool {
+	// ....To do: validate the hash.
+	return true
+}
+
+/*******************************************************************************
  * Encrypt the specified string. For now, just return the string.
  * ....To do: Need to complete this to use the Server's private key.
  */
