@@ -332,11 +332,13 @@ func (group *InMemGroup) addUserId(userObjId string) error {
 	if obj == nil { return errors.New(fmt.Sprintf(
 		"Object with Id %s does not exist", userObjId))
 	}
-	_, isUser := obj.(User)
+	user, isUser := obj.(User)
 	if ! isUser { return errors.New(fmt.Sprintf(
 		"Object with Id %s is not a User", userObjId))
 	}
 	group.UserObjIds = append(group.UserObjIds, userObjId)
+	err := user.addGroupId(group.getId())
+	if err != nil { return err }
 	return nil
 }
 
