@@ -254,6 +254,10 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	var groupDescription string
 	groupDescription, err = GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	var addMeStr string = GetPOSTFieldValue(values, "AddMe")
+	var addMe bool = false
+	if addMeStr == "true" { addMe = true }
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, CreateMask, realmId,
 		"createGroup"); failMsg != nil { return failMsg }
@@ -261,6 +265,15 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	var group Group
 	group, err = server.dbClient.dbCreateGroup(realmId, groupName, groupDescription)
 	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	if addMe {
+		var userId string = sessionToken.AuthenticatedUserid
+		var user User = server.dbClient.getUser(userId)
+		if ! group.hasUserWithId(user.getId()) {
+			err = group.addUserId(userId)
+			if err != nil { return NewFailureDesc(err.Error()) }
+		}
+	}
 	
 	return group.asGroupDesc()
 }
