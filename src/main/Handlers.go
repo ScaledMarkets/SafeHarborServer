@@ -272,13 +272,19 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	if addMe {
 		fmt.Println("addMe...")
 		var userId string = sessionToken.AuthenticatedUserid
+		fmt.Println("A")
 		var user User = server.dbClient.getUser(userId)
+		fmt.Println("B")
 		if ! group.hasUserWithId(user.getId()) {
 			fmt.Println("Adding user", user.getName(), "with ObjId", user.getId(),
 				"to group", group.getName(), "with ObjId", group.getId())
 			err = group.addUserId(userId)
 			if err != nil { return NewFailureDesc(err.Error()) }
-		} else {fmt.Println("User", user.getName() + "is already in group", group.getName())}
+		} else {
+			fmt.Println("C")
+			fmt.Println("User", user.getName() + "is already in group", group.getName())
+			fmt.Println("D")
+		}
 	}
 	
 	return group.asGroupDesc()
