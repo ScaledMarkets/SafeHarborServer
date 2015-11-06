@@ -167,8 +167,8 @@ func (server *Server) start() {
  */
 func (server *Server) stop() {
 	fmt.Println("...Stopping service...")
-	server.stopAcceptingRequests()
-	server.waitUntilNoRequestsInProgress()
+	server.stopAcceptingNewRequests()
+	server.waitUntilNoRequestsInProgress(10)
 	fmt.Println("...stop.")
 	os.Exit(0)
 }
@@ -176,22 +176,25 @@ func (server *Server) stop() {
 /*******************************************************************************
  * 
  */
-func (server *Server) stopAcceptingRequests() {
+func (server *Server) stopAcceptingNewRequests() {
 	// Set flag for dispatcher that no more requests should be accepted.
 	// ....
 }
 
 /*******************************************************************************
- * Blocks until the set of dispatched requests is empty.
+ * Blocks until the set of dispatched requests is empty. Waits no longer than
+ * the specified number of seconds. Returns false if timeout, true if all
+ * requests ended.
  */
-func (server *Server) waitUntilNoRequestsInProgress() {
+func (server *Server) waitUntilNoRequestsInProgress(maxSeconds int) bool {
 	// ....
+	return true
 }
 
 /*******************************************************************************
  * 
  */
-func (server *Server) resumeAcceptingRequests() {
+func (server *Server) resumeAcceptingNewRequests() {
 	// ....
 }
 
@@ -346,6 +349,18 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 			files = form.File
 		}
 
+	} else if httpMethod == "OPTIONS" {
+		// Handle pre-flight request.
+		// See https://remysharp.com/2011/04/21/getting-cors-working
+		// http://www.w3.org/TR/cors/#preflight-request
+		
+		//httpReq.Header["Access-Control-Request-Method"]
+		var reqHeaders []string = httpReq.Header["Access-Control-Request-Headers"]
+		if (reqHeaders == nil) || (len(reqHeaders) != 1) { return }
+		
+		writer.Header().Set("Access-Control-Allow-Headers", reqHeaders[0])
+		return
+		
 	} else {
 		respondMethodNotSupported(writer, httpReq.Method)
 		return

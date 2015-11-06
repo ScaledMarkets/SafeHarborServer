@@ -1006,6 +1006,34 @@ func (image *InMemDockerImage) getParentId() string {
 func (image *InMemDockerImage) isDockerImage() bool { return true }
 
 
+/*******************************************************************************
+ * 
+ */
+type InMemEvent struct {
+	InMemPersistObj
+	When time.Time
+	UserId string
+}
+
+func (event *InMemEvent) getWhen() time.Time {
+	return event.When
+}
+
+func (event *InMemEvent) getUserId() string {
+	return event.UserId
+}
+
+func (event *InMemEvent) asEventDesc() *EventDesc {
+	return NewEventDesc(event.Id, event.When, event.UserId)
+}
+
+
+
+
+
+
+
+
 /****************************** Utility Methods ********************************
  ******************************************************************************/
 

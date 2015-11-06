@@ -339,7 +339,7 @@ func (authSvc *AuthService) createUniqueSessionId() string {
  * Validate session Id: return true if valid, false otherwise.
  */
 func (authSvc *AuthService) sessionIdIsValid(sessionId string) bool {
-	// ....To do: validate the hash.
+	// ....To do: validate the session Id.
 	return true
 }
 

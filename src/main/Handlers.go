@@ -240,8 +240,6 @@ func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	fmt.Println("Entered createGroup")
-
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var err error
@@ -270,31 +268,10 @@ func createGroup(server *Server, sessionToken *SessionToken, values url.Values,
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	if addMe {
-		fmt.Println("addMe...")
 		var userId string = sessionToken.AuthenticatedUserid
-		fmt.Println("userId=" + userId)
-		fmt.Println("A")
 		var user User = server.dbClient.dbGetUserByUserId(userId)
-		fmt.Println("B")
-		
-		
-		if ! group.hasUserWithId(user.getId()) {
-			fmt.Println("Adding user", user.getName(), "with ObjId", user.getId(),
-				"to group", group.getName(), "with ObjId", group.getId())
-			err = group.addUserId(user.getId())
-			if err != nil { return NewFailureDesc(err.Error()) }
-			
-			
-			var groupIds []string = user.getGroupIds()
-			fmt.Println("After adding user", user.getName(), "to group",
-				group.getName(), "user has", len(groupIds), "groups")
-			
-			
-		} else {
-			fmt.Println("C")
-			fmt.Println("User", user.getName() + "is already in group", group.getName())
-			fmt.Println("D")
-		}
+		err = group.addUserId(user.getId())
+		if err != nil { return NewFailureDesc(err.Error()) }
 	}
 	
 	return group.asGroupDesc()
@@ -1224,23 +1201,11 @@ func getMyDesc(server *Server, sessionToken *SessionToken, values url.Values,
 func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	fmt.Println("Entered getMyGroups")
-	
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
 	var groupDescs GroupDescs = make([]*GroupDesc, 0)
-	
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	
-	fmt.Println("for user '" + user.getName() + "', Id " + user.getId())
-	
-	
-	
 	var groupIds []string = user.getGroupIds()
-	
-	fmt.Println("User has", len(groupIds), "groups")
-	
-	
 	for _, groupId := range groupIds {
 		var group Group = server.dbClient.getGroup(groupId)
 		if group == nil {

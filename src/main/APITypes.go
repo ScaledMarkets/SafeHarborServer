@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"fmt"
 	"errors"
+	"time"
 )
 
 /*******************************************************************************
@@ -552,6 +553,29 @@ func NewScanResultDesc(msg string) *ScanResultDesc {
 
 func (scanResultDesc *ScanResultDesc) asResponse() string {
 	return fmt.Sprintf("{\"Message\": \"%s\"}", scanResultDesc.Message)
+}
+
+/*******************************************************************************
+ * 
+ */
+type EventDesc struct {
+	BaseType
+	Id string
+	When time.Time
+	UserId string
+}
+
+func NewEventDesc(objId string, when time.Time, userId string) *EventDesc {
+	return &EventDesc{
+		Id: objId,
+		When: when,
+		UserId: userId,
+	}
+}
+
+func (eventDesc *EventDesc) asResponse() string {
+	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\"}",
+		eventDesc.Id, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId)
 }
 
 /*******************************************************************************

@@ -158,7 +158,7 @@ type DockerImage interface {
 // For Image Workflow:
 
 type Event interface {
-	getWhen() string
+	getWhen() time.Time
 	getUserId() string
 }
 
