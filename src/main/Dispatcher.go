@@ -70,6 +70,7 @@ func NewDispatcher() *Dispatcher {
 		"addDockerfile": addDockerfile,
 		"replaceDockerfile": replaceDockerfile,
 		"execDockerfile": execDockerfile,
+		"addAndExecDockerfile": addAndExecDockerfile,
 		"downloadImage": downloadImage,
 		"setPermission": setPermission,
 		"addPermission": addPermission,

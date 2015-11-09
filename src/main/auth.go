@@ -1,5 +1,5 @@
 /*******************************************************************************
- * 
+ * Authentication and authorization.
  */
 
 package main
@@ -14,6 +14,8 @@ import (
 	"crypto/x509"
 	"time"
 	"errors"
+	"crypto/sha512"
+	"hash"
 )
 
 type AuthService struct {
@@ -22,19 +24,22 @@ type AuthService struct {
 	AuthServerName string
 	AuthPort int
 	AuthClient *http.Client
+	secretSalt []byte
 }
 
 /*******************************************************************************
  * 
  */
 func NewAuthService(serviceName string, authServerName string, authPort int,
-	certPool *x509.CertPool) *AuthService {
+	certPool *x509.CertPool, secretSalt string) *AuthService {
+
 	return &AuthService{
 		Service: serviceName,
 		Sessions: make(map[string]*Credentials),
 		AuthServerName: authServerName,
 		AuthPort: authPort,
 		AuthClient: connectToAuthServer(certPool),
+		secretSalt: []byte(secretSalt),
 	}
 }
 
@@ -219,8 +224,6 @@ func (server *Server) partyHasAccess(party Party, actionMask []bool, resource Re
 }
 
 
-
-
 /***************************** Internal Functions ******************************
  *******************************************************************************
  * Returns the session id header value, or "" if there is none.
@@ -327,26 +330,42 @@ func (authSvc *AuthService) sendQueryToAuthServer(creds *Credentials,
 
 /*******************************************************************************
  * Return a session id that is guaranteed to be unique, and that is completely
- * opaque and unforgeable. ....To do: append a monotonically increasing value
- * (created atomically) to the string prior to encryption.
+ * opaque and unforgeable.
  */
 func (authSvc *AuthService) createUniqueSessionId() string {
-	// ....Important: randomize this!!!!!!
-	return encrypt(time.Now().Local().String())
+	
+	var uniqueNonRandomValue string = time.Now().Local().String()
+	var saltedHashBytes []byte =
+		authSvc.computeHash(uniqueNonRandomValue).Sum(authSvc.secretSalt)
+	return uniqueNonRandomValue + ":" + string(saltedHashBytes)
 }
 
 /*******************************************************************************
  * Validate session Id: return true if valid, false otherwise.
  */
 func (authSvc *AuthService) sessionIdIsValid(sessionId string) bool {
-	// ....To do: validate the session Id.
-	return true
+	
+	var parts []string = strings.Split(sessionId, ":")
+	if len(parts) != 2 {
+		fmt.Println("Illegally formatted sessionId:", sessionId)
+		return false
+	}
+	
+	var uniqueNonRandomValue string = parts[0]
+	var untrustedHash string = parts[1]
+	var actualSaltedHashBytes []byte =
+		authSvc.computeHash(uniqueNonRandomValue).Sum(authSvc.secretSalt)
+	
+	return untrustedHash == string(actualSaltedHashBytes)
 }
 
 /*******************************************************************************
- * Encrypt the specified string. For now, just return the string.
- * ....To do: Need to complete this to use the Server's private key.
+ * 
  */
-func encrypt(s string) string {
-	return s
+func (authSvc *AuthService) computeHash(s string) hash.Hash {
+	
+	var hash hash.Hash = sha512.New()
+	var bytes []byte = []byte(s)
+	hash.Write(bytes)
+	return hash
 }

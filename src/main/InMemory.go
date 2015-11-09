@@ -808,18 +808,20 @@ type InMemRepo struct {
 	InMemPersistObj
 	InMemResource
 	RealmId string
+	Description string
 	DockerfileIds []string
 	DockerImageIds []string
 	FileDirectory string  // where this repo's files are stored
 }
 
-func (client *InMemClient) dbCreateRepo(realmId string, name string) (Repo, error) {
+func (client *InMemClient) dbCreateRepo(realmId string, name string, desc string) (Repo, error) {
 	var realm Realm = client.getRealm(realmId)
 	var repoId string = createUniqueDbObjectId()
 	var newRepo *InMemRepo = &InMemRepo{
 		InMemPersistObj: InMemPersistObj{Id: repoId, Client: client},
 		InMemResource: *NewInMemResource(name, time.Now()),
 		RealmId: realmId,
+		Description: desc,
 		DockerfileIds: make([]string, 0),
 		DockerImageIds: make([]string, 0),
 		FileDirectory: client.assignRepoFileDir(realmId, repoId),
@@ -870,7 +872,7 @@ func (repo *InMemRepo) addDockerImage(image DockerImage) {
 }
 
 func (repo *InMemRepo) asRepoDesc() *RepoDesc {
-	return NewRepoDesc(repo.Id, repo.RealmId, repo.Name)
+	return NewRepoDesc(repo.Id, repo.RealmId, repo.Name, repo.Description)
 }
 
 func (repo *InMemRepo) getParentId() string {
@@ -886,16 +888,18 @@ type InMemDockerfile struct {
 	InMemPersistObj
 	InMemResource
 	RepoId string
+	Description string
 	FilePath string
 }
 
 func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
-	filepath string) (Dockerfile, error) {
+	desc string, filepath string) (Dockerfile, error) {
 	var dockerfileId string = createUniqueDbObjectId()
 	var newDockerfile *InMemDockerfile = &InMemDockerfile{
 		InMemPersistObj: InMemPersistObj{Id: dockerfileId, Client: client},
 		InMemResource: *NewInMemResource(name, time.Now()),
 		RepoId: repoId,
+		Description: desc,
 		FilePath: filepath,
 	}
 	fmt.Println("Created Dockerfile")
@@ -933,7 +937,7 @@ func (dockerfile *InMemDockerfile) getFilePath() string {
 }
 
 func (dockerfile *InMemDockerfile) asDockerfileDesc() *DockerfileDesc {
-	return NewDockerfileDesc(dockerfile.Id, dockerfile.RepoId, dockerfile.Name)
+	return NewDockerfileDesc(dockerfile.Id, dockerfile.RepoId, dockerfile.Name, dockerfile.Description)
 }
 
 func (dockerfile *InMemDockerfile) getParentId() string {
@@ -1029,11 +1033,6 @@ func (event *InMemEvent) asEventDesc() *EventDesc {
 
 
 
-
-
-
-
-
 /****************************** Utility Methods ********************************
  ******************************************************************************/
 
@@ -1077,20 +1076,6 @@ func (client *InMemClient) assignRepoFileDir(realmId string, repoId string) stri
 	err := os.MkdirAll(path, 0711)
 	if err != nil { panic(err) }
 	return path
-}
-
-/*******************************************************************************
- * Format the specified Time value into a string that Javascript will parse as
- * a valid date/time. The string must be in this format:
- *    2015-10-09 14:45:25.641890879 / YYYY-MM-DD HH:MM:SS
- */
-func FormatTimeAsJavascriptDate(curTime time.Time) string {
-	b, err := curTime.MarshalJSON()
-	if err != nil {
-		fmt.Println(err.Error())
-		return ""
-	}
-	return string(b)  // Note: this outputs RFC 3339 format date/time.
 }
 
 /*******************************************************************************

@@ -40,7 +40,7 @@ type Server struct {
 /*******************************************************************************
  * Create a Server structure. This includes reading in the auth server cert.
  */
-func NewServer(debug bool, noauthor bool, port int, adapter string) *Server {
+func NewServer(debug bool, noauthor bool, port int, adapter string, secretSalt string) *Server {
 	
 	// Read configuration. (Defined in a JSON file.)
 	fmt.Println("Reading configuration")
@@ -115,7 +115,7 @@ func NewServer(debug bool, noauthor bool, port int, adapter string) *Server {
 	dispatcher.server = server
 	
 	server.authService = NewAuthService(config.service,
-		config.AuthServerName, config.AuthPort, certPool)
+		config.AuthServerName, config.AuthPort, certPool, secretSalt)
 	
 	// To do: Make this a TLS listener.
 	// Instantiate an HTTP server with the SafeHarbor server as the handler.

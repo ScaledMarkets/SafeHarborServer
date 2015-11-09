@@ -698,12 +698,16 @@ func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	repoName, err = GetRequiredPOSTFieldValue(values, "Name")
 	if err != nil { return NewFailureDesc(err.Error()) }
 
+	var repoDesc string
+	repoDesc, err = GetRequiredPOSTFieldValue(values, "Description")
+	if err != nil { return NewFailureDesc(err.Error()) }
+
 	if failMsg := authorizeHandlerAction(server, sessionToken, CreateMask, realmId,
 		"createRepo"); failMsg != nil { return failMsg }
 	
 	fmt.Println("Creating repo", repoName)
 	var repo Repo
-	repo, err = server.dbClient.dbCreateRepo(realmId, repoName)
+	repo, err = server.dbClient.dbCreateRepo(realmId, repoName, repoDesc)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Created repo")
 
@@ -835,7 +839,10 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	var repoId string
 	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
 	if err != nil { return NewFailureDesc(err.Error()) }
-	if repoId == "" { return NewFailureDesc("No HTTP parameter found for RepoId") }
+
+	var desc string
+	desc, err = GetRequiredPOSTFieldValue(values, "Description")
+	if err != nil { return NewFailureDesc(err.Error()) }
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, CreateMask, repoId,
 		"addDockerfile"); failMsg != nil { return failMsg }
@@ -870,7 +877,7 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	
 	// Add the file to the specified repo's set of Dockerfiles.
 	var dockerfile Dockerfile
-	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), filename, filepath)
+	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), filename, desc, filepath)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	// Create an ACL entry for the new file, to allow access by the current user.
@@ -897,7 +904,7 @@ func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Va
 
 /*******************************************************************************
  * Arguments: RepoId, DockerfileId, ImageName
- * Returns: DockerfileImageDesc
+ * Returns: DockerImageDesc
  */
 func execDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
@@ -994,6 +1001,16 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	fmt.Println("Created docker image object.")
 	
 	return image.asDockerImageDesc()
+}
+
+/*******************************************************************************
+ * Arguments: RepoId, Description, ImageName, <File attachment>
+ * Returns: DockerImageDesc
+ */
+func addAndExecDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	return nil
 }
 
 /*******************************************************************************

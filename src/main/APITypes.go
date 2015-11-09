@@ -352,19 +352,21 @@ type RepoDesc struct {
 	Id string
 	RealmId string
 	RepoName string
+	Description string
 }
 
-func NewRepoDesc(id string, realmId string, name string) *RepoDesc {
+func NewRepoDesc(id string, realmId string, name string, desc string) *RepoDesc {
 	return &RepoDesc{
 		Id: id,
 		RealmId: realmId,
 		RepoName: name,
+		Description: desc,
 	}
 }
 
 func (repoDesc *RepoDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", \"RepoName\": \"%s\"}",
-		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName)
+	return fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", \"RepoName\": \"%s\", \"Description\": \"%s\"}",
+		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName, repoDesc.Description)
 }
 
 type RepoDescs []*RepoDesc
@@ -387,20 +389,22 @@ type DockerfileDesc struct {
 	BaseType
 	Id string
 	RepoId string
+	Description string
 	DockerfileName string
 }
 
-func NewDockerfileDesc(id string, repoId string, name string) *DockerfileDesc {
+func NewDockerfileDesc(id string, repoId string, name string, desc string) *DockerfileDesc {
 	return &DockerfileDesc{
 		Id: id,
 		RepoId: repoId,
 		DockerfileName: name,
+		Description: desc,
 	}
 }
 
 func (dockerfileDesc *DockerfileDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"RepoId\": \"%s\", \"DockerfileName\": \"%s\"}",
-		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.DockerfileName)
+	return fmt.Sprintf("{\"Id\": \"%s\", \"RepoId\": \"%s\", \"DockerfileName\": \"%s\", \"Description\": \"%s\"}",
+		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.DockerfileName, dockerfileDesc.Description)
 }
 
 type DockerfileDescs []*DockerfileDesc
@@ -576,6 +580,25 @@ func NewEventDesc(objId string, when time.Time, userId string) *EventDesc {
 func (eventDesc *EventDesc) asResponse() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\"}",
 		eventDesc.Id, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId)
+}
+
+
+
+/****************************** Utility Methods ********************************
+ ******************************************************************************/
+
+/*******************************************************************************
+ * Format the specified Time value into a string that Javascript will parse as
+ * a valid date/time. The string must be in this format:
+ *    2015-10-09 14:45:25.641890879 / YYYY-MM-DD HH:MM:SS
+ */
+func FormatTimeAsJavascriptDate(curTime time.Time) string {
+	b, err := curTime.MarshalJSON()
+	if err != nil {
+		fmt.Println(err.Error())
+		return ""
+	}
+	return string(b)  // Note: this outputs RFC 3339 format date/time.
 }
 
 /*******************************************************************************

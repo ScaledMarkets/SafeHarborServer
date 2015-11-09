@@ -16,8 +16,8 @@ type DBClient interface {
 	dbCreateUser(string, string, string, string, string) (User, error)
 	dbCreateACLEntry(string, string, []bool) (ACLEntry, error)
 	dbCreateRealm(*RealmInfo, string) (Realm, error)
-	dbCreateRepo(string, string) (Repo, error)
-	dbCreateDockerfile(string, string, string) (Dockerfile, error)
+	dbCreateRepo(string, string, string) (Repo, error)
+	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string) (DockerImage, error)
 	dbGetAllRealmIds() []string
 	getResource(string) Resource

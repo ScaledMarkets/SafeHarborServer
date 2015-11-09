@@ -18,6 +18,7 @@ func main() {
 	var help *bool = flag.Bool("help", false, "Provide help instructions.")
 	var port *int = flag.Int("port", 0, "The TCP port on which the SafeHarborServer should listen. If not set, then the value is taken from the conf.json file.")
 	var adapter *string = flag.String("adapter", "", "Network adapter to use (e.g., eth0)")
+	var secretSalt *string = flag.String("secretkey", "", "Secret value to make session hashes unpredictable.")
 	
 	flag.Parse()
 	
@@ -31,8 +32,13 @@ func main() {
 		os.Exit(0)
 	}
 	
+	if *secretSalt == "" {
+		fmt.Println("Must specify a random value for -secretkey")
+		os.Exit(2)
+	}
+	
 	fmt.Println("Creating SafeHarbor server...")
-	var server *Server = NewServer(*debug, *noauthor, *port, *adapter)
+	var server *Server = NewServer(*debug, *noauthor, *port, *adapter, *secretSalt)
 	if server == nil { os.Exit(1) }
 
 	server.start()
