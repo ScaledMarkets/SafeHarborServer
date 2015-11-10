@@ -334,10 +334,10 @@ func (authSvc *AuthService) sendQueryToAuthServer(creds *Credentials,
  */
 func (authSvc *AuthService) createUniqueSessionId() string {
 	
-	var uniqueNonRandomValue string = time.Now().Local().String()
+	var uniqueNonRandomValue string = fmt.Sprintf("%d", time.Now().UnixNano())
 	var saltedHashBytes []byte =
 		authSvc.computeHash(uniqueNonRandomValue).Sum(authSvc.secretSalt)
-	return uniqueNonRandomValue + ":" + string(saltedHashBytes)
+	return uniqueNonRandomValue + ":" + fmt.Sprintf("%x", saltedHashBytes)
 }
 
 /*******************************************************************************
@@ -356,7 +356,7 @@ func (authSvc *AuthService) sessionIdIsValid(sessionId string) bool {
 	var actualSaltedHashBytes []byte =
 		authSvc.computeHash(uniqueNonRandomValue).Sum(authSvc.secretSalt)
 	
-	return untrustedHash == string(actualSaltedHashBytes)
+	return untrustedHash == fmt.Sprintf("%x", actualSaltedHashBytes)
 }
 
 /*******************************************************************************
