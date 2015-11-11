@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"errors"
 	"time"
+	"runtime/debug"
 )
 
 /*******************************************************************************
@@ -399,6 +400,8 @@ func (repoDesc *RepoDesc) asResponse() string {
 		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName, repoDesc.Description,
 		repoDesc.DockerfileIds)
 	fmt.Println(fmt.Sprintf("len(DockerfileIds)=%d", len(repoDesc.DockerfileIds)))
+	fmt.Println("Printing stack:")
+	debug.PrintStack()
 	for i, id := range repoDesc.DockerfileIds {
 		if i > 0 { resp = resp + ", " }
 		resp = resp + id

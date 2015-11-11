@@ -709,7 +709,6 @@ func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	var repo Repo
 	repo, err = server.dbClient.dbCreateRepo(realmId, repoName, repoDesc)
 	if err != nil { return NewFailureDesc(err.Error()) }
-	fmt.Println("Created repo")
 
 	// Add ACL entry to enable the current user to access what he/she just created.
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
