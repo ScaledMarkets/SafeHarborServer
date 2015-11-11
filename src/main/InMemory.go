@@ -1088,7 +1088,10 @@ func (client *InMemClient) assignRepoFileDir(realmId string, repoId string) stri
 	fmt.Println("assignRepoFileDir.B")
 	err := os.MkdirAll(path, 0711)
 	fmt.Println("assignRepoFileDir.C")
-	if err != nil { panic(err) }
+	if err != nil {
+		fmt.Println("Internal error:", err.Error())
+		panic(err)
+	}
 	fmt.Println("assignRepoFileDir.D")
 	return path
 }
