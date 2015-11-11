@@ -884,19 +884,7 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	desc string, filepath string) (Dockerfile, error) {
 	var dockerfileId string = createUniqueDbObjectId()
 	var newDockerfile *InMemDockerfile = &InMemDockerfile{
-		InMemResource: InMemResource{//dockerfileId, name, desc
-			InMemACL: InMemACL{
-				InMemPersistObj: InMemPersistObj{
-					Id: dockerfileId,
-					Client: client,
-				},
-				ACLEntryIds: make([]string, 0),
-			},
-			Name: name,
-			Description: desc,
-			CreationTime: time.Now(),
-		},
-		//InMemResource: *client.NewInMemResource(dockerfileId, name, desc),
+		InMemResource: *client.NewInMemResource(dockerfileId, name, desc),
 		RepoId: repoId,
 		FilePath: filepath,
 	}
