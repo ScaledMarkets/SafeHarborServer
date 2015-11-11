@@ -274,7 +274,6 @@ func (party *InMemParty) getACLEntryForResourceId(resourceId string) ACLEntry {
  * 
  */
 type InMemGroup struct {
-	InMemPersistObj
 	InMemParty
 	Description string
 	UserObjIds []string
@@ -295,7 +294,6 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	
 	var groupId string = createUniqueDbObjectId()
 	var newGroup = &InMemGroup{
-		InMemPersistObj: *client.NewInMemPersistObj(groupId),
 		InMemParty: *client.NewInMemParty(groupId, name, realmId),
 		Description: description,
 		UserObjIds: make([]string, 0),
@@ -365,7 +363,6 @@ func (group *InMemGroup) asGroupDesc() *GroupDesc {
  * 
  */
 type InMemUser struct {
-	InMemPersistObj
 	InMemParty
 	UserId string
 	EmailAddress string
@@ -390,7 +387,6 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	var userObjId string = createUniqueDbObjectId()
 	var pswdAsBytes []byte = []byte(pswd)
 	var newUser *InMemUser = &InMemUser{
-		InMemPersistObj: InMemPersistObj{Id: userObjId, Client: client},
 		InMemParty: *client.NewInMemParty(userObjId, name, realmId),
 		UserId: userId,
 		EmailAddress: email,
@@ -879,7 +875,6 @@ func (repo *InMemRepo) asRepoDesc() *RepoDesc {
  * 
  */
 type InMemDockerfile struct {
-	InMemPersistObj
 	InMemResource
 	RepoId string
 	FilePath string
