@@ -868,7 +868,8 @@ func (repo *InMemRepo) getParentId() string {
 func (repo *InMemRepo) isRepo() bool { return true }
 
 func (repo *InMemRepo) asRepoDesc() *RepoDesc {
-	return NewRepoDesc(repo.Id, repo.RealmId, repo.Name, repo.Description, repo.CreationTime)
+	return NewRepoDesc(repo.Id, repo.RealmId, repo.Name, repo.Description,
+		repo.CreationTime, repo.getDockerfileIds())
 }
 
 /*******************************************************************************

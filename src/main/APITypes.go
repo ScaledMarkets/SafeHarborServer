@@ -377,22 +377,33 @@ type RepoDesc struct {
 	RepoName string
 	Description string
 	CreationDate string
+	DockerfileIds []string
 }
 
 func NewRepoDesc(id string, realmId string, name string, desc string,
-	creationTime time.Time) *RepoDesc {
+	creationTime time.Time, dockerfileIds []string) *RepoDesc {
+
 	return &RepoDesc{
 		Id: id,
 		RealmId: realmId,
 		RepoName: name,
 		Description: desc,
 		CreationDate: FormatTimeAsJavascriptDate(creationTime),
+		DockerfileIds: dockerfileIds,
 	}
 }
 
 func (repoDesc *RepoDesc) asResponse() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", \"RepoName\": \"%s\", \"Description\": \"%s\"}",
-		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName, repoDesc.Description)
+	var resp string = fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", " +
+		"\"RepoName\": \"%s\", \"Description\": \"%s\", [",
+		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName, repoDesc.Description,
+		repoDesc.DockerfileIds)
+	for i, id := range repoDesc.DockerfileIds {
+		if i > 0 { resp = resp + ", " }
+		resp = resp + id
+	}
+	resp = resp + "]}"
+	return resp
 }
 
 type RepoDescs []*RepoDesc
