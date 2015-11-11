@@ -120,6 +120,9 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 	}
 	fmt.Println("Calling handler")
 	if sessionToken == nil { fmt.Println("handleRequest: Session token is nil") }
+	if dispatcher.server.Debug {
+		printHTTPParameters(values)
+	}
 	var result RespIntfTp = handler(dispatcher.server, sessionToken, values, files)
 	fmt.Println("Returning result:", result.asResponse())
 	
@@ -154,4 +157,15 @@ func respondNoSuchMethod(headers http.Header, writer http.ResponseWriter, method
 	
 	writer.WriteHeader(404)
 	io.WriteString(writer, "No such method," + methodName)
+}
+
+/*******************************************************************************
+ * 
+ */
+func printHTTPParameters(values url.Values) {
+	// Values is a map[string][]string
+	fmt.Println("HTTP parameters:")
+	for k, v := range values {
+		fmt.Println(k + ": " + v[0])
+	}
 }
