@@ -396,8 +396,10 @@ func NewRepoDesc(id string, realmId string, name string, desc string,
 
 func (repoDesc *RepoDesc) asResponse() string {
 	var resp string = fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", " +
-		"\"RepoName\": \"%s\", \"Description\": \"%s\", \"DockerfileIds\": [",
-		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName, repoDesc.Description)
+		"\"RepoName\": \"%s\", \"Description\": \"%s\", \"CreationDate\": \"%s\", " +
+		"\"DockerfileIds\": [",
+		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName, repoDesc.Description,
+		repoDesc.CreationDate)
 	fmt.Println("1: resp=%s", resp)
 	fmt.Println(fmt.Sprintf("len(DockerfileIds)=%d", len(repoDesc.DockerfileIds)))
 	//fmt.Println("Printing stack:")
