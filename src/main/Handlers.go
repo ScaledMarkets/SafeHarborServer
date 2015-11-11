@@ -997,7 +997,7 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	
 	// Add a record for the image to the database.
 	var image DockerImage
-	image, err = dbClient.dbCreateDockerImage(repoId, imageName)
+	image, err = dbClient.dbCreateDockerImage(repoId, imageName, dockerfile.getDescription())
 	fmt.Println("Created docker image object.")
 	
 	return image.asDockerImageDesc()
@@ -1478,7 +1478,7 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	// https://aws.amazon.com/partners/redhat/
 	
 	var cmd *exec.Cmd = exec.Command("image-scanner-remote.py",
-		"--profile", "localhost", "-s", dockerImage.getDockerImageId())
+		"--profile", "localhost", "-s", dockerImage.getDockerImageTag())
 	var output []byte
 	output, err = cmd.CombinedOutput()
 	var outputStr string = string(output)

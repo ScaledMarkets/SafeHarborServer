@@ -18,7 +18,7 @@ type DBClient interface {
 	dbCreateRealm(*RealmInfo, string) (Realm, error)
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
-	dbCreateDockerImage(string, string) (DockerImage, error)
+	dbCreateDockerImage(string, string, string) (DockerImage, error)
 	dbGetAllRealmIds() []string
 	getResource(string) Resource
 	getParty(string) Party
@@ -91,6 +91,7 @@ type Resource interface {
 	ACL
 	getName() string
 	getCreationTime() time.Time
+	getDescription() string
 	getACLEntryForPartyId(string) ACLEntry
 	getParentId() string
 	isRealm() bool
@@ -144,10 +145,14 @@ type Dockerfile interface {
 	//getDockerfileExecEventIds() []string
 }
 
-type DockerImage interface {
+type Image interface {
 	Resource
+}
+
+type DockerImage interface {
+	Image
 	//ImageCreationEvent
-	getDockerImageId() string
+	getDockerImageTag() string
 	asDockerImageDesc() *DockerImageDesc
 	
 	//getScanEventIds() []string

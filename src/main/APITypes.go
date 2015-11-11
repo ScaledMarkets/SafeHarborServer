@@ -167,6 +167,16 @@ type GroupDesc struct {
 	Description string
 }
 
+func NewGroupDesc(groupId, realmId, groupName, desc string, creationDate time.Time) *GroupDesc {
+	return &GroupDesc{
+		GroupId: groupId,
+		RealmId: realmId,
+		GroupName: groupName,
+		CreationDate: FormatTimeAsJavascriptDate(creationDate),
+		Description: desc,
+	}
+}
+
 func (groupDesc *GroupDesc) asResponse() string {
 	return fmt.Sprintf("{\"RealmId\": \"%s\", \"GroupName\": \"%s\", \"CreationDate\": %s, \"GroupId\": \"%s\", \"Description\": \"%s\"}",
 		groupDesc.RealmId, groupDesc.GroupName, groupDesc.CreationDate, groupDesc.GroupId, groupDesc.Description)
@@ -249,6 +259,16 @@ type UserDesc struct {
 	CanModifyTheseRealms []string
 }
 
+func NewUserDesc(id, userId, userName, realmId string, canModRealms []string) *UserDesc {
+	return &UserDesc{
+		Id: id,
+		UserId: userId,
+		UserName: userName,
+		RealmId: realmId,
+		CanModifyTheseRealms: canModRealms,
+	}
+}
+
 func (userDesc *UserDesc) asResponse() string {
 	var response string = fmt.Sprintf("{\"Id\": \"%s\", \"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\", \"CanModifyTheseRealms\": [",
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId)
@@ -319,24 +339,27 @@ type RealmInfo struct {
 	BaseType
 	RealmName string
 	OrgFullName string
+	Description string
 }
 
-func NewRealmInfo(realmName string, orgName string) (*RealmInfo, error) {
+func NewRealmInfo(realmName string, orgName string, desc string) (*RealmInfo, error) {
 	if realmName == "" { return nil, errors.New("realmName is empty") }
 	if orgName == "" { return nil, errors.New("orgName is empty") }
 	return &RealmInfo{
 		RealmName: realmName,
 		OrgFullName: orgName,
+		Description: desc,
 	}, nil
 }
 
 func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 	var err error
-	var name, orgFullName string
+	var name, orgFullName, desc string
 	name, err = GetRequiredPOSTFieldValue(values, "RealmName")
 	orgFullName, err = GetRequiredPOSTFieldValue(values, "OrgFullName")
 	if err != nil { return nil, err }
-	return NewRealmInfo(name, orgFullName)
+	desc = GetPOSTFieldValue(values, "Description")
+	return NewRealmInfo(name, orgFullName, desc)
 }
 
 func (realmInfo *RealmInfo) asResponse() string {
@@ -353,14 +376,17 @@ type RepoDesc struct {
 	RealmId string
 	RepoName string
 	Description string
+	CreationDate string
 }
 
-func NewRepoDesc(id string, realmId string, name string, desc string) *RepoDesc {
+func NewRepoDesc(id string, realmId string, name string, desc string,
+	creationTime time.Time) *RepoDesc {
 	return &RepoDesc{
 		Id: id,
 		RealmId: realmId,
 		RepoName: name,
 		Description: desc,
+		CreationDate: FormatTimeAsJavascriptDate(creationTime),
 	}
 }
 
@@ -423,26 +449,43 @@ func (dockerfileDescs DockerfileDescs) asResponse() string {
 /*******************************************************************************
  * 
  */
-type DockerImageDesc struct {
+type ImageDesc struct {
 	BaseType
 	ObjId string
-	DockerImageTag string
+	Name string
+	Description string
+	CreationDate string
 }
 
-func NewDockerImageDesc(objId string, dockerId string) *DockerImageDesc {
-	return &DockerImageDesc{
+func NewImageDesc(objId, name, desc string, creationTime time.Time) *ImageDesc {
+	return &ImageDesc{
 		ObjId: objId,
-		DockerImageTag: dockerId,
+		Name: name,
+		Description: desc,
+		CreationDate: FormatTimeAsJavascriptDate(creationTime),
 	}
 }
 
-func (imageDesc *DockerImageDesc) getDockerImageId() string {
-	return imageDesc.DockerImageTag
+/*******************************************************************************
+ * 
+ */
+type DockerImageDesc struct {
+	ImageDesc
+}
+
+func NewDockerImageDesc(objId, name, desc string, creationTime time.Time) *DockerImageDesc {
+	return &DockerImageDesc{
+		ImageDesc: *NewImageDesc(objId, name, desc, creationTime),
+	}
+}
+
+func (imageDesc *DockerImageDesc) getDockerImageTag() string {
+	return imageDesc.Name
 }
 
 func (imageDesc *DockerImageDesc) asResponse() string {
 	return fmt.Sprintf("{\"ObjId\": \"%s\", \"DockerImageTag\": \"%s\"}",
-		imageDesc.ObjId, imageDesc.DockerImageTag)
+		imageDesc.ObjId, imageDesc.Name)
 }
 
 type DockerImageDescs []*DockerImageDesc
