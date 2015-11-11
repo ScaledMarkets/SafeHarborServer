@@ -250,11 +250,14 @@ func authorizeHandlerAction(server *Server, sessionToken *SessionToken,
  */
 func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo, desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
 	
+	fmt.Println("A1")
 	var headers []*multipart.FileHeader = files["filename"]
 	if len(headers) == 0 { return nil, nil }
 	if len(headers) > 1 { return nil, errors.New("Too many files posted") }
 	
+	fmt.Println("A2")
 	var header *multipart.FileHeader = headers[0]
+	fmt.Println("A3")
 	var filename string = header.Filename	
 	fmt.Println("Filename:", filename)
 	
