@@ -849,7 +849,7 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo, desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
 	
 	var headers []*multipart.FileHeader = files["filename"]
-	if len(headers) == 0 { return nil, errors.New("No file posted") }
+	if len(headers) == 0 { return nil, nil }
 	if len(headers) > 1 { return nil, errors.New("Too many files posted") }
 	
 	var header *multipart.FileHeader = headers[0]
