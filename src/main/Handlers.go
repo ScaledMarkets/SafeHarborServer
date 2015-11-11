@@ -709,13 +709,17 @@ func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	var repo Repo
 	repo, err = server.dbClient.dbCreateRepo(realmId, repoName, repoDesc)
 	if err != nil { return NewFailureDesc(err.Error()) }
+	fmt.Println("createRepo.A")
 
 	// Add ACL entry to enable the current user to access what he/she just created.
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	fmt.Println("createRepo.B")
 	server.dbClient.dbCreateACLEntry(repo.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
+	fmt.Println("createRepo.C")
 	
 	_, err = createDockerfile(sessionToken, server.dbClient, repo, repo.getDescription(), values, files)
+	fmt.Println("createRepo.D")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	return repo.asRepoDesc()
