@@ -889,11 +889,26 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	desc string, filepath string) (Dockerfile, error) {
 	var dockerfileId string = createUniqueDbObjectId()
 	var newDockerfile *InMemDockerfile = &InMemDockerfile{
-		InMemResource: *client.NewInMemResource(dockerfileId, name, desc),
+		InMemResource: InMemResource{//dockerfileId, name, desc
+			InMemACL: InMemACL{
+				InMemPersistObj: InMemPersistObj{
+					Id: dockerfileId,
+					Client: client,
+				},
+				ACLEntryIds: make([]string, 0),
+			},
+			Name: name,
+			Description: desc,
+			CreationTime: time.Now(),
+		},
+		//InMemResource: *client.NewInMemResource(dockerfileId, name, desc),
 		RepoId: repoId,
 		FilePath: filepath,
 	}
 	
+	if newDockerfile.getId() == newDockerfile.InMemResource.getId() {
+		fmt.Println("Worked")
+	}
 	assertThat(newDockerfile.getId() == newDockerfile.InMemResource.getId(), "Uh oh")
 	assertThat(newDockerfile.getId() != "", "Internal ERROR: Dockerfile Id is empty")
 	assertThat(newDockerfile.getId() == dockerfileId, "Internal ERROR: Dockerfile Id has not be set properly")
