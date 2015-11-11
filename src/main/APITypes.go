@@ -398,9 +398,11 @@ func (repoDesc *RepoDesc) asResponse() string {
 		"\"RepoName\": \"%s\", \"Description\": \"%s\", [",
 		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName, repoDesc.Description,
 		repoDesc.DockerfileIds)
+	fmt.Println(fmt.Sprintf("len(DockerfileIds)=%d", len(repoDesc.DockerfileIds)))
 	for i, id := range repoDesc.DockerfileIds {
 		if i > 0 { resp = resp + ", " }
 		resp = resp + id
+		fmt.Println("Added " + id + " to resp")
 	}
 	resp = resp + "]}"
 	return resp
