@@ -909,6 +909,9 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	if newDockerfile.getId() == newDockerfile.InMemResource.InMemACL.InMemPersistObj.getId() {
 		fmt.Println("Worked")
 	}
+	fmt.Println("newDockerfile.getId()=" + newDockerfile.getId())
+	fmt.Println("newDockerfile.InMemResource.InMemACL.InMemPersistObj.getId()=" +
+		newDockerfile.InMemResource.InMemACL.InMemPersistObj.getId())
 	assertThat(newDockerfile.getId() == newDockerfile.InMemResource.InMemACL.InMemPersistObj.getId(), "Uh oh")
 	assertThat(newDockerfile.getId() != "", "Internal ERROR: Dockerfile Id is empty")
 	assertThat(newDockerfile.getId() == dockerfileId, "Internal ERROR: Dockerfile Id has not be set properly")
