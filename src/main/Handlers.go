@@ -10,13 +10,13 @@ import (
 	"mime/multipart"
 	//"net/textproto"
 	"fmt"
-	"errors"
+	//"errors"
 	//"bufio"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strconv"
+	//"strconv"
 	"strings"
 	"reflect"
 )
@@ -843,61 +843,6 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 	if dockerfile == nil { return NewFailureDesc("No dockerfile was attached") }
 	
 	return dockerfile.asDockerfileDesc()
-}
-
-func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo, desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
-	
-	var headers []*multipart.FileHeader = files["filename"]
-	if len(headers) == 0 { return nil, nil }
-	if len(headers) > 1 { return nil, errors.New("Too many files posted") }
-	
-	var header *multipart.FileHeader = headers[0]
-	var filename string = header.Filename	
-	fmt.Println("Filename:", filename)
-	
-	var file multipart.File
-	var err error
-	file, err = header.Open()
-	if err != nil { return nil, errors.New(err.Error()) }
-	if file == nil { return nil, errors.New("Internal Error") }	
-	
-	// Create a filename for the new file.
-	var filepath = repo.getFileDirectory() + "/" + filename
-	if fileExists(filepath) {
-		filepath, err = createUniqueFilename(repo.getFileDirectory(), filename)
-		if err != nil {
-			fmt.Println(err.Error())
-			return nil, errors.New(err.Error())
-		}
-	}
-	if fileExists(filepath) {
-		fmt.Println("********Internal error: file exists but it should not:" + filepath)
-		return nil, errors.New("********Internal error: file exists but it should not:" + filepath)
-	}
-	
-	// Save the file data to a permanent file.
-	var bytes []byte
-	bytes, err = ioutil.ReadAll(file)
-	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
-	if err != nil {
-		fmt.Println(err.Error())
-		return nil, errors.New(err.Error())
-	}
-	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
-	
-	// Add the file to the specified repo's set of Dockerfiles.
-	var dockerfile Dockerfile
-	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), filename, desc, filepath)
-	if err != nil { return nil, errors.New(err.Error()) }
-	
-	// Create an ACL entry for the new file, to allow access by the current user.
-	fmt.Println("Adding ACL entry")
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	dbClient.dbCreateACLEntry(dockerfile.getId(), user.getId(),
-		[]bool{ true, true, true, true, true } )
-	fmt.Println("Created ACL entry")
-	
-	return dockerfile, nil
 }
 
 /*******************************************************************************

@@ -636,7 +636,6 @@ func (realm *InMemRealm) getAdminUserId() string {
 }
 
 func (realm *InMemRealm) getFileDirectory() string {
-	fmt.Println("getFileDirectory...")
 	return realm.FileDirectory
 }
 
