@@ -644,12 +644,15 @@ func (client *InMemClient) getRealm(id string) Realm {
 	var realm Realm
 	var isType bool
 	realm, isType = allObjects[id].(Realm)
+	fmt.Println("getRealm.A")
 	if realm == nil { return nil }
+	fmt.Println("getRealm.B")
 	if ! isType {
 		fmt.Println("realm is a", reflect.TypeOf(realm))
 		fmt.Println("allObjects[", id, "] is a", reflect.TypeOf(allObjects[id]))
 		panic(errors.New("Internal error: object is an unexpected type"))
 	}
+	fmt.Println("getRealm.C")
 	return realm
 }
 
@@ -1080,9 +1083,13 @@ func (client *InMemClient) assignRealmFileDir(realmId string) string {
 func (client *InMemClient) assignRepoFileDir(realmId string, repoId string) string {
 	fmt.Println("assignRepoFileDir(", realmId, ",", repoId, ")...")
 	var realm Realm = client.getRealm(realmId)
+	fmt.Println("assignRepoFileDir.A")
 	var path = realm.getFileDirectory() + "/" + repoId
+	fmt.Println("assignRepoFileDir.B")
 	err := os.MkdirAll(path, 0711)
+	fmt.Println("assignRepoFileDir.C")
 	if err != nil { panic(err) }
+	fmt.Println("assignRepoFileDir.D")
 	return path
 }
 
