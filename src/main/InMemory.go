@@ -893,6 +893,10 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 		RepoId: repoId,
 		FilePath: filepath,
 	}
+	
+	assertThat(newDockerfile.getId() != "", "Internal ERROR: Dockerfile Id is empty")
+	assertThat(newDockerfile.getId() == dockerfileId, "Internal ERROR: Dockerfile Id has not be set properly")
+	
 	fmt.Println("Created Dockerfile")
 	allObjects[dockerfileId] = newDockerfile
 	
