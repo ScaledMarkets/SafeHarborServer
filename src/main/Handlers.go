@@ -952,7 +952,14 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	output, err = cmd.CombinedOutput()
 	outputStr = string(output)
 	fmt.Println("...finished processing dockerfile.")
-	fmt.Println(outputStr)
+	fmt.Println("Output: " + outputStr)
+	
+	fmt.Println("Files in " + tempDirPath + ":")
+	dirfiles, _ := ioutil.ReadDir(tempDirPath)
+	for _, f := range dirfiles {
+		fmt.Println("\t" + f.Name())
+	}
+	
 	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
 	fmt.Println("Performed docker build command successfully.")
 	
