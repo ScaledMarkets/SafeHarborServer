@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"io"
 	"fmt"
+	"os"
 	//"errors"
 )
 
@@ -119,6 +120,11 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 		fmt.Println("Handler is nil!!!")
 		return
 	}
+	var curdir string
+	var err error
+	curdir, err = os.Getwd()
+	if err != nil { fmt.Println(err.Error()) }
+	if dispatcher.server.Debug { fmt.Println("Cur dir='" + curdir + "'") }
 	fmt.Println("Calling handler")
 	if sessionToken == nil { fmt.Println("handleRequest: Session token is nil") }
 	if dispatcher.server.Debug {
