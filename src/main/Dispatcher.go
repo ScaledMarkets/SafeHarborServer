@@ -118,6 +118,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 		fmt.Println("Handler is nil!!!")
 		return
 	}
+	fmt.Println("------------------------")
 	fmt.Println("Calling handler")
 	if sessionToken == nil { fmt.Println("handleRequest: Session token is nil") }
 	if dispatcher.server.Debug {
@@ -136,6 +137,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 	
 	returnOkResponse(headers, w, result)
 	fmt.Printf("Handled %s\n", reqName)
+	fmt.Println()
 }
 
 /*******************************************************************************
@@ -166,6 +168,6 @@ func printHTTPParameters(values url.Values) {
 	// Values is a map[string][]string
 	fmt.Println("HTTP parameters:")
 	for k, v := range values {
-		fmt.Println(k + ": " + v[0])
+		fmt.Println(k + ": '" + v[0] + "'")
 	}
 }
