@@ -933,9 +933,9 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Copied Dockerfile to temp directory")
 	
-	fmt.Println("Changing directory to '" + tempDirPath + "'")
-	err = os.Chdir(tempDirPath)
-	if err != nil { return NewFailureDesc(err.Error()) }
+//	fmt.Println("Changing directory to '" + tempDirPath + "'")
+//	err = os.Chdir(tempDirPath)
+//	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	// Create a the docker build command.
 	// https://docs.docker.com/reference/commandline/build/
@@ -943,7 +943,7 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
 	// Image id format: <hash>[:TAG]
 	
-	cmd = exec.Command("/usr/bin/docker", "build",
+	cmd = exec.Command("cd \"" + tempDirPath + "\"; /usr/bin/docker", "build",
     	"--file", dockerfileName, "--tag", imageName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
