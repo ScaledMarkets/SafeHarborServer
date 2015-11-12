@@ -107,6 +107,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 	headers http.Header, w http.ResponseWriter, reqName string, values url.Values,
 	files map[string][]*multipart.FileHeader) {
 
+	fmt.Println("------------------------")
 	fmt.Printf("Dispatcher: handleRequest for '%s'\n", reqName)
 	var handler, found = dispatcher.handlers[reqName]
 	if ! found {
@@ -118,7 +119,6 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 		fmt.Println("Handler is nil!!!")
 		return
 	}
-	fmt.Println("------------------------")
 	fmt.Println("Calling handler")
 	if sessionToken == nil { fmt.Println("handleRequest: Session token is nil") }
 	if dispatcher.server.Debug {

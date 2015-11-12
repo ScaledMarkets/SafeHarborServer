@@ -250,14 +250,11 @@ func authorizeHandlerAction(server *Server, sessionToken *SessionToken,
  */
 func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo, desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
 	
-	fmt.Println("A1")
 	var headers []*multipart.FileHeader = files["filename"]
 	if len(headers) == 0 { return nil, nil }
 	if len(headers) > 1 { return nil, errors.New("Too many files posted") }
 	
-	fmt.Println("A2")
 	var header *multipart.FileHeader = headers[0]
-	fmt.Println("A3")
 	var filename string = header.Filename	
 	fmt.Println("Filename:", filename)
 	
@@ -276,19 +273,15 @@ func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo, 
 			return nil, errors.New(err.Error())
 		}
 	}
-	fmt.Println("A")
 	if fileExists(filepath) {
 		fmt.Println("********Internal error: file exists but it should not:" + filepath)
 		return nil, errors.New("********Internal error: file exists but it should not:" + filepath)
 	}
 	
 	// Save the file data to a permanent file.
-	fmt.Println("A")
 	var bytes []byte
 	bytes, err = ioutil.ReadAll(file)
-	fmt.Println("B")
 	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
-	fmt.Println("C")
 	if err != nil {
 		fmt.Println(err.Error())
 		return nil, errors.New(err.Error())
@@ -296,10 +289,8 @@ func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo, 
 	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
 	
 	// Add the file to the specified repo's set of Dockerfiles.
-	fmt.Println("D")
 	var dockerfile Dockerfile
 	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), filename, desc, filepath)
-	fmt.Println("E")
 	if err != nil { return nil, errors.New(err.Error()) }
 	
 	// Create an ACL entry for the new file, to allow access by the current user.
