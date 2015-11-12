@@ -932,7 +932,8 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	err = out.Close()
 	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Copied Dockerfile to temp directory")
-		
+	
+	fmt.Println("Changing directory to '" + tempDirPath + "'")
 	err = os.Chdir(tempDirPath)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
