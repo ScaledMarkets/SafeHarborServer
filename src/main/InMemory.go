@@ -1081,8 +1081,13 @@ func (client *InMemClient) assignRepoFileDir(realmId string, repoId string) stri
 	fmt.Println("assignRepoFileDir(", realmId, ",", repoId, ")...")
 	var realm Realm = client.getRealm(realmId)
 	var path = realm.getFileDirectory() + "/" + repoId
+	var curdir string
+	var err error
+	curdir, err = os.Getwd()
+	if err != nil { fmt.Println(err.Error()) }
+	fmt.Println("Current directory is '" + curdir + "'")
 	fmt.Println("Creating directory '" + path + "'...")
-	err := os.MkdirAll(path, 0711)
+	err = os.MkdirAll(path, 0711)
 	if err != nil {
 		fmt.Println("Internal error:", err.Error())
 		panic(err)
