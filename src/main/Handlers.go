@@ -925,13 +925,14 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	var in, out *os.File
 	in, err = os.Open(dockerfile.getFilePath())
 	if err != nil { return NewFailureDesc(err.Error()) }
-	out, err = os.Create(tempDirPath + "/" + dockerfileName)
+	var dockerfileCopyPath string = tempDirPath + "/" + dockerfileName
+	out, err = os.Create(dockerfileCopyPath)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	_, err = io.Copy(out, in)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	err = out.Close()
 	if err != nil { return NewFailureDesc(err.Error()) }
-	fmt.Println("Copied Dockerfile to temp directory")
+	fmt.Println("Copied Dockerfile to " + dockerfileCopyPath)
 	
 //	fmt.Println("Changing directory to '" + tempDirPath + "'")
 //	err = os.Chdir(tempDirPath)
