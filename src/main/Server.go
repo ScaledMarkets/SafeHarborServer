@@ -340,6 +340,7 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 			// https://golang.org/pkg/mime/multipart/#Reader.ReadForm
 			var form *multipart.Form
 			form, err = mpReader.ReadForm(10000)
+			fmt.Println("Read form data")
 			if err != nil {
 				respondWithClientError(writer, err.Error())
 				return
@@ -347,6 +348,7 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 			
 			values = form.Value
 			files = form.File
+			fmt.Println("Set file parameters")
 		}
 
 	} else if httpMethod == "OPTIONS" {
