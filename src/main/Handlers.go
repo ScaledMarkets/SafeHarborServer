@@ -12,9 +12,9 @@ import (
 	"fmt"
 	//"errors"
 	//"bufio"
-	"io"
-	"io/ioutil"
-	"os"
+	//"io"
+	//"io/ioutil"
+	//"os"
 	"os/exec"
 	//"strconv"
 	"strings"
@@ -889,88 +889,15 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	
 	var dbClient = server.dbClient
 	var dockerfile Dockerfile = dbClient.getDockerfile(dockerfileId)
-	var dockerfileName string = dockerfile.getName()
-	fmt.Println("Dockerfile name =", dockerfileName)
-
-	var imageName string
-	imageName, err = GetRequiredPOSTFieldValue(values, "ImageName")
-	if err != nil { return NewFailureDesc(err.Error()) }
-	if imageName == "" { return NewFailureDesc("No HTTP parameter found for ImageName") }
-	if ! localDockerImageNameIsValid(imageName) {
-		return NewFailureDesc(fmt.Sprintf("Image name '%s' is not valid - must be " +
-			"of format <name>[:<tag>]", imageName))
-	}
-	fmt.Println("Image name =", imageName)
+	fmt.Println("Dockerfile name =", dockerfile.getName())
 	
-	// Check if am image with that name already exists.
-	var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "inspect", imageName)
-	var output []byte
-	output, err = cmd.CombinedOutput()
-	var outputStr string = string(output)
-	if ! strings.HasPrefix(outputStr, "Error") {
-		return NewFailureDesc("An image with name " + imageName + " already exists.")
-	}
-	
-	// Verify that the image name conforms to Docker's requirements.
-	err = nameConformsToSafeHarborImageNameRules(imageName)
-	if err != nil { return NewFailureDesc(err.Error()) }
-	
-	// Create a temporary directory to serve as the build context.
-	var tempDirPath string
-	tempDirPath, err = ioutil.TempDir("", "")
-	defer os.RemoveAll(tempDirPath)
-	fmt.Println("Temp directory = ", tempDirPath)
-
-	// Copy dockerfile to that directory.
-	var in, out *os.File
-	in, err = os.Open(dockerfile.getFilePath())
-	if err != nil { return NewFailureDesc(err.Error()) }
-	var dockerfileCopyPath string = tempDirPath + "/" + dockerfileName
-	out, err = os.Create(dockerfileCopyPath)
-	if err != nil { return NewFailureDesc(err.Error()) }
-	_, err = io.Copy(out, in)
-	if err != nil { return NewFailureDesc(err.Error()) }
-	err = out.Close()
-	if err != nil { return NewFailureDesc(err.Error()) }
-	fmt.Println("Copied Dockerfile to " + dockerfileCopyPath)
-	
-//	fmt.Println("Changing directory to '" + tempDirPath + "'")
-//	err = os.Chdir(tempDirPath)
-//	if err != nil { return NewFailureDesc(err.Error()) }
-	
-	// Create a the docker build command.
-	// https://docs.docker.com/reference/commandline/build/
-	// REPOSITORY                      TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
-	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
-	// Image id format: <hash>[:TAG]
-	
-	cmd = exec.Command("/usr/bin/docker", "build",
-	"--file", tempDirPath + "/" + dockerfileName, "--tag", imageName, tempDirPath)
-	
-	// Execute the command in the temporary directory.
-	// This initiates processing of the dockerfile.
-	output, err = cmd.CombinedOutput()
-	outputStr = string(output)
-	fmt.Println("...finished processing dockerfile.")
-	fmt.Println("Output: " + outputStr)
-	
-	fmt.Println("Files in " + tempDirPath + ":")
-	dirfiles, _ := ioutil.ReadDir(tempDirPath)
-	for _, f := range dirfiles {
-		fmt.Println("\t" + f.Name())
-	}
-	
-	if err != nil { return NewFailureDesc(err.Error() + ", " + outputStr) }
-	fmt.Println("Performed docker build command successfully.")
-	
-	// Add a record for the image to the database.
 	var image DockerImage
-	image, err = dbClient.dbCreateDockerImage(repoId, imageName, dockerfile.getDescription())
-	fmt.Println("Created docker image object.")
+	image, err = buildDockerfile(dockerfile, sessionToken, dbClient, values)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	return image.asDockerImageDesc()
 }
-
+	
 /*******************************************************************************
  * Arguments: RepoId, Description, ImageName, <File attachment>
  * Returns: DockerImageDesc
@@ -978,7 +905,43 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 func addAndExecDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
-	return nil
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
+	fmt.Println("Entered addAndExecDockerfile")
+	
+	var repoId string
+	var err error
+	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if repoId == "" { return NewFailureDesc("No HTTP parameter found for RepoId") }
+
+	if failMsg := authorizeHandlerAction(server, sessionToken, WriteMask, repoId,
+		"addAndExecDockerfile"); failMsg != nil { return failMsg }
+	
+	var dbClient = server.dbClient
+	var repo Repo = dbClient.getRepo(repoId)
+	if repo == nil { return NewFailureDesc("Repo does not exist") }
+	
+	var desc string
+	desc, err = GetRequiredPOSTFieldValue(values, "Description")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if desc == "" { return NewFailureDesc("No HTTP parameter found for Description") }
+
+	var imageName string
+	imageName, err = GetRequiredPOSTFieldValue(values, "ImageName")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if imageName == "" { return NewFailureDesc("No HTTP parameter found for ImageName") }
+	
+	var dockerfile Dockerfile
+	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, desc, values, files)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if dockerfile == nil { return NewFailureDesc("No dockerfile was attached") }
+	
+	var image DockerImage
+	image, err = buildDockerfile(dockerfile, sessionToken, dbClient, values)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	return image.asDockerImageDesc()
 }
 
 /*******************************************************************************

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"errors"
 	"os"
+	"os/exec"
+	"io"
 	"strconv"
 	"strings"
 	"regexp"
@@ -248,7 +250,8 @@ func authorizeHandlerAction(server *Server, sessionToken *SessionToken,
 /*******************************************************************************
  * 
  */
-func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo, desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
+func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo,
+	desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
 	
 	var headers []*multipart.FileHeader = files["filename"]
 	if len(headers) == 0 { return nil, nil }
@@ -301,4 +304,91 @@ func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo, 
 	fmt.Println("Created ACL entry")
 	
 	return dockerfile, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func buildDockerfile(dockerfile Dockerfile, sessionToken *SessionToken,
+	dbClient DBClient, values url.Values) (DockerImage, error) {
+
+	var imageName string
+	var err error
+	imageName, err = GetRequiredPOSTFieldValue(values, "ImageName")
+	if err != nil { return nil, err }
+	if imageName == "" { return nil, errors.New("No HTTP parameter found for ImageName") }
+	if ! localDockerImageNameIsValid(imageName) {
+		return nil, errors.New(fmt.Sprintf("Image name '%s' is not valid - must be " +
+			"of format <name>[:<tag>]", imageName))
+	}
+	fmt.Println("Image name =", imageName)
+	
+	// Check if am image with that name already exists.
+	var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "inspect", imageName)
+	var output []byte
+	output, err = cmd.CombinedOutput()
+	var outputStr string = string(output)
+	if ! strings.HasPrefix(outputStr, "Error") {
+		return nil, errors.New("An image with name " + imageName + " already exists.")
+	}
+	
+	// Verify that the image name conforms to Docker's requirements.
+	err = nameConformsToSafeHarborImageNameRules(imageName)
+	if err != nil { return nil, err }
+	
+	// Create a temporary directory to serve as the build context.
+	var tempDirPath string
+	tempDirPath, err = ioutil.TempDir("", "")
+	defer os.RemoveAll(tempDirPath)
+	fmt.Println("Temp directory = ", tempDirPath)
+
+	// Copy dockerfile to that directory.
+	var in, out *os.File
+	in, err = os.Open(dockerfile.getFilePath())
+	if err != nil { return nil, err }
+	var dockerfileCopyPath string = tempDirPath + "/" + dockerfile.getName()
+	out, err = os.Create(dockerfileCopyPath)
+	if err != nil { return nil, err }
+	_, err = io.Copy(out, in)
+	if err != nil { return nil, err }
+	err = out.Close()
+	if err != nil { return nil, err }
+	fmt.Println("Copied Dockerfile to " + dockerfileCopyPath)
+	
+//	fmt.Println("Changing directory to '" + tempDirPath + "'")
+//	err = os.Chdir(tempDirPath)
+//	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	// Create a the docker build command.
+	// https://docs.docker.com/reference/commandline/build/
+	// REPOSITORY                      TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
+	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
+	// Image id format: <hash>[:TAG]
+	
+	cmd = exec.Command("/usr/bin/docker", "build",
+	"--file", tempDirPath + "/" + dockerfile.getName(), "--tag", imageName, tempDirPath)
+	
+	// Execute the command in the temporary directory.
+	// This initiates processing of the dockerfile.
+	output, err = cmd.CombinedOutput()
+	outputStr = string(output)
+	fmt.Println("...finished processing dockerfile.")
+	fmt.Println("Output: " + outputStr)
+	
+	fmt.Println("Files in " + tempDirPath + ":")
+	dirfiles, _ := ioutil.ReadDir(tempDirPath)
+	for _, f := range dirfiles {
+		fmt.Println("\t" + f.Name())
+	}
+	
+	if err != nil { return nil, errors.New(err.Error() + ", " + outputStr) }
+	fmt.Println("Performed docker build command successfully.")
+	
+	// Add a record for the image to the database.
+	var image DockerImage
+	image, err = dbClient.dbCreateDockerImage(dockerfile.getRepo().getId(),
+		imageName, dockerfile.getDescription())
+	fmt.Println("Created docker image object.")
+	
+	return image, nil
 }

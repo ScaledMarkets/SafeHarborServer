@@ -141,12 +141,14 @@ type Dockerfile interface {
 	Resource
 	getFilePath() string
 	asDockerfileDesc() *DockerfileDesc
+	getRepo() Repo
 	
 	//getDockerfileExecEventIds() []string
 }
 
 type Image interface {
 	Resource
+	getRepo() Repo
 }
 
 type DockerImage interface {
