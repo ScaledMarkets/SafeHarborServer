@@ -945,7 +945,7 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 	// Image id format: <hash>[:TAG]
 	
 	cmd = exec.Command("/usr/bin/docker", "build",
-    	"--file", dockerfileName, "--tag", imageName, tempDirPath)
+	"--file", tempDirPath + "/" + dockerfileName, "--tag", imageName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
