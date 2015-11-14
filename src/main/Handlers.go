@@ -156,11 +156,10 @@ func authenticate(server *Server, sessionToken *SessionToken, values url.Values,
 	
 	// Flag whether the user has Write access to the realm.
 	var realm Realm = server.dbClient.getRealm(user.getRealmId())
-	fmt.Println("authenticate.A")
 	var entry ACLEntry = realm.getACLEntryForPartyId(user.getId())
-	fmt.Println("authenticate.B")
-	token.setIsAdminUser(entry.getPermissionMask()[CanWrite])
-	fmt.Println("authenticate.C")
+	if entry != nil {
+		token.setIsAdminUser(entry.getPermissionMask()[CanWrite])
+	}
 	
 	return token
 }
