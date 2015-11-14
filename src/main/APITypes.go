@@ -513,7 +513,7 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 
 func (imageDesc *DockerImageDesc) asResponse() string {
 	return fmt.Sprintf("{\"ObjId\": \"%s\", \"Name\": \"%s\", " +
-		"\"Description\": \"%s\", \"CreationDate\": \"%s\"}",
+		"\"Description\": \"%s\", \"CreationDate\": %s}",
 		imageDesc.ObjId, imageDesc.Name, imageDesc.Description, imageDesc.CreationDate)
 }
 
