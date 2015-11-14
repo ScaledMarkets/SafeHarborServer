@@ -153,6 +153,12 @@ func authenticate(server *Server, sessionToken *SessionToken, values url.Values,
 		return NewFailureDesc("User was authenticated but not found in the database")
 	}
 	token.setRealmId(user.getRealmId())
+	
+	// Flag whether the user has Write access to the realm.
+	var realm Realm = server.dbClient.getRealm(user.getRealmId())
+	var entry ACLEntry = realm.getACLEntryForPartyId(user.getId())
+	token.setIsAdminUser(entry.getPermissionMask()[CanWrite])
+	
 	return token
 }
 
@@ -1407,6 +1413,9 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	// https://github.com/baude
 	// https://developerblog.redhat.com/2015/04/21/introducing-the-atomic-command/
 	// https://aws.amazon.com/partners/redhat/
+	
+	// Clair scan:
+	// https://github.com/coreos/clair
 	
 	var cmd *exec.Cmd = exec.Command("image-scanner-remote.py",
 		"--profile", "localhost", "-s", dockerImage.getDockerImageTag())

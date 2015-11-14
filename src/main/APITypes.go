@@ -137,6 +137,7 @@ type SessionToken struct {
 	UniqueSessionId string
 	AuthenticatedUserid string
 	RealmId string
+	IsAdmin bool
 }
 
 func NewSessionToken(sessionId string, userId string) *SessionToken {
@@ -144,6 +145,7 @@ func NewSessionToken(sessionId string, userId string) *SessionToken {
 		UniqueSessionId: sessionId,
 		AuthenticatedUserid: userId,
 		RealmId: "",
+		IsAdmin: false,
 	}
 }
 
@@ -151,9 +153,15 @@ func (sessionToken *SessionToken) setRealmId(id string) {
 	sessionToken.RealmId = id
 }
 
+func (sessionToken *SessionToken) setIsAdminUser(isAdmin bool) {
+	sessionToken.IsAdmin = isAdmin
+}
+
 func (sessionToken *SessionToken) asResponse() string {
-	return fmt.Sprintf("{\"UniqueSessionId\": \"%s\", \"AuthenticatedUserid\": \"%s\", \"RealmId\": \"%s\"}",
-		sessionToken.UniqueSessionId, sessionToken.AuthenticatedUserid, sessionToken.RealmId)
+	return fmt.Sprintf("{\"UniqueSessionId\": \"%s\", \"AuthenticatedUserid\": \"%s\", " +
+		"\"RealmId\": \"%s\", \"IsAdmin\": %s}",
+		sessionToken.UniqueSessionId, sessionToken.AuthenticatedUserid,
+		sessionToken.RealmId, boolToString(sessionToken.IsAdmin))
 }
 
 /*******************************************************************************
@@ -504,8 +512,9 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 }
 
 func (imageDesc *DockerImageDesc) asResponse() string {
-	return fmt.Sprintf("{\"ObjId\": \"%s\", \"DockerImageTag\": \"%s\"}",
-		imageDesc.ObjId, imageDesc.Name)
+	return fmt.Sprintf("{\"ObjId\": \"%s\", \"Name\": \"%s\", " +
+		"\"Description\": \"%s\", \"CreationDate\": \"%s\"}",
+		imageDesc.ObjId, imageDesc.Name, imageDesc.Description, imageDesc.CreationDate)
 }
 
 type DockerImageDescs []*DockerImageDesc
