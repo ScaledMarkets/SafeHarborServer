@@ -19,6 +19,7 @@ type DBClient interface {
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string, string) (DockerImage, error)
+	dbCreateScanConfig(string, string, string, string, []string) (ScanConfig, error)
 	dbGetAllRealmIds() []string
 	getResource(string) Resource
 	getParty(string) Party
@@ -164,6 +165,22 @@ type DockerImage interface {
 
 // For Image Workflow:
 
+type ParameterValue interface {
+	getName() string
+	getTypeName() string
+	getStringValue() string
+	getConfigId() string
+}
+
+type ScanConfig interface {
+	getRepoId() string
+	getVersion() string
+	getProviderName() string
+	getParameterValueIds() []string
+	getSuccessGraphicImageURL() string
+	getFailureGraphicImageURL() string
+}
+
 type Event interface {
 	getWhen() time.Time
 	getUserId() string
@@ -173,7 +190,8 @@ type ScanEvent interface {
 	Event
 	getScore() string
 	getDockerImageId() string
-	getDatasetIds() []string
+	getConfigId() string
+	getConfigVersion() string
 }
 
 type ImageCreationEvent interface {

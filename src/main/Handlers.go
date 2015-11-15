@@ -1370,16 +1370,70 @@ func getMyDockerImages(server *Server, sessionToken *SessionToken, values url.Va
 }
 
 /*******************************************************************************
- * Arguments: 
- * Returns: 
+ * Arguments: (none)
+ * Returns: ScanProviderDescs
  */
-func defineScan(server *Server, sessionToken *SessionToken, values url.Values,
+func getScanProviders(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
-	return nil
+
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+	
+	var providerDescs ScanProviderDescs = make([]*ScanProviderDesc, 0)
+	
+	// For now, hard-code the scan providers.
+	var params []ParameterInfo = make([]ParameterInfo, 0)
+	var providerDesc *ScanProviderDesc = NewScanProviderDesc("baude", params)
+	providerDescs = append(providerDescs, providerDesc)
+	
+	return providerDescs
 }
 
 /*******************************************************************************
- * Arguments: ScriptId, ImageObjId
+ * Arguments: Name, Desc, RepoId, ProviderName, Params..., SuccessGraphicImageURL, FailureGraphicImageURL
+ * Returns: ScanConfigDesc
+ */
+func defineScanConfig(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+	
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+	
+	var repoId string
+	var err error
+	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if repoId == "" { return NewFailureDesc("No HTTP parameter found for RepoId") }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, WriteMask, repoId,
+		"defineScanConfig"); failMsg != nil { return failMsg }
+	
+	var providerName string
+	providerName, err = GetRequiredPOSTFieldValue(values, "ProviderName")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if providerName == "" { return NewFailureDesc("No HTTP parameter found for ProviderName") }
+	
+	var successGraphicImageURL string
+	successGraphicImageURL, err = GetRequiredPOSTFieldValue(values, "SuccessGraphicImageURL")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if successGraphicImageURL == "" { return NewFailureDesc("No HTTP parameter found for SuccessGraphicImageURL") }
+	
+	var failureGraphicImageURL string
+	failureGraphicImageURL, err = GetRequiredPOSTFieldValue(values, "FailureGraphicImageURL")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if failureGraphicImageURL == "" { return NewFailureDesc("No HTTP parameter found for FailureGraphicImageURL") }
+	
+	// Look for each parameter required by the provider.
+	// (Right now there are none.)
+	
+	var scanConfig *ScanConfig
+	scanConfig, err = server.client.dbCreateScanConfig(name, desc, repoId,
+		providerName, paramValueIds, successGraphicImageURL, failureGraphicImageURL)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	return scanConfig.asScanConfigDesc()
+}
+
+/*******************************************************************************
+ * Arguments: ScanConfigId, ImageObjId
  * Returns: ScanResultDesc
  */
 func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
@@ -1414,7 +1468,11 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	// https://github.com/baude/image-scanner
 	// https://github.com/baude
 	// https://developerblog.redhat.com/2015/04/21/introducing-the-atomic-command/
+	// https://access.redhat.com/articles/881893#get
 	// https://aws.amazon.com/partners/redhat/
+	// https://aws.amazon.com/marketplace/pp/B00VIMU19E
+	// https://aws.amazon.com/marketplace/library/ref=mrc_prm_manage_subscriptions
+	// RHEL7.1 ami at Amazon: ami-4dbf9e7d
 	
 	// Clair scan:
 	// https://github.com/coreos/clair
@@ -1431,7 +1489,7 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	// Tag the image as having been scanned.
 	// ....
 	
-	return NewScanResultDesc(outputStr)
+	return ....NewScanResultDesc(outputStr)
 }
 
 /*******************************************************************************

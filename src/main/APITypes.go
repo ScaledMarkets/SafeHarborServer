@@ -558,23 +558,6 @@ func (mask *PermissionMask) SetCanWrite(can bool) { mask.Mask[2] = can }
 func (mask *PermissionMask) SetCanExecute(can bool) { mask.Mask[3] = can }
 func (mask *PermissionMask) SetCanDelete(can bool) { mask.Mask[4] = can }
 
-func (mask *PermissionMask) ToStringArray() []string {
-	var strAr []string = make([]string, len(mask.Mask))
-	for i, val := range mask.Mask {
-		if val { strAr[i] = "true" } else { strAr[i] = "false" }
-	}
-	return strAr
-}
-
-func ToBoolAr(mask []string) ([]bool, error) {
-	if len(mask) != 5 { return nil, errors.New("Length of mask != 5") }
-	var boolAr []bool = make([]bool, 5)
-	for i, val := range mask {
-		if val == "true" { boolAr[i] = true } else { boolAr[i] = false }
-	}
-	return boolAr, nil
-}
-
 func (mask *PermissionMask) asResponse() string {
 	return fmt.Sprintf(
 		"{\"CanCreate\": %d, \"CanRead\": %d, \"CanWrite\": %d, \"CanExecute\": %d, \"CanDelete\": %d}",
@@ -616,19 +599,95 @@ func (desc *PermissionDesc) asResponse() string {
 /*******************************************************************************
  * 
  */
-type ScanResultDesc struct {
-	BaseType
-	Message string
+type ParameterInfo struct {
+	Name string
+	Type string
 }
 
-func NewScanResultDesc(msg string) *ScanResultDesc {
-	return &ScanResultDesc{
-		Message: msg,
+func NewParameterInfo(name string, tp string) *ParameterInfo {
+	return &ParameterInfo{
+		Name: name,
+		Type: tp,
 	}
 }
 
-func (scanResultDesc *ScanResultDesc) asResponse() string {
-	return fmt.Sprintf("{\"Message\": \"%s\"}", scanResultDesc.Message)
+func (parameterInfo *ParameterInfo) asResponse() string {
+	return fmt.Sprintf("{\"Name\": \"%s\", \"Type\": \"%s\"}",
+		parameterInfo.Name, parameterInfo.Type)
+}
+
+/*******************************************************************************
+ * 
+ */
+type ScanProviderDesc struct {
+	BaseType
+	ProviderName string
+	Parameters []ParameterInfo
+}
+
+func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc {
+	return &ScanProviderDesc{
+		ProviderName: name,
+		Parameters: params,
+	}
+}
+
+func (scanProviderDesc *ScanProviderDesc) asResponse() string {
+	var response string = fmt.Sprintf("{\"ProviderName\": \"%s\", \"Parameters\": [",
+		scanProviderDesc.ProviderName)
+	var firstTime bool = true
+	for _, paramInfo := range scanProviderDesc.Parameters {
+		if firstTime { firstTime = false } else { response = response + ",\n" }
+		response = response + paramInfo.asResponse()
+	}
+	response = response + "]}"
+	return response
+}
+
+type ScanProviderDescs []*ScanProviderDesc
+
+func (scanProviderDescs ScanProviderDescs) asResponse() string {
+	var response string = "["
+	var firstTime bool = true
+	for _, desc := range scanProviderDescs {
+		if firstTime { firstTime = false } else { response = response + ",\n" }
+		response = response + desc.asResponse()
+	}
+	response = response + "]"
+	return response
+}
+
+/*******************************************************************************
+ * 
+ */
+type ParameterValue struct {
+	Name string
+	Type string
+	Value interface{}
+}
+
+func NewParameterValue(name string, tp string, value interface{}) *ParameterValue {
+	return &ParameterValue{
+		Name: name,
+		Type: string,
+		Value: value,
+	}
+}
+
+/*******************************************************************************
+ * 
+ */
+type ScanConfigDesc struct {
+	BaseType
+	Id string
+	ParamValues []ParameterValue
+}
+
+func NewScanConfigDesc(id string, paramValues []ParameterValue) *ScanConfigDesc {
+	return &ScanConfigDesc{
+		Id: id,
+		ParamValues: paramValues,
+	}
 }
 
 /*******************************************************************************
@@ -636,7 +695,7 @@ func (scanResultDesc *ScanResultDesc) asResponse() string {
  */
 type EventDesc struct {
 	BaseType
-	Id string
+	EventId string
 	When time.Time
 	UserId string
 }
@@ -652,6 +711,26 @@ func NewEventDesc(objId string, when time.Time, userId string) *EventDesc {
 func (eventDesc *EventDesc) asResponse() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\"}",
 		eventDesc.Id, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId)
+}
+
+/*******************************************************************************
+ * 
+ */
+type ScanEventDesc struct {
+	EventDesc
+	ScanConfigId
+	ScanConfigVersion
+	Score
+}
+
+func NewScanEventDesc(.... string) *ScanResultDesc {
+	return &ScanResultDesc{
+		....,
+	}
+}
+
+func (scanEventDesc *ScanEventDesc) asResponse() string {
+	return fmt.Sprintf("{\"....\": \"%s\"}", scanEventDesc.....)
 }
 
 
@@ -690,4 +769,21 @@ func GetRequiredPOSTFieldValue(values url.Values, name string) (string, error) {
 	var value string = GetPOSTFieldValue(values, name)
 	if value == "" { return "", errors.New(fmt.Sprintf("POST field not found: %s", name)) }
 	return value, nil
+}
+
+func (mask *PermissionMask) ToStringArray() []string {
+	var strAr []string = make([]string, len(mask.Mask))
+	for i, val := range mask.Mask {
+		if val { strAr[i] = "true" } else { strAr[i] = "false" }
+	}
+	return strAr
+}
+
+func ToBoolAr(mask []string) ([]bool, error) {
+	if len(mask) != 5 { return nil, errors.New("Length of mask != 5") }
+	var boolAr []bool = make([]bool, 5)
+	for i, val := range mask {
+		if val == "true" { boolAr[i] = true } else { boolAr[i] = false }
+	}
+	return boolAr, nil
 }

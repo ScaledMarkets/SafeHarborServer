@@ -596,7 +596,6 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo, adminUserId strin
 	}
 	realmId = createUniqueDbObjectId()
 	var newRealm *InMemRealm = &InMemRealm{
-		//InMemPersistObj: InMemPersistObj{Id: realmId, Client: client},
 		InMemResource: *client.NewInMemResource(realmId, realmInfo.RealmName, realmInfo.Description),
 		AdminUserId: adminUserId,
 		OrgFullName: realmInfo.OrgFullName,
@@ -1017,6 +1016,101 @@ func (image *InMemDockerImage) asDockerImageDesc() *DockerImageDesc {
 
 func (image *InMemDockerImage) isDockerImage() bool { return true }
 
+/*******************************************************************************
+ * 
+ */
+type InMemParameterValue struct {
+	Name string
+	TypeName string
+	StringValue string
+	ConfigId string
+}
+
+func (paramValue *InMemParameterValue) getName() string {
+	return paramValue.Name
+}
+
+func (paramValue *InMemParameterValue) getTypeName() string {
+	return paramValue.TypeName
+}
+
+func (paramValue *InMemParameterValue) getStringValue() string {
+	return paramValue.StringValue
+}
+
+func (paramValue *InMemParameterValue) getConfigId() string {
+	return paramValue.ConfigId
+}
+
+/*******************************************************************************
+ * 
+ */
+type InMemScanConfig struct {
+	InMemResource
+	RepoId string
+	Version string
+	ProviderName string
+	ParameterValueIds []string
+	SuccessGraphicImageURL string
+	FailureGraphicImageURL string
+}
+
+func (clint *InMemClient) dbCreateScanConfig(name, desc, repoId,
+	providerName string, paramValueIds []string, successGraphicImageURL,
+	failureGraphicImageURL string) (ScanConfig, error) {
+	
+	// Check if a scanConfig with that name already exists within the repo.
+	var repo Repo = client.getRepo(repoId)
+	if repo == nil { return nil, errors.New(fmt.Sprintf(
+		"Unidentified repo for repo Id %s", repoId))
+	}
+	if repo.getScanConfigByName(name) != nil { return nil, errors.New(
+		fmt.Sprintf("ScanConfig named %s already exists within repo %s", name,
+			client.getRealm(repoId).getName()))
+	}
+	
+	var scanConfigVersion string = ....createNewScanConfigVersion(repoId, name)
+	var scanConfigId string = createUniqueDbObjectId()
+	var scanConfig *InMemScanConfig = &InMemScanConfig{
+		InMemResource: *client.NewInMemResource(scanConfigId, name, desc),
+		RepoId: repoId,
+		Version: scanConfigVersion,
+		ProviderName: providerName,
+		ParameterValueIds: paramValueIds,
+		SuccessGraphicImageURL: successGraphicImageURL,
+		FailureGraphicImageURL: failureGraphicImageURL,
+	}
+	
+	....Link to repo
+	
+	....Add ACLEntry
+	
+	return scanConfig, nil
+}
+
+func (scanConfig *InMemScanConfig) getRepoId() string {
+	return scanConfig.RepoId
+}
+
+func (scanConfig *InMemScanConfig) getVersion() string {
+	return scanConfig.Version
+}
+
+func (scanConfig *InMemScanConfig) getProviderName() string {
+	return scanConfig.ProviderName
+}
+
+func (scanConfig *InMemScanConfig) getParameterValueIds() []string {
+	return scanConfig.ParameterValueIds
+}
+
+func (scanConfig *InMemScanConfig) getSuccessGraphicImageURL() string {
+	return scanConfig.SuccessGraphicImageURL
+}
+
+func (scanConfig *InMemScanConfig) getFailureGraphicImageURL() string {
+	return scanConfig.FailureGraphicImageURL
+}
 
 /*******************************************************************************
  * 
@@ -1037,6 +1131,18 @@ func (event *InMemEvent) getUserId() string {
 
 func (event *InMemEvent) asEventDesc() *EventDesc {
 	return NewEventDesc(event.Id, event.When, event.UserId)
+}
+
+/*******************************************************************************
+ * 
+ */
+type InMemScanEvent struct {
+	InMemEvent
+	
+}
+
+func (event *InMemScanEvent) asScanEventDesc() *ScanEventDesc {
+	return NewScanEventDesc(....event.Id, event.When, event.UserId)
 }
 
 
