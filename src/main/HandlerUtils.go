@@ -254,7 +254,7 @@ func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo,
 	desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
 	
 	var headers []*multipart.FileHeader = files["filename"]
-	if len(headers) == 0 { return nil, nil }
+	if len(headers) == 0 { return nil, errors.New("No POST parameter 'filename' found") }
 	if len(headers) > 1 { return nil, errors.New("Too many files posted") }
 	
 	var header *multipart.FileHeader = headers[0]
@@ -344,7 +344,7 @@ func buildDockerfile(dockerfile Dockerfile, sessionToken *SessionToken,
 
 	// Copy dockerfile to that directory.
 	var in, out *os.File
-	in, err = os.Open(dockerfile.getFilePath())
+	in, err = os.Open(dockerfile.getExternalFilePath())
 	if err != nil { return nil, err }
 	var dockerfileCopyPath string = tempDirPath + "/" + dockerfile.getName()
 	out, err = os.Create(dockerfileCopyPath)

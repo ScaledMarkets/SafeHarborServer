@@ -54,9 +54,6 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 
 	var exists bool
 	
-	config.service, exists = entries["SERVICE"]
-	if ! exists { return nil, fmt.Errorf("Did not find SERVICE in configuration") }
-	
 	config.netIntfName, exists = entries["INTFNAME"]
 	if ! exists { return nil, fmt.Errorf("Did not find INTFNAME in configuration") }
 	
@@ -72,23 +69,26 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	config.LocalRootCertPath, exists = entries["LOCAL_ROOT_CERT_PATH"]
 	if ! exists { return nil, fmt.Errorf("Did not find LOCAL_ROOT_CERT_PATH in configuration") }
 	
-	config.AuthServerName, exists = entries["AUTH_SERVER_DNS_NAME"]
-	if ! exists { return nil, fmt.Errorf("Did not find AUTH_SERVER_DNS_NAME in configuration") }
-	
-	portStr, exists = entries["AUTH_PORT"]
-	if ! exists { return nil, fmt.Errorf("Did not find AUTH_PORT in configuration") }
-	config.AuthPort, err = strconv.Atoi(portStr)
-	if err != nil { return nil, fmt.Errorf("AUTH_PORT value in configuration is not an integer") }
-	
-	config.AuthCertPath, exists = entries["AUTH_CERT_PATH"]
-	if ! exists { return nil, fmt.Errorf("Did not find AUTH_CERT_PATH in configuration") }
-	
-	config.AuthKeyPath, exists = entries["AUTH_PRIVATE_KEY_PATH"]
-	if ! exists { return nil, fmt.Errorf("Did not find AUTH_PRIVATE_KEY_PATH in configuration") }
-	
 	config.FileRepoRootPath, exists = entries["FILE_REPOSITORY_ROOT"]
 	if ! exists { config.FileRepoRootPath = "Repository" }
 	config.FileRepoRootPath = strings.TrimRight(config.FileRepoRootPath, "/ ")
+	
+	//config.service, exists = entries["SERVICE"]
+	//if ! exists { return nil, fmt.Errorf("Did not find SERVICE in configuration") }
+	
+	//config.AuthServerName, exists = entries["AUTH_SERVER_DNS_NAME"]
+	//if ! exists { return nil, fmt.Errorf("Did not find AUTH_SERVER_DNS_NAME in configuration") }
+	
+	//portStr, exists = entries["AUTH_PORT"]
+	//if ! exists { return nil, fmt.Errorf("Did not find AUTH_PORT in configuration") }
+	//config.AuthPort, err = strconv.Atoi(portStr)
+	//if err != nil { return nil, fmt.Errorf("AUTH_PORT value in configuration is not an integer") }
+	
+	//config.AuthCertPath, exists = entries["AUTH_CERT_PATH"]
+	//if ! exists { return nil, fmt.Errorf("Did not find AUTH_CERT_PATH in configuration") }
+	
+	//config.AuthKeyPath, exists = entries["AUTH_PRIVATE_KEY_PATH"]
+	//if ! exists { return nil, fmt.Errorf("Did not find AUTH_PRIVATE_KEY_PATH in configuration") }
 	
 	fmt.Println("Configuration values obtained")
 	return config, nil

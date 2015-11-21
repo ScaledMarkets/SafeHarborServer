@@ -8,6 +8,7 @@ package main
 
 import (
 	"time"
+	"os"
 )
 
 type DBClient interface {
@@ -19,7 +20,8 @@ type DBClient interface {
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string, string) (DockerImage, error)
-	dbCreateScanConfig(string, string, string, string, []string) (ScanConfig, error)
+	dbCreateScanConfig(string, string, string, string, []string, string, string) (ScanConfig, error)
+	dbCreateScanEvent(string, string, string, time.Time, string, string) (ScanEvent, error)
 	dbGetAllRealmIds() []string
 	getResource(string) Resource
 	getParty(string) Party
@@ -30,6 +32,7 @@ type DBClient interface {
 	getRepo(string) Repo
 	getDockerfile(string) Dockerfile
 	getDockerImage(string) DockerImage
+	getScanConfig(string) ScanConfig
 	getRealmsAdministeredByUser(string) []string  // those realms for which user can edit the realm
 	init()
 	printDatabase()
@@ -132,6 +135,7 @@ type Repo interface {
 	getDockerImageIds() []string
 	addDockerfile(Dockerfile)
 	addDockerImage(DockerImage)
+	addScanConfig(ScanConfig)
 	asRepoDesc() *RepoDesc
 	
 	//getDatasetIds() []string
@@ -140,7 +144,7 @@ type Repo interface {
 
 type Dockerfile interface {
 	Resource
-	getFilePath() string
+	getExternalFilePath() string
 	asDockerfileDesc() *DockerfileDesc
 	getRepo() Repo
 	
@@ -166,6 +170,7 @@ type DockerImage interface {
 // For Image Workflow:
 
 type ParameterValue interface {
+	PersistObj
 	getName() string
 	getTypeName() string
 	getStringValue() string
@@ -173,25 +178,31 @@ type ParameterValue interface {
 }
 
 type ScanConfig interface {
+	PersistObj
 	getRepoId() string
-	getVersion() string
+	getExternalObjPath() string
+	getCurrentExtObjId() string
+	getAsTempFile(string) *os.File
 	getProviderName() string
 	getParameterValueIds() []string
 	getSuccessGraphicImageURL() string
 	getFailureGraphicImageURL() string
+	asScanConfigDesc() *ScanConfigDesc
 }
 
 type Event interface {
+	PersistObj
 	getWhen() time.Time
-	getUserId() string
+	getUserObjId() string
 }
 
 type ScanEvent interface {
 	Event
 	getScore() string
 	getDockerImageId() string
-	getConfigId() string
-	getConfigVersion() string
+	getScanConfigId() string
+	asScanEventDesc() *ScanEventDesc
+	getScanConfigExternalObjId() string
 }
 
 type ImageCreationEvent interface {
@@ -201,6 +212,7 @@ type ImageCreationEvent interface {
 type DockerfileExecEvent interface {
 	ImageCreationEvent
 	getDockerfileId() string
+	getDockerfileExternalObjId() string
 }
 
 type UploadEvent interface {
@@ -208,6 +220,7 @@ type UploadEvent interface {
 }
 
 type Dataset interface {
+	PersistObj
 	getRepoId() string
 	getRepoExternalObjPath() string
 	//RepoExternalObjId string
@@ -215,6 +228,7 @@ type Dataset interface {
 }
 
 type Flag interface {
+	PersistObj
 	getExpr() string
 	getRepoId() string
 	getRepoExternalObjPath() string

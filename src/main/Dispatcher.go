@@ -85,6 +85,7 @@ func NewDispatcher() *Dispatcher {
 		"getMyDockerImages": getMyDockerImages,
 		"getScanProviders": getScanProviders,
 		"defineScanConfig": defineScanConfig,
+		"replaceScanConfig": replaceScanConfig,
 		"scanImage": scanImage,
 		"getUserEvents": getUserEvents,
 		"getImageEvents": getImageEvents,

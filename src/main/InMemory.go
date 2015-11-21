@@ -19,6 +19,7 @@ import (
 	"errors"
 	"reflect"
 	"os"
+	"io/ioutil"
 	"crypto/sha1"
 	"time"
 )
@@ -801,6 +802,7 @@ type InMemRepo struct {
 	RealmId string
 	DockerfileIds []string
 	DockerImageIds []string
+	ScanConfigIds []string
 	FileDirectory string  // where this repo's files are stored
 }
 
@@ -812,6 +814,7 @@ func (client *InMemClient) dbCreateRepo(realmId string, name string, desc string
 		RealmId: realmId,
 		DockerfileIds: make([]string, 0),
 		DockerImageIds: make([]string, 0),
+		ScanConfigIds: make([]string, 0),
 		FileDirectory: client.assignRepoFileDir(realmId, repoId),
 	}
 	fmt.Println("Created repo")
@@ -859,6 +862,10 @@ func (repo *InMemRepo) addDockerImage(image DockerImage) {
 	repo.DockerImageIds = append(repo.DockerImageIds, image.getId())
 }
 
+func (repo *InMemRepo) addScanConfig(config ScanConfig) {
+	repo.ScanConfigIds = append(repo.ScanConfigIds, config.getId())
+}
+
 func (repo *InMemRepo) getParentId() string {
 	return repo.RealmId
 }
@@ -876,7 +883,7 @@ func (repo *InMemRepo) asRepoDesc() *RepoDesc {
 type InMemDockerfile struct {
 	InMemResource
 	RepoId string
-	FilePath string
+	FilePath string  // make immutable
 }
 
 func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
@@ -928,7 +935,7 @@ func (dockerfile *InMemDockerfile) getRepo() Repo {
 	return repo
 }
 
-func (dockerfile *InMemDockerfile) getFilePath() string {
+func (dockerfile *InMemDockerfile) getExternalFilePath() string {
 	return dockerfile.FilePath
 }
 
@@ -1048,14 +1055,14 @@ func (paramValue *InMemParameterValue) getConfigId() string {
 type InMemScanConfig struct {
 	InMemResource
 	RepoId string
-	Version string
+	ExternalObjPath string
 	ProviderName string
 	ParameterValueIds []string
 	SuccessGraphicImageURL string
 	FailureGraphicImageURL string
 }
 
-func (clint *InMemClient) dbCreateScanConfig(name, desc, repoId,
+func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	providerName string, paramValueIds []string, successGraphicImageURL,
 	failureGraphicImageURL string) (ScanConfig, error) {
 	
@@ -1069,31 +1076,56 @@ func (clint *InMemClient) dbCreateScanConfig(name, desc, repoId,
 			client.getRealm(repoId).getName()))
 	}
 	
-	var scanConfigVersion string = ....createNewScanConfigVersion(repoId, name)
 	var scanConfigId string = createUniqueDbObjectId()
+	var externalObjPath string = repo.getFileDirectory() + "/" + scanConfigId
 	var scanConfig *InMemScanConfig = &InMemScanConfig{
 		InMemResource: *client.NewInMemResource(scanConfigId, name, desc),
 		RepoId: repoId,
-		Version: scanConfigVersion,
+		ExternalObjPath: externalObjPath,
 		ProviderName: providerName,
 		ParameterValueIds: paramValueIds,
 		SuccessGraphicImageURL: successGraphicImageURL,
 		FailureGraphicImageURL: failureGraphicImageURL,
 	}
 	
-	....Link to repo
-	
-	....Add ACLEntry
+	// Link to repo
+	repo.addScanConfig(scanConfig)
 	
 	return scanConfig, nil
+}
+
+func (clint *InMemClient) getScanConfig(string) ScanConfig {
+	var scanConfig ScanConfig
+	var isType bool
+	scanConfig, isType = allObjects[id].(ScanConfig)
+	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
+	return scanConfig
 }
 
 func (scanConfig *InMemScanConfig) getRepoId() string {
 	return scanConfig.RepoId
 }
 
-func (scanConfig *InMemScanConfig) getVersion() string {
-	return scanConfig.Version
+func (scanConfig *InMemScanConfig) getExternalObjPath() string {
+	return scanConfig.ExternalObjPath
+}
+
+func (scanConfig *InMemScanConfig) getCurrentExtObjId() string {
+	return scanConfig.ExternalObjPath  // temporary - until we incorporate git.
+		// Then we will replace this with the hash and path.
+		// See https://stackoverflow.com/questions/2466735/how-to-checkout-only-one-file-from-git-repository
+		// See also https://git-scm.com/docs/git-hash-object
+}
+
+func (scanConfig *InMemScanConfig) getAsTempFile(string) *os.File {
+	var file *os.File
+	var err error
+	file, err = ioutil.TempFile("", "")
+	if err != nil {
+		fmt.Println("Error: Unable to create temp file")
+		return nil
+	}
+	return file
 }
 
 func (scanConfig *InMemScanConfig) getProviderName() string {
@@ -1112,21 +1144,43 @@ func (scanConfig *InMemScanConfig) getFailureGraphicImageURL() string {
 	return scanConfig.FailureGraphicImageURL
 }
 
+func (scanConfig *InMemScanConfig) asScanConfigDesc() *ScanConfigDesc {
+	var paramValues []ParameterValue = make([]ParameterValue, 0)
+	for _, valueId := range scanConfig.ParameterValueIds {
+		var paramValue ParameterValue = scanConfig.Client.getParameterValue(valueId)
+		if paramValue == nil {
+			fmt.Println("Internal error: Could not find ParameterValue with Id " + valueId)
+			continue
+		}
+		paramValues = append(paramValues, paramValue)
+	}
+	
+	return NewScanConfigDesc(scanConfig.Id, paramValues)
+}
+
 /*******************************************************************************
  * 
  */
 type InMemEvent struct {
 	InMemPersistObj
 	When time.Time
-	UserId string
+	UserObjId string
+}
+
+func NewInMemEvent(id string, when string, userObjId string) InMemEvent {
+	return &InMemEvent{
+		InMemPersistObj: *NewInMemPersistObj(id),
+		When: when,
+		UserObjId: userObjId,
+	}
 }
 
 func (event *InMemEvent) getWhen() time.Time {
 	return event.When
 }
 
-func (event *InMemEvent) getUserId() string {
-	return event.UserId
+func (event *InMemEvent) getUserObjId() string {
+	return event.UserObjId
 }
 
 func (event *InMemEvent) asEventDesc() *EventDesc {
@@ -1138,11 +1192,68 @@ func (event *InMemEvent) asEventDesc() *EventDesc {
  */
 type InMemScanEvent struct {
 	InMemEvent
+	ScanConfigId string
+	DockerImageId string
+	Score string
+	ScanConfigExternalObjId string
+}
+
+func (clint *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
+	userObjId string, when time.Time, score string, extObjId string) (ScanEvent, error) {
 	
+	var id string = createUniqueDbObjectId()
+	var event = &InMemScanEvent{
+		InMemEvent: *NewInMemEvent(id, when, userObjId),
+		ScanConfigId: scanConfigId,
+		DockerImageId: imageId,
+		Score: score,
+		ScanConfigExternalObjId: extObjId,
+	}
+}
+
+func (event *InMemScanEvent) getScore() string {
+	return event.Score
+}
+
+func (event *InMemScanEvent) getDockerImageId() string {
+	return event.DockerImageId
+}
+
+func (event *InMemScanEvent) getScanConfigId() string {
+	return event.ScanConfigId
+}
+
+func (event *InMemScanEvent) getScanConfigExternalObjId() string {
+	return event.ScanConfigExternalObjId
 }
 
 func (event *InMemScanEvent) asScanEventDesc() *ScanEventDesc {
-	return NewScanEventDesc(....event.Id, event.When, event.UserId)
+	return NewScanEventDesc(event.Id, event.When, event.UserId,
+		event.ScanConfigId, event.Score)
+}
+
+/*******************************************************************************
+ * 
+ */
+type InMemImageCreationEvent struct {
+	InMemEvent
+}
+
+/*******************************************************************************
+ * 
+ */
+type InMemDockerfileExecEvent struct {
+	InMemImageCreationEvent
+	DockerfileId string
+	DockerfileExternalObjId string
+}
+
+func (execEvent *InMemDockerfileExecEvent) getDockerfileId() string {
+	return execEvent.DockerfileId
+}
+
+func (execEvent *InMemDockerfileExecEvent) getDockerfileExternalObjId() string {
+	return execEvent.DockerfileExternalObjId
 }
 
 

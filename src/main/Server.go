@@ -132,7 +132,7 @@ func NewServer(debug bool, noauthor bool, port int, adapter string, secretSalt s
 		os.Exit(1);
 	}
 	
-	// Verify that the docker daemon is running, and start it if not.
+	// Verify that the docker service is running, and start it if not.
 	// sudo service docker start
 	// ....
 	
@@ -266,11 +266,13 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	
 	defer httpReq.Body.Close() // ensure that request body is always closed.
 
+	if server.Debug { printHeaders(httpReq) }
+	
 	// Authenitcate session or user.
 	var sessionToken *SessionToken = nil
-	
 	sessionToken = server.authService.authenticateRequest(httpReq)
 	if sessionToken == nil { fmt.Println("Server.ServeHTTP: Session token is nil") }
+	
 	//if sessionToken == nil { //return authent failure
 	//	fmt.Println("Failed to authenticate - request being denied")
 	//	respondWithClientError(writer, "Failed to authenticate - request being denied")
@@ -287,6 +289,7 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	//writer.Header().Set("Access-Control-Expose-Headers",
 	
 	server.dispatch(sessionToken, writer, httpReq)
+	server.authService.addSessionIdToResponse(sessionToken, writer)
 }
 
 /*******************************************************************************
@@ -340,6 +343,10 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 			// https://golang.org/pkg/mime/multipart/#Reader.ReadForm
 			var form *multipart.Form
 			form, err = mpReader.ReadForm(10000)
+			if form == nil {
+				respondWithClientError(writer, "No form found")
+				return
+			}
 			fmt.Println("Read form data")
 			if err != nil {
 				respondWithClientError(writer, err.Error())
@@ -458,4 +465,14 @@ func respondWithClientError(writer http.ResponseWriter, err string) {
 func respondWithServerError(writer http.ResponseWriter, err string) {
 	writer.WriteHeader(500)
 	io.WriteString(writer, err)
+}
+
+/*******************************************************************************
+ * Print the HTTP headers to stdout.
+ */
+func printHeaders(httpReq *http.Request) {
+	fmt.Println("HTTP headers:")
+	for key, val := range httpReq.Header {
+		fmt.Println("\t" + key + ": " + val[0])
+	}
 }

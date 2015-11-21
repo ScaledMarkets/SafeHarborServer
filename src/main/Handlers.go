@@ -14,11 +14,12 @@ import (
 	//"bufio"
 	//"io"
 	//"io/ioutil"
-	//"os"
+	"os"
 	"os/exec"
 	//"strconv"
 	"strings"
 	"reflect"
+	"time"
 )
 
 /*******************************************************************************
@@ -146,12 +147,15 @@ func authenticate(server *Server, sessionToken *SessionToken, values url.Values,
 	var err error
 	creds, err = GetCredentials(values)
 	if err != nil { return NewFailureDesc(err.Error()) }
-	var token *SessionToken = server.authService.authenticateCredentials(creds)
-	var user User = server.dbClient.dbGetUserByUserId(token.AuthenticatedUserid)
+	
+	// Verify credentials.
+	var user User = server.dbClient.dbGetUserByUserId(creds.UserId)
 	if user == nil {
-		server.authService.invalidateSessionId(token.UniqueSessionId)
 		return NewFailureDesc("User was authenticated but not found in the database")
 	}
+	
+	// Create new user session.
+	var token *SessionToken = server.authService.createSession(creds)
 	token.setRealmId(user.getRealmId())
 	
 	// Flag whether the user has Write access to the realm.
@@ -182,7 +186,7 @@ func logout(server *Server, sessionToken *SessionToken, values url.Values,
 	
 
 
-	return nil
+	return NewFailureDesc("Not implemented yet: logout")
 }
 
 /*******************************************************************************
@@ -238,7 +242,7 @@ func deleteUser(server *Server, sessionToken *SessionToken, values url.Values,
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	return NewFailureDesc("Not implemented yet: deleteUser")
 }
 
 /*******************************************************************************
@@ -294,7 +298,7 @@ func deleteGroup(server *Server, sessionToken *SessionToken, values url.Values,
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	return NewFailureDesc("Not implemented yet: deleteGroup")
 }
 
 /*******************************************************************************
@@ -380,7 +384,7 @@ func remGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	return NewFailureDesc("Not implemented yet: remGroupUser")
 }
 
 /*******************************************************************************
@@ -485,7 +489,7 @@ func deleteRealm(server *Server, sessionToken *SessionToken, values url.Values,
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	return NewFailureDesc("Not implemented yet: deleteRealm")
 }
 
 /*******************************************************************************
@@ -526,7 +530,7 @@ func remRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	return NewFailureDesc("Not implemented yet: remRealmUser")
 }
 
 /*******************************************************************************
@@ -717,17 +721,14 @@ func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 	var repo Repo
 	repo, err = server.dbClient.dbCreateRepo(realmId, repoName, repoDesc)
 	if err != nil { return NewFailureDesc(err.Error()) }
-	fmt.Println("createRepo.A")
 
 	// Add ACL entry to enable the current user to access what he/she just created.
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	fmt.Println("createRepo.B")
 	server.dbClient.dbCreateACLEntry(repo.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	fmt.Println("createRepo.C")
 	
 	_, err = createDockerfile(sessionToken, server.dbClient, repo, repo.getDescription(), values, files)
-	fmt.Println("createRepo.D")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	return repo.asRepoDesc()
@@ -742,7 +743,7 @@ func deleteRepo(server *Server, sessionToken *SessionToken, values url.Values,
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	return NewFailureDesc("Not implemented yet: deleteRepo")
 }
 
 /*******************************************************************************
@@ -858,7 +859,7 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 }
 
 /*******************************************************************************
- * Arguments: RepoId, DockerfileId, File
+ * Arguments: DockerfileId, File
  * Returns: Result
  */
 func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Values,
@@ -866,7 +867,7 @@ func replaceDockerfile(server *Server, sessionToken *SessionToken, values url.Va
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	return NewFailureDesc("Not implemented yet: replaceDockerfile")
 }
 
 /*******************************************************************************
@@ -961,7 +962,7 @@ func downloadImage(server *Server, sessionToken *SessionToken, values url.Values
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	return NewFailureDesc("Not implemented yet: downloadImage")
 }
 
 /*******************************************************************************
@@ -1089,7 +1090,7 @@ func remPermission(server *Server, sessionToken *SessionToken, values url.Values
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	return NewFailureDesc("Not implemented yet: remPermission")
 }
 
 /*******************************************************************************
@@ -1382,8 +1383,9 @@ func getScanProviders(server *Server, sessionToken *SessionToken, values url.Val
 	
 	// For now, hard-code the scan providers.
 	var params []ParameterInfo = make([]ParameterInfo, 0)
-	var providerDesc *ScanProviderDesc = NewScanProviderDesc("baude", params)
-	providerDescs = append(providerDescs, providerDesc)
+	//providerDescs = append(providerDescs, NewScanProviderDesc("lynis", params))
+	//providerDescs = append(providerDescs, NewScanProviderDesc("baude", params))
+	providerDescs = append(providerDescs, NewScanProviderDesc("clair", params))
 	
 	return providerDescs
 }
@@ -1398,7 +1400,18 @@ func defineScanConfig(server *Server, sessionToken *SessionToken, values url.Val
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 	
 	var repoId string
+	var name string
+	var desc string
 	var err error
+
+	name, err = GetRequiredPOSTFieldValue(values, "Name")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if repoId == "" { return NewFailureDesc("No HTTP parameter found for Name") }
+	
+	desc, err = GetRequiredPOSTFieldValue(values, "Description")
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if repoId == "" { return NewFailureDesc("No HTTP parameter found for Description") }
+	
 	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	if repoId == "" { return NewFailureDesc("No HTTP parameter found for RepoId") }
@@ -1423,41 +1436,73 @@ func defineScanConfig(server *Server, sessionToken *SessionToken, values url.Val
 	
 	// Look for each parameter required by the provider.
 	// (Right now there are none.)
+	var paramValueIds []string = make([]string, 0)
 	
-	var scanConfig *ScanConfig
-	scanConfig, err = server.client.dbCreateScanConfig(name, desc, repoId,
+	var scanConfig ScanConfig
+	scanConfig, err = server.dbClient.dbCreateScanConfig(name, desc, repoId,
 		providerName, paramValueIds, successGraphicImageURL, failureGraphicImageURL)
 	if err != nil { return NewFailureDesc(err.Error()) }
+	
+	// Add ACL entry to enable the current user to access what he/she just created.
+	var userId string = sessionToken.AuthenticatedUserid
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	server.dbClient.dbCreateACLEntry(scanConfig.getId(), user.getId(),
+		[]bool{ true, true, true, true, true } )
 	
 	return scanConfig.asScanConfigDesc()
 }
 
+
+/*******************************************************************************
+ * Arguments: ScanConfigId, Desc, RepoId, ProviderName, Params…, SuccessGraphicImageURL, FailureGraphicImageURL
+ * Returns: 
+ */
+func replaceScanConfig(server *Server, sessionToken *SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) RespIntfTp {
+
+	//....
+	return NewFailureDesc("Not implemented yet: replaceScanConfig")
+}
+
 /*******************************************************************************
  * Arguments: ScanConfigId, ImageObjId
- * Returns: ScanResultDesc
+ * Returns: ScanEventDesc
  */
 func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) RespIntfTp {
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	var scriptId, imageObjId string
+	var scanConfigId, imageObjId string
 	var err error
-	scriptId, err = GetRequiredPOSTFieldValue(values, "ScriptId")
+	scanConfigId, err = GetRequiredPOSTFieldValue(values, "ScanConfigId")
 	if err != nil { return NewFailureDesc(err.Error()) }
 	imageObjId, err = GetRequiredPOSTFieldValue(values, "ImageObjId")
 	if err != nil { return NewFailureDesc(err.Error()) }
-	fmt.Println(scriptId)
+	fmt.Println(scanConfigId)
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, imageObjId,
 		"scanImage"); failMsg != nil { return failMsg }
-	if failMsg := authorizeHandlerAction(server, sessionToken, ExecuteMask, scriptId,
+	if failMsg := authorizeHandlerAction(server, sessionToken, ExecuteMask, scanConfigId,
 		"scanImage"); failMsg != nil { return failMsg }
 	
 	var dockerImage DockerImage = server.dbClient.getDockerImage(imageObjId)
 	if dockerImage == nil {
 		return NewFailureDesc("Docker image with object Id " + imageObjId + " not found")
 	}
+	
+	var scanConfig ScanConfig = server.dbClient.getScanConfig(scanConfigId)
+	if scanConfig == nil {
+		return NewFailureDesc("Scan Config with object Id " + scanConfigId + " not found")
+	}
+
+	// Get the current version of the ScanConfig file.
+	var extObjId string = scanConfig.getCurrentExtObjId()
+	var scanConfigTempFile *os.File = scanConfig.getAsTempFile(extObjId)
+	if scanConfigTempFile == nil {
+		return NewFailureDesc("Unable to obtain scan config as a temp file")
+	}
+	defer os.RemoveAll(scanConfigTempFile.Name())
 
 	// Lynis scan:
 	// https://cisofy.com/lynis/
@@ -1473,23 +1518,28 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	// https://aws.amazon.com/marketplace/pp/B00VIMU19E
 	// https://aws.amazon.com/marketplace/library/ref=mrc_prm_manage_subscriptions
 	// RHEL7.1 ami at Amazon: ami-4dbf9e7d
+	var cmd *exec.Cmd = exec.Command("image-scanner-remote.py",
+		"--profile", "localhost", "-s", dockerImage.getDockerImageTag())
 	
 	// Clair scan:
 	// https://github.com/coreos/clair
-	
-	var cmd *exec.Cmd = exec.Command("image-scanner-remote.py",
-		"--profile", "localhost", "-s", dockerImage.getDockerImageTag())
+	//....
 	var output []byte
 	output, err = cmd.CombinedOutput()
 	var outputStr string = string(output)
 	if ! strings.HasPrefix(outputStr, "Error") {
 		return NewFailureDesc("Image scan failed: " + outputStr)
 	}
-
-	// Tag the image as having been scanned.
-	// ....
 	
-	return ....NewScanResultDesc(outputStr)
+	var score string = "" //.... // Parse output.
+
+	// Create a scan event.
+	var userObjId string = sessionToken.AuthenticatedUserid
+	var scanEvent ScanEvent
+	scanEvent, err = server.dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
+		userObjId, time.Now(), score, extObjId)
+	
+	return scanEvent.asScanEventDesc()
 }
 
 /*******************************************************************************
@@ -1501,7 +1551,8 @@ func getUserEvents(server *Server, sessionToken *SessionToken, values url.Values
 	
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	//....
+	return NewFailureDesc("Not implemented yet: getUserEvents")
 }
 
 /*******************************************************************************
@@ -1513,7 +1564,8 @@ func getImageEvents(server *Server, sessionToken *SessionToken, values url.Value
 	
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	//....
+	return NewFailureDesc("Not implemented yet: getImageEvents")
 }
 
 /*******************************************************************************
@@ -1525,7 +1577,8 @@ func getImageStatus(server *Server, sessionToken *SessionToken, values url.Value
 	
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	//....
+	return NewFailureDesc("Not implemented yet: getImageStatus")
 }
 
 /*******************************************************************************
@@ -1537,7 +1590,8 @@ func getDockerfileEvents(server *Server, sessionToken *SessionToken, values url.
 	
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	//....
+	return NewFailureDesc("Not implemented yet: getDockerfileEvents")
 }
 
 /*******************************************************************************
@@ -1549,5 +1603,6 @@ func defineFlag(server *Server, sessionToken *SessionToken, values url.Values,
 	
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return nil
+	//....
+	return NewFailureDesc("Not implemented yet: defineFlag")
 }

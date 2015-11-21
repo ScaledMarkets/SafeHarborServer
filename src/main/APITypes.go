@@ -660,18 +660,23 @@ func (scanProviderDescs ScanProviderDescs) asResponse() string {
 /*******************************************************************************
  * 
  */
-type ParameterValue struct {
+type ParameterValueDesc struct {
 	Name string
 	Type string
-	Value interface{}
+	StringValue string
 }
 
-func NewParameterValue(name string, tp string, value interface{}) *ParameterValue {
-	return &ParameterValue{
+func NewParameterValueDesc(name string, tp string, strValue string) *ParameterValueDesc {
+	return &ParameterValueDesc{
 		Name: name,
-		Type: string,
-		Value: value,
+		Type: tp,
+		StringValue: strValue,
 	}
+}
+
+func (desc *ParameterValueDesc) asResponse() string {
+	return fmt.Sprintf("{\"Name\": \"%s\", \"Type\": \"%s\", \"Value\": \"%s\"}",
+		desc.Name, desc.Type, desc.StringValue)
 }
 
 /*******************************************************************************
@@ -680,14 +685,23 @@ func NewParameterValue(name string, tp string, value interface{}) *ParameterValu
 type ScanConfigDesc struct {
 	BaseType
 	Id string
-	ParamValues []ParameterValue
+	ParamValueDescs []ParameterValueDesc
 }
 
-func NewScanConfigDesc(id string, paramValues []ParameterValue) *ScanConfigDesc {
+func NewScanConfigDesc(id string, paramValueDescs []ParameterValueDesc) *ScanConfigDesc {
 	return &ScanConfigDesc{
 		Id: id,
-		ParamValues: paramValues,
+		ParamValueDescs: paramValueDescs,
 	}
+}
+
+func (scanConfig *ScanConfigDesc) asResponse() string {
+	var s string = fmt.Sprintf("\"Id\": \"%s\", \"ParamValueDescs\": [", scanConfig.Id)
+	for i, paramValueDesc := range scanConfig.ParamValueDescs {
+		if i > 0 { s = s + ",\n" }
+		s = s + paramValueDesc.asResponse()
+	}
+	return "\n]" + s
 }
 
 /*******************************************************************************
@@ -702,7 +716,7 @@ type EventDesc struct {
 
 func NewEventDesc(objId string, when time.Time, userId string) *EventDesc {
 	return &EventDesc{
-		Id: objId,
+		EventId: objId,
 		When: when,
 		UserId: userId,
 	}
@@ -710,7 +724,7 @@ func NewEventDesc(objId string, when time.Time, userId string) *EventDesc {
 
 func (eventDesc *EventDesc) asResponse() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\"}",
-		eventDesc.Id, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId)
+		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId)
 }
 
 /*******************************************************************************
@@ -718,19 +732,24 @@ func (eventDesc *EventDesc) asResponse() string {
  */
 type ScanEventDesc struct {
 	EventDesc
-	ScanConfigId
-	ScanConfigVersion
-	Score
+	ScanConfigId string
+	Score string
 }
 
-func NewScanEventDesc(.... string) *ScanResultDesc {
-	return &ScanResultDesc{
-		....,
+func NewScanEventDesc(objId string, when time.Time, userId string,
+	scanConfigId string, score string) *ScanEventDesc {
+	return &ScanEventDesc{
+		EventDesc: *NewEventDesc(objId, when, userId),
+		ScanConfigId: scanConfigId,
+		Score: score,
 	}
 }
 
-func (scanEventDesc *ScanEventDesc) asResponse() string {
-	return fmt.Sprintf("{\"....\": \"%s\"}", scanEventDesc.....)
+func (eventDesc *ScanEventDesc) asResponse() string {
+	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\", " +
+		"\"ScanConfigId\": \"%s\", \"Score\": \"%s\"}",
+		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId,
+		eventDesc.ScanConfigId, eventDesc.Score)
 }
 
 
