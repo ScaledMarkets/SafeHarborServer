@@ -61,6 +61,7 @@ func (authSvc *AuthService) createSession(creds *Credentials) *SessionToken {
 	// Cache the new session token, so that this Server can recognize it in future
 	// exchanges during this session.
 	authSvc.Sessions[sessionId] = creds
+	fmt.Println("Created session for session id " + sessionId)
 	
 	return token
 }
