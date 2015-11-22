@@ -685,19 +685,19 @@ func (desc *ParameterValueDesc) asResponse() string {
 type ScanConfigDesc struct {
 	BaseType
 	Id string
-	ParamValueDescs []ParameterValueDesc
+	ParameterValueDescs []*ParameterValueDesc
 }
 
-func NewScanConfigDesc(id string, paramValueDescs []ParameterValueDesc) *ScanConfigDesc {
+func NewScanConfigDesc(id string, paramValueDescs []*ParameterValueDesc) *ScanConfigDesc {
 	return &ScanConfigDesc{
 		Id: id,
-		ParamValueDescs: paramValueDescs,
+		ParameterValueDescs: paramValueDescs,
 	}
 }
 
 func (scanConfig *ScanConfigDesc) asResponse() string {
-	var s string = fmt.Sprintf("\"Id\": \"%s\", \"ParamValueDescs\": [", scanConfig.Id)
-	for i, paramValueDesc := range scanConfig.ParamValueDescs {
+	var s string = fmt.Sprintf("\"Id\": \"%s\", \"ParameterValueDescs\": [", scanConfig.Id)
+	for i, paramValueDesc := range scanConfig.ParameterValueDescs {
 		if i > 0 { s = s + ",\n" }
 		s = s + paramValueDesc.asResponse()
 	}

@@ -33,6 +33,7 @@ type DBClient interface {
 	getDockerfile(string) Dockerfile
 	getDockerImage(string) DockerImage
 	getScanConfig(string) ScanConfig
+	getParameterValue(string) ParameterValue
 	getRealmsAdministeredByUser(string) []string  // those realms for which user can edit the realm
 	init()
 	printDatabase()
@@ -136,6 +137,7 @@ type Repo interface {
 	addDockerfile(Dockerfile)
 	addDockerImage(DockerImage)
 	addScanConfig(ScanConfig)
+	getScanConfigByName(string) ScanConfig
 	asRepoDesc() *RepoDesc
 	
 	//getDatasetIds() []string
@@ -175,10 +177,11 @@ type ParameterValue interface {
 	getTypeName() string
 	getStringValue() string
 	getConfigId() string
+	asParameterValueDesc() *ParameterValueDesc
 }
 
 type ScanConfig interface {
-	PersistObj
+	Resource
 	getRepoId() string
 	getExternalObjPath() string
 	getCurrentExtObjId() string

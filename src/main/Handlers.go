@@ -422,10 +422,20 @@ func createRealmAnon(server *Server, sessionToken *SessionToken, values url.Valu
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, newRealm.getId())
 	if err != nil { return NewFailureDesc("Unable to create user: " + err.Error()) }
 
-	// Add ACL entry to enable the current user to access what he/she just created.
+	// Add ACL entry to enable the current user (if any) to access what he/she just created.
+	var curUser User
+	var sessionError error
+	curUser, sessionError = getCurrentUser(server, sessionToken)
+	if (curUser != nil) && (sessionError == nil) {
+		server.dbClient.dbCreateACLEntry(newRealm.getId(), curUser.getId(),
+			[]bool{ true, true, true, true, true } )
+	}
+
+	// Add ACL entry to enable the new user to access what was just created.
 	server.dbClient.dbCreateACLEntry(newRealm.getId(), newUser.getId(),
 		[]bool{ true, true, true, true, true } )
 	
+	if sessionError != nil { return NewFailureDesc(sessionError.Error()) }
 	return newUser.asUserDesc()
 }
 
@@ -1385,6 +1395,7 @@ func getScanProviders(server *Server, sessionToken *SessionToken, values url.Val
 	var params []ParameterInfo = make([]ParameterInfo, 0)
 	//providerDescs = append(providerDescs, NewScanProviderDesc("lynis", params))
 	//providerDescs = append(providerDescs, NewScanProviderDesc("baude", params))
+	//providerDescs = append(providerDescs, NewScanProviderDesc("nessus", params)) // tenable.com
 	providerDescs = append(providerDescs, NewScanProviderDesc("clair", params))
 	
 	return providerDescs

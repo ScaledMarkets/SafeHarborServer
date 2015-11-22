@@ -226,6 +226,26 @@ func authenticateSession(server *Server, sessionToken *SessionToken) *FailureDes
 }
 
 /*******************************************************************************
+ * Get the current authenticated user. If no one is authenticated, return nil. If
+ * any other error, return an error.
+ */
+func getCurrentUser(server *Server, sessionToken *SessionToken) (User, error) {
+	if sessionToken == nil { return nil, nil }
+	
+	if ! server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
+		return nil, errors.New("Session is not valid")
+	}
+	
+	var userId string = sessionToken.AuthenticatedUserid
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil {
+		return nil, errors.New("user object cannot be identified from user id " + userId)
+	}
+	
+	return user, nil
+}
+
+/*******************************************************************************
  * Authorize the request, based on the authenticated identity.
  */
 func authorizeHandlerAction(server *Server, sessionToken *SessionToken,

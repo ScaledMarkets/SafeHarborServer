@@ -866,6 +866,18 @@ func (repo *InMemRepo) addScanConfig(config ScanConfig) {
 	repo.ScanConfigIds = append(repo.ScanConfigIds, config.getId())
 }
 
+func (repo *InMemRepo) getScanConfigByName(name string) ScanConfig {
+	for _, configId := range repo.ScanConfigIds {
+		var config ScanConfig = repo.getDBClient().getScanConfig(configId)
+		if config == nil {
+			fmt.Println("Internal error: list ScanConfigIds contains an invalid entry")
+			continue
+		}
+		if config.getName() == name { return config }
+	}
+	return nil
+}
+
 func (repo *InMemRepo) getParentId() string {
 	return repo.RealmId
 }
@@ -1033,6 +1045,14 @@ type InMemParameterValue struct {
 	ConfigId string
 }
 
+func (client *InMemClient) getParameterValue(id string) ParameterValue {
+	var pv ParameterValue
+	var isType bool
+	pv, isType = allObjects[id].(ParameterValue)
+	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
+	return pv
+}
+
 func (paramValue *InMemParameterValue) getName() string {
 	return paramValue.Name
 }
@@ -1047,6 +1067,10 @@ func (paramValue *InMemParameterValue) getStringValue() string {
 
 func (paramValue *InMemParameterValue) getConfigId() string {
 	return paramValue.ConfigId
+}
+
+func (paramValue *InMemParameterValue) asParameterValueDesc() *ParameterValueDesc {
+	return NewParameterValueDesc(paramValue.Name, paramValue.TypeName, paramValue.StringValue)
 }
 
 /*******************************************************************************
@@ -1094,7 +1118,7 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	return scanConfig, nil
 }
 
-func (clint *InMemClient) getScanConfig(string) ScanConfig {
+func (clint *InMemClient) getScanConfig(id string) ScanConfig {
 	var scanConfig ScanConfig
 	var isType bool
 	scanConfig, isType = allObjects[id].(ScanConfig)
@@ -1145,17 +1169,17 @@ func (scanConfig *InMemScanConfig) getFailureGraphicImageURL() string {
 }
 
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *ScanConfigDesc {
-	var paramValues []ParameterValue = make([]ParameterValue, 0)
+	var paramValueDescs []*ParameterValueDesc = make([]*ParameterValueDesc, 0)
 	for _, valueId := range scanConfig.ParameterValueIds {
 		var paramValue ParameterValue = scanConfig.Client.getParameterValue(valueId)
 		if paramValue == nil {
 			fmt.Println("Internal error: Could not find ParameterValue with Id " + valueId)
 			continue
 		}
-		paramValues = append(paramValues, paramValue)
+		paramValueDescs = append(paramValueDescs, paramValue.asParameterValueDesc())
 	}
 	
-	return NewScanConfigDesc(scanConfig.Id, paramValues)
+	return NewScanConfigDesc(scanConfig.Id, paramValueDescs)
 }
 
 /*******************************************************************************
@@ -1167,9 +1191,9 @@ type InMemEvent struct {
 	UserObjId string
 }
 
-func NewInMemEvent(id string, when string, userObjId string) InMemEvent {
+func (client *InMemClient) NewInMemEvent(id string, when time.Time, userObjId string) *InMemEvent {
 	return &InMemEvent{
-		InMemPersistObj: *NewInMemPersistObj(id),
+		InMemPersistObj: *client.NewInMemPersistObj(id),
 		When: when,
 		UserObjId: userObjId,
 	}
@@ -1184,7 +1208,7 @@ func (event *InMemEvent) getUserObjId() string {
 }
 
 func (event *InMemEvent) asEventDesc() *EventDesc {
-	return NewEventDesc(event.Id, event.When, event.UserId)
+	return NewEventDesc(event.Id, event.When, event.UserObjId)
 }
 
 /*******************************************************************************
@@ -1198,17 +1222,17 @@ type InMemScanEvent struct {
 	ScanConfigExternalObjId string
 }
 
-func (clint *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
+func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 	userObjId string, when time.Time, score string, extObjId string) (ScanEvent, error) {
 	
 	var id string = createUniqueDbObjectId()
-	var event = &InMemScanEvent{
-		InMemEvent: *NewInMemEvent(id, when, userObjId),
+	return &InMemScanEvent{
+		InMemEvent: *client.NewInMemEvent(id, when, userObjId),
 		ScanConfigId: scanConfigId,
 		DockerImageId: imageId,
 		Score: score,
 		ScanConfigExternalObjId: extObjId,
-	}
+	}, nil
 }
 
 func (event *InMemScanEvent) getScore() string {
@@ -1228,7 +1252,7 @@ func (event *InMemScanEvent) getScanConfigExternalObjId() string {
 }
 
 func (event *InMemScanEvent) asScanEventDesc() *ScanEventDesc {
-	return NewScanEventDesc(event.Id, event.When, event.UserId,
+	return NewScanEventDesc(event.Id, event.When, event.UserObjId,
 		event.ScanConfigId, event.Score)
 }
 
