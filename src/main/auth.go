@@ -273,6 +273,12 @@ func (authSvc *AuthService) validateSessionId(sessionId string) *SessionToken {
 	
 	if credentials == nil {
 		fmt.Println("No credentials found for session id", sessionId)
+		fmt.Println("Sessions:")
+		for key, value := range authSvc.Sessions {
+			var valStr string
+			if value == nil { valStr = "nil" } else { valStr = "'" + value.UserId + "/" + value.Password + "'" }
+			fmt.Println("\t" + key + "='" + valStr + "'")
+		}
 		return nil
 	}
 	
