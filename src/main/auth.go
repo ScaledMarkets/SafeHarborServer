@@ -236,7 +236,7 @@ func getSessionId(httpReq *http.Request) string {
 		return ""
 	}
 	
-	var sessionId = cookie.String()
+	var sessionId = cookie.Value
 	
 	//if httpReq.Header["Session-Id"] == nil { // No authenticated session has been established.
 	//	fmt.Println("No Session-Id header found.")
