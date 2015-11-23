@@ -63,17 +63,6 @@ func (authSvc *AuthService) createSession(creds *Credentials) *SessionToken {
 	authSvc.Sessions[sessionId] = creds
 	fmt.Println("Created session for session id " + sessionId)
 	
-	
-	// debug
-	var c *Credentials = authSvc.Sessions[sessionId]
-	if c == nil {
-		fmt.Println("*******Unable to read back session Id " + sessionId)
-	} else {
-		fmt.Println("*******Was ABLE to read back session Id " + sessionId)
-		fmt.Println("Sessions map address:", &authSvc.Sessions)
-	}
-	// end debug
-	
 	return token
 }
 
@@ -276,7 +265,7 @@ func (authService *AuthService) setSessionId(sessionToken *SessionToken,
 
 /*******************************************************************************
  * Validate the specified session id. If valid, return a SessionToken with
- * the identity of the session's owner.
+ * the identity of the session owner.
  */
 func (authSvc *AuthService) validateSessionId(sessionId string) *SessionToken {
 	
@@ -284,27 +273,6 @@ func (authSvc *AuthService) validateSessionId(sessionId string) *SessionToken {
 	
 	if credentials == nil {
 		fmt.Println("No credentials found for session id", sessionId)
-		fmt.Println("********Session map address:", &authSvc.Sessions)
-		fmt.Println("Sessions:")
-		for key, value := range authSvc.Sessions {
-			var valStr string
-			if value == nil { valStr = "nil" } else { valStr = value.UserId + "/" + value.Password }
-			fmt.Println("\t'" + key + "'='" + valStr + "'")
-			var c *Credentials = authSvc.Sessions[key]
-			if c == nil {
-				fmt.Println("##############Unable to find key that we just extracted from map!!!!!!!")
-			} else {
-				fmt.Println("#####Found key " + key)
-				if key == sessionId {
-					fmt.Println("key = sessionId")
-				} else {
-					fmt.Println("key != sessionId - ")
-					fmt.Println(key, "!=", sessionId)
-				}
-			}
-		}
-		
-		
 		return nil
 	}
 	
