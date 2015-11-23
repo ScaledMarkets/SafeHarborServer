@@ -281,12 +281,13 @@ func (authSvc *AuthService) validateSessionId(sessionId string) *SessionToken {
 		}
 		
 		fmt.Println("Experiment:")
-		authSvc.Sessions["1248235699034670190:3132333435d662de5806aa610e133dff00ce3d97ef81294c9a5096c6cf8a87a7868173448a0dd6a000ec5f43eec4c498a5ecf22b55cf98f796a3fb077ce2a6d0c410270725"] = &Credentials{
+		var sess map[string]*Credentials = make(map[string]*Credentials)
+		sess["1448235699034670190:3132333435d662de5806aa610e133dff00ce3d97ef81294c9a5096c6cf8a87a7868173448a0dd6a000ec5f43eec4c498a5ecf22b55cf98f796a3fb077ce2a6d0c4102707f5"] = &Credentials{
 			UserId: "experiment",
 			Password: "password",
 		}
 		
-		var c *Credentials = authSvc.Sessions["1448235699034670190:3132333435d662de5806aa610e133dff00ce3d97ef81294c9a5096c6cf8a87a7868173448a0dd6a000ec5f43eec4c498a5ecf22b55cf98f796a3fb077ce2a6d0c4102707f5"]
+		var c *Credentials = sess["1448235699034670190:3132333435d662de5806aa610e133dff00ce3d97ef81294c9a5096c6cf8a87a7868173448a0dd6a000ec5f43eec4c498a5ecf22b55cf98f796a3fb077ce2a6d0c4102707f5"]
 		if c == nil { fmt.Println("c is nil") } else { fmt.Println("Found c") }
 		
 		
