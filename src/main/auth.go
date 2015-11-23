@@ -277,7 +277,7 @@ func (authSvc *AuthService) validateSessionId(sessionId string) *SessionToken {
 		for key, value := range authSvc.Sessions {
 			var valStr string
 			if value == nil { valStr = "nil" } else { valStr = value.UserId + "/" + value.Password }
-			fmt.Println("\t" + key + "='" + valStr + "'")
+			fmt.Println("\t'" + key + "'='" + valStr + "'")
 		}
 		
 		fmt.Println("Experiment:")
