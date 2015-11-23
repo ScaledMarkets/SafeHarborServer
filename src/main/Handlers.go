@@ -1402,7 +1402,7 @@ func getScanProviders(server *Server, sessionToken *SessionToken, values url.Val
 }
 
 /*******************************************************************************
- * Arguments: Name, Desc, RepoId, ProviderName, Params..., SuccessGraphicImageURL, FailureGraphicImageURL
+ * Arguments: Name, Description, RepoId, ProviderName, Params..., SuccessGraphicImageURL, FailureGraphicImageURL
  * Returns: ScanConfigDesc
  */
 func defineScanConfig(server *Server, sessionToken *SessionToken, values url.Values,
