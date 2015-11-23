@@ -70,6 +70,7 @@ func (authSvc *AuthService) createSession(creds *Credentials) *SessionToken {
 		fmt.Println("*******Unable to read back session Id " + sessionId)
 	} else {
 		fmt.Println("*******Was ABLE to read back session Id " + sessionId)
+		fmt.Println("Sessions map address:", &authSvc.Sessions)
 	}
 	// end debug
 	
