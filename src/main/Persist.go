@@ -23,6 +23,7 @@ type DBClient interface {
 	dbCreateScanConfig(string, string, string, string, []string, string, string) (ScanConfig, error)
 	dbCreateScanEvent(string, string, string, time.Time, string, string) (ScanEvent, error)
 	dbGetAllRealmIds() []string
+	getPersistentObject(id string) PersistObj
 	getResource(string) Resource
 	getParty(string) Party
 	getGroup(string) Group

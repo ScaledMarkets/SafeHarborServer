@@ -1457,6 +1457,10 @@ func defineScanConfig(server *Server, sessionToken *SessionToken, values url.Val
 	// Add ACL entry to enable the current user to access what he/she just created.
 	var userId string = sessionToken.AuthenticatedUserid
 	var user User = server.dbClient.dbGetUserByUserId(userId)
+
+	var obj PersistObj = server.dbClient.getPersistentObject(userId)
+	assertThat(obj != nil, "Internal error in defineScanConfig: obj is nil")
+	
 	server.dbClient.dbCreateACLEntry(scanConfig.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	
