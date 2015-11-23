@@ -1417,11 +1417,11 @@ func defineScanConfig(server *Server, sessionToken *SessionToken, values url.Val
 
 	name, err = GetRequiredPOSTFieldValue(values, "Name")
 	if err != nil { return NewFailureDesc(err.Error()) }
-	if repoId == "" { return NewFailureDesc("No HTTP parameter found for Name") }
+	if name == "" { return NewFailureDesc("No HTTP parameter found for Name") }
 	
 	desc, err = GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return NewFailureDesc(err.Error()) }
-	if repoId == "" { return NewFailureDesc("No HTTP parameter found for Description") }
+	if desc == "" { return NewFailureDesc("No HTTP parameter found for Description") }
 	
 	repoId, err = GetRequiredPOSTFieldValue(values, "RepoId")
 	if err != nil { return NewFailureDesc(err.Error()) }
