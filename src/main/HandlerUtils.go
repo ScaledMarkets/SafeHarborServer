@@ -307,7 +307,7 @@ func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo,
 	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
 	if err != nil {
 		fmt.Println(err.Error())
-		return nil, errors.New(err.Error())
+		return nil, errors.New("While writing dockerfile, " + err.Error())
 	}
 	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
 	
