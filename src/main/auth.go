@@ -63,6 +63,12 @@ func (authSvc *AuthService) createSession(creds *Credentials) *SessionToken {
 	authSvc.Sessions[sessionId] = creds
 	fmt.Println("Created session for session id " + sessionId)
 	
+	
+	// debug
+	var c *Credentials = authSvc.Sessions[sessionId]
+	if c == nil { fmt.Println("*******Unable to read back session Id********") }
+	// end debug
+	
 	return token
 }
 
