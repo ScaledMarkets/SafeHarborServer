@@ -294,7 +294,13 @@ func (authSvc *AuthService) validateSessionId(sessionId string) *SessionToken {
 			if c == nil {
 				fmt.Println("##############Unable to find key that we just extracted from map!!!!!!!")
 			} else {
-				fmt.Println("Found key " + key)
+				fmt.Println("#####Found key " + key)
+				if key == sessionId {
+					fmt.Println("key = sessionId")
+				} else {
+					fmt.Println("key != sessionId - ")
+					fmt.Println(key, "!=", sessionId)
+				}
 			}
 		}
 		
