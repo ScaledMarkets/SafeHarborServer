@@ -148,7 +148,10 @@ func authorized(server *Server, sessionToken *SessionToken, actionMask []bool,
 	// Check if the user or a group that the user belongs to has the permission
 	// that is specified by the actionMask.
 	var party Party = user  // start with the user.
-	var resource Resource = server.dbClient.getResource(resourceId)
+	var resource Resource
+	var err error
+	resource, err = server.dbClient.getResource(resourceId)
+	if err != nil { return false, err }
 	if resource == nil {
 		return false, errors.New("Resource with Id " + resourceId + " not found")
 	}
@@ -157,7 +160,10 @@ func authorized(server *Server, sessionToken *SessionToken, actionMask []bool,
 	for {
 		var parentId string = resource.getParentId()
 		var parent Resource
-		if parentId != "" { parent = server.dbClient.getResource(parentId) }
+		if parentId != "" {
+			parent, err = server.dbClient.getResource(parentId)
+			if err != nil { return false, err }
+		}
 		if server.partyHasAccess(party, actionMask, resource) ||
 			(
 				(parent != nil) && 
@@ -169,7 +175,9 @@ func authorized(server *Server, sessionToken *SessionToken, actionMask []bool,
 		
 		i++
 		if i == len(groupIds) { return false, nil }
-		party = server.dbClient.getParty(groupIds[i])  // check user's groups
+		var err error
+		party, err = server.dbClient.getParty(groupIds[i])  // check user's groups
+		if err != nil { return false, err }
 		if party == nil {
 			return false, errors.New("Internal error: Party with Id " + groupIds[i] + " not found")
 		}
@@ -191,7 +199,13 @@ func (server *Server) partyHasAccess(party Party, actionMask []bool, resource Re
 	for _, entryId := range entries {
 		
 		if entryId == resource.getId() {
-			var entry ACLEntry = server.dbClient.getACLEntry(entryId)
+			var err error
+			var entry ACLEntry
+			entry, err = server.dbClient.getACLEntry(entryId)
+			if err != nil {
+				fmt.Println(err.Error())
+				return false
+			}
 			if entry == nil {
 				fmt.Println("Internal error: ACLEntry with Id " + entryId + " not found")
 				return false

@@ -82,16 +82,23 @@ func clearAll(server *Server, sessionToken *SessionToken, values url.Values,
 	fmt.Println("Removing docker images that were created by SafeHarbor:")
 	var dbClient DBClient = server.dbClient
 	for _, realmId := range dbClient.dbGetAllRealmIds() {
-		var realm Realm = dbClient.getRealm(realmId)
+		var realm Realm
+		var err error
+		realm, err = dbClient.getRealm(realmId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		fmt.Println("For realm " + realm.getName() + ":")
 		
 		for _, repoId := range realm.getRepoIds() {
-			var repo Repo = dbClient.getRepo(repoId)
+			var repo Repo
+			repo, err = dbClient.getRepo(repoId)
+			if err != nil { return NewFailureDesc(err.Error()) }
 			fmt.Println("\tFor repo " + repo.getName() + ":")
 			
 			for _, imageId := range repo.getDockerImageIds() {
 				
-				var image DockerImage = dbClient.getDockerImage(imageId)
+				var image DockerImage
+				image, err = dbClient.getDockerImage(imageId)
+				if err != nil { return NewFailureDesc(err.Error()) }
 				var imageName string = image.getName()
 				fmt.Println("\t\tRemoving image " + imageName + ":")
 				
@@ -159,8 +166,12 @@ func authenticate(server *Server, sessionToken *SessionToken, values url.Values,
 	token.setRealmId(user.getRealmId())
 	
 	// Flag whether the user has Write access to the realm.
-	var realm Realm = server.dbClient.getRealm(user.getRealmId())
-	var entry ACLEntry = realm.getACLEntryForPartyId(user.getId())
+	var realm Realm
+	realm, err = server.dbClient.getRealm(user.getRealmId())
+	if err != nil { return NewFailureDesc(err.Error()) }
+	var entry ACLEntry
+	entry, err = realm.getACLEntryForPartyId(user.getId())
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if entry != nil {
 		token.setIsAdminUser(entry.getPermissionMask()[CanWrite])
 	}
@@ -318,14 +329,18 @@ func getGroupUsers(server *Server, sessionToken *SessionToken, values url.Values
 	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, groupId,
 		"getGroupUsers"); failMsg != nil { return failMsg }
 	
-	var group Group = server.dbClient.getGroup(groupId)
+	var group Group
+	group, err = server.dbClient.getGroup(groupId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if group == nil { return NewFailureDesc(fmt.Sprintf(
 		"No group with Id %s", groupId))
 	}
 	var userObjIds []string = group.getUserObjIds()
 	var userDescs UserDescs = make([]*UserDesc, 0)
 	for _, id := range userObjIds {
-		var user User = server.dbClient.getUser(id)
+		var user User
+		user, err = server.dbClient.getUser(id)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		if user == nil { return NewFailureDesc(fmt.Sprintf(
 			"Internal error: No user with Id %s", id))
 		}
@@ -357,7 +372,9 @@ func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 	if failMsg := authorizeHandlerAction(server, sessionToken, WriteMask, groupId,
 		"addGroupUser"); failMsg != nil { return failMsg }
 	
-	var group Group = server.dbClient.getGroup(groupId)
+	var group Group
+	group, err = server.dbClient.getGroup(groupId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if group == nil { return NewFailureDesc(fmt.Sprintf(
 		"No group with Id %s", groupId))
 	}
@@ -365,7 +382,10 @@ func addGroupUser(server *Server, sessionToken *SessionToken, values url.Values,
 	err = group.addUserId(userObjId)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
-	var user User = server.dbClient.getUser(userObjId)
+	var user User
+	user, err = server.dbClient.getUser(userObjId)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	if user == nil { return NewFailureDesc("User with Id " + userObjId + " unidentified") }
 	user.addGroupId(groupId)
 	if err != nil { return NewFailureDesc(err.Error()) }
 	
@@ -427,13 +447,15 @@ func createRealmAnon(server *Server, sessionToken *SessionToken, values url.Valu
 	var sessionError error
 	curUser, sessionError = getCurrentUser(server, sessionToken)
 	if (curUser != nil) && (sessionError == nil) {
-		server.dbClient.dbCreateACLEntry(newRealm.getId(), curUser.getId(),
+		_, err = server.dbClient.dbCreateACLEntry(newRealm.getId(), curUser.getId(),
 			[]bool{ true, true, true, true, true } )
+		if err != nil { return NewFailureDesc(err.Error()) }
 	}
 
 	// Add ACL entry to enable the new user to access what was just created.
-	server.dbClient.dbCreateACLEntry(newRealm.getId(), newUser.getId(),
+	_, err = server.dbClient.dbCreateACLEntry(newRealm.getId(), newUser.getId(),
 		[]bool{ true, true, true, true, true } )
+	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	if sessionError != nil { return NewFailureDesc(sessionError.Error()) }
 	return newUser.asUserDesc()
@@ -456,7 +478,9 @@ func getRealmDesc(server *Server, sessionToken *SessionToken, values url.Values,
 	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, realmId,
 		"getRealmDesc"); failMsg != nil { return failMsg }
 	
-	var realm Realm = server.dbClient.getRealm(realmId)
+	var realm Realm
+	realm, err = server.dbClient.getRealm(realmId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
 	
 	return realm.asRealmDesc()
@@ -484,8 +508,9 @@ func createRealm(server *Server, sessionToken *SessionToken, values url.Values,
 	fmt.Println("Created realm", realmInfo.RealmName)
 
 	// Add ACL entry to enable the current user to access what he/she just created.
-	server.dbClient.dbCreateACLEntry(realm.getId(), user.getId(),
+	_, err = server.dbClient.dbCreateACLEntry(realm.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
+	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	return realm.asRealmDesc()
 }
@@ -523,7 +548,8 @@ func addRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 		"addRealmUser"); failMsg != nil { return failMsg }
 	
 	var realm Realm
-	realm = server.dbClient.getRealm(realmId)
+	realm, err = server.dbClient.getRealm(realmId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
 	
 	err = realm.addUserId(userObjId)
@@ -564,10 +590,13 @@ func getRealmUser(server *Server, sessionToken *SessionToken, values url.Values,
 		"getRealmUser"); failMsg != nil { return failMsg }
 	
 	var realm Realm
-	realm = server.dbClient.getRealm(realmId)
+	realm, err = server.dbClient.getRealm(realmId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
 	
-	var realmUser User = realm.getUserByUserId(realmUserId)
+	var realmUser User
+	realmUser, err = realm.getUserByUserId(realmUserId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if realmUser == nil { return NewFailureDesc("User with user id " + realmUserId +
 		" in realm " + realm.getName() + " not found.") }
 	return realmUser.asUserDesc()
@@ -590,16 +619,17 @@ func getRealmUsers(server *Server, sessionToken *SessionToken, values url.Values
 	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, realmId,
 		"getRealmUsers"); failMsg != nil { return failMsg }
 		
-	var realm Realm = server.dbClient.getRealm(realmId)
+	var realm Realm
+	realm, err = server.dbClient.getRealm(realmId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if realm == nil { return NewFailureDesc("Realm with Id " + realmId + " not found") }
 	var userObjIds []string = realm.getUserObjIds()
 	var userDescs UserDescs = make([]*UserDesc, 0)
 	for _, userObjId := range userObjIds {
-		var user User = server.dbClient.getUser(userObjId)
-		if user == nil {
-			fmt.Println("Internal error: user with obj Id " + userObjId + " not found")
-			continue
-		}
+		var user User
+		user, err = server.dbClient.getUser(userObjId)
+		if err != nil { return NewFailureDesc(err.Error()) }
+		if user == nil { return NewFailureDesc("User with obj Id " + userObjId + " not found") }
 		var userDesc *UserDesc = user.asUserDesc()
 		userDescs = append(userDescs, userDesc)
 	}
@@ -624,11 +654,15 @@ func getRealmGroups(server *Server, sessionToken *SessionToken, values url.Value
 	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, realmId,
 		"getRealmGroups"); failMsg != nil { return failMsg }
 	
-	var realm Realm = server.dbClient.getRealm(realmId)
+	var realm Realm
+	realm, err = server.dbClient.getRealm(realmId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if realm == nil { return NewFailureDesc("Realm with Id " + realmId + " not found") }
 	var groupIds []string = realm.getGroupIds()
 	for _, groupId := range groupIds {
-		var group Group = server.dbClient.getGroup(groupId)
+		var group Group
+		group, err = server.dbClient.getGroup(groupId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		if group == nil {
 			fmt.Println("Internal error: group with Id " + groupId + " not found")
 			continue
@@ -656,7 +690,8 @@ func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values
 		"getRealmRepos"); failMsg != nil { return failMsg }
 	
 	var realm Realm
-	realm = server.dbClient.getRealm(realmId)
+	realm, err = server.dbClient.getRealm(realmId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if realm == nil { return NewFailureDesc("Cound not find realm with Id " + realmId) }
 	
 	var repoIds []string = realm.getRepoIds()
@@ -664,7 +699,9 @@ func getRealmRepos(server *Server, sessionToken *SessionToken, values url.Values
 	var result RepoDescs = make([]*RepoDesc, 0)
 	for _, id := range repoIds {
 		
-		var repo Repo = server.dbClient.getRepo(id)
+		var repo Repo
+		repo, err = server.dbClient.getRepo(id)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		if repo == nil { return NewFailureDesc(fmt.Sprintf(
 			"Internal error: no Repo found for Id %s", id))
 		}
@@ -690,7 +727,10 @@ func getAllRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	var result RealmDescs = make([]*RealmDesc, 0)
 	for _, realmId := range realmIds {
 		
-		var realm Realm = server.dbClient.getRealm(realmId)
+		var realm Realm
+		var err error
+		realm, err = server.dbClient.getRealm(realmId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		if realm == nil { return NewFailureDesc(fmt.Sprintf(
 			"Internal error: no Realm found for Id %s", realmId))
 		}
@@ -734,9 +774,9 @@ func createRepo(server *Server, sessionToken *SessionToken, values url.Values,
 
 	// Add ACL entry to enable the current user to access what he/she just created.
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	server.dbClient.dbCreateACLEntry(repo.getId(), user.getId(),
+	_, err = server.dbClient.dbCreateACLEntry(repo.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
-	fmt.Println("createRepo.C")
+	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	_, err = createDockerfile(sessionToken, server.dbClient, repo, repo.getDescription(), values, files)
 	if err != nil { return NewFailureDesc(err.Error()) }
@@ -773,7 +813,9 @@ func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Value
 	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, repoId,
 		"getDockerfiles"); failMsg != nil { return failMsg }
 	
-	var repo Repo = server.dbClient.getRepo(repoId)
+	var repo Repo
+	repo, err = server.dbClient.getRepo(repoId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if repo == nil { return NewFailureDesc(fmt.Sprintf(
 		"Repo with Id %s not found", repoId)) }
 	
@@ -781,7 +823,9 @@ func getDockerfiles(server *Server, sessionToken *SessionToken, values url.Value
 	var result DockerfileDescs = make([]*DockerfileDesc, 0)
 	for _, id := range dockerfileIds {
 		
-		var dockerfile Dockerfile = server.dbClient.getDockerfile(id)
+		var dockerfile Dockerfile
+		dockerfile, err = server.dbClient.getDockerfile(id)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		if dockerfile == nil { return NewFailureDesc(fmt.Sprintf(
 			"Internal error: no Dockerfile found for Id %s", id))
 		}
@@ -810,7 +854,9 @@ func getImages(server *Server, sessionToken *SessionToken, values url.Values,
 	if failMsg := authorizeHandlerAction(server, sessionToken, ReadMask, repoId,
 		"getImages"); failMsg != nil { return failMsg }
 	
-	var repo Repo = server.dbClient.getRepo(repoId)
+	var repo Repo
+	repo, err = server.dbClient.getRepo(repoId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if repo == nil { return NewFailureDesc(fmt.Sprintf(
 		"Repo with Id %s not found", repoId)) }
 	
@@ -818,7 +864,9 @@ func getImages(server *Server, sessionToken *SessionToken, values url.Values,
 	var result DockerImageDescs = make([]*DockerImageDesc, 0)
 	for _, id := range imageIds {
 		
-		var dockerImage DockerImage = server.dbClient.getDockerImage(id)
+		var dockerImage DockerImage
+		dockerImage, err = server.dbClient.getDockerImage(id)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		if dockerImage == nil { return NewFailureDesc(fmt.Sprintf(
 			"Internal error: no DockerImage found for Id %s", id))
 		}
@@ -857,7 +905,9 @@ func addDockerfile(server *Server, sessionToken *SessionToken, values url.Values
 		"addDockerfile"); failMsg != nil { return failMsg }
 	
 	var dbClient = server.dbClient
-	var repo Repo = dbClient.getRepo(repoId)
+	var repo Repo
+	repo, err = dbClient.getRepo(repoId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if repo == nil { return NewFailureDesc("Repo does not exist") }
 	
 	var dockerfile Dockerfile
@@ -907,7 +957,9 @@ func execDockerfile(server *Server, sessionToken *SessionToken, values url.Value
 		"execDockerfile"); failMsg != nil { return failMsg }
 	
 	var dbClient = server.dbClient
-	var dockerfile Dockerfile = dbClient.getDockerfile(dockerfileId)
+	var dockerfile Dockerfile
+	dockerfile, err = dbClient.getDockerfile(dockerfileId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	fmt.Println("Dockerfile name =", dockerfile.getName())
 	
 	var image DockerImage
@@ -938,7 +990,9 @@ func addAndExecDockerfile(server *Server, sessionToken *SessionToken, values url
 		"addAndExecDockerfile"); failMsg != nil { return failMsg }
 	
 	var dbClient = server.dbClient
-	var repo Repo = dbClient.getRepo(repoId)
+	var repo Repo
+	repo, err = dbClient.getRepo(repoId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if repo == nil { return NewFailureDesc("Repo does not exist") }
 	
 	var desc string
@@ -1013,15 +1067,21 @@ func setPermission(server *Server, sessionToken *SessionToken, values url.Values
 	
 	// Identify the Resource.
 	var dbClient DBClient = server.dbClient
-	var resource Resource = dbClient.getResource(resourceId)
+	var resource Resource
+	resource, err = dbClient.getResource(resourceId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if resource == nil { return NewFailureDesc("Unable to identify resource with Id " + resourceId) }
 	
 	// Identify the Party.
-	var party Party = dbClient.getParty(partyId)
+	var party Party
+	party, err = dbClient.getParty(partyId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if party == nil { return NewFailureDesc("Unable to identify party with Id " + partyId) }
 	
 	// Get the current ACLEntry, if there is one.
-	var aclEntry ACLEntry = party.getACLEntryForResourceId(resourceId)
+	var aclEntry ACLEntry
+	aclEntry, err = party.getACLEntryForResourceId(resourceId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if aclEntry == nil {
 		aclEntry, err = server.dbClient.dbCreateACLEntry(resourceId, partyId, mask)
 		if err != nil { return NewFailureDesc(err.Error()) }
@@ -1068,15 +1128,21 @@ func addPermission(server *Server, sessionToken *SessionToken, values url.Values
 	
 	// Identify the Resource.
 	var dbClient DBClient = server.dbClient
-	var resource Resource = dbClient.getResource(resourceId)
+	var resource Resource
+	resource, err = dbClient.getResource(resourceId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if resource == nil { return NewFailureDesc("Unable to identify resource with Id " + resourceId) }
 	
 	// Identify the Party.
-	var party Party = dbClient.getParty(partyId)
+	var party Party
+	party, err = dbClient.getParty(partyId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if party == nil { return NewFailureDesc("Unable to identify party with Id " + partyId) }
 	
 	// Get the current ACLEntry, if there is one.
-	var aclEntry ACLEntry = party.getACLEntryForResourceId(resourceId)
+	var aclEntry ACLEntry
+	aclEntry, err = party.getACLEntryForResourceId(resourceId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if aclEntry == nil {
 		aclEntry, err = server.dbClient.dbCreateACLEntry(resourceId, partyId, mask)
 		if err != nil { return NewFailureDesc(err.Error()) }
@@ -1129,11 +1195,15 @@ func getPermission(server *Server, sessionToken *SessionToken, values url.Values
 	//if resource == nil { return NewFailureDesc("Unable to identify resource with Id " + resourceId) }
 	
 	// Identify the Party.
-	var party Party = dbClient.getParty(partyId)
+	var party Party
+	party, err = dbClient.getParty(partyId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if party == nil { return NewFailureDesc("Unable to identify party with Id " + partyId) }
 	
 	// Return the ACLEntry.
-	var aclEntry ACLEntry = party.getACLEntryForResourceId(resourceId)
+	var aclEntry ACLEntry
+	aclEntry, err = party.getACLEntryForResourceId(resourceId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	var mask []bool
 	if aclEntry == nil {
 		mask = make([]bool, 5)
@@ -1174,7 +1244,10 @@ func getMyGroups(server *Server, sessionToken *SessionToken, values url.Values,
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
 	var groupIds []string = user.getGroupIds()
 	for _, groupId := range groupIds {
-		var group Group = server.dbClient.getGroup(groupId)
+		var group Group
+		var err error
+		group, err = server.dbClient.getGroup(groupId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		if group == nil {
 			fmt.Println("Internal error: group with Id " + groupId + " could not be found")
 			continue
@@ -1201,9 +1274,14 @@ func getMyRealms(server *Server, sessionToken *SessionToken, values url.Values,
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
 		fmt.Println("\taclEntryId:", aclEntryId)
-		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
+		var err error
+		var aclEntry ACLEntry
+		aclEntry, err = dbClient.getACLEntry(aclEntryId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		var resourceId string = aclEntry.getResourceId()
-		var resource Resource = dbClient.getResource(resourceId)
+		var resource Resource
+		resource, err = dbClient.getResource(resourceId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		switch v := resource.(type) {
 			case Realm: realms[v.getId()] = v
 				fmt.Println("\t\ta Realm")
@@ -1241,9 +1319,14 @@ func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
 		fmt.Println("\taclEntryId:", aclEntryId)
-		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
+		var err error
+		var aclEntry ACLEntry
+		aclEntry, err = dbClient.getACLEntry(aclEntryId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		var resourceId string = aclEntry.getResourceId()
-		var resource Resource = dbClient.getResource(resourceId)
+		var resource Resource
+		resource, err = dbClient.getResource(resourceId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		switch v := resource.(type) {
 			case Realm: realms[v.getId()] = v
 				fmt.Println("\t\ta Realm")
@@ -1257,7 +1340,12 @@ func getMyRepos(server *Server, sessionToken *SessionToken, values url.Values,
 		// Add all of the repos belonging to realm.
 		for _, repoId := range realm.getRepoIds() {
 			fmt.Println("\tadding repoId", repoId)
-			repos[repoId] = dbClient.getRepo(repoId)
+			var r Repo
+			var err error
+			r, err = dbClient.getRepo(repoId)
+			if err != nil { return NewFailureDesc(err.Error()) }
+			if r == nil { return NewFailureDesc("Internal error: No repo found for Id " + repoId) }
+			repos[repoId] = r
 		}
 	}
 	fmt.Println("Creating result...")
@@ -1289,9 +1377,14 @@ func getMyDockerfiles(server *Server, sessionToken *SessionToken, values url.Val
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
 		fmt.Println("\taclEntryId:", aclEntryId)
-		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
+		var err error
+		var aclEntry ACLEntry
+		aclEntry, err = dbClient.getACLEntry(aclEntryId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		var resourceId string = aclEntry.getResourceId()
-		var resource Resource = dbClient.getResource(resourceId)
+		var resource Resource
+		resource, err = dbClient.getResource(resourceId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		switch v := resource.(type) {
 			case Realm: realms[v.getId()] = v
 				fmt.Println("\t\ta Realm")
@@ -1307,12 +1400,22 @@ func getMyDockerfiles(server *Server, sessionToken *SessionToken, values url.Val
 		// Add all of the repos belonging to realm.
 		for _, repoId := range realm.getRepoIds() {
 			fmt.Println("\tadding repoId", repoId)
-			repos[repoId] = dbClient.getRepo(repoId)
+			var r Repo
+			var err error
+			r, err = dbClient.getRepo(repoId)
+			if err != nil { return NewFailureDesc(err.Error()) }
+			if r == nil { return NewFailureDesc("No repo found for Id " + repoId) }
+			repos[repoId] = r
 		}
 	}
 	for _, repo := range repos {
 		for _, dockerfileId := range repo.getDockerfileIds() {
-			dockerfiles[dockerfileId] = dbClient.getDockerfile(dockerfileId)
+			var d Dockerfile
+			var err error
+			d, err = dbClient.getDockerfile(dockerfileId)
+			if err != nil { return NewFailureDesc(err.Error()) }
+			if d == nil { return NewFailureDesc("Internal Error: No dockerfile found for Id " + dockerfileId) }
+			dockerfiles[dockerfileId] = d
 		}
 	}
 	
@@ -1344,9 +1447,14 @@ func getMyDockerImages(server *Server, sessionToken *SessionToken, values url.Va
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
 		fmt.Println("\taclEntryId:", aclEntryId)
-		var aclEntry ACLEntry = dbClient.getACLEntry(aclEntryId)
+		var err error
+		var aclEntry ACLEntry
+		aclEntry, err = dbClient.getACLEntry(aclEntryId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		var resourceId string = aclEntry.getResourceId()
-		var resource Resource = dbClient.getResource(resourceId)
+		var resource Resource
+		resource, err = dbClient.getResource(resourceId)
+		if err != nil { return NewFailureDesc(err.Error()) }
 		switch v := resource.(type) {
 			case Realm: realms[v.getId()] = v
 				fmt.Println("\t\ta Realm")
@@ -1362,12 +1470,22 @@ func getMyDockerImages(server *Server, sessionToken *SessionToken, values url.Va
 		// Add all of the repos belonging to realm.
 		for _, repoId := range realm.getRepoIds() {
 			fmt.Println("\tadding repoId", repoId)
-			repos[repoId] = dbClient.getRepo(repoId)
+			var r Repo
+			var err error
+			r, err = dbClient.getRepo(repoId)
+			if err != nil { return NewFailureDesc(err.Error()) }
+			if r == nil { return NewFailureDesc("No repo found for Id " + repoId) }
+			repos[repoId] = r
 		}
 	}
 	for _, repo := range repos {
 		for _, dockerImageId := range repo.getDockerImageIds() {
-			dockerImages[dockerImageId] = dbClient.getDockerImage(dockerImageId)
+			var dimg DockerImage
+			var err error
+			dimg, err = dbClient.getDockerImage(dockerImageId)
+			if err != nil { return NewFailureDesc(err.Error()) }
+			if dimg == nil { return NewFailureDesc("Internal error: No image found for Id " + dockerImageId) }
+			dockerImages[dockerImageId] = dimg
 		}
 	}
 	
@@ -1461,8 +1579,9 @@ func defineScanConfig(server *Server, sessionToken *SessionToken, values url.Val
 	var obj PersistObj = server.dbClient.getPersistentObject(userId)
 	assertThat(obj != nil, "Internal error in defineScanConfig: obj is nil")
 	
-	server.dbClient.dbCreateACLEntry(scanConfig.getId(), user.getId(),
+	_, err = server.dbClient.dbCreateACLEntry(scanConfig.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
+	if err != nil { return NewFailureDesc(err.Error()) }
 	
 	return scanConfig.asScanConfigDesc()
 }
@@ -1501,19 +1620,25 @@ func scanImage(server *Server, sessionToken *SessionToken, values url.Values,
 	if failMsg := authorizeHandlerAction(server, sessionToken, ExecuteMask, scanConfigId,
 		"scanImage"); failMsg != nil { return failMsg }
 	
-	var dockerImage DockerImage = server.dbClient.getDockerImage(imageObjId)
+	var dockerImage DockerImage
+	dockerImage, err = server.dbClient.getDockerImage(imageObjId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if dockerImage == nil {
 		return NewFailureDesc("Docker image with object Id " + imageObjId + " not found")
 	}
 	
-	var scanConfig ScanConfig = server.dbClient.getScanConfig(scanConfigId)
+	var scanConfig ScanConfig
+	scanConfig, err = server.dbClient.getScanConfig(scanConfigId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if scanConfig == nil {
 		return NewFailureDesc("Scan Config with object Id " + scanConfigId + " not found")
 	}
 
 	// Get the current version of the ScanConfig file.
 	var extObjId string = scanConfig.getCurrentExtObjId()
-	var scanConfigTempFile *os.File = scanConfig.getAsTempFile(extObjId)
+	var scanConfigTempFile *os.File
+	scanConfigTempFile, err = scanConfig.getAsTempFile(extObjId)
+	if err != nil { return NewFailureDesc(err.Error()) }
 	if scanConfigTempFile == nil {
 		return NewFailureDesc("Unable to obtain scan config as a temp file")
 	}

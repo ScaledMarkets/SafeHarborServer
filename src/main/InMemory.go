@@ -171,29 +171,36 @@ func (resource *InMemResource) getDescription() string {
 	return resource.Description
 }
 
-func (resource *InMemResource) getACLEntryForPartyId(partyId string) ACLEntry {
+func (resource *InMemResource) getACLEntryForPartyId(partyId string) (ACLEntry, error) {
+	var err error
 	for _, entryId := range resource.getACLEntryIds() {
 		var obj interface{} = allObjects[entryId]
 		if obj == nil {
-			fmt.Println("Internal error - no object found for Id " + entryId);
+			err = errors.New("Internal error - no object found for Id " + entryId);
 			continue
 		}
 		var entry ACLEntry
 		var isType bool
 		entry, isType = obj.(ACLEntry)
 		if ! isType {
-			fmt.Println("Internal error - object with Id " + entryId + " is not an ACLEntry");
+			err = errors.New("Internal error - object with Id " + entryId + " is not an ACLEntry");
 			continue
 		}
 		if entry.getPartyId() == partyId {
-			return entry
+			return entry, err
 		}
 	}
-	return nil
+	return nil, err
 }
 
-func (client *InMemClient) getResource(resourceId string) Resource {
-	return client.getPersistentObject(resourceId).(Resource)
+func (client *InMemClient) getResource(resourceId string) (Resource, error) {
+	var resource Resource
+	var isType bool
+	var obj PersistObj = client.getPersistentObject(resourceId)
+	if obj == nil { return nil, nil }
+	resource, isType = obj.(Resource)
+	if ! isType { return nil, errors.New("Object with Id " + resourceId + " is not a Resource") }
+	return resource, nil
 }
 
 func (resource *InMemResource) getParentId() string {
@@ -234,8 +241,14 @@ func (party *InMemParty) getCreationTime() time.Time {
 	return party.CreationTime
 }
 
-func (client *InMemClient) getParty(partyId string) Party {
-	return client.getPersistentObject(partyId).(Party)
+func (client *InMemClient) getParty(partyId string) (Party, error) {
+	var party Party
+	var isType bool
+	var obj PersistObj = client.getPersistentObject(partyId)
+	if obj == nil { return nil, nil }
+	party, isType = obj.(Party)
+	if ! isType { return nil, errors.New("Object with Id " + partyId + " is not a Party") }
+	return party, nil
 }
 
 func (party *InMemParty) getRealmId() string {
@@ -250,25 +263,26 @@ func (party *InMemParty) addACLEntry(entry ACLEntry) {
 	party.ACLEntryIds = append(party.ACLEntryIds, entry.getId())
 }
 
-func (party *InMemParty) getACLEntryForResourceId(resourceId string) ACLEntry {
+func (party *InMemParty) getACLEntryForResourceId(resourceId string) (ACLEntry, error) {
+	var err error
 	for _, entryId := range party.getACLEntryIds() {
 		var obj interface{} = allObjects[entryId]
 		if obj == nil {
-			fmt.Println("Internal error - no object found for Id " + entryId);
+			err = errors.New("Internal error - no object found for Id " + entryId);
 			continue
 		}
 		var entry ACLEntry
 		var isType bool
 		entry, isType = obj.(ACLEntry)
 		if ! isType {
-			fmt.Println("Internal error - object with Id " + entryId + " is not an ACLEntry");
+			err = errors.New("Internal error - object with Id " + entryId + " is not an ACLEntry");
 			continue
 		}
 		if entry.getResourceId() == resourceId {
-			return entry
+			return entry, err
 		}
 	}
-	return nil
+	return nil, err
 }
 
 /*******************************************************************************
@@ -284,13 +298,19 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	description string) (Group, error) {
 	
 	// Check if a group with that name already exists within the realm.
-	var realm Realm = client.getRealm(realmId)
+	var realm Realm
+	var err error
+	realm, err = client.getRealm(realmId)
+	if err != nil { return nil, err }
 	if realm == nil { return nil, errors.New(fmt.Sprintf(
 		"Unidentified realm for realm Id %s", realmId))
 	}
-	if realm.getGroupByName(name) != nil { return nil, errors.New(
+	var g Group
+	g, err = realm.getGroupByName(name)
+	if err != nil { return nil, err }
+	if g != nil { return nil, errors.New(
 		fmt.Sprintf("Group named %s already exists within realm %s", name,
-			client.getRealm(realmId).getName()))
+			realm.getName()))
 	}
 	
 	var groupId string = createUniqueDbObjectId()
@@ -308,8 +328,14 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	return newGroup, nil
 }
 
-func (client *InMemClient) getGroup(id string) Group {
-	return client.getPersistentObject(id).(Group)
+func (client *InMemClient) getGroup(id string) (Group, error) {
+	var group Group
+	var isType bool
+	var obj PersistObj = client.getPersistentObject(id)
+	if obj == nil { return nil, nil }
+	group, isType = obj.(Group)
+	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Group") }
+	return group, nil
 }
 
 func (group *InMemGroup) getDescription() string {
@@ -382,7 +408,10 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 		return nil, errors.New("A user with Id " + userId + " already exists")
 	}
 	
-	var realm Realm = client.getRealm(realmId)
+	var realm Realm
+	var err error
+	realm, err = client.getRealm(realmId)
+	if err != nil { return nil, err }
 	if realm == nil { return nil, errors.New("Realm with Id " + realmId + " not found") }
 	
 	var userObjId string = createUniqueDbObjectId()
@@ -403,9 +432,14 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	return newUser, nil
 }
 
-func (client *InMemClient) getUser(id string) User {
-	return client.getPersistentObject(id).(User)
-	//return User(client.getPersistentObject(id))
+func (client *InMemClient) getUser(id string) (User, error) {
+	var user User
+	var isType bool
+	var obj PersistObj = client.getPersistentObject(id)
+	if obj == nil { return nil, nil }
+	user, isType = obj.(User)
+	if ! isType { return nil, errors.New("Object with Id " + id + " is not a User") }
+	return user, nil
 }
 
 func (user *InMemUser) getUserId() string {
@@ -446,7 +480,7 @@ func (user *InMemUser) getGroupIds() []string {
 	return user.GroupIds
 }
 
-func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) []string {
+func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) ([]string, error) {
 	// those realms for which user can edit the realm
 	
 	var realmIds []string = make([]string, 0)
@@ -454,28 +488,31 @@ func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) []strin
 	// Identify the user.
 	var obj PersistObj = client.getPersistentObject(userObjId)
 	if obj == nil {
-		fmt.Println("Object with Id " + userObjId + " not found")
-		return realmIds
+		return nil, errors.New("Object with Id " + userObjId + " not found")
 	}
 	var user User
 	var isType bool
 	user, isType = obj.(User)
 	if ! isType {
-		fmt.Println("Internal error: object with Id " + userObjId + " is not a User")
-		return realmIds
+		return nil, errors.New("Internal error: object with Id " + userObjId + " is not a User")
 	}
 	
 	// Identify those ACLEntries that are for realms and for which the user has write access.
+	var err error
 	for _, entryId := range user.getACLEntryIds() {
-		var entry ACLEntry = client.getACLEntry(entryId)
+		var entry ACLEntry
+		entry, err = client.getACLEntry(entryId)
+		if err != nil { return nil, err }
 		if entry == nil {
-			fmt.Println("Internal error: object with Id " + entryId + " is not an ACLEntry")
+			err = errors.New("Internal error: object with Id " + entryId + " is not an ACLEntry")
 			continue
 		}
 		var resourceId string = entry.getResourceId()
-		var resource Resource = client.getResource(resourceId)
+		var resource Resource
+		resource, err = client.getResource(resourceId)
+		if err != nil { return nil, err }
 		if resource == nil {
-			fmt.Println("Internal error: resource with Id " + resourceId + " not found")
+			err = errors.New("Internal error: resource with Id " + resourceId + " not found")
 			continue
 		}
 		if resource.isRealm() {
@@ -487,11 +524,17 @@ func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) []strin
 		}
 	}
 	
-	return realmIds
+	return realmIds, err
 }
 
 func (user *InMemUser) asUserDesc() *UserDesc {
-	var adminRealmIds []string = user.getDBClient().getRealmsAdministeredByUser(user.getId())
+	var adminRealmIds []string
+	var err error
+	adminRealmIds, err = user.getDBClient().getRealmsAdministeredByUser(user.getId())
+	if err != nil {
+		fmt.Println("In asUserDesc(), " + err.Error())
+		adminRealmIds = make([]string, 0)
+	}
 	return NewUserDesc(user.Id, user.UserId, user.Name, user.RealmId, adminRealmIds)
 }
 
@@ -508,21 +551,21 @@ type InMemACLEntry struct {
 func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	permissionMask []bool) (ACLEntry, error) {
 	
-	assertThat(resourceId != "", "Internal error: resourceId is empty")
-	assertThat(partyId != "", "Internal error: partyId is empty")
+	if resourceId == "" { return nil, errors.New("Internal error: resourceId is empty") }
+	if partyId == "" { return nil, errors.New("Internal error: partyId is empty") }
 	var resource Resource
 	var party Party
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(resourceId)
-	assertThat(obj != nil, "Internal error: obj is nil")
+	if obj == nil { return nil, errors.New("Internal error: obj is nil") }
 	resource, isType = obj.(Resource)
-	assertThat(isType, "Internal error: object is not a Resource - it is a " +
-		reflect.TypeOf(obj).String())
+	if ! isType { return nil, errors.New("Internal error: object is not a Resource - it is a " +
+		reflect.TypeOf(obj).String()) }
 	obj = client.getPersistentObject(partyId)
-	assertThat(obj != nil, "Internal error: obj is nil")
+	if obj == nil { return nil, errors.New("Internal error: obj is nil") }
 	party, isType = obj.(Party)
-	assertThat(isType, "Internal error: object is not a Party - it is a " +
-		reflect.TypeOf(obj).String())
+	if ! isType { return nil, errors.New("Internal error: object is not a Party - it is a " +
+		reflect.TypeOf(obj).String()) }
 	var aclEntryId = createUniqueDbObjectId()
 	var newACLEntry *InMemACLEntry = &InMemACLEntry{
 		InMemPersistObj: *client.NewInMemPersistObj(aclEntryId),
@@ -539,12 +582,14 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	return newACLEntry, nil
 }
 
-func (client *InMemClient) getACLEntry(id string) ACLEntry {
+func (client *InMemClient) getACLEntry(id string) (ACLEntry, error) {
 	var aclEntry ACLEntry
 	var isType bool
-	aclEntry, isType = client.getPersistentObject(id).(ACLEntry)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return aclEntry
+	var obj PersistObj = client.getPersistentObject(id)
+	if obj == nil { return nil, nil }
+	aclEntry, isType = obj.(ACLEntry)
+	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
+	return aclEntry, nil
 }
 
 func (entry *InMemACLEntry) getResourceId() string {
@@ -555,12 +600,12 @@ func (entry *InMemACLEntry) getPartyId() string {
 	return entry.PartyId
 }
 
-func (entry *InMemACLEntry) getParty() Party {
+func (entry *InMemACLEntry) getParty() (Party, error) {
 	var party Party
 	var isType bool
 	party, isType = allObjects[entry.PartyId].(Party)
-	if ! isType { panic(errors.New("Internal error: object is not a Party")) }
-	return party
+	if ! isType { return nil, errors.New("Internal error: object is not a Party") }
+	return party, nil
 }
 
 func (entry *InMemACLEntry) getPermissionMask() []bool {
@@ -591,11 +636,17 @@ type InMemRealm struct {
 
 func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo, adminUserId string) (Realm, error) {
 	
-	var realmId string = client.getRealmIdByName(realmInfo.RealmName)
+	var realmId string
+	var err error
+	realmId, err = client.getRealmIdByName(realmInfo.RealmName)
+	if err != nil { return nil, err }
 	if realmId != "" {
 		return nil, errors.New("A realm with name " + realmInfo.RealmName + " already exists")
 	}
 	realmId = createUniqueDbObjectId()
+	var realmFileDir string
+	realmFileDir, err = client.assignRealmFileDir(realmId)
+	if err != nil { return nil, err }
 	var newRealm *InMemRealm = &InMemRealm{
 		InMemResource: *client.NewInMemResource(realmId, realmInfo.RealmName, realmInfo.Description),
 		AdminUserId: adminUserId,
@@ -603,19 +654,19 @@ func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo, adminUserId strin
 		UserObjIds: make([]string, 0),
 		GroupIds: make([]string, 0),
 		RepoIds: make([]string, 0),
-		FileDirectory: client.assignRealmFileDir(realmId),
+		FileDirectory: realmFileDir,
 	}
 	
 	allRealmIds = append(allRealmIds, realmId)
 	
 	fmt.Println("Created realm")
 	allObjects[realmId] = newRealm
-	_, isType := allObjects[realmId].(Realm)
-	if ! isType {
-		fmt.Println("*******realm", realmId, "is not a Realm")
-		fmt.Println("newRealm is a", reflect.TypeOf(newRealm))
-		fmt.Println("allObjects[", realmId, "] is a", reflect.TypeOf(allObjects[realmId]))
-	}
+	//_, isType := allObjects[realmId].(Realm)
+	//if ! isType {
+	//	fmt.Println("*******realm", realmId, "is not a Realm")
+	//	fmt.Println("newRealm is a", reflect.TypeOf(newRealm))
+	//	fmt.Println("allObjects[", realmId, "] is a", reflect.TypeOf(allObjects[realmId]))
+	//}
 	return newRealm, nil
 }
 
@@ -623,12 +674,15 @@ func (client *InMemClient) dbGetAllRealmIds() []string {
 	return allRealmIds
 }
 
-func (client *InMemClient) getRealmIdByName(name string) string {
+func (client *InMemClient) getRealmIdByName(name string) (string, error) {
 	for _, realmId := range allRealmIds {
-		var realm Realm = client.getRealm(realmId)
-		if realm.getName() == name { return realmId }
+		var realm Realm
+		var err error
+		realm, err = client.getRealm(realmId)
+		if err != nil { return "", err }
+		if realm.getName() == name { return realmId, nil }
 	}
-	return ""
+	return "", nil
 }
 
 func (realm *InMemRealm) getAdminUserId() string {
@@ -639,18 +693,14 @@ func (realm *InMemRealm) getFileDirectory() string {
 	return realm.FileDirectory
 }
 
-func (client *InMemClient) getRealm(id string) Realm {
-	fmt.Println("getRealm(", id, ")...")
+func (client *InMemClient) getRealm(id string) (Realm, error) {
 	var realm Realm
 	var isType bool
-	realm, isType = allObjects[id].(Realm)
-	if realm == nil { return nil }
-	if ! isType {
-		fmt.Println("realm is a", reflect.TypeOf(realm))
-		fmt.Println("allObjects[", id, "] is a", reflect.TypeOf(allObjects[id]))
-		panic(errors.New("Internal error: object is an unexpected type"))
-	}
-	return realm
+	var obj PersistObj = allObjects[id]
+	if obj == nil { return nil, nil }
+	realm, isType = obj.(Realm)
+	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Realm") }
+	return realm, nil
 }
 
 func (realm *InMemRealm) getUserObjIds() []string {
@@ -666,7 +716,7 @@ func (realm *InMemRealm) addUserId(userObjId string) error {
 	var user User
 	var isType bool
 	user, isType = allObjects[userObjId].(User)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
+	if ! isType { return errors.New("Internal error: object is an unexpected type") }
 	if user == nil { return errors.New("Could not identify user with obj Id " + userObjId) }
 	if user.getRealmId() != "" {
 		return errors.New("User with obj Id " + userObjId + " belongs to another realm")
@@ -732,64 +782,64 @@ func (realm *InMemRealm) hasRepoWithId(repoId string) bool {
 	return false
 }
 
-func (realm *InMemRealm) getUserByName(userName string) User {
+func (realm *InMemRealm) getUserByName(userName string) (User, error) {
 	for _, id := range realm.UserObjIds {
 		var obj PersistObj = allObjects[id]
-		if obj == nil { panic(errors.New(fmt.Sprintf(
-			"Internal error: obj with Id %s does not exist", id)))
+		if obj == nil { return nil, errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s does not exist", id))
 		}
 		user, isUser := obj.(User)
-		if ! isUser { panic(errors.New(fmt.Sprintf(
-			"Internal error: obj with Id %s is not a User", id)))
+		if ! isUser { return nil, errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s is not a User", id))
 		}
-		if user.getName() == userName { return user }
+		if user.getName() == userName { return user, nil }
 	}
-	return nil
+	return nil, nil
 }
 
-func (realm *InMemRealm) getUserByUserId(userId string) User {
+func (realm *InMemRealm) getUserByUserId(userId string) (User, error) {
 	for _, id := range realm.UserObjIds {
 		var obj PersistObj = allObjects[id]
-		if obj == nil { panic(errors.New(fmt.Sprintf(
-			"Internal error: obj with Id %s does not exist", id)))
+		if obj == nil { return nil, errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s does not exist", id))
 		}
 		user, isUser := obj.(User)
-		if ! isUser { panic(errors.New(fmt.Sprintf(
-			"Internal error: obj with Id %s is not a User", id)))
+		if ! isUser { return nil, errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s is not a User", id))
 		}
-		if user.getUserId() == userId { return user }
+		if user.getUserId() == userId { return user, nil }
 	}
-	return nil
+	return nil, nil
 }
 
-func (realm *InMemRealm) getGroupByName(groupName string) Group {
+func (realm *InMemRealm) getGroupByName(groupName string) (Group, error) {
 	for _, id := range realm.GroupIds {
 		var obj PersistObj = allObjects[id]
-		if obj == nil { panic(errors.New(fmt.Sprintf(
-			"Internal error: obj with Id %s does not exist", id)))
+		if obj == nil { return nil, errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s does not exist", id))
 		}
 		group, isGroup := obj.(Group)
-		if ! isGroup { panic(errors.New(fmt.Sprintf(
-			"Internal error: obj with Id %s is not a Group", id)))
+		if ! isGroup { return nil, errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s is not a Group", id))
 		}
-		if group.getName() == groupName { return group }
+		if group.getName() == groupName { return group, nil }
 	}
-	return nil
+	return nil, nil
 }
 
-func (realm *InMemRealm) getRepoByName(repoName string) Repo {
+func (realm *InMemRealm) getRepoByName(repoName string) (Repo, error) {
 	for _, id := range realm.RepoIds {
 		var obj PersistObj = allObjects[id]
-		if obj == nil { panic(errors.New(fmt.Sprintf(
-			"Internal error: obj with Id %s does not exist", id)))
+		if obj == nil { return nil, errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s does not exist", id))
 		}
 		repo, isRepo := obj.(Repo)
-		if ! isRepo { panic(errors.New(fmt.Sprintf(
-			"Internal error: obj with Id %s is not a Repo", id)))
+		if ! isRepo { return nil, errors.New(fmt.Sprintf(
+			"Internal error: obj with Id %s is not a Repo", id))
 		}
-		if repo.getName() == repoName { return repo }
+		if repo.getName() == repoName { return repo, nil }
 	}
-	return nil
+	return nil, nil
 }
 
 func (realm *InMemRealm) isRealm() bool { return true }
@@ -807,15 +857,21 @@ type InMemRepo struct {
 }
 
 func (client *InMemClient) dbCreateRepo(realmId string, name string, desc string) (Repo, error) {
-	var realm Realm = client.getRealm(realmId)
+	var realm Realm
+	var err error
+	realm, err = client.getRealm(realmId)
+	if err != nil { return nil, err }
 	var repoId string = createUniqueDbObjectId()
+	var repoFileDir string
+	repoFileDir, err = client.assignRepoFileDir(realmId, repoId)
+	if err != nil { return nil, err }
 	var newRepo *InMemRepo = &InMemRepo{
 		InMemResource: *client.NewInMemResource(repoId, name, desc),
 		RealmId: realmId,
 		DockerfileIds: make([]string, 0),
 		DockerImageIds: make([]string, 0),
 		ScanConfigIds: make([]string, 0),
-		FileDirectory: client.assignRepoFileDir(realmId, repoId),
+		FileDirectory: repoFileDir,
 	}
 	fmt.Println("Created repo")
 	allObjects[repoId] = newRepo
@@ -827,23 +883,22 @@ func (repo *InMemRepo) getFileDirectory() string {
 	return repo.FileDirectory
 }
 
-func (client *InMemClient) getRepo(id string) Repo {
+func (client *InMemClient) getRepo(id string) (Repo, error) {
 	var repo Repo
 	var isType bool
-	repo, isType = allObjects[id].(Repo)
-	if ! isType {
-		fmt.Println("***********allObjects[", id, "] is a", reflect.TypeOf(allObjects[id]))
-		panic(errors.New("************Internal error: object is an unexpected type"))
-	}
-	return repo
+	var obj PersistObj = allObjects[id]
+	if obj == nil { return nil, nil }
+	repo, isType = obj.(Repo)
+	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Repo") }
+	return repo, nil
 }
 
-func (repo *InMemRepo) getRealm() Realm {
+func (repo *InMemRepo) getRealm() (Realm, error) {
 	var realm Realm
 	var isType bool
 	realm, isType = allObjects[repo.RealmId].(Realm)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return realm
+	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
+	return realm, nil
 }
 
 func (repo *InMemRepo) getDockerfileIds() []string {
@@ -866,16 +921,18 @@ func (repo *InMemRepo) addScanConfig(config ScanConfig) {
 	repo.ScanConfigIds = append(repo.ScanConfigIds, config.getId())
 }
 
-func (repo *InMemRepo) getScanConfigByName(name string) ScanConfig {
+func (repo *InMemRepo) getScanConfigByName(name string) (ScanConfig, error) {
 	for _, configId := range repo.ScanConfigIds {
-		var config ScanConfig = repo.getDBClient().getScanConfig(configId)
+		var config ScanConfig
+		var err error
+		config, err = repo.getDBClient().getScanConfig(configId)
+		if err != nil { return nil, err }
 		if config == nil {
-			fmt.Println("Internal error: list ScanConfigIds contains an invalid entry")
-			continue
+			return nil, errors.New("Internal error: list ScanConfigIds contains an invalid entry")
 		}
-		if config.getName() == name { return config }
+		if config.getName() == name { return config, nil }
 	}
-	return nil
+	return nil, nil
 }
 
 func (repo *InMemRepo) getParentId() string {
@@ -907,21 +964,17 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 		FilePath: filepath,
 	}
 	
-	if newDockerfile.getId() == newDockerfile.InMemResource.InMemACL.InMemPersistObj.getId() {
-		fmt.Println("Worked")
-	}
-	fmt.Println("newDockerfile.getId()=" + newDockerfile.getId())
-	fmt.Println("newDockerfile.InMemResource.InMemACL.InMemPersistObj.getId()=" +
-		newDockerfile.InMemResource.InMemACL.InMemPersistObj.getId())
-	assertThat(newDockerfile.getId() == newDockerfile.InMemResource.InMemACL.InMemPersistObj.getId(), "Uh oh")
-	assertThat(newDockerfile.getId() != "", "Internal ERROR: Dockerfile Id is empty")
-	assertThat(newDockerfile.getId() == dockerfileId, "Internal ERROR: Dockerfile Id has not be set properly")
+	if newDockerfile.getId() == "" { return nil, errors.New("Internal ERROR: Dockerfile Id is empty") }
+	if newDockerfile.getId() != dockerfileId { return nil, errors.New("Internal ERROR: Dockerfile Id has not be set properly") }
 	
 	fmt.Println("Created Dockerfile")
 	allObjects[dockerfileId] = newDockerfile
 	
 	// Add to the Repo's list of Dockerfiles.
-	var repo Repo = client.getRepo(repoId)
+	var repo Repo
+	var err error
+	repo, err = client.getRepo(repoId)
+	if err != nil { return nil, err }
 	if repo == nil {
 		fmt.Println("Repo with Id " + repoId + " not found")
 		return nil, errors.New(fmt.Sprintf("Repo with Id %s not found", repoId))
@@ -931,20 +984,22 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	return newDockerfile, nil
 }
 
-func (client *InMemClient) getDockerfile(id string) Dockerfile {
+func (client *InMemClient) getDockerfile(id string) (Dockerfile, error) {
 	var dockerfile Dockerfile
 	var isType bool
-	dockerfile, isType = allObjects[id].(Dockerfile)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return dockerfile
+	var obj PersistObj = allObjects[id]
+	if obj == nil { return nil, nil }
+	dockerfile, isType = obj.(Dockerfile)
+	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Dockerfile") }
+	return dockerfile, nil
 }
 
-func (dockerfile *InMemDockerfile) getRepo() Repo {
+func (dockerfile *InMemDockerfile) getRepo() (Repo, error) {
 	var repo Repo
 	var isType bool
 	repo, isType = allObjects[dockerfile.RepoId].(Repo)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return repo
+	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
+	return repo, nil
 }
 
 func (dockerfile *InMemDockerfile) getExternalFilePath() string {
@@ -980,12 +1035,12 @@ func (image *InMemImage) getName() string {
 	return image.Name
 }
 
-func (image *InMemImage) getRepo() Repo {
+func (image *InMemImage) getRepo() (Repo, error) {
 	var repo Repo
 	var isType bool
 	repo, isType = allObjects[image.RepoId].(Repo)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return repo
+	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
+	return repo, nil
 }
 
 func (image *InMemDockerImage) getParentId() string {
@@ -1005,7 +1060,7 @@ func (client *InMemClient) dbCreateDockerImage(repoId string,
 	var repo Repo
 	var isType bool
 	repo, isType = allObjects[repoId].(Repo)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
+	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	
 	var imageObjId string = createUniqueDbObjectId()
 	var newDockerImage *InMemDockerImage = &InMemDockerImage{
@@ -1017,12 +1072,14 @@ func (client *InMemClient) dbCreateDockerImage(repoId string,
 	return newDockerImage, nil
 }
 
-func (client *InMemClient) getDockerImage(id string) DockerImage {
+func (client *InMemClient) getDockerImage(id string) (DockerImage, error) {
 	var image DockerImage
 	var isType bool
-	image, isType = allObjects[id].(DockerImage)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return image
+	var obj PersistObj = allObjects[id]
+	if obj == nil { return nil, nil }
+	image, isType = obj.(DockerImage)
+	if ! isType { return nil, errors.New("Object with Id " + id + " is not a DockerImage") }
+	return image, nil
 }
 
 func (image *InMemDockerImage) getDockerImageTag() string {
@@ -1045,12 +1102,14 @@ type InMemParameterValue struct {
 	ConfigId string
 }
 
-func (client *InMemClient) getParameterValue(id string) ParameterValue {
+func (client *InMemClient) getParameterValue(id string) (ParameterValue, error) {
 	var pv ParameterValue
 	var isType bool
-	pv, isType = allObjects[id].(ParameterValue)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return pv
+	var obj PersistObj = allObjects[id]
+	if obj == nil { return nil, nil }
+	pv, isType = obj.(ParameterValue)
+	if ! isType { return nil, errors.New("Object with Id " + id + " is not a ParameterValue") }
+	return pv, nil
 }
 
 func (paramValue *InMemParameterValue) getName() string {
@@ -1091,13 +1150,19 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	failureGraphicImageURL string) (ScanConfig, error) {
 	
 	// Check if a scanConfig with that name already exists within the repo.
-	var repo Repo = client.getRepo(repoId)
+	var repo Repo
+	var err error
+	repo, err = client.getRepo(repoId)
+	if err != nil { return nil, err }
 	if repo == nil { return nil, errors.New(fmt.Sprintf(
 		"Unidentified repo for repo Id %s", repoId))
 	}
-	if repo.getScanConfigByName(name) != nil { return nil, errors.New(
+	var sc ScanConfig
+	sc, err = repo.getScanConfigByName(name)
+	if err != nil { return nil, err }
+	if sc != nil { return nil, errors.New(
 		fmt.Sprintf("ScanConfig named %s already exists within repo %s", name,
-			client.getRealm(repoId).getName()))
+			repo.getName()))
 	}
 	
 	var scanConfigId string = createUniqueDbObjectId()
@@ -1118,12 +1183,14 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	return scanConfig, nil
 }
 
-func (clint *InMemClient) getScanConfig(id string) ScanConfig {
+func (clint *InMemClient) getScanConfig(id string) (ScanConfig, error) {
 	var scanConfig ScanConfig
 	var isType bool
-	scanConfig, isType = allObjects[id].(ScanConfig)
-	if ! isType { panic(errors.New("Internal error: object is an unexpected type")) }
-	return scanConfig
+	var obj PersistObj = allObjects[id]
+	if obj == nil { return nil, nil }
+	scanConfig, isType = obj.(ScanConfig)
+	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
+	return scanConfig, nil
 }
 
 func (scanConfig *InMemScanConfig) getRepoId() string {
@@ -1141,15 +1208,26 @@ func (scanConfig *InMemScanConfig) getCurrentExtObjId() string {
 		// See also https://git-scm.com/docs/git-hash-object
 }
 
-func (scanConfig *InMemScanConfig) getAsTempFile(string) *os.File {
-	var file *os.File
+func (scanConfig *InMemScanConfig) getAsTempFile(extObjId string) (*os.File, error) {
+	var tempfile *os.File
 	var err error
-	file, err = ioutil.TempFile("", "")
+	tempfile, err = ioutil.TempFile("", "")
 	if err != nil {
-		fmt.Println("Error: Unable to create temp file")
-		return nil
+		return nil, errors.New("Error: Unable to create temp file")
 	}
-	return file
+	
+	// Copy the specified file object to the temp file.
+	var bytes []byte
+	var sourcefile *os.File
+	sourcefile, err = os.Open(extObjId) // for now, we treat the extObjId as a file path.
+	bytes, err = ioutil.ReadAll(sourcefile)
+	err = ioutil.WriteFile(tempfile.Name(), bytes, os.ModePerm)
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil, errors.New("While writing dockerfile, " + err.Error())
+	}
+	
+	return tempfile, nil
 }
 
 func (scanConfig *InMemScanConfig) getProviderName() string {
@@ -1171,7 +1249,13 @@ func (scanConfig *InMemScanConfig) getFailureGraphicImageURL() string {
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *ScanConfigDesc {
 	var paramValueDescs []*ParameterValueDesc = make([]*ParameterValueDesc, 0)
 	for _, valueId := range scanConfig.ParameterValueIds {
-		var paramValue ParameterValue = scanConfig.Client.getParameterValue(valueId)
+		var paramValue ParameterValue
+		var err error
+		paramValue, err = scanConfig.Client.getParameterValue(valueId)
+		if err != nil {
+			fmt.Println("Internal error: " + err.Error())
+			continue
+		}
 		if paramValue == nil {
 			fmt.Println("Internal error: Could not find ParameterValue with Id " + valueId)
 			continue
@@ -1305,12 +1389,11 @@ var allRealmIds []string
  * Create a directory for the Dockerfiles, images, and any other files owned
  * by the specified realm.
  */
-func (client *InMemClient) assignRealmFileDir(realmId string) string {
+func (client *InMemClient) assignRealmFileDir(realmId string) (string, error) {
 	var path = client.Server.Config.FileRepoRootPath + "/" + realmId
 	// Create the directory. (It is an error if it already exists.)
 	err := os.MkdirAll(path, 0711)
-	if err != nil { panic(err) }
-	return path
+	return path, err
 }
 
 /*******************************************************************************
@@ -1318,22 +1401,20 @@ func (client *InMemClient) assignRealmFileDir(realmId string) string {
  * by the specified repo. The directory will be created as a subdirectory of the
  * realm's directory.
  */
-func (client *InMemClient) assignRepoFileDir(realmId string, repoId string) string {
+func (client *InMemClient) assignRepoFileDir(realmId string, repoId string) (string, error) {
 	fmt.Println("assignRepoFileDir(", realmId, ",", repoId, ")...")
-	var realm Realm = client.getRealm(realmId)
+	var err error
+	var realm Realm
+	realm, err = client.getRealm(realmId)
+	if err != nil { return "", err }
 	var path = realm.getFileDirectory() + "/" + repoId
 	var curdir string
-	var err error
 	curdir, err = os.Getwd()
 	if err != nil { fmt.Println(err.Error()) }
 	fmt.Println("Current directory is '" + curdir + "'")
 	fmt.Println("Creating directory '" + path + "'...")
 	err = os.MkdirAll(path, 0711)
-	if err != nil {
-		fmt.Println("Internal error:", err.Error())
-		panic(err)
-	}
-	return path
+	return path, err
 }
 
 /*******************************************************************************

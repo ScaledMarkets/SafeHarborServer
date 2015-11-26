@@ -24,18 +24,18 @@ type DBClient interface {
 	dbCreateScanEvent(string, string, string, time.Time, string, string) (ScanEvent, error)
 	dbGetAllRealmIds() []string
 	getPersistentObject(id string) PersistObj
-	getResource(string) Resource
-	getParty(string) Party
-	getGroup(string) Group
-	getUser(string) User
-	getACLEntry(string) ACLEntry
-	getRealm(string) Realm
-	getRepo(string) Repo
-	getDockerfile(string) Dockerfile
-	getDockerImage(string) DockerImage
-	getScanConfig(string) ScanConfig
-	getParameterValue(string) ParameterValue
-	getRealmsAdministeredByUser(string) []string  // those realms for which user can edit the realm
+	getResource(string) (Resource, error)
+	getParty(string) (Party, error)
+	getGroup(string) (Group, error)
+	getUser(string) (User, error)
+	getACLEntry(string) (ACLEntry, error)
+	getRealm(string) (Realm, error)
+	getRepo(string) (Repo, error)
+	getDockerfile(string) (Dockerfile, error)
+	getDockerImage(string) (DockerImage, error)
+	getScanConfig(string) (ScanConfig, error)
+	getParameterValue(string) (ParameterValue, error)
+	getRealmsAdministeredByUser(string) ([]string, error)  // those realms for which user can edit the realm
 	init()
 	printDatabase()
 }
@@ -53,7 +53,7 @@ type Party interface {
 	getCreationTime() time.Time
 	getACLEntryIds() []string
 	addACLEntry(ACLEntry)
-	getACLEntryForResourceId(string) ACLEntry
+	getACLEntryForResourceId(string) (ACLEntry, error)
 }
 
 type Group interface {
@@ -98,7 +98,7 @@ type Resource interface {
 	getName() string
 	getCreationTime() time.Time
 	getDescription() string
-	getACLEntryForPartyId(string) ACLEntry
+	getACLEntryForPartyId(string) (ACLEntry, error)
 	getParentId() string
 	isRealm() bool
 	isRepo() bool
@@ -114,13 +114,13 @@ type Realm interface {
 	hasUserWithId(string) bool
 	hasGroupWithId(string) bool
 	hasRepoWithId(string) bool
-	getUserByName(string) User
-	getGroupByName(string) Group
-	getRepoByName(string) Repo
+	getUserByName(string) (User, error)
+	getGroupByName(string) (Group, error)
+	getRepoByName(string) (Repo, error)
 	getUserObjIds() []string
 	getRepoIds() []string
 	addUserId(string) error
-	getUserByUserId(string) User
+	getUserByUserId(string) (User, error)
 	asRealmDesc() *RealmDesc
 	getGroupIds() []string
 	addGroup(Group)
@@ -132,13 +132,13 @@ type Repo interface {
 	Resource
 	//getName() string
 	getFileDirectory() string
-	getRealm() Realm
+	getRealm() (Realm, error)
 	getDockerfileIds() []string
 	getDockerImageIds() []string
 	addDockerfile(Dockerfile)
 	addDockerImage(DockerImage)
 	addScanConfig(ScanConfig)
-	getScanConfigByName(string) ScanConfig
+	getScanConfigByName(string) (ScanConfig, error)
 	asRepoDesc() *RepoDesc
 	
 	//getDatasetIds() []string
@@ -149,14 +149,14 @@ type Dockerfile interface {
 	Resource
 	getExternalFilePath() string
 	asDockerfileDesc() *DockerfileDesc
-	getRepo() Repo
+	getRepo() (Repo, error)
 	
 	//getDockerfileExecEventIds() []string
 }
 
 type Image interface {
 	Resource
-	getRepo() Repo
+	getRepo() (Repo, error)
 }
 
 type DockerImage interface {
@@ -186,7 +186,7 @@ type ScanConfig interface {
 	getRepoId() string
 	getExternalObjPath() string
 	getCurrentExtObjId() string
-	getAsTempFile(string) *os.File
+	getAsTempFile(string) (*os.File, error)
 	getProviderName() string
 	getParameterValueIds() []string
 	getSuccessGraphicImageURL() string

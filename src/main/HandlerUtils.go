@@ -255,7 +255,9 @@ func authorizeHandlerAction(server *Server, sessionToken *SessionToken,
 		isAuthorized, err := authorized(server, sessionToken, mask, resourceId)
 		if err != nil { return NewFailureDesc(err.Error()) }
 		if ! isAuthorized {
-			var resource Resource = server.dbClient.getResource(resourceId)
+			var resource Resource
+			resource, err = server.dbClient.getResource(resourceId)
+			if err != nil { return NewFailureDesc(err.Error()) }
 			if resource == nil {
 				return NewFailureDesc("Unable to identify resource with Id " + resourceId)
 			}
@@ -319,8 +321,9 @@ func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo,
 	// Create an ACL entry for the new file, to allow access by the current user.
 	fmt.Println("Adding ACL entry")
 	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	dbClient.dbCreateACLEntry(dockerfile.getId(), user.getId(),
+	_, err = dbClient.dbCreateACLEntry(dockerfile.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
+	if err != nil { return dockerfile, err }
 	fmt.Println("Created ACL entry")
 	
 	return dockerfile, nil
@@ -406,7 +409,10 @@ func buildDockerfile(dockerfile Dockerfile, sessionToken *SessionToken,
 	
 	// Add a record for the image to the database.
 	var image DockerImage
-	image, err = dbClient.dbCreateDockerImage(dockerfile.getRepo().getId(),
+	var repo Repo
+	repo, err = dockerfile.getRepo()
+	if err != nil { return nil, err }
+	image, err = dbClient.dbCreateDockerImage(repo.getId(),
 		imageName, dockerfile.getDescription())
 	fmt.Println("Created docker image object.")
 	
