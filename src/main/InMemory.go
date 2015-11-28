@@ -4,7 +4,7 @@
  * The Group, Permission, Repo, Dockerfile, Image, User, and Realm have
  * asGroupDesc, asPermissionDesc, asRepoDesc, asDockerfileDesc, asImageDesc,
  * asUserDesc, and asRealmDesc methods, respectively - these methods construct
- * instances of GroupDesc, PermissionDesc, RepoDesc, DockerfileDesc, ImageDesc,
+ * instances of apitypes.GroupDesc, apitypes.PermissionDesc, apitypes.RepoDesc, apitypes.DockerfileDesc, ImageDesc,
  * and so on. These methods are a convenient way of constructing the return values
  * that are needed by the handler methods defined in the API (slides titled
  * "SafeHarbor REST API" of the desgin), which are implemented by the functions
@@ -22,6 +22,8 @@ import (
 	"io/ioutil"
 	"crypto/sha1"
 	"time"
+	
+	"apitypes"
 )
 
 /*******************************************************************************
@@ -64,8 +66,8 @@ func (client *InMemClient) init() {
 	// For testing only:
 	if client.Server.Debug {
 		fmt.Println("Debug mode: creating realm testrealm")
-		var realmInfo *RealmInfo
-		realmInfo, err = NewRealmInfo("testrealm", "Test Org", "For Testing")
+		var realmInfo *apitypes.RealmInfo
+		realmInfo, err = apitypes.NewRealmInfo("testrealm", "Test Org", "For Testing")
 		if err != nil {
 			fmt.Println(err.Error())
 			panic(err)
@@ -381,8 +383,8 @@ func (group *InMemGroup) addUser(user User) {
 	group.UserObjIds = append(group.UserObjIds, user.getId())
 }
 
-func (group *InMemGroup) asGroupDesc() *GroupDesc {
-	return NewGroupDesc(
+func (group *InMemGroup) asGroupDesc() *apitypes.GroupDesc {
+	return apitypes.NewGroupDesc(
 		group.Id, group.RealmId, group.Name, group.Description, group.CreationTime)
 }
 
@@ -518,7 +520,7 @@ func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) ([]stri
 		if resource.isRealm() {
 			var realm Realm = resource.(Realm)
 			var mask []bool = entry.getPermissionMask()
-			if mask[CanWrite] { // entry has write access for the realm
+			if mask[apitypes.CanWrite] { // entry has write access for the realm
 				realmIds = append(realmIds, realm.getId())
 			}
 		}
@@ -527,7 +529,7 @@ func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) ([]stri
 	return realmIds, err
 }
 
-func (user *InMemUser) asUserDesc() *UserDesc {
+func (user *InMemUser) asUserDesc() *apitypes.UserDesc {
 	var adminRealmIds []string
 	var err error
 	adminRealmIds, err = user.getDBClient().getRealmsAdministeredByUser(user.getId())
@@ -535,7 +537,7 @@ func (user *InMemUser) asUserDesc() *UserDesc {
 		fmt.Println("In asUserDesc(), " + err.Error())
 		adminRealmIds = make([]string, 0)
 	}
-	return NewUserDesc(user.Id, user.UserId, user.Name, user.RealmId, adminRealmIds)
+	return apitypes.NewUserDesc(user.Id, user.UserId, user.Name, user.RealmId, adminRealmIds)
 }
 
 /*******************************************************************************
@@ -616,9 +618,9 @@ func (entry *InMemACLEntry) setPermissionMask(mask []bool) {
 	entry.PermissionMask = mask
 }
 
-func (entry *InMemACLEntry) asPermissionDesc() *PermissionDesc {
+func (entry *InMemACLEntry) asPermissionDesc() *apitypes.PermissionDesc {
 	
-	return NewPermissionDesc(entry.getId(), entry.ResourceId, entry.PartyId, entry.getPermissionMask())
+	return apitypes.NewPermissionDesc(entry.getId(), entry.ResourceId, entry.PartyId, entry.getPermissionMask())
 }
 
 /*******************************************************************************
@@ -634,7 +636,7 @@ type InMemRealm struct {
 	FileDirectory string  // where this realm's files are stored
 }
 
-func (client *InMemClient) dbCreateRealm(realmInfo *RealmInfo, adminUserId string) (Realm, error) {
+func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUserId string) (Realm, error) {
 	
 	var realmId string
 	var err error
@@ -742,8 +744,8 @@ func (realm *InMemRealm) addRepo(repo Repo) {
 	realm.RepoIds = append(realm.RepoIds, repo.getId())
 }
 
-func (realm *InMemRealm) asRealmDesc() *RealmDesc {
-	return NewRealmDesc(realm.Id, realm.Name, realm.OrgFullName, realm.AdminUserId)
+func (realm *InMemRealm) asRealmDesc() *apitypes.RealmDesc {
+	return apitypes.NewRealmDesc(realm.Id, realm.Name, realm.OrgFullName, realm.AdminUserId)
 }
 
 func (realm *InMemRealm) hasUserWithId(userObjId string) bool {
@@ -941,8 +943,8 @@ func (repo *InMemRepo) getParentId() string {
 
 func (repo *InMemRepo) isRepo() bool { return true }
 
-func (repo *InMemRepo) asRepoDesc() *RepoDesc {
-	return NewRepoDesc(repo.Id, repo.RealmId, repo.Name, repo.Description,
+func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
+	return apitypes.NewRepoDesc(repo.Id, repo.RealmId, repo.Name, repo.Description,
 		repo.CreationTime, repo.getDockerfileIds())
 }
 
@@ -1006,8 +1008,8 @@ func (dockerfile *InMemDockerfile) getExternalFilePath() string {
 	return dockerfile.FilePath
 }
 
-func (dockerfile *InMemDockerfile) asDockerfileDesc() *DockerfileDesc {
-	return NewDockerfileDesc(dockerfile.Id, dockerfile.RepoId, dockerfile.Name, dockerfile.Description)
+func (dockerfile *InMemDockerfile) asDockerfileDesc() *apitypes.DockerfileDesc {
+	return apitypes.NewDockerfileDesc(dockerfile.Id, dockerfile.RepoId, dockerfile.Name, dockerfile.Description)
 }
 
 func (dockerfile *InMemDockerfile) getParentId() string {
@@ -1086,8 +1088,8 @@ func (image *InMemDockerImage) getDockerImageTag() string {
 	return image.Name
 }
 
-func (image *InMemDockerImage) asDockerImageDesc() *DockerImageDesc {
-	return NewDockerImageDesc(image.Id, image.Name, image.Description, image.CreationTime)
+func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
+	return apitypes.NewDockerImageDesc(image.Id, image.Name, image.Description, image.CreationTime)
 }
 
 func (image *InMemDockerImage) isDockerImage() bool { return true }
@@ -1128,8 +1130,8 @@ func (paramValue *InMemParameterValue) getConfigId() string {
 	return paramValue.ConfigId
 }
 
-func (paramValue *InMemParameterValue) asParameterValueDesc() *ParameterValueDesc {
-	return NewParameterValueDesc(paramValue.Name, paramValue.TypeName, paramValue.StringValue)
+func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.ParameterValueDesc {
+	return apitypes.NewParameterValueDesc(paramValue.Name, paramValue.TypeName, paramValue.StringValue)
 }
 
 /*******************************************************************************
@@ -1246,8 +1248,8 @@ func (scanConfig *InMemScanConfig) getFailureGraphicImageURL() string {
 	return scanConfig.FailureGraphicImageURL
 }
 
-func (scanConfig *InMemScanConfig) asScanConfigDesc() *ScanConfigDesc {
-	var paramValueDescs []*ParameterValueDesc = make([]*ParameterValueDesc, 0)
+func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
+	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
 	for _, valueId := range scanConfig.ParameterValueIds {
 		var paramValue ParameterValue
 		var err error
@@ -1263,7 +1265,7 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *ScanConfigDesc {
 		paramValueDescs = append(paramValueDescs, paramValue.asParameterValueDesc())
 	}
 	
-	return NewScanConfigDesc(scanConfig.Id, paramValueDescs)
+	return apitypes.NewScanConfigDesc(scanConfig.Id, paramValueDescs)
 }
 
 /*******************************************************************************
@@ -1291,8 +1293,8 @@ func (event *InMemEvent) getUserObjId() string {
 	return event.UserObjId
 }
 
-func (event *InMemEvent) asEventDesc() *EventDesc {
-	return NewEventDesc(event.Id, event.When, event.UserObjId)
+func (event *InMemEvent) asEventDesc() *apitypes.EventDesc {
+	return apitypes.NewEventDesc(event.Id, event.When, event.UserObjId)
 }
 
 /*******************************************************************************
@@ -1335,8 +1337,8 @@ func (event *InMemScanEvent) getScanConfigExternalObjId() string {
 	return event.ScanConfigExternalObjId
 }
 
-func (event *InMemScanEvent) asScanEventDesc() *ScanEventDesc {
-	return NewScanEventDesc(event.Id, event.When, event.UserObjId,
+func (event *InMemScanEvent) asScanEventDesc() *apitypes.ScanEventDesc {
+	return apitypes.NewScanEventDesc(event.Id, event.When, event.UserObjId,
 		event.ScanConfigId, event.Score)
 }
 

@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"os"
 	//"errors"
+	
+	"apitypes"
 )
 
 /*******************************************************************************
@@ -19,8 +21,8 @@ import (
  * The string arguments are in pairs, where the first is the name of the arg,
  * and the second is the string value.
  */
-type ReqHandlerFuncType func (*Server, *SessionToken, url.Values,
-	map[string][]*multipart.FileHeader) RespIntfTp
+type ReqHandlerFuncType func (*Server, *apitypes.SessionToken, url.Values,
+	map[string][]*multipart.FileHeader) apitypes.RespIntfTp
 
 /*******************************************************************************
  * The Dispatcher is a singleton struct that contains a map from request name
@@ -106,7 +108,7 @@ func NewDispatcher() *Dispatcher {
  * Invoke the method specified by the REST request. This is called by the
  * Server dispatch method.
  */
-func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
+func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	headers http.Header, w http.ResponseWriter, reqName string, values url.Values,
 	files map[string][]*multipart.FileHeader) {
 
@@ -132,13 +134,13 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
 	if dispatcher.server.Debug {
 		printHTTPParameters(values)
 	}
-	var result RespIntfTp = handler(dispatcher.server, sessionToken, values, files)
-	fmt.Println("Returning result:", result.asResponse())
+	var result apitypes.RespIntfTp = handler(dispatcher.server, sessionToken, values, files)
+	fmt.Println("Returning result:", result.AsResponse())
 	
 	// Detect whether an error occurred.
-	failureDesc, isType := result.(*FailureDesc)
+	failureDesc, isType := result.(*apitypes.FailureDesc)
 	if isType {
-		http.Error(w, failureDesc.asResponse(), failureDesc.HTTPCode)
+		http.Error(w, failureDesc.AsResponse(), failureDesc.HTTPCode)
 		fmt.Printf("Error:", failureDesc.Reason)
 		return
 	}
@@ -152,8 +154,8 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *SessionToken,
  * Generate a 200 HTTP response by converting the result into a
  * string consisting of name=value lines.
  */
-func returnOkResponse(headers http.Header, writer http.ResponseWriter, result RespIntfTp) {
-	var response string = result.asResponse()
+func returnOkResponse(headers http.Header, writer http.ResponseWriter, result apitypes.RespIntfTp) {
+	var response string = result.AsResponse()
 	fmt.Println("Response:")
 	fmt.Println(response)
 	writer.WriteHeader(http.StatusOK)

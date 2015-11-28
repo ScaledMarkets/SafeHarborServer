@@ -16,11 +16,13 @@ import (
 	"errors"
 	"crypto/sha512"
 	"hash"
+	
+	"apitypes"
 )
 
 type AuthService struct {
 	Service string
-	Sessions map[string]*Credentials  // map session key to Credentials.
+	Sessions map[string]*apitypes.Credentials  // map session key to apitypes.Credentials.
 	//DockerRegistry2AuthServerName string
 	//DockerRegistry2AuthPort int
 	//DockerRegistry2AuthSvc *http.Client
@@ -35,7 +37,7 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
 
 	return &AuthService{
 		Service: serviceName,
-		Sessions: make(map[string]*Credentials),
+		Sessions: make(map[string]*apitypes.Credentials),
 		//DockerRegistry2AuthServerName: authServerName,
 		//DockerRegistry2AuthPort: authPort,
 		//DockerRegistry2AuthSvc: connectToAuthServer(certPool),
@@ -47,16 +49,16 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
  * Clear all sessions that are cached in the auth service.
  */
 func (authSvc *AuthService) clearAllSessions() {
-	authSvc.Sessions = make(map[string]*Credentials)
+	authSvc.Sessions = make(map[string]*apitypes.Credentials)
 }
 
 /*******************************************************************************
  * Create a new user session. This presumes that the credentials have been verified.
  */
-func (authSvc *AuthService) createSession(creds *Credentials) *SessionToken {
+func (authSvc *AuthService) createSession(creds *apitypes.Credentials) *apitypes.SessionToken {
 	
 	var sessionId string = authSvc.createUniqueSessionId()
-	var token *SessionToken = NewSessionToken(sessionId, creds.UserId)
+	var token *apitypes.SessionToken = apitypes.NewSessionToken(sessionId, creds.UserId)
 	
 	// Cache the new session token, so that this Server can recognize it in future
 	// exchanges during this session.
@@ -78,9 +80,9 @@ func (authSvc *AuthService) invalidateSessionId(sessionId string) {
  * Obtain the session Id, if any, and validate it; return nil if no Id found
  * or the Id is not valid.
  */
-func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionToken {
+func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *apitypes.SessionToken {
 	
-	var sessionToken *SessionToken = nil
+	var sessionToken *apitypes.SessionToken = nil
 	
 	fmt.Println("authenticating request...")
 	var sessionId = getSessionId(httpReq)
@@ -96,7 +98,7 @@ func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *SessionT
  * 
  */
 
-func (authSvc *AuthService) addSessionIdToResponse(sessionToken *SessionToken,
+func (authSvc *AuthService) addSessionIdToResponse(sessionToken *apitypes.SessionToken,
 	writer http.ResponseWriter) {
 
 	authSvc.setSessionId(sessionToken, writer)
@@ -107,7 +109,7 @@ func (authSvc *AuthService) addSessionIdToResponse(sessionToken *SessionToken,
  * The ACL set for the resource is used to make the determination.
  * At most one field of the actionMask may be true.
  */
-func authorized(server *Server, sessionToken *SessionToken, actionMask []bool,
+func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask []bool,
 	resourceId string) (bool, error) {
 
 	/* Rules:
@@ -256,7 +258,7 @@ func getSessionId(httpReq *http.Request) string {
 /*******************************************************************************
  * Used by addSessionIdToResponse.
  */
-func (authService *AuthService) setSessionId(sessionToken *SessionToken,
+func (authService *AuthService) setSessionId(sessionToken *apitypes.SessionToken,
 	writer http.ResponseWriter) {
 	
 	// Set cookie containing the session Id.
@@ -278,19 +280,19 @@ func (authService *AuthService) setSessionId(sessionToken *SessionToken,
 }
 
 /*******************************************************************************
- * Validate the specified session id. If valid, return a SessionToken with
+ * Validate the specified session id. If valid, return a apitypes.SessionToken with
  * the identity of the session owner.
  */
-func (authSvc *AuthService) validateSessionId(sessionId string) *SessionToken {
+func (authSvc *AuthService) validateSessionId(sessionId string) *apitypes.SessionToken {
 	
-	var credentials *Credentials = authSvc.Sessions[sessionId]
+	var credentials *apitypes.Credentials = authSvc.Sessions[sessionId]
 	
 	if credentials == nil {
 		fmt.Println("No credentials found for session id", sessionId)
 		return nil
 	}
 	
-	return NewSessionToken(sessionId, credentials.UserId)
+	return apitypes.NewSessionToken(sessionId, credentials.UserId)
 }
 
 /*******************************************************************************

@@ -12,14 +12,19 @@
  *      the design in the slide "API REST Binding".
  */
 
-package main
+package apitypes
 
 import (
 	"net/url"
+	"net/http"
 	"fmt"
 	"errors"
 	"time"
+	"io"
 	//"runtime/debug"
+	
+	// My packages:
+	//"rest"
 )
 
 /*******************************************************************************
@@ -44,10 +49,10 @@ type BaseType struct {
 }
 
 type RespIntfTp interface {  // response interface type
-	asResponse() string
+	AsResponse() string
 }
 
-func (b *BaseType) asResponse() string {
+func (b *BaseType) AsResponse() string {
 	return ""
 }
 
@@ -69,7 +74,7 @@ func NewResult(status int, message string) *Result {
 	}
 }
 
-func (result *Result) asResponse() string {
+func (result *Result) AsResponse() string {
 	return fmt.Sprintf("{\"Status\": \"%d\",\"Message\": \"%s\"}",
 		result.Status, result.Message)
 }
@@ -91,9 +96,8 @@ func NewFailureDesc(reason string) *FailureDesc {
 	}
 }
 
-func (failureDesc *FailureDesc) asResponse() string {
-	return fmt.Sprintf("{\"Reason\": \"%s\", \"HTTPCode\": \"%d\"}",
-		failureDesc.Reason, failureDesc.HTTPCode)
+func (failureDesc *FailureDesc) AsResponse() string {
+	return NewFailureMessage(failureDesc.Reason, failureDesc.HTTPCode)
 }
 
 /*******************************************************************************
@@ -125,7 +129,7 @@ func GetCredentials(values url.Values) (*Credentials, error) {
 	return NewCredentials(userid, pswd), nil
 }
 
-func (creds *Credentials) asResponse() string {
+func (creds *Credentials) AsResponse() string {
 	return fmt.Sprintf("{\"UserId\": \"%s\"}", creds.UserId)
 }
 
@@ -149,19 +153,19 @@ func NewSessionToken(sessionId string, userId string) *SessionToken {
 	}
 }
 
-func (sessionToken *SessionToken) setRealmId(id string) {
+func (sessionToken *SessionToken) SetRealmId(id string) {
 	sessionToken.RealmId = id
 }
 
-func (sessionToken *SessionToken) setIsAdminUser(isAdmin bool) {
+func (sessionToken *SessionToken) SetIsAdminUser(isAdmin bool) {
 	sessionToken.IsAdmin = isAdmin
 }
 
-func (sessionToken *SessionToken) asResponse() string {
+func (sessionToken *SessionToken) AsResponse() string {
 	return fmt.Sprintf("{\"UniqueSessionId\": \"%s\", \"AuthenticatedUserid\": \"%s\", " +
 		"\"RealmId\": \"%s\", \"IsAdmin\": %s}",
 		sessionToken.UniqueSessionId, sessionToken.AuthenticatedUserid,
-		sessionToken.RealmId, boolToString(sessionToken.IsAdmin))
+		sessionToken.RealmId, BoolToString(sessionToken.IsAdmin))
 }
 
 /*******************************************************************************
@@ -186,19 +190,19 @@ func NewGroupDesc(groupId, realmId, groupName, desc string, creationDate time.Ti
 	}
 }
 
-func (groupDesc *GroupDesc) asResponse() string {
+func (groupDesc *GroupDesc) AsResponse() string {
 	return fmt.Sprintf("{\"RealmId\": \"%s\", \"GroupName\": \"%s\", \"CreationDate\": %s, \"GroupId\": \"%s\", \"Description\": \"%s\"}",
 		groupDesc.RealmId, groupDesc.GroupName, groupDesc.CreationDate, groupDesc.GroupId, groupDesc.Description)
 }
 
 type GroupDescs []*GroupDesc
 
-func (groupDescs GroupDescs) asResponse() string {
+func (groupDescs GroupDescs) AsResponse() string {
 	var response string = "[\n"
 	var firstTime bool = true
 	for _, desc := range groupDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.asResponse()
+		response = response + desc.AsResponse()
 	}
 	response = response + "]"
 	return response
@@ -251,7 +255,7 @@ func GetUserInfo(values url.Values) (*UserInfo, error) {
 	return NewUserInfo(userid, name, email, pswd, realmId), nil
 }
 
-func (userInfo *UserInfo) asResponse() string {
+func (userInfo *UserInfo) AsResponse() string {
 	return fmt.Sprintf("{\"UserId\": \"%s\", \"UserName\": \"%s\", \"EmailAddress\": \"%s\", \"RealmId\": \"%s\"}",
 		userInfo.UserId, userInfo.UserName, userInfo.EmailAddress, userInfo.RealmId)
 }
@@ -278,7 +282,7 @@ func NewUserDesc(id, userId, userName, realmId string, canModRealms []string) *U
 	}
 }
 
-func (userDesc *UserDesc) asResponse() string {
+func (userDesc *UserDesc) AsResponse() string {
 	var response string = fmt.Sprintf("{\"Id\": \"%s\", \"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\", \"CanModifyTheseRealms\": [",
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId)
 	for i, adminRealmId := range userDesc.CanModifyTheseRealms {
@@ -291,12 +295,12 @@ func (userDesc *UserDesc) asResponse() string {
 
 type UserDescs []*UserDesc
 
-func (userDescs UserDescs) asResponse() string {
+func (userDescs UserDescs) AsResponse() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range userDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.asResponse()
+		response = response + desc.AsResponse()
 	}
 	response = response + "]"
 	return response
@@ -322,20 +326,20 @@ func NewRealmDesc(id string, name string, orgName string, adminUserId string) *R
 	}
 }
 
-func (realmDesc *RealmDesc) asResponse() string {
+func (realmDesc *RealmDesc) AsResponse() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"RealmName\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
 		realmDesc.Id, realmDesc.RealmName, realmDesc.OrgFullName, realmDesc.AdminUserId)
 }
 
 type RealmDescs []*RealmDesc
 
-func (realmDescs RealmDescs) asResponse() string {
+func (realmDescs RealmDescs) AsResponse() string {
 	
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range realmDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.asResponse()
+		response = response + desc.AsResponse()
 	}
 	response = response + "]"
 	return response
@@ -371,7 +375,7 @@ func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 	return NewRealmInfo(name, orgFullName, desc)
 }
 
-func (realmInfo *RealmInfo) asResponse() string {
+func (realmInfo *RealmInfo) AsResponse() string {
 	return fmt.Sprintf("{\"RealmName\": \"%s\", \"OrgFullName\": \"%s\"}",
 		realmInfo.RealmName, realmInfo.OrgFullName)
 }
@@ -402,7 +406,7 @@ func NewRepoDesc(id string, realmId string, name string, desc string,
 	}
 }
 
-func (repoDesc *RepoDesc) asResponse() string {
+func (repoDesc *RepoDesc) AsResponse() string {
 	var resp string = fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", " +
 		"\"RepoName\": \"%s\", \"Description\": \"%s\", \"CreationDate\": %s, " +
 		"\"DockerfileIds\": [",
@@ -425,12 +429,12 @@ func (repoDesc *RepoDesc) asResponse() string {
 
 type RepoDescs []*RepoDesc
 
-func (repoDescs RepoDescs) asResponse() string {
+func (repoDescs RepoDescs) AsResponse() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range repoDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.asResponse()
+		response = response + desc.AsResponse()
 	}
 	response = response + "]"
 	return response
@@ -456,19 +460,19 @@ func NewDockerfileDesc(id string, repoId string, name string, desc string) *Dock
 	}
 }
 
-func (dockerfileDesc *DockerfileDesc) asResponse() string {
+func (dockerfileDesc *DockerfileDesc) AsResponse() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"RepoId\": \"%s\", \"DockerfileName\": \"%s\", \"Description\": \"%s\"}",
 		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.DockerfileName, dockerfileDesc.Description)
 }
 
 type DockerfileDescs []*DockerfileDesc
 
-func (dockerfileDescs DockerfileDescs) asResponse() string {
+func (dockerfileDescs DockerfileDescs) AsResponse() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range dockerfileDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.asResponse()
+		response = response + desc.AsResponse()
 	}
 	response = response + "]"
 	return response
@@ -511,7 +515,7 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 	return imageDesc.Name
 }
 
-func (imageDesc *DockerImageDesc) asResponse() string {
+func (imageDesc *DockerImageDesc) AsResponse() string {
 	return fmt.Sprintf("{\"ObjId\": \"%s\", \"Name\": \"%s\", " +
 		"\"Description\": \"%s\", \"CreationDate\": %s}",
 		imageDesc.ObjId, imageDesc.Name, imageDesc.Description, imageDesc.CreationDate)
@@ -519,12 +523,12 @@ func (imageDesc *DockerImageDesc) asResponse() string {
 
 type DockerImageDescs []*DockerImageDesc
 
-func (imageDescs DockerImageDescs) asResponse() string {
+func (imageDescs DockerImageDescs) AsResponse() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range imageDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.asResponse()
+		response = response + desc.AsResponse()
 	}
 	response = response + "]"
 	return response
@@ -558,7 +562,7 @@ func (mask *PermissionMask) SetCanWrite(can bool) { mask.Mask[2] = can }
 func (mask *PermissionMask) SetCanExecute(can bool) { mask.Mask[3] = can }
 func (mask *PermissionMask) SetCanDelete(can bool) { mask.Mask[4] = can }
 
-func (mask *PermissionMask) asResponse() string {
+func (mask *PermissionMask) AsResponse() string {
 	return fmt.Sprintf(
 		"{\"CanCreate\": %d, \"CanRead\": %d, \"CanWrite\": %d, \"CanExecute\": %d, \"CanDelete\": %d}",
 		mask.CanCreate, mask.CanRead, mask.CanWrite, mask.CanExecute, mask.CanDelete)
@@ -586,14 +590,14 @@ func NewPermissionDesc(aclEntryId string, resourceId string, partyId string,
 	}
 }
 
-func (desc *PermissionDesc) asResponse() string {
+func (desc *PermissionDesc) AsResponse() string {
 	return fmt.Sprintf(
 		"{\"ACLEntryId\": \"%s\", \"ResourceId\": \"%s\", \"PartyId\": \"%s\", " +
 		"\"Create\": %s, \"Read\": %s, \"Write\": %s, \"Execute\": %s, \"Delete\": %s}",
 		desc.ACLEntryId, desc.ResourceId, desc.PartyId,
-		boolToString(desc.CanCreate()), boolToString(desc.CanRead()),
-		boolToString(desc.CanWrite()), boolToString(desc.CanExecute()),
-		boolToString(desc.CanDelete()))
+		BoolToString(desc.CanCreate()), BoolToString(desc.CanRead()),
+		BoolToString(desc.CanWrite()), BoolToString(desc.CanExecute()),
+		BoolToString(desc.CanDelete()))
 }
 
 /*******************************************************************************
@@ -611,7 +615,7 @@ func NewParameterInfo(name string, tp string) *ParameterInfo {
 	}
 }
 
-func (parameterInfo *ParameterInfo) asResponse() string {
+func (parameterInfo *ParameterInfo) AsResponse() string {
 	return fmt.Sprintf("{\"Name\": \"%s\", \"Type\": \"%s\"}",
 		parameterInfo.Name, parameterInfo.Type)
 }
@@ -632,13 +636,13 @@ func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc 
 	}
 }
 
-func (scanProviderDesc *ScanProviderDesc) asResponse() string {
+func (scanProviderDesc *ScanProviderDesc) AsResponse() string {
 	var response string = fmt.Sprintf("{\"ProviderName\": \"%s\", \"Parameters\": [",
 		scanProviderDesc.ProviderName)
 	var firstTime bool = true
 	for _, paramInfo := range scanProviderDesc.Parameters {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + paramInfo.asResponse()
+		response = response + paramInfo.AsResponse()
 	}
 	response = response + "]}"
 	return response
@@ -646,12 +650,12 @@ func (scanProviderDesc *ScanProviderDesc) asResponse() string {
 
 type ScanProviderDescs []*ScanProviderDesc
 
-func (scanProviderDescs ScanProviderDescs) asResponse() string {
+func (scanProviderDescs ScanProviderDescs) AsResponse() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range scanProviderDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.asResponse()
+		response = response + desc.AsResponse()
 	}
 	response = response + "]"
 	return response
@@ -674,7 +678,7 @@ func NewParameterValueDesc(name string, tp string, strValue string) *ParameterVa
 	}
 }
 
-func (desc *ParameterValueDesc) asResponse() string {
+func (desc *ParameterValueDesc) AsResponse() string {
 	return fmt.Sprintf("{\"Name\": \"%s\", \"Type\": \"%s\", \"Value\": \"%s\"}",
 		desc.Name, desc.Type, desc.StringValue)
 }
@@ -695,11 +699,11 @@ func NewScanConfigDesc(id string, paramValueDescs []*ParameterValueDesc) *ScanCo
 	}
 }
 
-func (scanConfig *ScanConfigDesc) asResponse() string {
+func (scanConfig *ScanConfigDesc) AsResponse() string {
 	var s string = fmt.Sprintf("\"Id\": \"%s\", \"ParameterValueDescs\": [", scanConfig.Id)
 	for i, paramValueDesc := range scanConfig.ParameterValueDescs {
 		if i > 0 { s = s + ",\n" }
-		s = s + paramValueDesc.asResponse()
+		s = s + paramValueDesc.AsResponse()
 	}
 	return "\n]" + s
 }
@@ -722,7 +726,7 @@ func NewEventDesc(objId string, when time.Time, userId string) *EventDesc {
 	}
 }
 
-func (eventDesc *EventDesc) asResponse() string {
+func (eventDesc *EventDesc) AsResponse() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\"}",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId)
 }
@@ -745,7 +749,7 @@ func NewScanEventDesc(objId string, when time.Time, userId string,
 	}
 }
 
-func (eventDesc *ScanEventDesc) asResponse() string {
+func (eventDesc *ScanEventDesc) AsResponse() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\", " +
 		"\"ScanConfigId\": \"%s\", \"Score\": \"%s\"}",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId,
@@ -790,6 +794,9 @@ func GetRequiredPOSTFieldValue(values url.Values, name string) (string, error) {
 	return value, nil
 }
 
+/*******************************************************************************
+ * 
+ */
 func (mask *PermissionMask) ToStringArray() []string {
 	var strAr []string = make([]string, len(mask.Mask))
 	for i, val := range mask.Mask {
@@ -798,6 +805,9 @@ func (mask *PermissionMask) ToStringArray() []string {
 	return strAr
 }
 
+/*******************************************************************************
+ * 
+ */
 func ToBoolAr(mask []string) ([]bool, error) {
 	if len(mask) != 5 { return nil, errors.New("Length of mask != 5") }
 	var boolAr []bool = make([]bool, 5)
@@ -806,3 +816,42 @@ func ToBoolAr(mask []string) ([]bool, error) {
 	}
 	return boolAr, nil
 }
+
+/*******************************************************************************
+ * 
+ */
+func RespondMethodNotSupported(writer http.ResponseWriter, methodName string) {
+	writer.WriteHeader(405)
+	io.WriteString(writer, "HTTP method not supported:" + methodName)
+}
+
+/*******************************************************************************
+ * 
+ */
+func RespondWithClientError(writer http.ResponseWriter, err string) {
+	writer.WriteHeader(400)
+	io.WriteString(writer, err)
+}
+
+/*******************************************************************************
+ * 
+ */
+func RespondWithServerError(writer http.ResponseWriter, err string) {
+	writer.WriteHeader(500)
+	io.WriteString(writer, err)
+}
+
+/*******************************************************************************
+ * 
+ */
+func NewFailureMessage(reason string, httpCode int) string {
+	return fmt.Sprintf("{\"Reason\": \"%s\", \"HTTPCode\": \"%d\"}", reason, httpCode)
+}
+
+/*******************************************************************************
+ * 
+ */
+func BoolToString(b bool) string {
+	if b { return "true" } else { return "false" }	
+}
+

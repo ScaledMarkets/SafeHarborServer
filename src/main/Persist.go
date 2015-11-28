@@ -9,6 +9,8 @@ package main
 import (
 	"time"
 	"os"
+	
+	"apitypes"
 )
 
 type DBClient interface {
@@ -16,7 +18,7 @@ type DBClient interface {
 	dbCreateGroup(string, string, string) (Group, error)
 	dbCreateUser(string, string, string, string, string) (User, error)
 	dbCreateACLEntry(string, string, []bool) (ACLEntry, error)
-	dbCreateRealm(*RealmInfo, string) (Realm, error)
+	dbCreateRealm(*apitypes.RealmInfo, string) (Realm, error)
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string, string) (DockerImage, error)
@@ -63,14 +65,14 @@ type Group interface {
 	hasUserWithId(string) bool
 	addUserId(string) error
 	addUser(User)
-	asGroupDesc() *GroupDesc
+	asGroupDesc() *apitypes.GroupDesc
 }
 
 type User interface {
 	Party
 	getUserId() string
 	hasGroupWithId(string) bool
-	asUserDesc() *UserDesc
+	asUserDesc() *apitypes.UserDesc
 	addGroupId(string) error
 	getGroupIds() []string
 	
@@ -83,7 +85,7 @@ type ACLEntry interface {
 	getPartyId() string
 	getPermissionMask() []bool
 	setPermissionMask([]bool)
-	asPermissionDesc() *PermissionDesc
+	asPermissionDesc() *apitypes.PermissionDesc
 }
 
 type ACL interface {
@@ -121,7 +123,7 @@ type Realm interface {
 	getRepoIds() []string
 	addUserId(string) error
 	getUserByUserId(string) (User, error)
-	asRealmDesc() *RealmDesc
+	asRealmDesc() *apitypes.RealmDesc
 	getGroupIds() []string
 	addGroup(Group)
 	addUser(User)
@@ -139,7 +141,7 @@ type Repo interface {
 	addDockerImage(DockerImage)
 	addScanConfig(ScanConfig)
 	getScanConfigByName(string) (ScanConfig, error)
-	asRepoDesc() *RepoDesc
+	asRepoDesc() *apitypes.RepoDesc
 	
 	//getDatasetIds() []string
 	//getFlagIds() []string
@@ -148,7 +150,7 @@ type Repo interface {
 type Dockerfile interface {
 	Resource
 	getExternalFilePath() string
-	asDockerfileDesc() *DockerfileDesc
+	asDockerfileDesc() *apitypes.DockerfileDesc
 	getRepo() (Repo, error)
 	
 	//getDockerfileExecEventIds() []string
@@ -163,7 +165,7 @@ type DockerImage interface {
 	Image
 	//ImageCreationEvent
 	getDockerImageTag() string
-	asDockerImageDesc() *DockerImageDesc
+	asDockerImageDesc() *apitypes.DockerImageDesc
 	
 	//getScanEventIds() []string
 }
@@ -178,7 +180,7 @@ type ParameterValue interface {
 	getTypeName() string
 	getStringValue() string
 	getConfigId() string
-	asParameterValueDesc() *ParameterValueDesc
+	asParameterValueDesc() *apitypes.ParameterValueDesc
 }
 
 type ScanConfig interface {
@@ -191,7 +193,7 @@ type ScanConfig interface {
 	getParameterValueIds() []string
 	getSuccessGraphicImageURL() string
 	getFailureGraphicImageURL() string
-	asScanConfigDesc() *ScanConfigDesc
+	asScanConfigDesc() *apitypes.ScanConfigDesc
 }
 
 type Event interface {
@@ -205,7 +207,7 @@ type ScanEvent interface {
 	getScore() string
 	getDockerImageId() string
 	getScanConfigId() string
-	asScanEventDesc() *ScanEventDesc
+	asScanEventDesc() *apitypes.ScanEventDesc
 	getScanConfigExternalObjId() string
 }
 

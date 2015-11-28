@@ -16,6 +16,9 @@ import (
 	"regexp"
 	"net/url"
 	"io/ioutil"
+	
+	"apitypes"
+	//"rest"
 )
 
 /*******************************************************************************
@@ -44,7 +47,7 @@ func fileExists(path string) bool {
 /*******************************************************************************
  * Write the specified map to stdout. This is a diagnostic method.
  */
-func printMap(m map[string][]string) {
+func PrintMap(m map[string][]string) {
 	fmt.Println("Map:")
 	for k, v := range m {
 		fmt.Println(k, ":")
@@ -63,7 +66,7 @@ func printFileMap(m map[string][]*multipart.FileHeader) {
 		fmt.Println("Name:", k, "FileHeaders:")
 		for i := range headers {
 			fmt.Println("Filename:", headers[i].Filename)
-			printMap(headers[i].Header)
+			PrintMap(headers[i].Header)
 			fmt.Println()
 		}
 	}
@@ -197,21 +200,14 @@ func assertErrIsNil(err error, msg string) {
 }
 
 /*******************************************************************************
- * 
- */
-func boolToString(b bool) string {
-	if b { return "true" } else { return "false" }	
-}
-
-/*******************************************************************************
  * Authenticate the session token.
  */
-func authenticateSession(server *Server, sessionToken *SessionToken) *FailureDesc {
+func authenticateSession(server *Server, sessionToken *apitypes.SessionToken) *apitypes.FailureDesc {
 	
-	if sessionToken == nil { return NewFailureDesc("Unauthenticated") }
+	if sessionToken == nil { return apitypes.NewFailureDesc("Unauthenticated") }
 
 	if ! server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
-		return NewFailureDesc("Invalid session Id")
+		return apitypes.NewFailureDesc("Invalid session Id")
 	}
 	
 	// Identify the user.
@@ -219,7 +215,7 @@ func authenticateSession(server *Server, sessionToken *SessionToken) *FailureDes
 	fmt.Println("userid=", userId)
 	var user User = server.dbClient.dbGetUserByUserId(userId)
 	if user == nil {
-		return NewFailureDesc("user object cannot be identified from user id " + userId)
+		return apitypes.NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
 	
 	return nil
@@ -229,7 +225,7 @@ func authenticateSession(server *Server, sessionToken *SessionToken) *FailureDes
  * Get the current authenticated user. If no one is authenticated, return nil. If
  * any other error, return an error.
  */
-func getCurrentUser(server *Server, sessionToken *SessionToken) (User, error) {
+func getCurrentUser(server *Server, sessionToken *apitypes.SessionToken) (User, error) {
 	if sessionToken == nil { return nil, nil }
 	
 	if ! server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
@@ -248,20 +244,20 @@ func getCurrentUser(server *Server, sessionToken *SessionToken) (User, error) {
 /*******************************************************************************
  * Authorize the request, based on the authenticated identity.
  */
-func authorizeHandlerAction(server *Server, sessionToken *SessionToken,
-	mask []bool, resourceId, attemptedAction string) *FailureDesc {
+func authorizeHandlerAction(server *Server, sessionToken *apitypes.SessionToken,
+	mask []bool, resourceId, attemptedAction string) *apitypes.FailureDesc {
 	
 	if server.Authorize {
 		isAuthorized, err := authorized(server, sessionToken, mask, resourceId)
-		if err != nil { return NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		if ! isAuthorized {
 			var resource Resource
 			resource, err = server.dbClient.getResource(resourceId)
-			if err != nil { return NewFailureDesc(err.Error()) }
+			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 			if resource == nil {
-				return NewFailureDesc("Unable to identify resource with Id " + resourceId)
+				return apitypes.NewFailureDesc("Unable to identify resource with Id " + resourceId)
 			}
-			return NewFailureDesc(fmt.Sprintf(
+			return apitypes.NewFailureDesc(fmt.Sprintf(
 				"Unauthorized: cannot perform %s on %s", attemptedAction, resource.getName()))
 		}
 	}
@@ -272,7 +268,7 @@ func authorizeHandlerAction(server *Server, sessionToken *SessionToken,
 /*******************************************************************************
  * 
  */
-func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo,
+func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient, repo Repo,
 	desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
 	
 	var headers []*multipart.FileHeader = files["filename"]
@@ -332,12 +328,12 @@ func createDockerfile(sessionToken *SessionToken, dbClient DBClient, repo Repo,
 /*******************************************************************************
  * 
  */
-func buildDockerfile(dockerfile Dockerfile, sessionToken *SessionToken,
+func buildDockerfile(dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	dbClient DBClient, values url.Values) (DockerImage, error) {
 
 	var imageName string
 	var err error
-	imageName, err = GetRequiredPOSTFieldValue(values, "ImageName")
+	imageName, err = apitypes.GetRequiredPOSTFieldValue(values, "ImageName")
 	if err != nil { return nil, err }
 	if imageName == "" { return nil, errors.New("No HTTP parameter found for ImageName") }
 	if ! localDockerImageNameIsValid(imageName) {
@@ -380,7 +376,7 @@ func buildDockerfile(dockerfile Dockerfile, sessionToken *SessionToken,
 	
 //	fmt.Println("Changing directory to '" + tempDirPath + "'")
 //	err = os.Chdir(tempDirPath)
-//	if err != nil { return NewFailureDesc(err.Error()) }
+//	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	// Create a the docker build command.
 	// https://docs.docker.com/reference/commandline/build/

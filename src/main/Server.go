@@ -18,6 +18,10 @@ import (
 	"crypto/x509"
 	//"errors"
 	//"strconv"
+	
+	// My packages:
+	//"rest"
+	"apitypes"
 )
 
 /*******************************************************************************
@@ -32,7 +36,7 @@ type Server struct {
 	certPool *x509.CertPool
 	authService *AuthService
 	dispatcher *Dispatcher
-	sessions map[string]*Credentials  // map session key to Credentials.
+	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
 	Authorize bool
 	Debug bool
 }
@@ -269,13 +273,13 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	if server.Debug { printHeaders(httpReq) }
 	
 	// Authenitcate session or user.
-	var sessionToken *SessionToken = nil
+	var sessionToken *apitypes.SessionToken = nil
 	sessionToken = server.authService.authenticateRequest(httpReq)
 	if sessionToken == nil { fmt.Println("Server.ServeHTTP: Session token is nil") }
 	
 	//if sessionToken == nil { //return authent failure
 	//	fmt.Println("Failed to authenticate - request being denied")
-	//	respondWithClientError(writer, "Failed to authenticate - request being denied")
+	//	apitypes.RespondWithClientError(writer, "Failed to authenticate - request being denied")
 	//	return
 	//}
 	//fmt.Println("authenticated request")
@@ -296,7 +300,7 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
  * Interpret the request string to determine which method is being requested,
  * and invoke the requested method.
  */
-func (server *Server) dispatch(sessionToken *SessionToken,
+func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 	writer http.ResponseWriter, httpReq *http.Request) {
 
 	fmt.Println("Dispatching request")
@@ -312,7 +316,7 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 	if httpMethod == "GET" {
 		
 		if err = httpReq.ParseForm(); err != nil {
-			respondWithClientError(writer, err.Error())
+			apitypes.RespondWithClientError(writer, err.Error())
 			return
 		}
 		values = httpReq.Form  // map[string]string
@@ -326,7 +330,7 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 		// allow users to register trusted origins.
 		
 		if err = httpReq.ParseForm(); err != nil {
-			respondWithClientError(writer, err.Error())
+			apitypes.RespondWithClientError(writer, err.Error())
 			return
 		}
 		values = httpReq.PostForm  // map[string]string
@@ -344,12 +348,12 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 			var form *multipart.Form
 			form, err = mpReader.ReadForm(10000)
 			if form == nil {
-				respondWithClientError(writer, "No form found")
+				apitypes.RespondWithClientError(writer, "No form found")
 				return
 			}
 			fmt.Println("Read form data")
 			if err != nil {
-				respondWithClientError(writer, err.Error())
+				apitypes.RespondWithClientError(writer, err.Error())
 				return
 			}
 			
@@ -371,7 +375,7 @@ func (server *Server) dispatch(sessionToken *SessionToken,
 		return
 		
 	} else {
-		respondMethodNotSupported(writer, httpReq.Method)
+		apitypes.RespondMethodNotSupported(writer, httpReq.Method)
 		return
 	}
 
@@ -441,30 +445,6 @@ func newTCPListener(ipaddr string, port int) (net.Listener, error) {
  */
 type tcpKeepAliveListener struct {
 	*net.TCPListener
-}
-
-/*******************************************************************************
- * 
- */
-func respondMethodNotSupported(writer http.ResponseWriter, methodName string) {
-	writer.WriteHeader(405)
-	io.WriteString(writer, "HTTP method not supported:" + methodName)
-}
-
-/*******************************************************************************
- * 
- */
-func respondWithClientError(writer http.ResponseWriter, err string) {
-	writer.WriteHeader(400)
-	io.WriteString(writer, err)
-}
-
-/*******************************************************************************
- * 
- */
-func respondWithServerError(writer http.ResponseWriter, err string) {
-	writer.WriteHeader(500)
-	io.WriteString(writer, err)
 }
 
 /*******************************************************************************
