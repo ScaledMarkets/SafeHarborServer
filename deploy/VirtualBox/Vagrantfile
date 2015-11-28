@@ -88,5 +88,10 @@ Vagrant.configure(2) do |config|
 		# Install the SafeHarborServer.
 		d.pull_images @SafeHarborDockerImage
 	end
+	
+	# Install Lynis
+	config.vm.provision "shell", inline: <<-SHELL
+		cd /usr/local; git clone https://github.com/CISOfy/lynis
+	SHELL
 
 end

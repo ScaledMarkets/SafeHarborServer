@@ -1,12 +1,7 @@
 {
-	"SERVICE": "Auth Service",
-    "IPADDR": "127.0.0.1",
+	"INTFNAME": "enp0s3",
     "PORT": "6000",
     "LOCAL_AUTH_CERT_PATH": "docker_auth.crt",
     "LOCAL_ROOT_CERT_PATH": "scaledmarkets.crt",
-    "AUTH_SERVER_DNS_NAME": "127.0.0.1",
-    "AUTH_PORT": "5001",
-    "AUTH_CERT_PATH": "/home/vagrant/auth_server/config/ssl/docker_auth.crt",
-    "AUTH_PRIVATE_KEY_PATH": "/home/vagrant/auth_server/config/ssl/docker_auth.key",
     "FILE_REPOSITORY_ROOT": "Repositories"
 }

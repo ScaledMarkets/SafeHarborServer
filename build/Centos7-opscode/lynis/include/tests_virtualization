@@ -1,0 +1,53 @@
+#!/bin/sh
+
+#################################################################################
+#
+#   Lynis
+# ------------------
+#
+# Copyright 2007-2015, Michael Boelen, CISOfy (michael.boelen@cisofy.com)
+# Web site: https://cisofy.com
+#
+# Lynis comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
+# welcome to redistribute it under the terms of the GNU General Public License.
+# See LICENSE file for usage of this software.
+#
+#################################################################################
+#
+# Virtualization
+#
+#################################################################################
+#
+    InsertSection "Virtualization"
+#
+#################################################################################
+#
+#    # Test        : VIRT-1920
+#    # Description : Checking VMware
+#    Register --test-no VIRT-1920 --weight L --network NO --description "Checking VMware guest status"
+#    if [ ${SKIPTEST} -eq 0 ]; then
+#        # Initialise
+#        VMWARE_GUEST=0
+#        Display --indent 2 --text "- Checking VMware guest status"
+#        # check memory driver file
+#        # check LKM list
+#        # check vmware tools
+#        logtext "Test: checking VMware tools daemon presence"
+#        if [ ! "${VMWARETOOLSBINARY}" = "" ]; then
+#            logtext "Result: VMware tools binary found"
+#            VMWARE_GUEST=1
+#            Display --indent 4 --text "- Checking VMware tools daemon" --result FOUND --color GREEN
+#          else
+#            Display --indent 4 --text "- Checking VMware tools daemon" --result "NOT FOUND" --color WHITE
+#        fi
+#
+#    fi
+#
+#################################################################################
+#
+
+wait_for_keypress
+
+#
+#================================================================================
+# Lynis - Copyright 2007-2015, Michael Boelen, CISOfy - https://cisofy.com

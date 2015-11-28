@@ -1,0 +1,7 @@
+{
+	"INTFNAME": "en0",
+    "PORT": "80",
+    "LOCAL_AUTH_CERT_PATH": "docker_auth.crt",
+    "LOCAL_ROOT_CERT_PATH": "scaledmarkets.crt",
+    "FILE_REPOSITORY_ROOT": "Repositories"
+}

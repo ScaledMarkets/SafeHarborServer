@@ -1,7 +1,11 @@
 # Create all the machines and docker containers needed to run the SafeHarbor server.
 # This includes the Cesanta authorization server.
 
-# For AWS, use Amazon_CentOS_6-5-x86-64_1.0rev15_2015-Jun-29_12.39.00 (ami-fd585ecd)
+# For AWS, use ami-c7d092f7 (for Oregon, or ami-96a818fe for US East, or ami-6bcfc42e for N. Cal)
+# https://aws.amazon.com/marketplace/ordering/ref=dtl_psb_continue?ie=UTF8&productId=b7ee8a69-ee97-4a49-9e68-afaee216db2e&region=us-west-2
+# https://aws.amazon.com/marketplace/library/ref=mrc_prm_manage_subscriptions
+# https://docs.docker.com/installation/centos/
+
 
 ....Customize this for AWS
 

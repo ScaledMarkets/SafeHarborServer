@@ -1,0 +1,42 @@
+# Build the box in which SafeHarborServer is compiled for Centos.
+# This box is not part of the deployment.
+
+@vmboxname = "bento/centos-7.1"  # contains guest additions
+
+Vagrant.configure(2) do |config|
+
+	# Configure the OS.
+	config.vm.box = @vmboxname
+	config.vm.hostname = "SafeHarborCentosBuildBox"
+	
+	# Install the go tools.
+	config.vm.provision "shell", inline: <<-SHELL
+		sudo yum install -y golang
+		sudo yum install -y git
+	SHELL
+	
+	# Obtain the source code that is to be compiled.
+	config.vm.provision "shell", inline: <<-SHELL
+		rm -rf SafeHarborServer
+		git clone -q https://cliffbdf:flubber2@github.com/Scaled-Markets/SafeHarborServer.git
+	SHELL
+	
+	# Compile the source code.
+	config.vm.provision "shell", inline: <<-SHELL
+		cd SafeHarborServer; GOPATH=. make compile
+	SHELL
+	
+	# Package the compiled code.
+	config.vm.provision "shell", inline: <<-SHELL
+		# For now, just zip the files.
+		mkdir package
+		mv bin/SafeHarborServer package
+		cp SafeHarborServer/*.example package
+		cp SafeHarborServer/certs.mk package
+		cp SafeHarborServer/scaledmarkets.crt package
+		sudo yum install -y zip
+		cd package; zip safeharborserver *
+		mv safeharborserver.zip /vagrant
+	SHELL
+
+end

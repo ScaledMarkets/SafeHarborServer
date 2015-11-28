@@ -1,0 +1,85 @@
+#!/bin/sh
+
+#################################################################################
+#
+#   Lynis
+# ------------------
+#
+# Copyright 2007-2015, Michael Boelen, CISOfy (michael.boelen@cisofy.com)
+# Web site: https://cisofy.com
+#
+# Lynis comes with ABSOLUTELY NO WARRANTY. This is free software, and you are
+# welcome to redistribute it under the terms of the GNU General Public License.
+# See LICENSE file for usage of this software.
+#
+#################################################################################
+#
+# Here you could insert your own custom checks
+#
+# Tips:
+# - Make sure to use each test ID only once in Register function
+# - Use big steps in numbering, so you can easily put tests in between
+# - Want to improve Lynis? Share your checks!
+#
+#################################################################################
+#
+#    This has already been inserted, but you might reuse it to split your tests
+#    InsertSection "Custom Checks"
+#
+#################################################################################
+#
+    # Test        : CUST-0010
+    # Author      : Your name <e-mail address>
+    # Description : Check for something interesting - template
+    # Notes       : This test first checks if OpenSSL binary was found
+
+    # * Prerequisites Check
+    # -----------------------
+    #
+    # Check first if any dependency. If it doesn't meet, the test will be skipped after registration (SKIPTEST == 1)
+    #
+    # Examples:
+    # -f /etc/file                     =  Test if file exists
+    # -d /var/run/mydirectory          =  Test if directory exists
+    # ${MYVARIABLE} -eq 1              =  Test if variable is set to 1
+    # "${MYVARIABLE}" = "Value"        =  Test if variable is equal to specific value
+
+    if [ -f /etc/myfile ]; then PREQS_MET="YES"; else PREQS_MET="NO"; fi
+
+    # * Registration of Test
+    # ------------------------
+    #
+    # Register the test, with custom ID CUST-0010, and only execute it when the prerequisites were met
+    Register --test-no CUST-0010 --preqs-met ${PREQS_MET} --weight L --network NO --description "Description of what this test does"
+
+    # Or we could use this test without any dependencies
+    # Register --test-no CUST-0010 --weight L --network NO --description "Description of what this test does"
+
+    # If everything is fine, perform test
+    if [ ${SKIPTEST} -eq 0 ]; then
+        FOUND=0
+        logtext "Test: checking something"
+        if [ ${FOUND} -eq 0 ]; then
+            Display --indent 4 --text "- Performing custom test" --result OK --color GREEN
+            logtext "Result: the test result looks great!"
+
+            # Optional: create a suggestion after a specific finding
+            #ReportSuggestion "${TEST_NO}" "This is my suggestion to improve the system even further."
+
+          else
+            Display --indent 4 --text "- Performing custom test" --result WARNING --color RED
+            logtext "Result: this test had a bad result :("
+            # Throw a warning to the screen and report
+            ReportWarning ${TEST_NO} "M" "This is a warning message"
+        fi
+    fi
+
+#
+#################################################################################
+#
+
+wait_for_keypress
+
+#
+#================================================================================
+# Lynis - Copyright 2007-2015, Michael Boelen, CISOfy - https://cisofy.com

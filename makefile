@@ -27,19 +27,22 @@ src_dir = $(CURDIR)/src
 
 build_dir = $(CURDIR)/../bin
 
-GOPATH = $(CURDIR)/..
+#GOPATH = $(CURDIR)/..
+#GO_LDFLAGS=-ldflags "-X `go list ./version`.Version $(VERSION)"
 
 all: compile authcert
 
 $(build_dir):
 	mkdir $(build_dir)
 
-$(build_dir)/$(EXECNAME): $(build_dir) $(src_dir)/main
+$(build_dir)/$(EXECNAME): $(build_dir) $(src_dir)
 
 # 'make compile' builds the executable, which is placed in <build_dir>.
 compile: $(build_dir)/$(EXECNAME)
 	@echo GOPATH=$(GOPATH)
-	GOPATH=$(CURDIR) go build main rest providers
+	@GOPATH=$(CURDIR) go build ./src/...
+	#@GOPATH=$(CURDIR) go build -tags "${DOCKER_BUILDTAGS}" -v ${GO_LDFLAGS} ./src/...
+	#GOPATH=$(CURDIR) go install main
 	#go build -o $(build_dir)/$(EXECNAME) main rest
 
 clean:
