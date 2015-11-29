@@ -705,7 +705,7 @@ func (scanConfig *ScanConfigDesc) AsResponse() string {
 		if i > 0 { s = s + ",\n" }
 		s = s + paramValueDesc.AsResponse()
 	}
-	return "\n]}" + s
+	return s + "\n]}"
 }
 
 /*******************************************************************************
