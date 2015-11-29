@@ -75,7 +75,7 @@ func NewResult(status int, message string) *Result {
 }
 
 func (result *Result) AsResponse() string {
-	return fmt.Sprintf("{\"Status\": \"%d\",\"Message\": \"%s\"}",
+	return fmt.Sprintf("{\"Status\": \"%d\", \"Message\": \"%s\"}",
 		result.Status, result.Message)
 }
 
@@ -700,12 +700,12 @@ func NewScanConfigDesc(id string, paramValueDescs []*ParameterValueDesc) *ScanCo
 }
 
 func (scanConfig *ScanConfigDesc) AsResponse() string {
-	var s string = fmt.Sprintf("\"Id\": \"%s\", \"ParameterValueDescs\": [", scanConfig.Id)
+	var s string = fmt.Sprintf("{\"Id\": \"%s\", \"ParameterValueDescs\": [", scanConfig.Id)
 	for i, paramValueDesc := range scanConfig.ParameterValueDescs {
 		if i > 0 { s = s + ",\n" }
 		s = s + paramValueDesc.AsResponse()
 	}
-	return "\n]" + s
+	return "\n]}" + s
 }
 
 /*******************************************************************************
