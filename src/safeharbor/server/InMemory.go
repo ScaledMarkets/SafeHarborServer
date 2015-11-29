@@ -1181,6 +1181,9 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	
 	// Link to repo
 	repo.addScanConfig(scanConfig)
+
+	fmt.Println("Created ScanConfig")
+	allObjects[scanConfigId] = scanConfig
 	
 	return scanConfig, nil
 }
@@ -1312,13 +1315,18 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 	userObjId string, when time.Time, score string, extObjId string) (ScanEvent, error) {
 	
 	var id string = createUniqueDbObjectId()
-	return &InMemScanEvent{
+	var scanEvent *InMemScanEvent = &InMemScanEvent{
 		InMemEvent: *client.NewInMemEvent(id, when, userObjId),
 		ScanConfigId: scanConfigId,
 		DockerImageId: imageId,
 		Score: score,
 		ScanConfigExternalObjId: extObjId,
-	}, nil
+	}
+	
+	fmt.Println("Created ScanEvent")
+	allObjects[id] = scanEvent
+	
+	return scanEvent, nil
 }
 
 func (event *InMemScanEvent) getScore() string {
