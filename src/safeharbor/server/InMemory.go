@@ -559,12 +559,12 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	var party Party
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(resourceId)
-	if obj == nil { return nil, errors.New("Internal error: obj is nil") }
+	if obj == nil { return nil, errors.New("Internal error: cannot identify resource: obj with Id '" + resourceId + "' not found") }
 	resource, isType = obj.(Resource)
 	if ! isType { return nil, errors.New("Internal error: object is not a Resource - it is a " +
 		reflect.TypeOf(obj).String()) }
 	obj = client.getPersistentObject(partyId)
-	if obj == nil { return nil, errors.New("Internal error: obj is nil") }
+	if obj == nil { return nil, errors.New("Internal error: cannot identify party: obj with Id '" + partyId + "' not found") }
 	party, isType = obj.(Party)
 	if ! isType { return nil, errors.New("Internal error: object is not a Party - it is a " +
 		reflect.TypeOf(obj).String()) }
