@@ -1268,7 +1268,7 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 		paramValueDescs = append(paramValueDescs, paramValue.asParameterValueDesc())
 	}
 	
-	return apitypes.NewScanConfigDesc(scanConfig.Id, paramValueDescs)
+	return apitypes.NewScanConfigDesc(scanConfig.Id, scanConfig.ProviderName, paramValueDescs)
 }
 
 /*******************************************************************************
