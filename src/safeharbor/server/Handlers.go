@@ -1581,7 +1581,7 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	var userId string = sessionToken.AuthenticatedUserid
 	var user User = server.dbClient.dbGetUserByUserId(userId)
 
-	var obj PersistObj = server.dbClient.getPersistentObject(userId)
+	var obj PersistObj = server.dbClient.getPersistentObject(user.getId())
 	assertThat(obj != nil, "Internal error in defineScanConfig: obj is nil")
 	
 	_, err = server.dbClient.dbCreateACLEntry(scanConfig.getId(), user.getId(),

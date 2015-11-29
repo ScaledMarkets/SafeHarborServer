@@ -39,8 +39,7 @@ $(build_dir)/$(PACKAGENAME): src/..
 	@GOPATH=$(CURDIR) go install $(PACKAGENAME)
 
 clean:
-	rm -r -f $(build_dir)
-	rm -r -f $(test_build_dir)
+	rm -r -f $(build_dir)/$(PACKAGENAME)
 
 info:
 	@echo "Makefile for $(PRODUCTNAME)"
