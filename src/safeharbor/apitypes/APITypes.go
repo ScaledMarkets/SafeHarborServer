@@ -21,6 +21,7 @@ import (
 	"errors"
 	"time"
 	"io"
+	"strings"
 	//"runtime/debug"
 	
 	// My packages:
@@ -249,7 +250,7 @@ func GetUserInfo(values url.Values) (*UserInfo, error) {
 	if err != nil { return nil, err }
 	
 	var realmId string
-	realmId = GetPOSTFieldValue(values, "RealmId") // optional
+	realmId, err = GetPOSTFieldValue(values, "RealmId") // optional
 	if err != nil { return nil, err }
 	
 	return NewUserInfo(userid, name, email, pswd, realmId), nil
@@ -371,7 +372,8 @@ func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 	name, err = GetRequiredPOSTFieldValue(values, "RealmName")
 	orgFullName, err = GetRequiredPOSTFieldValue(values, "OrgFullName")
 	if err != nil { return nil, err }
-	desc = GetPOSTFieldValue(values, "Description")
+	desc, err = GetPOSTFieldValue(values, "Description")
+	if err != nil { return nil, err }
 	return NewRealmInfo(name, orgFullName, desc)
 }
 
@@ -781,18 +783,21 @@ func FormatTimeAsJavascriptDate(curTime time.Time) string {
 /*******************************************************************************
  * 
  */
-func GetPOSTFieldValue(values url.Values, name string) string {
+func GetPOSTFieldValue(values url.Values, name string) (string, error) {
 	valuear, found := values[name]
-	if ! found { return "" }
-	if len(valuear) == 0 { return "" }
-	return valuear[0]
+	if ! found { return "", nil }
+	if len(valuear) == 0 { return "", nil }
+	return sanitize(valuear[0])
 }
 
 /*******************************************************************************
  * 
  */
 func GetRequiredPOSTFieldValue(values url.Values, name string) (string, error) {
-	var value string = GetPOSTFieldValue(values, name)
+	var value string
+	var err error
+	value, err = GetPOSTFieldValue(values, name)
+	if err != nil { return "", err }
 	if value == "" { return "", errors.New(fmt.Sprintf("POST field not found: %s", name)) }
 	return value, nil
 }
@@ -858,3 +863,13 @@ func BoolToString(b bool) string {
 	if b { return "true" } else { return "false" }	
 }
 
+/*******************************************************************************
+ * Check if the input contains any character sequences that could result in
+ * a scripting attack if rendered in a response to a client. Simply limit characters
+ * to letters, numbers, period, hyphen, and underscore.
+ */
+func sanitize(value string) (string, error) {
+	var allowed string = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
+	if len(strings.TrimLeft(value, allowed)) == 0 { return value, nil }
+	return "", errors.New("Value '" + value + "' may only have letters, numbers, and .-_")
+}

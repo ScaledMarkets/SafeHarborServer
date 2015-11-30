@@ -282,7 +282,9 @@ func createGroup(server *Server, sessionToken *apitypes.SessionToken, values url
 	groupDescription, err = apitypes.GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	var addMeStr string = apitypes.GetPOSTFieldValue(values, "AddMe")
+	var addMeStr string
+	addMeStr, err = apitypes.GetPOSTFieldValue(values, "AddMe")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var addMe bool = false
 	if addMeStr == "true" { addMe = true }
 	fmt.Println(fmt.Sprintf("AddMe=%s", addMeStr))
