@@ -21,7 +21,7 @@ import (
 	"errors"
 	"time"
 	"io"
-	"strings"
+	//"strings"
 	//"runtime/debug"
 	
 	// My packages:
@@ -869,7 +869,10 @@ func BoolToString(b bool) string {
  * to letters, numbers, period, hyphen, and underscore.
  */
 func sanitize(value string) (string, error) {
+	return value, nil
+	/*
 	var allowed string = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 	if len(strings.TrimLeft(value, allowed)) == 0 { return value, nil }
 	return "", errors.New("Value '" + value + "' may only have letters, numbers, and .-_")
+	*/
 }
