@@ -951,7 +951,6 @@ func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values 
 	var err error
 	repoId, err = apitypes.GetRequiredPOSTFieldValue(values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if repoId == "" { return apitypes.NewFailureDesc("No HTTP parameter found for RepoId") }
 
 	// Identify the Dockerfile.
 	var dockerfileId string
@@ -990,7 +989,6 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	var err error
 	repoId, err = apitypes.GetRequiredPOSTFieldValue(values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if repoId == "" { return apitypes.NewFailureDesc("No HTTP parameter found for RepoId") }
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, repoId,
 		"addAndExecDockerfile"); failMsg != nil { return failMsg }
@@ -1004,12 +1002,10 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	var desc string
 	desc, err = apitypes.GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if desc == "" { return apitypes.NewFailureDesc("No HTTP parameter found for Description") }
 
 	var imageName string
 	imageName, err = apitypes.GetRequiredPOSTFieldValue(values, "ImageName")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if imageName == "" { return apitypes.NewFailureDesc("No HTTP parameter found for ImageName") }
 	
 	var dockerfile Dockerfile
 	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, desc, values, files)
@@ -1111,6 +1107,7 @@ func addPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	var partyId string
 	var err error
 	partyId, err = apitypes.GetRequiredPOSTFieldValue(values, "PartyId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var resourceId string
 	var smask []string = make([]string, 5)
 	resourceId, err = apitypes.GetRequiredPOSTFieldValue(values, "ResourceId")
@@ -1542,15 +1539,12 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 
 	name, err = apitypes.GetRequiredPOSTFieldValue(values, "Name")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if name == "" { return apitypes.NewFailureDesc("No HTTP parameter found for Name") }
 	
 	desc, err = apitypes.GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if desc == "" { return apitypes.NewFailureDesc("No HTTP parameter found for Description") }
 	
 	repoId, err = apitypes.GetRequiredPOSTFieldValue(values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if repoId == "" { return apitypes.NewFailureDesc("No HTTP parameter found for RepoId") }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, repoId,
 		"defineScanConfig"); failMsg != nil { return failMsg }
@@ -1558,17 +1552,14 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	var providerName string
 	providerName, err = apitypes.GetRequiredPOSTFieldValue(values, "ProviderName")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if providerName == "" { return apitypes.NewFailureDesc("No HTTP parameter found for ProviderName") }
 	
 	var successGraphicImageURL string
 	successGraphicImageURL, err = apitypes.GetRequiredPOSTFieldValue(values, "SuccessGraphicImageURL")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if successGraphicImageURL == "" { return apitypes.NewFailureDesc("No HTTP parameter found for SuccessGraphicImageURL") }
 	
 	var failureGraphicImageURL string
 	failureGraphicImageURL, err = apitypes.GetRequiredPOSTFieldValue(values, "FailureGraphicImageURL")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if failureGraphicImageURL == "" { return apitypes.NewFailureDesc("No HTTP parameter found for FailureGraphicImageURL") }
 	
 	// Look for each parameter required by the provider.
 	// (Right now there are none.)
