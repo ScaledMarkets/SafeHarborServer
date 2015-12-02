@@ -872,8 +872,8 @@ func BoolToString(b bool) string {
 func sanitize(value string) (string, error) {
 	//return value, nil
 	
-	var allowed string = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
+	var allowed string = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-@"
 	if len(strings.TrimLeft(value, allowed)) == 0 { return value, nil }
-	return "", errors.New("Value '" + value + "' may only have letters, numbers, and .-_")
+	return "", errors.New("Value '" + value + "' may only have letters, numbers, and .-_@")
 	
 }
