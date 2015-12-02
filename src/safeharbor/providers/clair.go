@@ -29,9 +29,13 @@ func CreateClairContext(hostname string, port int) *ClairRestContext {
 }
 
 func (clairContext *ClairRestContext) PingService() *apitypes.Result {
-	var health string = clairContext.getHealth()
-	if health == "" { return apitypes.NewResult(500, health) } else {
-		return apitypes.NewResult(200, health) }
+	var apiVersion string
+	var engineVersion string
+	var err error
+	apiVersion, engineVersion, err = clairContext.getVersions()
+	if err != nil { return apitypes.NewResult(500, err.Error()) }
+	return apitypes.NewResult(200, fmt.Sprintf(
+		"Service is up: api version %s, engine version %s", apiVersion, engineVersion))
 }
 
 /*******************************************************************************
