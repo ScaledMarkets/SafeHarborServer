@@ -1665,8 +1665,11 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 		/home/vagrant/bin/analyze-local-images <Docker Image ID>
 		*/
 		
+		fmt.Println("Getting clair service...")
 		var clairSvc *providers.ClairRestContext = providers.CreateClairContext("localhost", 6060)
+		fmt.Println("Pinging service...")
 		var result *apitypes.Result = clairSvc.PingService()
+		fmt.Println("Obtained response...")
 		if result.Status != 200 { return apitypes.NewFailureDesc(result.Message) }
 		fmt.Println("Scanner service ping successful")
 		
