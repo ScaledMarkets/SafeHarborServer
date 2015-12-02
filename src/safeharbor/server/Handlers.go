@@ -937,7 +937,7 @@ func replaceDockerfile(server *Server, sessionToken *apitypes.SessionToken, valu
 }
 
 /*******************************************************************************
- * Arguments: RepoId, DockerfileId, ImageName
+ * Arguments: DockerfileId, ImageName
  * Returns: apitypes.DockerImageDesc
  */
 func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
@@ -947,12 +947,8 @@ func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values 
 
 	fmt.Println("Entered execDockerfile")
 	
-	var repoId string
-	var err error
-	repoId, err = apitypes.GetRequiredPOSTFieldValue(values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-
 	// Identify the Dockerfile.
+	var err error
 	var dockerfileId string
 	dockerfileId, err = apitypes.GetRequiredPOSTFieldValue(values, "DockerfileId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -973,7 +969,7 @@ func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values 
 	
 	return image.asDockerImageDesc()
 }
-	
+
 /*******************************************************************************
  * Arguments: RepoId, Description, ImageName, <File attachment>
  * Returns: apitypes.DockerImageDesc
@@ -1003,10 +999,6 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	desc, err = apitypes.GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
-	var imageName string
-	imageName, err = apitypes.GetRequiredPOSTFieldValue(values, "ImageName")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	
 	var dockerfile Dockerfile
 	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, desc, values, files)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
