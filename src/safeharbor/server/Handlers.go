@@ -1638,7 +1638,7 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	// For now, just hard-code each provider.
 	var scanProviderName = scanConfig.getProviderName()
 	//var paramValues []string = scanConfig.getParameterValueIds()
-	var cmd *exec.Cmd
+	//var cmd *exec.Cmd
 	
 	if scanProviderName == "clair" {
 		// Clair scan:
@@ -1666,8 +1666,12 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 		*/
 		
 		var clairSvc *providers.ClairRestContext = providers.CreateClairContext("localhost", 6060)
-		clairSvc.PingService()
+		var result *apitypes.Result = clairSvc.PingService()
+		if result.Status != 200 { return apitypes.NewFailureDesc(result.Message) }
+		fmt.Println("Scanner service ping successful")
 		
+		//var imageName string = ....full docker name of image
+		//result = clairSvc.ScanImage(imageName)
 		
 		
 	} else if scanProviderName == "lynis" {
@@ -1703,13 +1707,14 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	
 	
 	
-	
+	/*
 	var output []byte
 	output, err = cmd.CombinedOutput()
 	var outputStr string = string(output)
 	if ! strings.HasPrefix(outputStr, "Error") {
 		return apitypes.NewFailureDesc("Image scan failed: " + outputStr)
 	}
+	*/
 	
 	var score string = "" //.... // Parse output.
 

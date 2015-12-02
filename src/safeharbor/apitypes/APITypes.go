@@ -64,7 +64,7 @@ var _ RespIntfTp = &BaseType{}
  */
 type Result struct {
 	BaseType
-	Status int
+	Status int  // HTTP status code (e.g., 200 is success)
 	Message string
 }
 

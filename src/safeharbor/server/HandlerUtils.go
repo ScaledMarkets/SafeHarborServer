@@ -392,7 +392,10 @@ func buildDockerfile(dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	output, err = cmd.CombinedOutput()
 	outputStr = string(output)
 	fmt.Println("...finished processing dockerfile.")
-	fmt.Println("Output: " + outputStr)
+	fmt.Println("Output from docker build command:")
+	fmt.Println(outputStr)
+	fmt.Println()
+	fmt.Println("End of output from docker build command.")
 	
 	fmt.Println("Files in " + tempDirPath + ":")
 	dirfiles, _ := ioutil.ReadDir(tempDirPath)
@@ -400,7 +403,11 @@ func buildDockerfile(dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 		fmt.Println("\t" + f.Name())
 	}
 	
-	if err != nil { return nil, errors.New(err.Error() + ", " + outputStr) }
+	if err != nil {
+		fmt.Println()
+		fmt.Println("Returning from buildDockerfile, with error")
+		return nil, errors.New(err.Error() + ", " + outputStr)
+	}
 	fmt.Println("Performed docker build command successfully.")
 	
 	// Add a record for the image to the database.
