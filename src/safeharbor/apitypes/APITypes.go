@@ -487,14 +487,16 @@ func (dockerfileDescs DockerfileDescs) AsResponse() string {
 type ImageDesc struct {
 	BaseType
 	ObjId string
+	RepoId string
 	Name string
 	Description string
 	CreationDate string
 }
 
-func NewImageDesc(objId, name, desc string, creationTime time.Time) *ImageDesc {
+func NewImageDesc(objId, repoId, name, desc string, creationTime time.Time) *ImageDesc {
 	return &ImageDesc{
 		ObjId: objId,
+		RepoId: repoId,
 		Name: name,
 		Description: desc,
 		CreationDate: FormatTimeAsJavascriptDate(creationTime),
@@ -508,9 +510,9 @@ type DockerImageDesc struct {
 	ImageDesc
 }
 
-func NewDockerImageDesc(objId, name, desc string, creationTime time.Time) *DockerImageDesc {
+func NewDockerImageDesc(objId, repoId, name, desc string, creationTime time.Time) *DockerImageDesc {
 	return &DockerImageDesc{
-		ImageDesc: *NewImageDesc(objId, name, desc, creationTime),
+		ImageDesc: *NewImageDesc(objId, repoId, name, desc, creationTime),
 	}
 }
 

@@ -165,6 +165,7 @@ type DockerImage interface {
 	Image
 	//ImageCreationEvent
 	getDockerImageTag() string
+	getFullName() string
 	asDockerImageDesc() *apitypes.DockerImageDesc
 	
 	//getScanEventIds() []string

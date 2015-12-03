@@ -1640,6 +1640,8 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	//var paramValues []string = scanConfig.getParameterValueIds()
 	//var cmd *exec.Cmd
 	
+	var score string
+	
 	if scanProviderName == "clair" {
 		// Clair scan:
 		// https://github.com/coreos/clair
@@ -1667,15 +1669,14 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 		
 		fmt.Println("Getting clair service...")
 		var clairSvc *providers.ClairRestContext = providers.CreateClairContext("localhost", 6060)
-		fmt.Println("Pinging service...")
-		var result *apitypes.Result = clairSvc.PingService()
+		fmt.Println("Contacting clair service...")
+		//var result *apitypes.Result = clairSvc.PingService()
+		var result *apitypes.Result = clairSvc.ScanImage(dockerImage.getFullName())
 		fmt.Println("Obtained response...")
 		if result.Status != 200 { return apitypes.NewFailureDesc(result.Message) }
-		fmt.Println("Scanner service ping successful")
+		fmt.Println("Scanner service responded with a 200 status")
 		
-		//var imageName string = ....full docker name of image
-		//result = clairSvc.ScanImage(imageName)
-		
+		score = ""//.... // Parse output.
 		
 	} else if scanProviderName == "lynis" {
 		// Lynis scan:
@@ -1704,22 +1705,6 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	} else {
 		return apitypes.NewFailureDesc("Unsupported scan provider: " + scanProviderName)
 	}
-	
-	
-
-	
-	
-	
-	/*
-	var output []byte
-	output, err = cmd.CombinedOutput()
-	var outputStr string = string(output)
-	if ! strings.HasPrefix(outputStr, "Error") {
-		return apitypes.NewFailureDesc("Image scan failed: " + outputStr)
-	}
-	*/
-	
-	var score string = "" //.... // Parse output.
 
 	// Create a scan event.
 	var userObjId string = sessionToken.AuthenticatedUserid

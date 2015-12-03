@@ -194,7 +194,7 @@ func ReadResponseBody(body io.ReadCloser) []byte {
 		if err != nil { break }
 		if n < len(buf) { break }
 	}
-	fmt.Println("Read this:")
+	fmt.Println("rest.ReadResponseBody this:")
 	fmt.Println(string(value))
 	fmt.Println("--")
 	fmt.Println()

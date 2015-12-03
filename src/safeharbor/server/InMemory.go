@@ -1088,8 +1088,12 @@ func (image *InMemDockerImage) getDockerImageTag() string {
 	return image.Name
 }
 
+func (image *InMemDockerImage) getFullName() string {
+	return ""//....
+}
+
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
-	return apitypes.NewDockerImageDesc(image.Id, image.Name, image.Description, image.CreationTime)
+	return apitypes.NewDockerImageDesc(image.Id, image.RepoId, image.Name, image.Description, image.CreationTime)
 }
 
 func (image *InMemDockerImage) isDockerImage() bool { return true }
