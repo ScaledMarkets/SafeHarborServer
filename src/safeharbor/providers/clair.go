@@ -4,7 +4,19 @@ import (
 	"errors"
 	"net/http"
 	"fmt"
-	
+
+	"bufio"
+	"bytes"
+	"encoding/json"
+	"flag"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+	"time"
+
 	// My packages:
 	"safeharbor/apitypes"
 	"safeharbor/rest"
@@ -46,6 +58,53 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) *apitypes.Resu
 	// Use the docker 'save' command to extract image to a tar of tar files.
 	// Must be extracted to a temp directory that is shared with the clair container.
 	
+	// Save image
+	fmt.Printf("Saving %s\n", imageName)
+	path, err := save(imageName)
+	defer os.RemoveAll(path)
+	if err != nil {
+		log.Fatalf("- Could not save image: %s\n", err)
+	}
+
+	// Retrieve history
+	fmt.Println("Getting image's history")
+	layerIDs, err := history(imageName)
+	if err != nil || len(layerIDs) == 0 {
+		log.Fatalf("- Could not get image's history: %s\n", err)
+	}
+
+	// Analyze layers
+	fmt.Printf("Analyzing %d layers\n", len(layerIDs))
+	for i := 0; i < len(layerIDs); i++ {
+		fmt.Printf("- Analyzing %s\n", layerIDs[i])
+
+		var err error
+		if i > 0 {
+			err = analyzeLayer(*endpoint, path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], layerIDs[i-1])
+		} else {
+			err = analyzeLayer(*endpoint, path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], "")
+		}
+		if err != nil {
+			log.Fatalf("- Could not analyze layer: %s\n", err)
+		}
+	}
+
+	// Get vulnerabilities
+	fmt.Println("Getting image's vulnerabilities")
+	vulnerabilities, err := getVulnerabilities(*endpoint, layerIDs[len(layerIDs)-1], *minimumPriority)
+	if err != nil {
+		log.Fatalf("- Could not get vulnerabilities: %s\n", err)
+	}
+	if len(vulnerabilities) == 0 {
+		fmt.Println("Bravo, your image looks SAFE !")
+	}
+	for _, vulnerability := range vulnerabilities {
+		fmt.Printf("- # %s\n", vulnerability.ID)
+		fmt.Printf("  - Priority:    %s\n", vulnerability.Priority)
+		fmt.Printf("  - Link:        %s\n", vulnerability.Link)
+		fmt.Printf("  - Description: %s\n", vulnerability.Description)
+	}
+
 	/*
 	defer os.RemoveAll(....temp dir)
 	
@@ -174,4 +233,100 @@ func setClairSessionId(req *http.Request, sessionId string) {
 	}
 	
 	req.AddCookie(cookie)
+}
+
+/*******************************************************************************
+ * Retrieve image as a tar of tars, and extract each tar (layer).
+ * Return the path to the directory containing the layer tar files.
+ */
+func save(imageName string) (string, error) {
+	path, err := ioutil.TempDir("", "analyze-local-image-")
+	if err != nil {
+		return "", err
+	}
+
+	var stderr bytes.Buffer
+	save := exec.Command("docker", "save", imageName)
+	save.Stderr = &stderr
+	extract := exec.Command("tar", "xf", "-", "-C"+path)
+	extract.Stderr = &stderr
+	pipe, err := extract.StdinPipe()
+	if err != nil {
+		return "", err
+	}
+	save.Stdout = pipe
+
+	err = extract.Start()
+	if err != nil {
+		return "", errors.New(stderr.String())
+	}
+	err = save.Run()
+	if err != nil {
+		return "", errors.New(stderr.String())
+	}
+	err = pipe.Close()
+	if err != nil {
+		return "", err
+	}
+	err = extract.Wait()
+	if err != nil {
+		return "", errors.New(stderr.String())
+	}
+
+	return path, nil
+}
+
+/*******************************************************************************
+ * Retrieve a list of the layer Ids.
+ */
+func history(imageName string) ([]string, error) {
+	var stderr bytes.Buffer
+	cmd := exec.Command("docker", "history", "-q", "--no-trunc", imageName)
+	cmd.Stderr = &stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return []string{}, err
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return []string{}, errors.New(stderr.String())
+	}
+
+	var layers []string
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		layers = append(layers, scanner.Text())
+	}
+
+	for i := len(layers)/2 - 1; i >= 0; i-- {
+		opp := len(layers) - 1 - i
+		layers[i], layers[opp] = layers[opp], layers[i]
+	}
+
+	return layers, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func getVulnerabilities(endpoint, layerID, minimumPriority string) ([]APIVulnerability, error) {
+	response, err := http.Get(endpoint + fmt.Sprintf(getLayerVulnerabilitiesURI, layerID, minimumPriority))
+	if err != nil {
+		return []APIVulnerability{}, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 200 {
+		body, _ := ioutil.ReadAll(response.Body)
+		return []APIVulnerability{}, fmt.Errorf("Got response %d with message %s", response.StatusCode, string(body))
+	}
+
+	var apiResponse APIVulnerabilitiesResponse
+	err = json.NewDecoder(response.Body).Decode(&apiResponse)
+	if err != nil {
+		return []APIVulnerability{}, err
+	}
+
+	return apiResponse.Vulnerabilities, nil
 }
