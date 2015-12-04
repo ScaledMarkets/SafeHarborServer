@@ -160,7 +160,7 @@ func nameConformsToSafeHarborImageNameRules(name string) error {
 	var err error = nameConformsToDockerRules(name)
 	if err != nil { return err }
 	if strings.Contains(name, ".") { return errors.New(
-		"SafeHarbor does not allow periods in image names: " + name)
+		"SafeHarbor does not allow periods in names: " + name)
 	}
 	return nil
 }
@@ -175,7 +175,7 @@ func nameConformsToDockerRules(name string) error {
 	var a = strings.TrimLeft(name, "abcdefghijklmnopqrstuvwxyz0123456789")
 	var b = strings.TrimRight(a, "abcdefghijklmnopqrstuvwxyz0123456789._-")
 	if len(b) == 0 { return nil }
-	return errors.New("Image name '" + name + "' does not conform to docker image name rules: " +
+	return errors.New("Name '" + name + "' does not conform to docker name rules: " +
 		"[a-z0-9]+(?:[._-][a-z0-9]+)*")
 }
 

@@ -1676,7 +1676,11 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 		if result.Status != 200 { return apitypes.NewFailureDesc(result.Message) }
 		fmt.Println("Scanner service responded with a 200 status")
 		
-		score = ""//.... // Parse output.
+		score = 0
+		fmt.Println("Message:")
+		fmt.Println(result.Message)
+		fmt.Println("End of message")
+		
 		
 	} else if scanProviderName == "lynis" {
 		// Lynis scan:

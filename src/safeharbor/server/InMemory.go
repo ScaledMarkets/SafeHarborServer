@@ -645,6 +645,10 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	if realmId != "" {
 		return nil, errors.New("A realm with name " + realmInfo.RealmName + " already exists")
 	}
+	
+	err = nameConformsToSafeHarborImageNameRules(realmInfo.RealmName)
+	if err != nil { return nil, err }
+	
 	realmId = createUniqueDbObjectId()
 	var realmFileDir string
 	realmFileDir, err = client.assignRealmFileDir(realmId)
@@ -863,6 +867,10 @@ func (client *InMemClient) dbCreateRepo(realmId string, name string, desc string
 	var err error
 	realm, err = client.getRealm(realmId)
 	if err != nil { return nil, err }
+	
+	err = nameConformsToSafeHarborImageNameRules(realmInfo.name)
+	if err != nil { return nil, err }
+	
 	var repoId string = createUniqueDbObjectId()
 	var repoFileDir string
 	repoFileDir, err = client.assignRepoFileDir(realmId, repoId)
@@ -1045,7 +1053,7 @@ func (image *InMemImage) getRepo() (Repo, error) {
 	return repo, nil
 }
 
-func (image *InMemDockerImage) getParentId() string {
+func (image *InMemImage) getParentId() string {
 	return image.RepoId
 }
 
@@ -1088,8 +1096,16 @@ func (image *InMemDockerImage) getDockerImageTag() string {
 	return image.Name
 }
 
-func (image *InMemDockerImage) getFullName() string {
-	return ""//....
+func (image *InMemDockerImage) getFullName() (string, error) {
+	// See http://blog.thoward37.me/articles/where-are-docker-images-stored/
+	var repo Repo
+	var realm Realm
+	var err error
+	repo, err = image.Client.getRepo(repoId)
+	if err != nil { return "", err }
+	realm, err = image.Client.getRealm(repo.getRealmId())
+	if err != nil { return "", err }
+	return (realm.getName() + "/" + repo.getName() + ":" + image.Name), nil
 }
 
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {

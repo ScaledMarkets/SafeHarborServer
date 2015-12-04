@@ -22,20 +22,35 @@ import (
 	"safeharbor/rest"
 )
 
+type ClairService struct {
+	
+	ClairEndpoint string  // http://127.0.0.1:6060
+	//MinimumPriority := flag.String("minimum-priority", "Low", "Minimum vulnerability vulnerability to show")
+
+}
+
+func CreateClairService(host string, port int) ScanService {
+	return &ClairService{
+		ClairEndpoint: "http://%s:%d", host, port,
+	}
+}
 
 /*******************************************************************************
  * For accessing the Clair scanning service.
  */
 type ClairRestContext struct {
 	rest.RestContext
+	ClairService *ClairService
 	sessionId string
 }
 
-func CreateClairContext(hostname string, port int) *ClairRestContext {
+func (clairSvc *ClairService) CreateClairContext(hostname string, port int) *ClairRestContext {
 	
 	var portString string = fmt.Sprintf("%d", port)
+	
 	return &ClairRestContext{
 		RestContext: *rest.CreateRestContext(hostname, portString, setClairSessionId),
+		ClairService: clairSvc,
 		sessionId: "",
 	}
 }
@@ -80,9 +95,9 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) *apitypes.Resu
 
 		var err error
 		if i > 0 {
-			err = analyzeLayer(*endpoint, path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], layerIDs[i-1])
+			err = analyzeLayer(clairContext.ClairService.ClairEndpoint, path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], layerIDs[i-1])
 		} else {
-			err = analyzeLayer(*endpoint, path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], "")
+			err = analyzeLayer(clairContext.ClairService.ClairEndpoint, path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], "")
 		}
 		if err != nil {
 			log.Fatalf("- Could not analyze layer: %s\n", err)
@@ -126,14 +141,14 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) *apitypes.Resu
 }
 
 
-/**************************** Implementation Methods ***************************
+/**************************** Clair Service Methods ***************************
  ******************************************************************************/
 
 
 /*******************************************************************************
  * 
  */
-func (clairContext *ClairRestContext) getVersions() (apiVersion string, engineVersion string, err error) {
+func (clairContext *ClairRestContext) GetVersions() (apiVersion string, engineVersion string, err error) {
 
 	var resp *http.Response
 	resp, err = clairContext.SendGet(clairContext.sessionId,
@@ -157,14 +172,19 @@ func (clairContext *ClairRestContext) getVersions() (apiVersion string, engineVe
 	return apiVersion, engineVersion, nil
 }
 
-func (clairContext *ClairRestContext) getHealth() string {
+func (clairContext *ClairRestContext) GetHealth() string {
 	//resp = get("v1/health")
 	return ""
 }
 
-func (clairContext *ClairRestContext) processLayer(id, path, parentId string) error {
+func (clairContext *ClairRestContext) ProcessLayer(id, path, parentId string) error {
 	var err error
 	var resp *http.Response
+	
+	err = analyzeLayer(endpoint, path, layerID, parentLayerID string)
+	
+	
+	
 	resp, err = clairContext.SendPost(clairContext.sessionId,
 		"v1/layers",
 		[]string{"ID", "Path", "ParentID"},
@@ -182,34 +202,53 @@ func (clairContext *ClairRestContext) processLayer(id, path, parentId string) er
 	return nil
 }
 
-func (clairContext *ClairRestContext) getLayerOS() {
+func (clairContext *ClairRestContext) GetLayerOS() {
 }
 
-func (clairContext *ClairRestContext) getLayerParent() {
+func (clairContext *ClairRestContext) GetLayerParent() {
 }
 
-func (clairContext *ClairRestContext) getLayerPackageList() {
+func (clairContext *ClairRestContext) GetLayerPackageList() {
 }
 
-func (clairContext *ClairRestContext) getLayerPackageDiff() {
+func (clairContext *ClairRestContext) GetLayerPackageDiff() {
 }
 
-func (clairContext *ClairRestContext) getLayerVulnerabilities() {
+func (clairContext *ClairRestContext) GetLayerVulnerabilities() {
 }
 
-func (clairContext *ClairRestContext) getLayerVulnerabilitiesDelta() {
+func (clairContext *ClairRestContext) GetLayerVulnerabilitiesDelta() {
 }
 
-func (clairContext *ClairRestContext) getLayerVulnerabilitiesBatch() {
+func (clairContext *ClairRestContext) GetLayerVulnerabilitiesBatch() {
 }
 
-func (clairContext *ClairRestContext) getVulnerabilityInfo() {
+func (clairContext *ClairRestContext) GetVulnerabilityInfo() {
 }
 
-func (clairContext *ClairRestContext) getLayersIntroducingVulnerability() {
+func (clairContext *ClairRestContext) GetLayersIntroducingVulnerability() {
 }
 
-func (clairContext *ClairRestContext) getLayersAffectedByVulnerability() {
+func (clairContext *ClairRestContext) GetLayersAffectedByVulnerability() {
+}
+
+
+/**************************** Internal Implementation Methods ***************************
+ ******************************************************************************/
+
+
+
+const (
+	postLayerURI               = "/v1/layers"
+	getLayerVulnerabilitiesURI = "/v1/layers/%s/vulnerabilities?minimumPriority=%s"
+)
+
+type APIVulnerabilitiesResponse struct {
+	Vulnerabilities []APIVulnerability
+}
+
+type APIVulnerability struct {
+	ID, Link, Priority, Description string
 }
 
 /*******************************************************************************
@@ -305,6 +344,37 @@ func history(imageName string) ([]string, error) {
 	}
 
 	return layers, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func analyzeLayer(endpoint, path, layerID, parentLayerID string) error {
+	payload := struct{ ID, Path, ParentID string }{ID: layerID, Path: path, ParentID: parentLayerID}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	request, err := http.NewRequest("POST", endpoint+postLayerURI, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 201 {
+		body, _ := ioutil.ReadAll(response.Body)
+		return fmt.Errorf("Got response %d with message %s", response.StatusCode, string(body))
+	}
+
+	return nil
 }
 
 /*******************************************************************************
