@@ -391,7 +391,7 @@ func buildDockerfile(dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
 	// Image id format: <hash>[:TAG]
 	
-	var imageFullName string = realm.getName() + "/" + repo.getName() + "/" + imageName
+	var imageFullName string = realm.getName() + "/" + repo.getName() + ":" + imageName
 	cmd = exec.Command("/usr/bin/docker", "build",
 	"--file", tempDirPath + "/" + dockerfile.getName(), "--tag", imageFullName, tempDirPath)
 	
