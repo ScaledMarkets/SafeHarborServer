@@ -1,3 +1,8 @@
+/*******************************************************************************
+ * Implementation of ScanProvider for the CoreOS Clair container scanner.
+ * See https://github.com/coreos/clair
+ */
+
 package providers
 
 import (
@@ -8,14 +13,14 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"flag"
+	//"flag"
 	"io/ioutil"
-	"log"
+	//"log"
 	"os"
 	"os/exec"
-	"strconv"
-	"strings"
-	"time"
+	//"strconv"
+	//"strings"
+	//"time"
 
 	// My packages:
 	"safeharbor/apitypes"
@@ -23,16 +28,43 @@ import (
 )
 
 type ClairService struct {
-	
-	ClairEndpoint string  // http://127.0.0.1:6060
-	//MinimumPriority := flag.String("minimum-priority", "Low", "Minimum vulnerability vulnerability to show")
-
+	Host string
+	Port int
 }
 
 func CreateClairService(host string, port int) ScanService {
 	return &ClairService{
-		ClairEndpoint: "http://%s:%d", host, port,
+		Host: host,
+		Port: port,
 	}
+}
+
+func (clairSvc *ClairService) GetEndpoint() string {
+	return fmt.Sprintf("http://%s:%d", clairSvc.Host, clairSvc.Port)
+}
+
+func (clairSvc *ClairService) GetParameterDescriptions() map[string]string {
+	return map[string]string{
+		"MinimumPriority": "The minimum priority level of vulnerabilities to report",
+	}
+}
+
+func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanContext, error) {
+	
+	var minPriority string
+	
+	if params != nil {
+		minPriority = params["MinimumPriority"]
+		// this param is optional so do not require its presence.
+	}
+	
+	return &ClairRestContext{
+		RestContext: *rest.CreateRestContext(
+			clairSvc.Host, fmt.Sprintf("%d", clairSvc.Port), setClairSessionId),
+		MinimumVulnerabilityPriority: minPriority,
+		ClairService: clairSvc,
+		sessionId: "",
+	}, nil
 }
 
 /*******************************************************************************
@@ -40,26 +72,20 @@ func CreateClairService(host string, port int) ScanService {
  */
 type ClairRestContext struct {
 	rest.RestContext
+	MinimumVulnerabilityPriority string
 	ClairService *ClairService
 	sessionId string
 }
 
-func (clairSvc *ClairService) CreateClairContext(hostname string, port int) *ClairRestContext {
-	
-	var portString string = fmt.Sprintf("%d", port)
-	
-	return &ClairRestContext{
-		RestContext: *rest.CreateRestContext(hostname, portString, setClairSessionId),
-		ClairService: clairSvc,
-		sessionId: "",
-	}
+func (clairContext *ClairRestContext) getEndpoint() string {
+	return clairContext.ClairService.GetEndpoint()
 }
 
 func (clairContext *ClairRestContext) PingService() *apitypes.Result {
 	var apiVersion string
 	var engineVersion string
 	var err error
-	apiVersion, engineVersion, err = clairContext.getVersions()
+	apiVersion, engineVersion, err = clairContext.GetVersions()
 	if err != nil { return apitypes.NewResult(500, err.Error()) }
 	return apitypes.NewResult(200, fmt.Sprintf(
 		"Service is up: api version %s, engine version %s", apiVersion, engineVersion))
@@ -68,7 +94,7 @@ func (clairContext *ClairRestContext) PingService() *apitypes.Result {
 /*******************************************************************************
  * See https://github.com/coreos/clair/blob/master/contrib/analyze-local-images/main.go
  */
-func (clairContext *ClairRestContext) ScanImage(imageName string) *apitypes.Result {
+func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, error) {
 	
 	// Use the docker 'save' command to extract image to a tar of tar files.
 	// Must be extracted to a temp directory that is shared with the clair container.
@@ -77,16 +103,13 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) *apitypes.Resu
 	fmt.Printf("Saving %s\n", imageName)
 	path, err := save(imageName)
 	defer os.RemoveAll(path)
-	if err != nil {
-		log.Fatalf("- Could not save image: %s\n", err)
-	}
+	if err != nil { return nil, err }
 
 	// Retrieve history
 	fmt.Println("Getting image's history")
 	layerIDs, err := history(imageName)
-	if err != nil || len(layerIDs) == 0 {
-		log.Fatalf("- Could not get image's history: %s\n", err)
-	}
+	if err != nil { return nil, err }
+	if len(layerIDs) == 0 { return nil, errors.New("Could not get image's history") }
 
 	// Analyze layers
 	fmt.Printf("Analyzing %d layers\n", len(layerIDs))
@@ -95,23 +118,21 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) *apitypes.Resu
 
 		var err error
 		if i > 0 {
-			err = analyzeLayer(clairContext.ClairService.ClairEndpoint, path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], layerIDs[i-1])
+			err = analyzeLayer(clairContext.getEndpoint(), path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], layerIDs[i-1])
 		} else {
-			err = analyzeLayer(clairContext.ClairService.ClairEndpoint, path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], "")
+			err = analyzeLayer(clairContext.getEndpoint(), path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], "")
 		}
-		if err != nil {
-			log.Fatalf("- Could not analyze layer: %s\n", err)
-		}
+		if err != nil { return nil, err }
 	}
 
 	// Get vulnerabilities
 	fmt.Println("Getting image's vulnerabilities")
-	vulnerabilities, err := getVulnerabilities(*endpoint, layerIDs[len(layerIDs)-1], *minimumPriority)
-	if err != nil {
-		log.Fatalf("- Could not get vulnerabilities: %s\n", err)
-	}
+	var vulnerabilities []Vulnerability
+	vulnerabilities, err = getVulnerabilities(
+		clairContext.getEndpoint(), layerIDs[len(layerIDs)-1], clairContext.MinimumVulnerabilityPriority)
+	if err != nil { return nil, err }
 	if len(vulnerabilities) == 0 {
-		fmt.Println("Bravo, your image looks SAFE !")
+		fmt.Println("No vulnerabilities found for image")
 	}
 	for _, vulnerability := range vulnerabilities {
 		fmt.Printf("- # %s\n", vulnerability.ID)
@@ -119,25 +140,10 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) *apitypes.Resu
 		fmt.Printf("  - Link:        %s\n", vulnerability.Link)
 		fmt.Printf("  - Description: %s\n", vulnerability.Description)
 	}
-
-	/*
-	defer os.RemoveAll(....temp dir)
 	
-	// Extract the individual layer tar files.
-	
-	// Scan each layer.
-	for _, layerPath := range layerPaths {
-		
-		var id string = ....
-		var err error = clairContext.processLayer(id, layerPath, "")
-		if err != nil {
-			....
-		}
-	}
-	*/
-	
-	
-	return apitypes.NewResult(500, "Not implemented yet")
+	return &ScanResult{
+		Vulnerabilities: vulnerabilities,
+	}, nil
 }
 
 
@@ -181,14 +187,7 @@ func (clairContext *ClairRestContext) ProcessLayer(id, path, parentId string) er
 	var err error
 	var resp *http.Response
 	
-	err = analyzeLayer(endpoint, path, layerID, parentLayerID string)
-	
-	
-	
-	resp, err = clairContext.SendPost(clairContext.sessionId,
-		"v1/layers",
-		[]string{"ID", "Path", "ParentID"},
-		[]string{id, path, parentId})
+	err = analyzeLayer(clairContext.getEndpoint(), path, id, parentId)
 	
 	if err != nil { return err }
 	defer resp.Body.Close()
@@ -244,11 +243,7 @@ const (
 )
 
 type APIVulnerabilitiesResponse struct {
-	Vulnerabilities []APIVulnerability
-}
-
-type APIVulnerability struct {
-	ID, Link, Priority, Description string
+	Vulnerabilities []Vulnerability
 }
 
 /*******************************************************************************
@@ -380,22 +375,23 @@ func analyzeLayer(endpoint, path, layerID, parentLayerID string) error {
 /*******************************************************************************
  * 
  */
-func getVulnerabilities(endpoint, layerID, minimumPriority string) ([]APIVulnerability, error) {
+func getVulnerabilities(endpoint, layerID, minimumPriority string) ([]Vulnerability, error) {
+	
 	response, err := http.Get(endpoint + fmt.Sprintf(getLayerVulnerabilitiesURI, layerID, minimumPriority))
 	if err != nil {
-		return []APIVulnerability{}, err
+		return []Vulnerability{}, err
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
 		body, _ := ioutil.ReadAll(response.Body)
-		return []APIVulnerability{}, fmt.Errorf("Got response %d with message %s", response.StatusCode, string(body))
+		return []Vulnerability{}, fmt.Errorf("Got response %d with message %s", response.StatusCode, string(body))
 	}
 
 	var apiResponse APIVulnerabilitiesResponse
 	err = json.NewDecoder(response.Body).Decode(&apiResponse)
 	if err != nil {
-		return []APIVulnerability{}, err
+		return []Vulnerability{}, err
 	}
 
 	return apiResponse.Vulnerabilities, nil

@@ -134,6 +134,7 @@ type Repo interface {
 	Resource
 	//getName() string
 	getFileDirectory() string
+	getRealmId() string
 	getRealm() (Realm, error)
 	getDockerfileIds() []string
 	getDockerImageIds() []string

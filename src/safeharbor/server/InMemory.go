@@ -868,7 +868,7 @@ func (client *InMemClient) dbCreateRepo(realmId string, name string, desc string
 	realm, err = client.getRealm(realmId)
 	if err != nil { return nil, err }
 	
-	err = nameConformsToSafeHarborImageNameRules(realmInfo.name)
+	err = nameConformsToSafeHarborImageNameRules(name)
 	if err != nil { return nil, err }
 	
 	var repoId string = createUniqueDbObjectId()
@@ -902,6 +902,8 @@ func (client *InMemClient) getRepo(id string) (Repo, error) {
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Repo") }
 	return repo, nil
 }
+
+func (repo *InMemRepo) getRealmId() string { return repo.RealmId }
 
 func (repo *InMemRepo) getRealm() (Realm, error) {
 	var realm Realm
@@ -1101,7 +1103,7 @@ func (image *InMemDockerImage) getFullName() (string, error) {
 	var repo Repo
 	var realm Realm
 	var err error
-	repo, err = image.Client.getRepo(repoId)
+	repo, err = image.Client.getRepo(image.RepoId)
 	if err != nil { return "", err }
 	realm, err = image.Client.getRealm(repo.getRealmId())
 	if err != nil { return "", err }

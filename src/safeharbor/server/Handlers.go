@@ -1668,19 +1668,21 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 		*/
 		
 		fmt.Println("Getting clair service...")
-		var clairSvc *providers.ClairRestContext = providers.CreateClairContext("localhost", 6060)
+		var clairService providers.ScanService = providers.CreateClairService("localhost", 6060)
+		var clairContext providers.ScanContext
+		clairContext, err = clairService.CreateScanContext(nil)
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		fmt.Println("Contacting clair service...")
 		//var result *apitypes.Result = clairSvc.PingService()
-		var result *apitypes.Result = clairSvc.ScanImage(dockerImage.getFullName())
-		fmt.Println("Obtained response...")
-		if result.Status != 200 { return apitypes.NewFailureDesc(result.Message) }
-		fmt.Println("Scanner service responded with a 200 status")
+		var imageName string
+		imageName, err = dockerImage.getFullName()
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		var result *providers.ScanResult
+		result, err = clairContext.ScanImage(imageName)
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		fmt.Println("Scanner service completed")
 		
-		score = 0
-		fmt.Println("Message:")
-		fmt.Println(result.Message)
-		fmt.Println("End of message")
-		
+		score = fmt.Sprintf("%d", len(result.Vulnerabilities))
 		
 	} else if scanProviderName == "lynis" {
 		// Lynis scan:
