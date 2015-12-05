@@ -176,7 +176,7 @@ func nameConformsToDockerRules(name string) error {
 	var b = strings.TrimRight(a, "abcdefghijklmnopqrstuvwxyz0123456789._-")
 	if len(b) == 0 { return nil }
 	return errors.New("Name '" + name + "' does not conform to docker name rules: " +
-		"[a-z0-9]+(?:[._-][a-z0-9]+)*")
+		"[a-z0-9]+(?:[._-][a-z0-9]+)*  Offending fragment: '" + b + "'")
 }
 
 /*******************************************************************************
