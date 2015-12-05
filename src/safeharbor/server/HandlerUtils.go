@@ -331,8 +331,15 @@ func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient, re
 func buildDockerfile(dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	dbClient DBClient, values url.Values) (DockerImage, error) {
 
-	var imageName string
+	var repo Repo
 	var err error
+	repo, err = dockerfile.getRepo()
+	if err != nil { return nil, err }
+	var realm Realm
+	realm, err = repo.getRealm()
+	if err != nil { return nil, err }
+
+	var imageName string
 	imageName, err = apitypes.GetRequiredPOSTFieldValue(values, "ImageName")
 	if err != nil { return nil, err }
 	if imageName == "" { return nil, errors.New("No HTTP parameter found for ImageName") }
@@ -384,8 +391,9 @@ func buildDockerfile(dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
 	// Image id format: <hash>[:TAG]
 	
+	var imageFullName string = realm.getName() + "/" + repo.getName() + "/" + imageName
 	cmd = exec.Command("/usr/bin/docker", "build",
-	"--file", tempDirPath + "/" + dockerfile.getName(), "--tag", imageName, tempDirPath)
+	"--file", tempDirPath + "/" + dockerfile.getName(), "--tag", imageFullName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
@@ -412,9 +420,6 @@ func buildDockerfile(dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	
 	// Add a record for the image to the database.
 	var image DockerImage
-	var repo Repo
-	repo, err = dockerfile.getRepo()
-	if err != nil { return nil, err }
 	image, err = dbClient.dbCreateDockerImage(repo.getId(),
 		imageName, dockerfile.getDescription())
 	fmt.Println("Created docker image object.")

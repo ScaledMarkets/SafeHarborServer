@@ -964,6 +964,7 @@ func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values 
 	fmt.Println("Dockerfile name =", dockerfile.getName())
 	
 	var image DockerImage
+	
 	image, err = buildDockerfile(dockerfile, sessionToken, dbClient, values)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
