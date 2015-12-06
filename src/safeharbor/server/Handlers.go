@@ -943,10 +943,10 @@ func replaceDockerfile(server *Server, sessionToken *apitypes.SessionToken, valu
 func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
-
 	fmt.Println("Entered execDockerfile")
 	
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
 	// Identify the Dockerfile.
 	var err error
 	var dockerfileId string
@@ -978,9 +978,17 @@ func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values 
 func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
+	fmt.Println("Entered addAndExecDockerfile")
+	
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	fmt.Println("Entered addAndExecDockerfile")
+	if failMsg != nil { // no session Id found; see if it was sent as an HTTP parameter.
+		
+		var sessionId string = apitypes.GetPOSTFieldValue(values, "SessionId")
+		if sessionId == "" { return failMsg }
+		sessionToken = server.authService.validateSessionId(sessionId)  // returns nil if invalid
+		if sessionToken == nil { return failMsg }
+	}
 	
 	var repoId string
 	var err error
