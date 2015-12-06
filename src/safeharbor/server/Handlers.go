@@ -1679,7 +1679,7 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 		*/
 		
 		fmt.Println("Getting clair service...")
-		var clairService providers.ScanService = providers.CreateClairService("localhost", 6060)
+		var clairService providers.ScanService = providers.CreateClairServiceStub("localhost", 6060)
 		var clairContext providers.ScanContext
 		clairContext, err = clairService.CreateScanContext(nil)
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
