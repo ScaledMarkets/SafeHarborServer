@@ -980,11 +980,13 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 
 	fmt.Println("Entered addAndExecDockerfile")
 	
-	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
-
+	var failMsg *apitypes.FailureDesc = authenticateSession(server, sessionToken)
 	if failMsg != nil { // no session Id found; see if it was sent as an HTTP parameter.
 		
-		var sessionId string = apitypes.GetPOSTFieldValue(values, "SessionId")
+		var sessionId string
+		valuear, found := values["SessionId"]
+		if ! found { return failMsg }
+		sessionId = valuear[0]
 		if sessionId == "" { return failMsg }
 		sessionToken = server.authService.validateSessionId(sessionId)  // returns nil if invalid
 		if sessionToken == nil { return failMsg }
