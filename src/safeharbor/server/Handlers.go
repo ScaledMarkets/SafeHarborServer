@@ -1589,7 +1589,7 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 			desc, err = scanService.GetParameterDescription(name)
 			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 			var value string = valueAr[0]
-			var pval ParameterValue = scanConfig.createParameterValue(name, value)
+			var pval ParameterValue = scanConfig.setParameterValue(name, value)
 			paramValueIds = append(paramValueIds, pval.getId())
 		}
 	}
@@ -1712,9 +1712,6 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	var scanEvent ScanEvent
 	scanEvent, err = server.dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
 		userObjId, time.Now(), score, extObjId)
-	
-	// Create an ACL entry for the event.
-	....
 	
 	return scanEvent.asScanEventDesc()
 }

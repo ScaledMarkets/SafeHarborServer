@@ -328,7 +328,7 @@ func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient, re
 /*******************************************************************************
  * 
  */
-func buildDockerfile(dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
+func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	dbClient DBClient, values url.Values) (DockerImage, error) {
 
 	var repo Repo
@@ -337,6 +337,10 @@ func buildDockerfile(dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	if err != nil { return nil, err }
 	var realm Realm
 	realm, err = repo.getRealm()
+	if err != nil { return nil, err }
+	
+	var user User
+	user, err = getCurrentUser(server, sessionToke)
 	if err != nil { return nil, err }
 
 	var imageName string
@@ -423,6 +427,10 @@ func buildDockerfile(dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	image, err = dbClient.dbCreateDockerImage(repo.getId(),
 		imageName, dockerfile.getDescription())
 	fmt.Println("Created docker image object.")
+	
+	// Create an event to record that this happened.
+	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), image.getId(),
+		user.getId(), time.Now())
 	
 	return image, nil
 }

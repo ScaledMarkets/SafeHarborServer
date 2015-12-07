@@ -1126,6 +1126,14 @@ type InMemParameterValue struct {
 	ConfigId string
 }
 
+func (client *InMemClient) NewInMemParameterValue(name, value, configId string) *InMemParameterValue {
+	return &InMemParameterValue{
+		Name: name,
+		StringValue: value,
+		ConfigId: configId,
+	}
+}
+
 func (client *InMemClient) getParameterValue(id string) (ParameterValue, error) {
 	var pv ParameterValue
 	var isType bool
@@ -1146,6 +1154,10 @@ func (paramValue *InMemParameterValue) getName() string {
 
 func (paramValue *InMemParameterValue) getStringValue() string {
 	return paramValue.StringValue
+}
+
+func (paramValue *InMemParameterValue) setStringValue(value string) {
+	paramValue.StringValue = value
 }
 
 func (paramValue *InMemParameterValue) getConfigId() string {
@@ -1274,8 +1286,29 @@ func (scanConfig *InMemScanConfig) getFailureGraphicImageURL() string {
 	return scanConfig.FailureGraphicImageURL
 }
 
-func (scanConfig *InMemScanConfig) createParameterValue(name, typeName, strValue string) (ParameterValue, error) {
-	....
+func (scanConfig *InMemScanConfig) setParameterValue(name, strValue string) (ParameterValue, error) {
+	
+	// Check if a parameter value already exist for the parameter. If so, replace the value.
+	for _, id := range scanConfig.ParameterValueIds {
+		var pv ParameterValue
+		var err error
+		pv, err = scanConfig.getDBClient().getParameterValue(id)
+		if err != nil { return nil, err }
+		if pv == nil {
+			fmt.Println("Internal ERROR: broken ParameterValue list for scan config " + scanConfig.getName())
+			continue
+		}
+		if pv.getName() == name {
+			pv.setStringValue(strValue)
+			return pv, nil
+		}
+	}
+	
+	// Did not find a value for a parameter of that name - create a new ParameterValue.
+	var paramValue = NewInMemParameterValue(name, strValue, scanConfig.getId())
+	scanConfig.ParameterValueIds = append(scanConfig.ParameterValueIds, paramValue.getId())
+	allObjects[paramValue.getId()] = paramValue
+	return paramValue, nil
 }
 
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
@@ -1307,10 +1340,10 @@ type InMemEvent struct {
 	UserObjId string
 }
 
-func (client *InMemClient) NewInMemEvent(id string, when time.Time, userObjId string) *InMemEvent {
+func (client *InMemClient) NewInMemEvent(id string, userObjId string) *InMemEvent {
 	return &InMemEvent{
 		InMemPersistObj: *client.NewInMemPersistObj(id),
-		When: when,
+		When: time.Now(),
 		UserObjId: userObjId,
 	}
 }
@@ -1336,20 +1369,39 @@ type InMemScanEvent struct {
 	DockerImageId string
 	Score string
 	ScanConfigExternalObjId string
+	ActualParameterValueIds []string
 }
 
 func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
-	userObjId string, when time.Time, score string, extObjId string) (ScanEvent, error) {
+	userObjId string, score string, extObjId string) (ScanEvent, error) {
 	
+	// Create actual ParameterValues for the Event, using the current ParameterValues
+	// that exist for the ScanConfig.
+	var scanConfig ScanConfig
+	var err error
+	scanConfig, err = client.getScanConfig(scanConfigId)
+	if err != nil { return nil, err }
+	var actParamValueIds []
+	for _, paramId := scanConfig.getParameterValueIds {
+		var param ParameterValue
+		param, err = client.getParameterValue(paramId)
+		if err != nil { return nil, err }
+		var name string = param.getName()
+		var value string = param.getStringValue()
+		var actParamValue = NewInMemParameterValue(name, value, scanConfigId)
+		actParamValueIds = append(actParamValueIds, actParamValue.getId())
+	}
+
 	var id string = createUniqueDbObjectId()
 	var scanEvent *InMemScanEvent = &InMemScanEvent{
-		InMemEvent: *client.NewInMemEvent(id, when, userObjId),
+		InMemEvent: *client.NewInMemEvent(id, userObjId),
 		ScanConfigId: scanConfigId,
 		DockerImageId: imageId,
 		Score: score,
 		ScanConfigExternalObjId: extObjId,
+		ActualParameterValueIds: actParamValueIds,
 	}
-	
+
 	fmt.Println("Created ScanEvent")
 	allObjects[id] = scanEvent
 	
@@ -1368,6 +1420,10 @@ func (event *InMemScanEvent) getScanConfigId() string {
 	return event.ScanConfigId
 }
 
+func (event *InMemScanEvent) getActualParameterValueIds() []string {
+	return event.ActualParameterValueIds
+}
+
 func (event *InMemScanEvent) getScanConfigExternalObjId() string {
 	return event.ScanConfigExternalObjId
 }
@@ -1382,6 +1438,14 @@ func (event *InMemScanEvent) asScanEventDesc() *apitypes.ScanEventDesc {
  */
 type InMemImageCreationEvent struct {
 	InMemEvent
+	ImageId string
+}
+
+func (client *InMemClient) NewInMemImageCreationEvenet(id, userObjId, imageId string) *InMemImageCreationEvent {
+	return &InMemImageCreationEvent{
+		InMemEvent: NewInMemEvent(id, userObjId),
+		ImageId: imageId,
+	}
 }
 
 /*******************************************************************************
@@ -1391,6 +1455,30 @@ type InMemDockerfileExecEvent struct {
 	InMemImageCreationEvent
 	DockerfileId string
 	DockerfileExternalObjId string
+}
+
+func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId, imageId,
+	userObjId string) (DockerfileExecEvent, error) {
+	
+	
+	var id string = createUniqueDbObjectId()
+	var newDockerfileExecEvent *InMemDockerfileExecEvent =
+		NewInMemDockerfileExecEvent(id, dockerfileId, imageId, userObjId)
+	
+	allObjects[id] = newDockerfileExecEvent
+
+	// Link to Dockerfile.
+	....
+}
+
+func (client *InMemClient) NewInMemDockerfileExecEvent(id, dockerfileId, imageId,
+	userObjId string) *InMemDockerfileExecEvent {
+	
+	return &InMemDockerfileExecEvent{
+		InMemImageCreationEvent: NewInMemImageCreationEvent(id, userObjId, imageId),
+		DockerfileId: dockerfileId,
+		DockerfileExternalObjId: "",  // for when we add git
+	}
 }
 
 func (execEvent *InMemDockerfileExecEvent) getDockerfileId() string {

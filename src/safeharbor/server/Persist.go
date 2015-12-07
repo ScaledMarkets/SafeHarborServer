@@ -24,6 +24,8 @@ type DBClient interface {
 	dbCreateDockerImage(string, string, string) (DockerImage, error)
 	dbCreateScanConfig(string, string, string, string, []string, string, string) (ScanConfig, error)
 	dbCreateScanEvent(string, string, string, time.Time, string, string) (ScanEvent, error)
+	dbCreateDockerfileExecEvent(dockerfileId, imageId,
+		userObjId string, when time.Time) (DockerfileExecEvent, error)
 	dbGetAllRealmIds() []string
 	getPersistentObject(id string) PersistObj
 	getResource(string) (Resource, error)
@@ -181,6 +183,7 @@ type ParameterValue interface {
 	getName() string
 	//getTypeName() string
 	getStringValue() string
+	setStringValue(string)
 	getConfigId() string
 	asParameterValueDesc() *apitypes.ParameterValueDesc
 }
@@ -195,7 +198,7 @@ type ScanConfig interface {
 	getParameterValueIds() []string
 	getSuccessGraphicImageURL() string
 	getFailureGraphicImageURL() string
-	createParameterValue(string, string) (ParameterValue, error)
+	setParameterValue(string, string) (ParameterValue, error)
 	asScanConfigDesc() *apitypes.ScanConfigDesc
 }
 
@@ -210,6 +213,7 @@ type ScanEvent interface {
 	getScore() string
 	getDockerImageId() string
 	getScanConfigId() string
+	getActualParameterValueIds() []string
 	asScanEventDesc() *apitypes.ScanEventDesc
 	getScanConfigExternalObjId() string
 }
@@ -224,7 +228,7 @@ type DockerfileExecEvent interface {
 	getDockerfileExternalObjId() string
 }
 
-type UploadEvent interface {
+type ImageUploadEvent interface {
 	ImageCreationEvent
 }
 
