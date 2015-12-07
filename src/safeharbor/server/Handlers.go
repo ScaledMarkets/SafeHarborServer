@@ -982,6 +982,14 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	
 	var failMsg *apitypes.FailureDesc = authenticateSession(server, sessionToken)
 	if failMsg != nil { // no session Id found; see if it was sent as an HTTP parameter.
+		// We do this because the client is likely to invoke this method directly
+		// from a javascript app in a browser instead of from the middle tier,
+		// and the browser/javascript framework is not likely going to allow
+		// the javascript app to set a cookie for a domain to which _IT_ has
+		// not authenticated directly. (The authenticate method is most likely
+		// called by the middle tier - not a javascript app.) To get around this,
+		// we allow the addAndExecDockerfile method to provide the session Id
+		// as an HTTP parameter, instead of via the normal mechanism (a cookie).
 		
 		var sessionId string
 		valuear, found := values["SessionId"]
@@ -1565,8 +1573,26 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	// Look for each parameter required by the provider.
-	// (Right now there are none.)
 	var paramValueIds []string = make([]string, 0)
+	for key, valueAr := range values {
+		if strings.HasPrefix(key, "scan.") {
+			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
+				"Parameter " + key + " is ill-formatted")
+			}
+			var name string = strings.TrimPrefix(key, "scan.")
+			// See if the parameter is known by the scanner.
+			var scanService ScanService = getScanService(providerName)
+			if scanService == nil { return apitypes.NewFailureDesc(
+				"Unable to identify a scan service named '" + providerName + "'")
+			}
+			var desc
+			desc, err = scanService.GetParameterDescription(name)
+			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+			var value string = valueAr[0]
+			var pval ParameterValue = scanConfig.createParameterValue(name, value)
+			paramValueIds = append(paramValueIds, pval.getId())
+		}
+	}
 	
 	var scanConfig ScanConfig
 	scanConfig, err = server.dbClient.dbCreateScanConfig(name, desc, repoId,
@@ -1635,6 +1661,16 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 		return apitypes.NewFailureDesc("Scan Config with object Id " + scanConfigId + " not found")
 	}
 
+	fmt.Println("Getting scan parameters from configuration")
+	var params = map[string]string{}
+	var paramValueIds []string = scanConfig.getParameterValueIds()
+	for _, id := range paramValueIds {
+		var paramValue ParameterValue
+		paramValue, err = server.dbClient.getParameterValue(id)
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		params[paramValue.getName()] = paramValue.getStringValue()
+	}
+
 	// Get the current version of the ScanConfig file.
 	var extObjId string = scanConfig.getCurrentExtObjId()
 	var scanConfigTempFile *os.File
@@ -1653,81 +1689,32 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	
 	var score string
 	
-	if scanProviderName == "clair" {
-		// Clair scan:
-		// https://github.com/coreos/clair
-		// https://github.com/coreos/clair/tree/master/contrib/analyze-local-images
-		
-		/* From Clair maintainer (Quentin Machu):
-		You don’t actually need to run Clair on each host, a single Clair instance/database
-		is able to analyze all your container images. That is why it is an API-driven service.
-		All Clair needs is being able to access your container images. When you insert
-		a container layer via the API (https://github.com/coreos/clair/blob/master/docs/API.md#insert-a-new-layer),
-		you have to specify a path to the layer tarball that Clair can access;
-		it can either be a filesystem path or an URL. So you can analyze local images
-		or images stored on S3, OpenStack Swift, Ceph pretty easily!
-
-		You may want to take a look at https://github.com/coreos/clair/tree/master/contrib/analyze-local-images,
-		a small tool I hacked to ease analyzing local images. But in fact, I added
-		a very minimal “remote” support, allowing Clair to run somewhere else:
-		the local images are served by a web server.
+	fmt.Println("Getting scan service...")
+	var scanService providers.ScanService = getScanService(scanProviderName)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-		docker pull quay.io/coreos/clair
-		sudo docker run -i -t -v /tmp:/tmp -p 6060:6060 quay.io/coreos/clair:latest --db-type=bolt --db-path=/db/database
-		sudo GOPATH=/home/vagrant go get -u github.com/coreos/clair/contrib/analyze-local-images
-		/home/vagrant/bin/analyze-local-images <Docker Image ID>
-		*/
-		
-		fmt.Println("Getting clair service...")
-		var clairService providers.ScanService = providers.CreateClairServiceStub("localhost", 6060)
-		var clairContext providers.ScanContext
-		clairContext, err = clairService.CreateScanContext(nil)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-		fmt.Println("Contacting clair service...")
-		//var result *apitypes.Result = clairSvc.PingService()
-		var imageName string
-		imageName, err = dockerImage.getFullName()
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-		var result *providers.ScanResult
-		result, err = clairContext.ScanImage(imageName)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-		fmt.Println("Scanner service completed")
-		
-		score = fmt.Sprintf("%d", len(result.Vulnerabilities))
-		
-	} else if scanProviderName == "lynis" {
-		// Lynis scan:
-		// https://cisofy.com/lynis/
-		// https://cisofy.com/lynis/plugins/docker-containers/
-		// /usr/local/lynis/lynis -c --checkupdate --quiet --auditor "SafeHarbor" > ....
-		return apitypes.NewFailureDesc("Unsupported scan provider: " + scanProviderName)
-	} else if scanProviderName == "baude" {
-		// OpenScap using RedHat/Baude image scanner:
-		// https://github.com/baude/image-scanner
-		// https://github.com/baude
-		// https://developerblog.redhat.com/2015/04/21/introducing-the-atomic-command/
-		// https://access.redhat.com/articles/881893#get
-		// https://aws.amazon.com/partners/redhat/
-		// https://aws.amazon.com/marketplace/pp/B00VIMU19E
-		// https://aws.amazon.com/marketplace/library/ref=mrc_prm_manage_subscriptions
-		// RHEL7.1 ami at Amazon: ami-4dbf9e7d
-		
-		//var cmd *exec.Cmd = exec.Command("image-scanner-remote.py",
-		//	"--profile", "localhost", "-s", dockerImage.getDockerImageTag())
-		return apitypes.NewFailureDesc("Unsupported scan provider: " + scanProviderName)
-	} else if scanProviderName == "openscap" {
-		// http://www.open-scap.org/resources/documentation/security-compliance-of-rhel7-docker-containers/
-		
-
-	} else {
-		return apitypes.NewFailureDesc("Unsupported scan provider: " + scanProviderName)
-	}
+	var scanContext providers.ScanContext
+	scanContext, err = scanService.CreateScanContext(params)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	var imageName string
+	imageName, err = dockerImage.getFullName()
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	var result *providers.ScanResult
+	fmt.Println("Contacting scan service...")
+	result, err = scanContext.ScanImage(imageName)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	fmt.Println("Scanner service completed")
+	
+	score = fmt.Sprintf("%d", len(result.Vulnerabilities))
 
 	// Create a scan event.
 	var userObjId string = sessionToken.AuthenticatedUserid
 	var scanEvent ScanEvent
 	scanEvent, err = server.dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
 		userObjId, time.Now(), score, extObjId)
+	
+	// Create an ACL entry for the event.
+	....
 	
 	return scanEvent.asScanEventDesc()
 }

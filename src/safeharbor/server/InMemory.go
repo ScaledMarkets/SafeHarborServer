@@ -1121,7 +1121,7 @@ func (image *InMemDockerImage) isDockerImage() bool { return true }
  */
 type InMemParameterValue struct {
 	Name string
-	TypeName string
+	//TypeName string
 	StringValue string
 	ConfigId string
 }
@@ -1140,9 +1140,9 @@ func (paramValue *InMemParameterValue) getName() string {
 	return paramValue.Name
 }
 
-func (paramValue *InMemParameterValue) getTypeName() string {
-	return paramValue.TypeName
-}
+//func (paramValue *InMemParameterValue) getTypeName() string {
+//	return paramValue.TypeName
+//}
 
 func (paramValue *InMemParameterValue) getStringValue() string {
 	return paramValue.StringValue
@@ -1153,7 +1153,8 @@ func (paramValue *InMemParameterValue) getConfigId() string {
 }
 
 func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.ParameterValueDesc {
-	return apitypes.NewParameterValueDesc(paramValue.Name, paramValue.TypeName, paramValue.StringValue)
+	return apitypes.NewParameterValueDesc(paramValue.Name, //paramValue.TypeName,
+		paramValue.StringValue)
 }
 
 /*******************************************************************************
@@ -1271,6 +1272,10 @@ func (scanConfig *InMemScanConfig) getSuccessGraphicImageURL() string {
 
 func (scanConfig *InMemScanConfig) getFailureGraphicImageURL() string {
 	return scanConfig.FailureGraphicImageURL
+}
+
+func (scanConfig *InMemScanConfig) createParameterValue(name, typeName, strValue string) (ParameterValue, error) {
+	....
 }
 
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {

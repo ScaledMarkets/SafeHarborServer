@@ -179,7 +179,7 @@ type DockerImage interface {
 type ParameterValue interface {
 	PersistObj
 	getName() string
-	getTypeName() string
+	//getTypeName() string
 	getStringValue() string
 	getConfigId() string
 	asParameterValueDesc() *apitypes.ParameterValueDesc
@@ -195,6 +195,7 @@ type ScanConfig interface {
 	getParameterValueIds() []string
 	getSuccessGraphicImageURL() string
 	getFailureGraphicImageURL() string
+	createParameterValue(string, string) (ParameterValue, error)
 	asScanConfigDesc() *apitypes.ScanConfigDesc
 }
 

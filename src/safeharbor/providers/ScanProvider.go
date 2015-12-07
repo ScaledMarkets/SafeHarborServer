@@ -8,6 +8,7 @@ import (
 type ScanService interface {
 	GetEndpoint() string
 	GetParameterDescriptions() map[string]string
+	GetParameterDescription(string) (string, error)
 	CreateScanContext(map[string]string) (ScanContext, error)  // params may be nil
 }
 
