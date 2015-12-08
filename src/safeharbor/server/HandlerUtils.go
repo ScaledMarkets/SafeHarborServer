@@ -16,8 +16,10 @@ import (
 	"regexp"
 	"net/url"
 	"io/ioutil"
+	//"time"
 	
 	"safeharbor/apitypes"
+	"safeharbor/providers"
 	//"rest"
 )
 
@@ -340,7 +342,7 @@ func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apityp
 	if err != nil { return nil, err }
 	
 	var user User
-	user, err = getCurrentUser(server, sessionToke)
+	user, err = getCurrentUser(server, sessionToken)
 	if err != nil { return nil, err }
 
 	var imageName string
@@ -429,8 +431,7 @@ func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apityp
 	fmt.Println("Created docker image object.")
 	
 	// Create an event to record that this happened.
-	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), image.getId(),
-		user.getId(), time.Now())
+	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), image.getId(), user.getId())
 	
 	return image, nil
 }
@@ -438,7 +439,7 @@ func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apityp
 /*******************************************************************************
  * 
  */
-func getScanService(scanProviderName string) (ScanService, error) {
+func getScanService(scanProviderName string) (providers.ScanService, error) {
 	
 	if scanProviderName == "clair" {
 		// Clair scan:
@@ -493,8 +494,8 @@ func getScanService(scanProviderName string) (ScanService, error) {
 	} else if scanProviderName == "openscap" {
 		// http://www.open-scap.org/resources/documentation/security-compliance-of-rhel7-docker-containers/
 		
-
-	} else {
 		return nil, errors.New("Unsupported scan provider: " + scanProviderName)
 	}
+	
+	return nil, errors.New("Unsupported scan provider: " + scanProviderName)
 }

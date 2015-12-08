@@ -23,9 +23,8 @@ type DBClient interface {
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string, string) (DockerImage, error)
 	dbCreateScanConfig(string, string, string, string, []string, string, string) (ScanConfig, error)
-	dbCreateScanEvent(string, string, string, time.Time, string, string) (ScanEvent, error)
-	dbCreateDockerfileExecEvent(dockerfileId, imageId,
-		userObjId string, when time.Time) (DockerfileExecEvent, error)
+	dbCreateScanEvent(string, string, string, string, string) (ScanEvent, error)
+	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
 	dbGetAllRealmIds() []string
 	getPersistentObject(id string) PersistObj
 	getResource(string) (Resource, error)
@@ -155,8 +154,8 @@ type Dockerfile interface {
 	getExternalFilePath() string
 	asDockerfileDesc() *apitypes.DockerfileDesc
 	getRepo() (Repo, error)
-	
-	//getDockerfileExecEventIds() []string
+	getDockerfileExecEventIds() []string
+	addEventId(string)
 }
 
 type Image interface {

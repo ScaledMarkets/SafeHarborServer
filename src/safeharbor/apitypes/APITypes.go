@@ -671,21 +671,21 @@ func (scanProviderDescs ScanProviderDescs) AsResponse() string {
  */
 type ParameterValueDesc struct {
 	Name string
-	Type string
+	//Type string
 	StringValue string
 }
 
-func NewParameterValueDesc(name string, tp string, strValue string) *ParameterValueDesc {
+func NewParameterValueDesc(name string, strValue string) *ParameterValueDesc {
 	return &ParameterValueDesc{
 		Name: name,
-		Type: tp,
+		//Type: tp,
 		StringValue: strValue,
 	}
 }
 
 func (desc *ParameterValueDesc) AsResponse() string {
-	return fmt.Sprintf("{\"Name\": \"%s\", \"Type\": \"%s\", \"Value\": \"%s\"}",
-		desc.Name, desc.Type, desc.StringValue)
+	return fmt.Sprintf("{\"Name\": \"%s\", \"Value\": \"%s\"}",
+		desc.Name, desc.StringValue)
 }
 
 /*******************************************************************************

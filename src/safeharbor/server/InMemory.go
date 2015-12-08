@@ -93,7 +93,7 @@ func (client *InMemClient) init() {
  */
 type InMemPersistObj struct {
 	Id string
-	Client DBClient
+	Client *InMemClient
 }
 
 var _ PersistObj = &InMemPersistObj{}
@@ -965,6 +965,7 @@ type InMemDockerfile struct {
 	InMemResource
 	RepoId string
 	FilePath string  // make immutable
+	DockerfileExecEventIds []string
 }
 
 func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
@@ -974,6 +975,7 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 		InMemResource: *client.NewInMemResource(dockerfileId, name, desc),
 		RepoId: repoId,
 		FilePath: filepath,
+		DockerfileExecEventIds: make([]string, 0),
 	}
 	
 	if newDockerfile.getId() == "" { return nil, errors.New("Internal ERROR: Dockerfile Id is empty") }
@@ -1012,6 +1014,14 @@ func (dockerfile *InMemDockerfile) getRepo() (Repo, error) {
 	repo, isType = allObjects[dockerfile.RepoId].(Repo)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return repo, nil
+}
+
+func (dockerfile *InMemDockerfile) getDockerfileExecEventIds() []string {
+	return dockerfile.DockerfileExecEventIds
+}
+
+func (dockerfile *InMemDockerfile) addEventId(eventId string) {
+	dockerfile.DockerfileExecEventIds = append(dockerfile.DockerfileExecEventIds, eventId)
 }
 
 func (dockerfile *InMemDockerfile) getExternalFilePath() string {
@@ -1120,14 +1130,16 @@ func (image *InMemDockerImage) isDockerImage() bool { return true }
  * 
  */
 type InMemParameterValue struct {
+	InMemPersistObj
 	Name string
 	//TypeName string
 	StringValue string
 	ConfigId string
 }
 
-func (client *InMemClient) NewInMemParameterValue(name, value, configId string) *InMemParameterValue {
+func (client *InMemClient) NewInMemParameterValue(id, name, value, configId string) *InMemParameterValue {
 	return &InMemParameterValue{
+		InMemPersistObj: *client.NewInMemPersistObj(id),
 		Name: name,
 		StringValue: value,
 		ConfigId: configId,
@@ -1223,7 +1235,7 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	return scanConfig, nil
 }
 
-func (clint *InMemClient) getScanConfig(id string) (ScanConfig, error) {
+func (client *InMemClient) getScanConfig(id string) (ScanConfig, error) {
 	var scanConfig ScanConfig
 	var isType bool
 	var obj PersistObj = allObjects[id]
@@ -1305,7 +1317,8 @@ func (scanConfig *InMemScanConfig) setParameterValue(name, strValue string) (Par
 	}
 	
 	// Did not find a value for a parameter of that name - create a new ParameterValue.
-	var paramValue = NewInMemParameterValue(name, strValue, scanConfig.getId())
+	var pvId string = createUniqueDbObjectId()
+	var paramValue = scanConfig.Client.NewInMemParameterValue(pvId, name, strValue, scanConfig.getId())
 	scanConfig.ParameterValueIds = append(scanConfig.ParameterValueIds, paramValue.getId())
 	allObjects[paramValue.getId()] = paramValue
 	return paramValue, nil
@@ -1381,14 +1394,15 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 	var err error
 	scanConfig, err = client.getScanConfig(scanConfigId)
 	if err != nil { return nil, err }
-	var actParamValueIds []
-	for _, paramId := scanConfig.getParameterValueIds {
+	var actParamValueIds []string = make([]string, 0)
+	for _, paramId := range scanConfig.getParameterValueIds() {
 		var param ParameterValue
 		param, err = client.getParameterValue(paramId)
 		if err != nil { return nil, err }
 		var name string = param.getName()
 		var value string = param.getStringValue()
-		var actParamValue = NewInMemParameterValue(name, value, scanConfigId)
+		var pvId string = createUniqueDbObjectId()
+		var actParamValue = client.NewInMemParameterValue(pvId, name, value, scanConfigId)
 		actParamValueIds = append(actParamValueIds, actParamValue.getId())
 	}
 
@@ -1441,9 +1455,9 @@ type InMemImageCreationEvent struct {
 	ImageId string
 }
 
-func (client *InMemClient) NewInMemImageCreationEvenet(id, userObjId, imageId string) *InMemImageCreationEvent {
+func (client *InMemClient) NewInMemImageCreationEvent(id, userObjId, imageId string) *InMemImageCreationEvent {
 	return &InMemImageCreationEvent{
-		InMemEvent: NewInMemEvent(id, userObjId),
+		InMemEvent: *client.NewInMemEvent(id, userObjId),
 		ImageId: imageId,
 	}
 }
@@ -1460,22 +1474,27 @@ type InMemDockerfileExecEvent struct {
 func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId, imageId,
 	userObjId string) (DockerfileExecEvent, error) {
 	
-	
 	var id string = createUniqueDbObjectId()
 	var newDockerfileExecEvent *InMemDockerfileExecEvent =
-		NewInMemDockerfileExecEvent(id, dockerfileId, imageId, userObjId)
+		client.NewInMemDockerfileExecEvent(id, dockerfileId, imageId, userObjId)
 	
 	allObjects[id] = newDockerfileExecEvent
 
 	// Link to Dockerfile.
-	....
+	var dockerfile Dockerfile
+	var err error
+	dockerfile, err = client.getDockerfile(dockerfileId)
+	if err != nil { return nil, err }
+	dockerfile.addEventId(id)
+	
+	return newDockerfileExecEvent, nil
 }
 
 func (client *InMemClient) NewInMemDockerfileExecEvent(id, dockerfileId, imageId,
 	userObjId string) *InMemDockerfileExecEvent {
 	
 	return &InMemDockerfileExecEvent{
-		InMemImageCreationEvent: NewInMemImageCreationEvent(id, userObjId, imageId),
+		InMemImageCreationEvent: *client.NewInMemImageCreationEvent(id, userObjId, imageId),
 		DockerfileId: dockerfileId,
 		DockerfileExternalObjId: "",  // for when we add git
 	}

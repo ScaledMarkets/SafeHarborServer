@@ -19,7 +19,7 @@ import (
 	//"strconv"
 	"strings"
 	"reflect"
-	"time"
+	//"time"
 	
 	// My packages:
 	"safeharbor/providers"
@@ -965,7 +965,7 @@ func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values 
 	
 	var image DockerImage
 	
-	image, err = buildDockerfile(dockerfile, sessionToken, dbClient, values)
+	image, err = buildDockerfile(server, dockerfile, sessionToken, dbClient, values)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return image.asDockerImageDesc()
@@ -1024,7 +1024,7 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	if dockerfile == nil { return apitypes.NewFailureDesc("No dockerfile was attached") }
 	
 	var image DockerImage
-	image, err = buildDockerfile(dockerfile, sessionToken, dbClient, values)
+	image, err = buildDockerfile(server, dockerfile, sessionToken, dbClient, values)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return image.asDockerImageDesc()
@@ -1572,8 +1572,13 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	failureGraphicImageURL, err = apitypes.GetRequiredPOSTFieldValue(values, "FailureGraphicImageURL")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	// Look for each parameter required by the provider.
+	var scanConfig ScanConfig
 	var paramValueIds []string = make([]string, 0)
+	scanConfig, err = server.dbClient.dbCreateScanConfig(name, desc, repoId,
+		providerName, paramValueIds, successGraphicImageURL, failureGraphicImageURL)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	// Look for each parameter required by the provider.
 	for key, valueAr := range values {
 		if strings.HasPrefix(key, "scan.") {
 			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
@@ -1581,23 +1586,19 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 			}
 			var name string = strings.TrimPrefix(key, "scan.")
 			// See if the parameter is known by the scanner.
-			var scanService ScanService = getScanService(providerName)
+			var scanService providers.ScanService
+			scanService, err = getScanService(providerName)
+			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 			if scanService == nil { return apitypes.NewFailureDesc(
 				"Unable to identify a scan service named '" + providerName + "'")
 			}
-			var desc
-			desc, err = scanService.GetParameterDescription(name)
-			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 			var value string = valueAr[0]
-			var pval ParameterValue = scanConfig.setParameterValue(name, value)
+			var pval ParameterValue
+			pval, err = scanConfig.setParameterValue(name, value)
+			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 			paramValueIds = append(paramValueIds, pval.getId())
 		}
 	}
-	
-	var scanConfig ScanConfig
-	scanConfig, err = server.dbClient.dbCreateScanConfig(name, desc, repoId,
-		providerName, paramValueIds, successGraphicImageURL, failureGraphicImageURL)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	// Add ACL entry to enable the current user to access what he/she just created.
 	var userId string = sessionToken.AuthenticatedUserid
@@ -1690,7 +1691,8 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	var score string
 	
 	fmt.Println("Getting scan service...")
-	var scanService providers.ScanService = getScanService(scanProviderName)
+	var scanService providers.ScanService
+	scanService, err = getScanService(scanProviderName)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var scanContext providers.ScanContext
@@ -1711,7 +1713,7 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	var userObjId string = sessionToken.AuthenticatedUserid
 	var scanEvent ScanEvent
 	scanEvent, err = server.dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
-		userObjId, time.Now(), score, extObjId)
+		userObjId, score, extObjId)
 	
 	return scanEvent.asScanEventDesc()
 }

@@ -27,11 +27,9 @@ import (
 	"safeharbor/rest"
 )
 
-const (
-	clairStubParams = map[string]string{
-		"MinimumPriority": "The minimum priority level of vulnerabilities to report",
-	}
-)
+var clairStubParams = map[string]string{
+	"MinimumPriority": "The minimum priority level of vulnerabilities to report",
+}
 
 type ClairServiceStub struct {
 	Host string
@@ -53,9 +51,9 @@ func (clairSvc *ClairServiceStub) GetParameterDescriptions() map[string]string {
 	return clairStubParams
 }
 
-func (clairSvc *ClairServiceStrub) GetParameterDescription(name string) (string, error) {
+func (clairSvc *ClairServiceStub) GetParameterDescription(name string) (string, error) {
 	var desc string = clairStubParams[name]
-	if desc == "" return "", errors.New("No parameter named '" + name + "'")
+	if desc == "" { return "", errors.New("No parameter named '" + name + "'") }
 	return desc, nil
 }
 
