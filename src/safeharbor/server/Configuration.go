@@ -30,6 +30,7 @@ type Configuration struct {
 	AuthCertPath string
 	AuthKeyPath string
 	FileRepoRootPath string // where Dockerfiles, images, etc. are stored
+	ScanServices map[string](map[string]string)
 }
 
 /*******************************************************************************
@@ -91,6 +92,13 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	
 	//config.AuthKeyPath, exists = entries["AUTH_PRIVATE_KEY_PATH"]
 	//if ! exists { return nil, fmt.Errorf("Did not find AUTH_PRIVATE_KEY_PATH in configuration") }
+	
+	var obj interface{}
+	obj, exists = entries["ScanServices"]
+	if ! exists { return nil, fmt.Errorf("Did not find ScanServices in configuration") }
+	var isType bool
+	config.ScanServices, isType = obj.(map[string](map[string]string))
+	if ! isType { return nil, fmt.Errorf("Scan configuration is ill-formatted") }
 	
 	fmt.Println("Configuration values obtained")
 	return config, nil

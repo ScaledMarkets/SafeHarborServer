@@ -27,17 +27,29 @@ import (
 	"safeharbor/rest"
 )
 
-var clairStubParams = map[string]string{
-	"MinimumPriority": "The minimum priority level of vulnerabilities to report",
-}
-
 type ClairServiceStub struct {
 	Host string
 	Port int
+	Params = map[string]string{
+		"MinimumPriority": "The minimum priority level of vulnerabilities to report",
+	}
 }
 
-func CreateClairServiceStub(host string, port int) ScanService {
-	return &ClairServiceStub{
+func (clairSvc *ClairService) GetName() string { return "clair" }
+
+func CreateClairServiceStub(params map[string]string) (ScanService, error) {
+	
+	var host string = params["Host"]
+	var portStr string = params["Port"]
+	
+	if host == "" { return nil, errors.New("Parameter 'Host' not specified") }
+	if portStr == "" { return nil, errors.New("Parameter 'Port' not specified") }
+	var port int
+	var err error
+	port, err = strconv.Atoi(portStr)
+	if err != nil { return nil, err }
+	
+	return &ClairService{
 		Host: host,
 		Port: port,
 	}
@@ -48,11 +60,11 @@ func (clairSvc *ClairServiceStub) GetEndpoint() string {
 }
 
 func (clairSvc *ClairServiceStub) GetParameterDescriptions() map[string]string {
-	return clairStubParams
+	return clairSvc.Params
 }
 
 func (clairSvc *ClairServiceStub) GetParameterDescription(name string) (string, error) {
-	var desc string = clairStubParams[name]
+	var desc string = clairSvc.Params[name]
 	if desc == "" { return "", errors.New("No parameter named '" + name + "'") }
 	return desc, nil
 }
@@ -73,6 +85,14 @@ func (clairSvc *ClairServiceStub) CreateScanContext(params map[string]string) (S
 		ClairServiceStub: clairSvc,
 		sessionId: "",
 	}, nil
+}
+
+func (clairSvc *ClairServiceStub) AsScanProviderDesc() apitypes.ScanProviderDesc {
+	var params = []apitypes.ParameterInfo{}
+	for name, desc := range clairSvc.Params {
+		params = append(params, *apitypes.NewParameterInfo(name, desc))
+	}
+	return apitypes.NewScanProviderDesc(clairSvc.GetName(), params)
 }
 
 /*******************************************************************************
@@ -121,7 +141,12 @@ func (clairContext *ClairRestContextStub) ScanImage(imageName string) (*ScanResu
 
 	// Get vulnerabilities
 	fmt.Println("Getting image's vulnerabilities")
-	var vulnerabilities []Vulnerability = make([]Vulnerability, 0)
+	var vulnerabilities = []Vulnerability{
+		ID: "12345-XYZ-4",
+		Link: "http://somewhere.cert.org",
+		Priority: "High",
+		Description: "A very bad vulnerability",
+	}
 	if len(vulnerabilities) == 0 {
 		fmt.Println("No vulnerabilities found for image")
 	}

@@ -1522,14 +1522,10 @@ func getScanProviders(server *Server, sessionToken *apitypes.SessionToken, value
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 	
 	var providerDescs apitypes.ScanProviderDescs = make([]*apitypes.ScanProviderDesc, 0)
-	
-	// For now, hard-code the scan providers.
-	var params []apitypes.ParameterInfo = make([]apitypes.ParameterInfo, 0)
-	//providerDescs = append(providerDescs, apitypes.NewScanProviderDesc("lynis", params))
-	//providerDescs = append(providerDescs, apitypes.NewScanProviderDesc("baude", params))
-	//providerDescs = append(providerDescs, apitypes.NewScanProviderDesc("nessus", params)) // tenable.com
-	//providerDescs = append(providerDescs, apitypes.NewScanProviderDesc("openscap", params))
-	providerDescs = append(providerDescs, apitypes.NewScanProviderDesc("clair", params))
+	var services []providers.ScanService = server.GetScanServices()
+	for _, service := range services {
+		providerDescs = append(providerDescs, service.AsScanProviderDesc())
+	}
 	
 	return providerDescs
 }
@@ -1587,8 +1583,7 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 			var name string = strings.TrimPrefix(key, "scan.")
 			// See if the parameter is known by the scanner.
 			var scanService providers.ScanService
-			scanService, err = getScanService(providerName)
-			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+			scanService = server.GetScanService(providerName)
 			if scanService == nil { return apitypes.NewFailureDesc(
 				"Unable to identify a scan service named '" + providerName + "'")
 			}
@@ -1692,8 +1687,9 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	
 	fmt.Println("Getting scan service...")
 	var scanService providers.ScanService
-	scanService, err = getScanService(scanProviderName)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	scanService = server.GetScanService(scanProviderName)
+	if scanService == nil { return apitypes.NewFailureDesc(
+		"Unable to identify a scan service named '" + scanProviderName + "'")
 	
 	var scanContext providers.ScanContext
 	scanContext, err = scanService.CreateScanContext(params)

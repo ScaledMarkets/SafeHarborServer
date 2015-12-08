@@ -1,6 +1,29 @@
 /*******************************************************************************
  * Implementation of ScanProvider for the CoreOS Clair container scanner.
  * See https://github.com/coreos/clair
+ *
+	// Clair scan:
+	// https://github.com/coreos/clair
+	// https://github.com/coreos/clair/tree/master/contrib/analyze-local-images
+	
+	From Clair maintainer (Quentin Machu):
+	You don’t actually need to run Clair on each host, a single Clair instance/database
+	is able to analyze all your container images. That is why it is an API-driven service.
+	All Clair needs is being able to access your container images. When you insert
+	a container layer via the API (https://github.com/coreos/clair/blob/master/docs/API.md#insert-a-new-layer),
+	you have to specify a path to the layer tarball that Clair can access;
+	it can either be a filesystem path or an URL. So you can analyze local images
+	or images stored on S3, OpenStack Swift, Ceph pretty easily!
+	
+	You may want to take a look at https://github.com/coreos/clair/tree/master/contrib/analyze-local-images,
+	a small tool I hacked to ease analyzing local images. But in fact, I added
+	a very minimal “remote” support, allowing Clair to run somewhere else:
+	the local images are served by a web server.
+	
+	docker pull quay.io/coreos/clair
+	sudo docker run -i -t -m 500M -v /tmp:/tmp -p 6060:6060 quay.io/coreos/clair:latest --db-type=bolt --db-path=/db/database
+	sudo GOPATH=/home/vagrant go get -u github.com/coreos/clair/contrib/analyze-local-images
+	/home/vagrant/bin/analyze-local-images <Docker Image ID>
  */
 
 package providers
@@ -27,32 +50,44 @@ import (
 	"safeharbor/rest"
 )
 
-var clairParams = map[string]string{
-	"MinimumPriority": "The minimum priority level of vulnerabilities to report",
-}
-
 type ClairService struct {
 	Host string
 	Port int
+	Params = map[string]string{
+		"MinimumPriority": "The minimum priority level of vulnerabilities to report",
+	}
 }
 
-func CreateClairService(host string, port int) ScanService {
+func CreateClairService(params map[string]string) (ScanService, error) {
+	
+	var host string = params["Host"]
+	var portStr string = params["Port"]
+	
+	if host == "" { return nil, errors.New("Parameter 'Host' not specified") }
+	if portStr == "" { return nil, errors.New("Parameter 'Port' not specified") }
+	var port int
+	var err error
+	port, err = strconv.Atoi(portStr)
+	if err != nil { return nil, err }
+	
 	return &ClairService{
 		Host: host,
 		Port: port,
 	}
 }
 
+func (clairSvc *ClairService) GetName() string { return "clair" }
+
 func (clairSvc *ClairService) GetEndpoint() string {
 	return fmt.Sprintf("http://%s:%d", clairSvc.Host, clairSvc.Port)
 }
 
 func (clairSvc *ClairService) GetParameterDescriptions() map[string]string {
-	return clairParams
+	return clairSvc.Params
 }
 
 func (clairSvc *ClairService) GetParameterDescription(name string) (string, error) {
-	var desc string = clairParams[name]
+	var desc string = clairSvc.Params[name]
 	if desc == "" { return "", errors.New("No parameter named '" + name + "'") }
 	return desc, nil
 }
@@ -73,6 +108,14 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 		ClairService: clairSvc,
 		sessionId: "",
 	}, nil
+}
+
+func (clairSvc *ClairService) AsScanProviderDesc() apitypes.ScanProviderDesc {
+	var params = []apitypes.ParameterInfo{}
+	for name, desc := range clairSvc.Params {
+		params = append(params, *apitypes.NewParameterInfo(name, desc))
+	}
+	return apitypes.NewScanProviderDesc(clairSvc.GetName(), params)
 }
 
 /*******************************************************************************

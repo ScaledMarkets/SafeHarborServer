@@ -22,6 +22,7 @@ import (
 	// My packages:
 	//"rest"
 	"safeharbor/apitypes"
+	"safeharbor/providers"
 )
 
 /*******************************************************************************
@@ -35,6 +36,7 @@ type Server struct {
 	http.Handler
 	certPool *x509.CertPool
 	authService *AuthService
+	ScanServices []ScanService
 	dispatcher *Dispatcher
 	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
 	Authorize bool
@@ -147,6 +149,24 @@ func NewServer(debug bool, noauthor bool, port int, adapter string, secretSalt s
 	//....To do: Install a ^C signal handler, to gracefully shut down.
 	//....To do: Ensure that request handlers are re-entrant (or guarded re-entrant).
 	
+	
+	// Install scanning services.
+	var clairConfig map[string]string = config.ScanServices["clair"]
+	if clairConfig == nil {
+		fmt.Println("Cound not find configuration for the clair scanning service")
+		os.Exit(1);
+	}
+	var scanSvc providers.ScanService
+	scanSvc, err = providers.CreateClairServiceStub(clairConfig), // for testing only
+	//scanSvc, err = providers.CreateClairService(clairConfig),
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1);
+	}
+	server.ScanServices = []providers.ScanServices{
+		scanSvc,
+	}
+	
 	return server
 }
 
@@ -200,6 +220,23 @@ func (server *Server) WaitUntilNoRequestsInProgress(maxSeconds int) bool {
  */
 func (server *Server) ResumeAcceptingNewRequests() {
 	// ....
+}
+
+/*******************************************************************************
+ * 
+ */
+func (server *Server) GetScanServices() []providers.ScanService {
+	return server.ScanServices
+}
+
+/*******************************************************************************
+ * 
+ */
+func (server *Server) GetScanService(name string) providers.ScanService {
+	for _, service := range server.ScanServices {
+		if service.GetName() == name { return service }
+	}
+	return nil
 }
 
 /*******************************************************************************

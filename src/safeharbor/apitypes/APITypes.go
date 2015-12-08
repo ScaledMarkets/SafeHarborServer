@@ -610,19 +610,19 @@ func (desc *PermissionDesc) AsResponse() string {
  */
 type ParameterInfo struct {
 	Name string
-	Type string
+	Description string
 }
 
-func NewParameterInfo(name string, tp string) *ParameterInfo {
+func NewParameterInfo(name string, desc string) *ParameterInfo {
 	return &ParameterInfo{
 		Name: name,
-		Type: tp,
+		Description: desc,
 	}
 }
 
 func (parameterInfo *ParameterInfo) AsResponse() string {
-	return fmt.Sprintf("{\"Name\": \"%s\", \"Type\": \"%s\"}",
-		parameterInfo.Name, parameterInfo.Type)
+	return fmt.Sprintf("{\"Name\": \"%s\", \"Description\": \"%s\"}",
+		parameterInfo.Name, parameterInfo.Description)
 }
 
 /*******************************************************************************
