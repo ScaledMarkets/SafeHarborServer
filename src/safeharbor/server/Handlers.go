@@ -165,6 +165,8 @@ func authenticate(server *Server, sessionToken *apitypes.SessionToken, values ur
 		return apitypes.NewFailureDesc("User was authenticated but not found in the database")
 	}
 	
+	if ! user.isActive() { return apitypes.NewFailureDesc("User is not active") }
+	
 	// Create new user session.
 	var token *apitypes.SessionToken = server.authService.createSession(creds)
 	token.SetRealmId(user.getRealmId())
@@ -190,18 +192,10 @@ func authenticate(server *Server, sessionToken *apitypes.SessionToken, values ur
 func logout(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	// Identify the user.
-	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
-	if user == nil {
-		return apitypes.NewFailureDesc("user object cannot be identified from user id " + userId)
-	}
-
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 	
-
-
-	return apitypes.NewFailureDesc("Not implemented yet: logout")
+	server.authSvc.invalidateSessionId(sessionToken.UniqueSessionId)
+	return apitypes.NewResult(200, "Logged out")
 }
 
 /*******************************************************************************
@@ -211,8 +205,6 @@ func logout(server *Server, sessionToken *apitypes.SessionToken, values url.Valu
 func createUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if sessionToken == nil { return apitypes.NewFailureDesc("Unauthenticated") }
-	
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 	
 	var err error
@@ -252,12 +244,26 @@ func createUser(server *Server, sessionToken *apitypes.SessionToken, values url.
  * Arguments: UserObjId
  * Returns: apitypes.Result
  */
-func deleteUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+func disableUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return apitypes.NewFailureDesc("Not implemented yet: deleteUser")
+	userObjId, err = apitypes.GetRequiredPOSTFieldValue(values, "UserObjId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var user User
+	var err error
+	user, err = server.dbClient.getUser(userObjId)
+	if err != nil { return NewFailureResp(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
+		user.getRealm().getId(), "disableUser"); failMsg != nil { return failMsg }
+	
+	// Prevent the user from authenticating.
+	user.setActive(false)
+	
+	return apitypes.NewResult(200, "User with user Id '" + user.getUserId() + "' disabled")
 }
 
 /*******************************************************************************
@@ -315,6 +321,25 @@ func deleteGroup(server *Server, sessionToken *apitypes.SessionToken, values url
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
+	var groupId string
+	var err error
+	groupId, err = apitypes.GetRequiredPOSTFieldValue(values, "GroupId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var group Group
+	group, err = server.dbClient.getGroup(groupId)
+	if err != nil { return NewFailureResp(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
+		group.getRealmId(), "deleteGroup"); failMsg != nil { return failMsg }
+	
+	// Remove users from the group.
+	....
+	
+	// Remove ACL entries referenced by the group.
+	....
+	
+	
 	return apitypes.NewFailureDesc("Not implemented yet: deleteGroup")
 }
 

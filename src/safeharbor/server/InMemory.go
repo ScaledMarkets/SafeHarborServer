@@ -229,6 +229,7 @@ func (resource *InMemResource) isDockerImage() bool { return false }
  */
 type InMemParty struct {
 	InMemPersistObj
+	IsActive bool
 	Name string
 	CreationTime time.Time
 	RealmId string
@@ -238,11 +239,20 @@ type InMemParty struct {
 func (client *InMemClient) NewInMemParty(name string, realmId string) *InMemParty {
 	return &InMemParty{
 		InMemPersistObj: *client.NewInMemPersistObj(),
+		IsActive: true,
 		Name: name,
 		CreationTime: time.Now(),
 		RealmId: realmId,
 		ACLEntryIds: make([]string, 0),
 	}
+}
+
+func (party *InMemParty) setActive(b bool) {
+	party.IsActive = b
+}
+
+func (party *InMemParty) isActive() bool {
+	return party.IsActive
 }
 
 func (party *InMemParty) getName() string {

@@ -51,6 +51,8 @@ type PersistObj interface {
 /* A Party is a User or a Group. Parties act on Resources. */
 type Party interface {
 	PersistObj
+	setActive(bool)
+	isActive() bool
 	getRealmId() string
 	getName() string
 	getCreationTime() time.Time
