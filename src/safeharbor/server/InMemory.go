@@ -98,8 +98,11 @@ type InMemPersistObj struct {
 
 var _ PersistObj = &InMemPersistObj{}
 
-func (client *InMemClient) NewInMemPersistObj(id string) *InMemPersistObj {
-	return &InMemPersistObj{Id: id, Client: client}
+func (client *InMemClient) NewInMemPersistObj() *InMemPersistObj {
+	return &InMemPersistObj{
+		Id: createUniqueDbObjectId(),
+		Client: client,
+	}
 }
 
 func (persObj *InMemPersistObj) getId() string {
@@ -127,9 +130,9 @@ type InMemACL struct {
 	ACLEntryIds []string
 }
 
-func (client *InMemClient) NewInMemACL(id string) *InMemACL {
+func (client *InMemClient) NewInMemACL() *InMemACL {
 	return &InMemACL{
-		InMemPersistObj: *client.NewInMemPersistObj(id),
+		InMemPersistObj: *client.NewInMemPersistObj(),
 		ACLEntryIds: make([]string, 0),
 	}
 }
@@ -152,9 +155,9 @@ type InMemResource struct {
 	CreationTime time.Time
 }
 
-func (client *InMemClient) NewInMemResource(id string, name string, desc string) *InMemResource {
+func (client *InMemClient) NewInMemResource(name string, desc string) *InMemResource {
 	return &InMemResource{
-		InMemACL: *client.NewInMemACL(id),
+		InMemACL: *client.NewInMemACL(),
 		Name: name,
 		Description: desc,
 		CreationTime: time.Now(),
@@ -225,9 +228,9 @@ type InMemParty struct {
 	ACLEntryIds []string
 }
 
-func (client *InMemClient) NewInMemParty(id string, name string, realmId string) *InMemParty {
+func (client *InMemClient) NewInMemParty(name string, realmId string) *InMemParty {
 	return &InMemParty{
-		InMemPersistObj: *client.NewInMemPersistObj(id),
+		InMemPersistObj: *client.NewInMemPersistObj(),
 		Name: name,
 		CreationTime: time.Now(),
 		RealmId: realmId,
@@ -315,9 +318,9 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 			realm.getName()))
 	}
 	
-	var groupId string = createUniqueDbObjectId()
+	//var groupId string = createUniqueDbObjectId()
 	var newGroup = &InMemGroup{
-		InMemParty: *client.NewInMemParty(groupId, name, realmId),
+		InMemParty: *client.NewInMemParty(/*groupId,*/ name, realmId),
 		Description: description,
 		UserObjIds: make([]string, 0),
 	}
@@ -326,7 +329,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	realm.addGroup(newGroup)
 	
 	fmt.Println("Created Group")
-	allObjects[groupId] = newGroup
+	allObjects[newGroup.getId()] = newGroup
 	return newGroup, nil
 }
 
@@ -416,10 +419,10 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	if err != nil { return nil, err }
 	if realm == nil { return nil, errors.New("Realm with Id " + realmId + " not found") }
 	
-	var userObjId string = createUniqueDbObjectId()
+	//var userObjId string = createUniqueDbObjectId()
 	var pswdAsBytes []byte = []byte(pswd)
 	var newUser *InMemUser = &InMemUser{
-		InMemParty: *client.NewInMemParty(userObjId, name, realmId),
+		InMemParty: *client.NewInMemParty(/*userObjId,*/ name, realmId),
 		UserId: userId,
 		EmailAddress: email,
 		PasswordHash: sha1.Sum(pswdAsBytes),
@@ -430,7 +433,7 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	realm.addUser(newUser)
 	
 	fmt.Println("Created user")
-	allObjects[userObjId] = newUser
+	allObjects[newUser.getId()] = newUser
 	return newUser, nil
 }
 
@@ -568,14 +571,14 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	party, isType = obj.(Party)
 	if ! isType { return nil, errors.New("Internal error: object is not a Party - it is a " +
 		reflect.TypeOf(obj).String()) }
-	var aclEntryId = createUniqueDbObjectId()
+	//var aclEntryId = createUniqueDbObjectId()
 	var newACLEntry *InMemACLEntry = &InMemACLEntry{
-		InMemPersistObj: *client.NewInMemPersistObj(aclEntryId),
+		InMemPersistObj: *client.NewInMemPersistObj(),
 		ResourceId: resource.getId(),
 		PartyId: partyId,
 		PermissionMask: permissionMask,
 	}
-	allObjects[aclEntryId] = newACLEntry
+	allObjects[newACLEntry.getId()] = newACLEntry
 	resource.addACLEntry(newACLEntry)  // Add to resource's ACL
 	party.addACLEntry(newACLEntry)  // Add to user or group's ACL
 	fmt.Println("Added ACL entry for " + party.getName() + "(a " +
@@ -649,19 +652,20 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	err = nameConformsToSafeHarborImageNameRules(realmInfo.RealmName)
 	if err != nil { return nil, err }
 	
-	realmId = createUniqueDbObjectId()
-	var realmFileDir string
-	realmFileDir, err = client.assignRealmFileDir(realmId)
-	if err != nil { return nil, err }
+	//realmId = createUniqueDbObjectId()
 	var newRealm *InMemRealm = &InMemRealm{
-		InMemResource: *client.NewInMemResource(realmId, realmInfo.RealmName, realmInfo.Description),
+		InMemResource: *client.NewInMemResource(realmInfo.RealmName, realmInfo.Description),
 		AdminUserId: adminUserId,
 		OrgFullName: realmInfo.OrgFullName,
 		UserObjIds: make([]string, 0),
 		GroupIds: make([]string, 0),
 		RepoIds: make([]string, 0),
-		FileDirectory: realmFileDir,
+		FileDirectory: "",
 	}
+	var realmFileDir string
+	realmFileDir, err = client.assignRealmFileDir(newRealm.getId())
+	if err != nil { return nil, err }
+	newRealm.FileDirectory = realmFileDir
 	
 	allRealmIds = append(allRealmIds, realmId)
 	
@@ -871,20 +875,21 @@ func (client *InMemClient) dbCreateRepo(realmId string, name string, desc string
 	err = nameConformsToSafeHarborImageNameRules(name)
 	if err != nil { return nil, err }
 	
-	var repoId string = createUniqueDbObjectId()
-	var repoFileDir string
-	repoFileDir, err = client.assignRepoFileDir(realmId, repoId)
-	if err != nil { return nil, err }
+	//var repoId string = createUniqueDbObjectId()
 	var newRepo *InMemRepo = &InMemRepo{
-		InMemResource: *client.NewInMemResource(repoId, name, desc),
+		InMemResource: *client.NewInMemResource(name, desc),
 		RealmId: realmId,
 		DockerfileIds: make([]string, 0),
 		DockerImageIds: make([]string, 0),
 		ScanConfigIds: make([]string, 0),
-		FileDirectory: repoFileDir,
+		FileDirectory: "",
 	}
+	var repoFileDir string
+	repoFileDir, err = client.assignRepoFileDir(realmId, newRepo.getId())
+	if err != nil { return nil, err }
+	newRepo.FileDirectory = repoFileDir
 	fmt.Println("Created repo")
-	allObjects[repoId] = newRepo
+	allObjects[newRepo.getId()] = newRepo
 	realm.addRepo(newRepo)  // Add it to the realm.
 	return newRepo, nil
 }
@@ -970,19 +975,16 @@ type InMemDockerfile struct {
 
 func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	desc string, filepath string) (Dockerfile, error) {
-	var dockerfileId string = createUniqueDbObjectId()
+	//var dockerfileId string = createUniqueDbObjectId()
 	var newDockerfile *InMemDockerfile = &InMemDockerfile{
-		InMemResource: *client.NewInMemResource(dockerfileId, name, desc),
+		InMemResource: *client.NewInMemResource(name, desc),
 		RepoId: repoId,
 		FilePath: filepath,
 		DockerfileExecEventIds: make([]string, 0),
 	}
 	
-	if newDockerfile.getId() == "" { return nil, errors.New("Internal ERROR: Dockerfile Id is empty") }
-	if newDockerfile.getId() != dockerfileId { return nil, errors.New("Internal ERROR: Dockerfile Id has not be set properly") }
-	
 	fmt.Println("Created Dockerfile")
-	allObjects[dockerfileId] = newDockerfile
+	allObjects[newDockerfile.getId()] = newDockerfile
 	
 	// Add to the Repo's list of Dockerfiles.
 	var repo Repo
@@ -1046,9 +1048,9 @@ type InMemImage struct {
 	RepoId string
 }
 
-func (client *InMemClient) NewInMemImage(imageObjId, name, desc, repoId string) *InMemImage {
+func (client *InMemClient) NewInMemImage(name, desc, repoId string) *InMemImage {
 	return &InMemImage{
-		InMemResource: *client.NewInMemResource(imageObjId, name, desc),
+		InMemResource: *client.NewInMemResource(name, desc),
 		RepoId: repoId,
 	}
 }
@@ -1084,12 +1086,12 @@ func (client *InMemClient) dbCreateDockerImage(repoId string,
 	repo, isType = allObjects[repoId].(Repo)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	
-	var imageObjId string = createUniqueDbObjectId()
+	//var imageObjId string = createUniqueDbObjectId()
 	var newDockerImage *InMemDockerImage = &InMemDockerImage{
-		InMemImage: *client.NewInMemImage(imageObjId, dockerImageTag, desc, repoId),
+		InMemImage: *client.NewInMemImage(dockerImageTag, desc, repoId),
 	}
 	fmt.Println("Created DockerImage")
-	allObjects[imageObjId] = newDockerImage
+	allObjects[newDockerImage.getId()] = newDockerImage
 	repo.addDockerImage(newDockerImage)  // Add to repo's list.
 	return newDockerImage, nil
 }
@@ -1137,9 +1139,9 @@ type InMemParameterValue struct {
 	ConfigId string
 }
 
-func (client *InMemClient) NewInMemParameterValue(id, name, value, configId string) *InMemParameterValue {
+func (client *InMemClient) NewInMemParameterValue(name, value, configId string) *InMemParameterValue {
 	return &InMemParameterValue{
-		InMemPersistObj: *client.NewInMemPersistObj(id),
+		InMemPersistObj: *client.NewInMemPersistObj(),
 		Name: name,
 		StringValue: value,
 		ConfigId: configId,
@@ -1214,23 +1216,24 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 			repo.getName()))
 	}
 	
-	var scanConfigId string = createUniqueDbObjectId()
-	var externalObjPath string = repo.getFileDirectory() + "/" + scanConfigId
+	//var scanConfigId string = createUniqueDbObjectId()
 	var scanConfig *InMemScanConfig = &InMemScanConfig{
-		InMemResource: *client.NewInMemResource(scanConfigId, name, desc),
+		InMemResource: *client.NewInMemResource(name, desc),
 		RepoId: repoId,
-		ExternalObjPath: externalObjPath,
+		ExternalObjPath: "",
 		ProviderName: providerName,
 		ParameterValueIds: paramValueIds,
 		SuccessGraphicImageURL: successGraphicImageURL,
 		FailureGraphicImageURL: failureGraphicImageURL,
 	}
+	var externalObjPath string = repo.getFileDirectory() + "/" + scanConfig.getId()
+	scanConfig.ExternalObjPath = externalObjPath
 	
 	// Link to repo
 	repo.addScanConfig(scanConfig)
 
 	fmt.Println("Created ScanConfig")
-	allObjects[scanConfigId] = scanConfig
+	allObjects[scanConfig.getId()] = scanConfig
 	
 	return scanConfig, nil
 }
@@ -1317,8 +1320,8 @@ func (scanConfig *InMemScanConfig) setParameterValue(name, strValue string) (Par
 	}
 	
 	// Did not find a value for a parameter of that name - create a new ParameterValue.
-	var pvId string = createUniqueDbObjectId()
-	var paramValue = scanConfig.Client.NewInMemParameterValue(pvId, name, strValue, scanConfig.getId())
+	//var pvId string = createUniqueDbObjectId()
+	var paramValue = scanConfig.Client.NewInMemParameterValue(/*pvId,*/ name, strValue, scanConfig.getId())
 	scanConfig.ParameterValueIds = append(scanConfig.ParameterValueIds, paramValue.getId())
 	allObjects[paramValue.getId()] = paramValue
 	return paramValue, nil
@@ -1353,9 +1356,9 @@ type InMemEvent struct {
 	UserObjId string
 }
 
-func (client *InMemClient) NewInMemEvent(id string, userObjId string) *InMemEvent {
+func (client *InMemClient) NewInMemEvent(userObjId string) *InMemEvent {
 	return &InMemEvent{
-		InMemPersistObj: *client.NewInMemPersistObj(id),
+		InMemPersistObj: *client.NewInMemPersistObj(),
 		When: time.Now(),
 		UserObjId: userObjId,
 	}
@@ -1401,14 +1404,14 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 		if err != nil { return nil, err }
 		var name string = param.getName()
 		var value string = param.getStringValue()
-		var pvId string = createUniqueDbObjectId()
-		var actParamValue = client.NewInMemParameterValue(pvId, name, value, scanConfigId)
+		//var pvId string = createUniqueDbObjectId()
+		var actParamValue = client.NewInMemParameterValue(/*pvId,*/ name, value, scanConfigId)
 		actParamValueIds = append(actParamValueIds, actParamValue.getId())
 	}
 
-	var id string = createUniqueDbObjectId()
+	//var id string = createUniqueDbObjectId()
 	var scanEvent *InMemScanEvent = &InMemScanEvent{
-		InMemEvent: *client.NewInMemEvent(id, userObjId),
+		InMemEvent: *client.NewInMemEvent(/*id,*/ userObjId),
 		ScanConfigId: scanConfigId,
 		DockerImageId: imageId,
 		Score: score,
@@ -1417,7 +1420,7 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 	}
 
 	fmt.Println("Created ScanEvent")
-	allObjects[id] = scanEvent
+	allObjects[scanEvent.getId()] = scanEvent
 	
 	return scanEvent, nil
 }
@@ -1455,9 +1458,9 @@ type InMemImageCreationEvent struct {
 	ImageId string
 }
 
-func (client *InMemClient) NewInMemImageCreationEvent(id, userObjId, imageId string) *InMemImageCreationEvent {
+func (client *InMemClient) NewInMemImageCreationEvent(userObjId, imageId string) *InMemImageCreationEvent {
 	return &InMemImageCreationEvent{
-		InMemEvent: *client.NewInMemEvent(id, userObjId),
+		InMemEvent: *client.NewInMemEvent(userObjId),
 		ImageId: imageId,
 	}
 }
@@ -1474,27 +1477,27 @@ type InMemDockerfileExecEvent struct {
 func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId, imageId,
 	userObjId string) (DockerfileExecEvent, error) {
 	
-	var id string = createUniqueDbObjectId()
+	//var id string = createUniqueDbObjectId()
 	var newDockerfileExecEvent *InMemDockerfileExecEvent =
-		client.NewInMemDockerfileExecEvent(id, dockerfileId, imageId, userObjId)
+		client.NewInMemDockerfileExecEvent(dockerfileId, imageId, userObjId)
 	
-	allObjects[id] = newDockerfileExecEvent
+	allObjects[newDockerfileExecEvent.getId()] = newDockerfileExecEvent
 
 	// Link to Dockerfile.
 	var dockerfile Dockerfile
 	var err error
 	dockerfile, err = client.getDockerfile(dockerfileId)
 	if err != nil { return nil, err }
-	dockerfile.addEventId(id)
+	dockerfile.addEventId(newDockerfileExecEvent.getId())
 	
 	return newDockerfileExecEvent, nil
 }
 
-func (client *InMemClient) NewInMemDockerfileExecEvent(id, dockerfileId, imageId,
+func (client *InMemClient) NewInMemDockerfileExecEvent(dockerfileId, imageId,
 	userObjId string) *InMemDockerfileExecEvent {
 	
 	return &InMemDockerfileExecEvent{
-		InMemImageCreationEvent: *client.NewInMemImageCreationEvent(id, userObjId, imageId),
+		InMemImageCreationEvent: *client.NewInMemImageCreationEvent(userObjId, imageId),
 		DockerfileId: dockerfileId,
 		DockerfileExternalObjId: "",  // for when we add git
 	}
