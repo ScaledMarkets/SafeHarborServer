@@ -675,7 +675,7 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	allRealmIds = append(allRealmIds, realmId)
 	
 	fmt.Println("Created realm")
-	allObjects[realmId] = newRealm
+	allObjects[newRealm.getId()] = newRealm
 	//_, isType := allObjects[realmId].(Realm)
 	//if ! isType {
 	//	fmt.Println("*******realm", realmId, "is not a Realm")
