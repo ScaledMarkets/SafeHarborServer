@@ -31,7 +31,7 @@ type Configuration struct {
 	AuthCertPath string
 	AuthKeyPath string
 	FileRepoRootPath string // where Dockerfiles, images, etc. are stored
-	ScanServices map[string](map[string]string)
+	ScanServices map[string]interface{}
 }
 
 /*******************************************************************************
@@ -98,7 +98,7 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	obj, exists = entries["ScanServices"]
 	if ! exists { return nil, fmt.Errorf("Did not find ScanServices in configuration") }
 	var isType bool
-	config.ScanServices, isType = obj.(map[string](map[string]string))
+	config.ScanServices, isType = obj.(map[string]interface{})
 	if ! isType {
 		fmt.Println("ScanServices is a", reflect.TypeOf(obj))
 		return nil, fmt.Errorf("Scan configuration is ill-formatted")
