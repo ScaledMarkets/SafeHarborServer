@@ -82,6 +82,10 @@ func (client *InMemClient) init() {
 		var testUser1 User
 		testUser1, err = client.dbCreateUser("testuser1", "Test User", 
 			"testuser@gmail.com", "Password1", testRealm.getId())
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1);
+		}
 		fmt.Println("User", testUser1.getName())
 		fmt.Println("created, id=", testUser1.getId())
 	}
