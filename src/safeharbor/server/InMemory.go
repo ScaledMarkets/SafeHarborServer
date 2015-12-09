@@ -672,7 +672,7 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	if err != nil { return nil, err }
 	newRealm.FileDirectory = realmFileDir
 	
-	allRealmIds = append(allRealmIds, realmId)
+	allRealmIds = append(allRealmIds, newRealm.getId())
 	
 	fmt.Println("Created realm")
 	allObjects[newRealm.getId()] = newRealm
