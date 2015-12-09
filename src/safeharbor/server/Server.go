@@ -159,9 +159,9 @@ func NewServer(debug bool, noauthor bool, port int, adapter string, secretSalt s
 		fmt.Println(config.ScanServices["clair"])
 		os.Exit(1);
 	}
-	var clairConfig map[string]string
+	var clairConfig map[string]interface{}
 	var isType bool
-	clairConfig, isType = obj.(map[string]string)
+	clairConfig, isType = obj.(map[string]interface{})
 	if ! isType {
 		fmt.Println("Configuration of clair services is ill-formed:")
 		fmt.Println(obj)

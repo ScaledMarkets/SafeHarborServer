@@ -36,13 +36,19 @@ type ClairServiceStub struct {
 
 func (clairSvc *ClairServiceStub) GetName() string { return "clair" }
 
-func CreateClairServiceStub(params map[string]string) (ScanService, error) {
+func CreateClairServiceStub(params map[string]interface{}) (ScanService, error) {
 	
-	var host string = params["Host"]
-	var portStr string = params["Port"]
+	var host string
+	var portStr string
+	var isType bool
 	
+	host, isType = params["Host"].(string)
+	portStr, isType = params["Port"].(string)
 	if host == "" { return nil, errors.New("Parameter 'Host' not specified") }
 	if portStr == "" { return nil, errors.New("Parameter 'Port' not specified") }
+	if ! isType { return nil, errors.New("Parameter 'Host' is not a string") }
+	if ! isType { return nil, errors.New("Parameter 'Port' is not a string") }
+	
 	var port int
 	var err error
 	port, err = strconv.Atoi(portStr)
