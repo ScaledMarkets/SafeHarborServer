@@ -109,7 +109,6 @@ func (client *InMemClient) NewInMemPersistObj() *InMemPersistObj {
 		Id: id,
 		Client: client,
 	}
-	allObjects[id] = obj
 	return obj
 }
 
@@ -337,7 +336,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	realm.addGroup(newGroup)
 	
 	fmt.Println("Created Group")
-	////allObjects[newGroup.getId()] = newGroup
+	allObjects[newGroup.getId()] = newGroup
 	return newGroup, nil
 }
 
@@ -441,7 +440,7 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	realm.addUser(newUser)
 	
 	fmt.Println("Created user")
-	////allObjects[newUser.getId()] = newUser
+	allObjects[newUser.getId()] = newUser
 	return newUser, nil
 }
 
@@ -586,7 +585,7 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 		PartyId: partyId,
 		PermissionMask: permissionMask,
 	}
-	////allObjects[newACLEntry.getId()] = newACLEntry
+	allObjects[newACLEntry.getId()] = newACLEntry
 	resource.addACLEntry(newACLEntry)  // Add to resource's ACL
 	party.addACLEntry(newACLEntry)  // Add to user or group's ACL
 	fmt.Println("Added ACL entry for " + party.getName() + "(a " +
@@ -678,7 +677,7 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	allRealmIds = append(allRealmIds, newRealm.getId())
 	
 	fmt.Println("Created realm")
-	////allObjects[newRealm.getId()] = newRealm
+	allObjects[newRealm.getId()] = newRealm
 	//_, isType := allObjects[realmId].(Realm)
 	//if ! isType {
 	//	fmt.Println("*******realm", realmId, "is not a Realm")
@@ -897,7 +896,7 @@ func (client *InMemClient) dbCreateRepo(realmId string, name string, desc string
 	if err != nil { return nil, err }
 	newRepo.FileDirectory = repoFileDir
 	fmt.Println("Created repo")
-	////allObjects[newRepo.getId()] = newRepo
+	allObjects[newRepo.getId()] = newRepo
 	realm.addRepo(newRepo)  // Add it to the realm.
 	return newRepo, nil
 }
@@ -992,7 +991,7 @@ func (client *InMemClient) dbCreateDockerfile(repoId string, name string,
 	}
 	
 	fmt.Println("Created Dockerfile")
-	////allObjects[newDockerfile.getId()] = newDockerfile
+	allObjects[newDockerfile.getId()] = newDockerfile
 	
 	// Add to the Repo's list of Dockerfiles.
 	var repo Repo
@@ -1099,7 +1098,7 @@ func (client *InMemClient) dbCreateDockerImage(repoId string,
 		InMemImage: *client.NewInMemImage(dockerImageTag, desc, repoId),
 	}
 	fmt.Println("Created DockerImage")
-	////allObjects[newDockerImage.getId()] = newDockerImage
+	allObjects[newDockerImage.getId()] = newDockerImage
 	repo.addDockerImage(newDockerImage)  // Add to repo's list.
 	return newDockerImage, nil
 }
@@ -1241,7 +1240,7 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	repo.addScanConfig(scanConfig)
 
 	fmt.Println("Created ScanConfig")
-	////allObjects[scanConfig.getId()] = scanConfig
+	allObjects[scanConfig.getId()] = scanConfig
 	
 	return scanConfig, nil
 }
@@ -1331,7 +1330,7 @@ func (scanConfig *InMemScanConfig) setParameterValue(name, strValue string) (Par
 	//var pvId string = createUniqueDbObjectId()
 	var paramValue = scanConfig.Client.NewInMemParameterValue(/*pvId,*/ name, strValue, scanConfig.getId())
 	scanConfig.ParameterValueIds = append(scanConfig.ParameterValueIds, paramValue.getId())
-	////allObjects[paramValue.getId()] = paramValue
+	allObjects[paramValue.getId()] = paramValue
 	return paramValue, nil
 }
 
@@ -1428,7 +1427,7 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 	}
 
 	fmt.Println("Created ScanEvent")
-	////allObjects[scanEvent.getId()] = scanEvent
+	allObjects[scanEvent.getId()] = scanEvent
 	
 	return scanEvent, nil
 }
@@ -1489,7 +1488,7 @@ func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId, imageId,
 	var newDockerfileExecEvent *InMemDockerfileExecEvent =
 		client.NewInMemDockerfileExecEvent(dockerfileId, imageId, userObjId)
 	
-	////allObjects[newDockerfileExecEvent.getId()] = newDockerfileExecEvent
+	allObjects[newDockerfileExecEvent.getId()] = newDockerfileExecEvent
 
 	// Link to Dockerfile.
 	var dockerfile Dockerfile
