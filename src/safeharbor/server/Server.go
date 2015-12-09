@@ -16,6 +16,7 @@ import (
 	"os"
 	"strings"
 	"crypto/x509"
+	"reflect"
 	//"errors"
 	//"strconv"
 	
@@ -156,6 +157,7 @@ func NewServer(debug bool, noauthor bool, port int, adapter string, secretSalt s
 	clairConfig, isType = config.ScanServices["clair"].(map[string]string)
 	if clairConfig == nil {
 		fmt.Println("Cound not find configuration for the clair scanning service")
+		fmt.Println("Type of clair config is", reflect.TypeOf(config.ScanServices["clair"]))
 		os.Exit(1);
 	}
 	if ! isType {
