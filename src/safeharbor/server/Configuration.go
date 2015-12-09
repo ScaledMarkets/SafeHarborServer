@@ -50,29 +50,29 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	if int64(n) != size { return nil, fmt.Errorf("Num bytes read does not match file size") }
 	fmt.Println(fmt.Sprintf("Read %d bytes from configuration file", size))
 	
-	var entries = make(map[string]string)
+	var entries = make(map[string]interface{})
 	err = json.Unmarshal(data, &entries)
 	if err != nil { return nil, err }
 	fmt.Println("Parsed configuration file")
 
 	var exists bool
 	
-	config.netIntfName, exists = entries["INTFNAME"]
+	config.netIntfName, exists = entries["INTFNAME"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find INTFNAME in configuration") }
 	
 	var portStr string
-	portStr, exists = entries["PORT"]
+	portStr, exists = entries["PORT"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find PORT in configuration") }
 	config.port, err = strconv.Atoi(portStr)
 	if err != nil { return nil, fmt.Errorf("PORT value in configuration is not an integer") }
 	
-	config.LocalAuthCertPath, exists = entries["LOCAL_AUTH_CERT_PATH"]
+	config.LocalAuthCertPath, exists = entries["LOCAL_AUTH_CERT_PATH"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find LOCAL_AUTH_CERT_PATH in configuration") }
 	
-	config.LocalRootCertPath, exists = entries["LOCAL_ROOT_CERT_PATH"]
+	config.LocalRootCertPath, exists = entries["LOCAL_ROOT_CERT_PATH"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find LOCAL_ROOT_CERT_PATH in configuration") }
 	
-	config.FileRepoRootPath, exists = entries["FILE_REPOSITORY_ROOT"]
+	config.FileRepoRootPath, exists = entries["FILE_REPOSITORY_ROOT"].(string)
 	if ! exists { config.FileRepoRootPath = "Repository" }
 	config.FileRepoRootPath = strings.TrimRight(config.FileRepoRootPath, "/ ")
 	
