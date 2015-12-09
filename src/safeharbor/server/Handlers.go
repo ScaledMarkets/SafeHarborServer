@@ -1690,7 +1690,7 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	scanService = server.GetScanService(scanProviderName)
 	if scanService == nil { return apitypes.NewFailureDesc(
 		"Unable to identify a scan service named '" + scanProviderName + "'")
-	
+	}
 	var scanContext providers.ScanContext
 	scanContext, err = scanService.CreateScanContext(params)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }

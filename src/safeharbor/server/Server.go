@@ -36,7 +36,7 @@ type Server struct {
 	http.Handler
 	certPool *x509.CertPool
 	authService *AuthService
-	ScanServices []ScanService
+	ScanServices []providers.ScanService
 	dispatcher *Dispatcher
 	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
 	Authorize bool
@@ -157,13 +157,13 @@ func NewServer(debug bool, noauthor bool, port int, adapter string, secretSalt s
 		os.Exit(1);
 	}
 	var scanSvc providers.ScanService
-	scanSvc, err = providers.CreateClairServiceStub(clairConfig), // for testing only
-	//scanSvc, err = providers.CreateClairService(clairConfig),
+	scanSvc, err = providers.CreateClairServiceStub(clairConfig) // for testing only
+	//scanSvc, err = providers.CreateClairService(clairConfig)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1);
 	}
-	server.ScanServices = []providers.ScanServices{
+	server.ScanServices = []providers.ScanService{
 		scanSvc,
 	}
 	

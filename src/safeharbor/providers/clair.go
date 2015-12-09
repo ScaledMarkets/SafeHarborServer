@@ -44,6 +44,7 @@ import (
 	//"strconv"
 	//"strings"
 	//"time"
+	"strconv"
 
 	// My packages:
 	"safeharbor/apitypes"
@@ -53,9 +54,7 @@ import (
 type ClairService struct {
 	Host string
 	Port int
-	Params = map[string]string{
-		"MinimumPriority": "The minimum priority level of vulnerabilities to report",
-	}
+	Params map[string]string
 }
 
 func CreateClairService(params map[string]string) (ScanService, error) {
@@ -73,7 +72,10 @@ func CreateClairService(params map[string]string) (ScanService, error) {
 	return &ClairService{
 		Host: host,
 		Port: port,
-	}
+		Params: map[string]string{
+			"MinimumPriority": "The minimum priority level of vulnerabilities to report",
+		},
+	}, nil
 }
 
 func (clairSvc *ClairService) GetName() string { return "clair" }
@@ -110,7 +112,7 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 	}, nil
 }
 
-func (clairSvc *ClairService) AsScanProviderDesc() apitypes.ScanProviderDesc {
+func (clairSvc *ClairService) AsScanProviderDesc() *apitypes.ScanProviderDesc {
 	var params = []apitypes.ParameterInfo{}
 	for name, desc := range clairSvc.Params {
 		params = append(params, *apitypes.NewParameterInfo(name, desc))

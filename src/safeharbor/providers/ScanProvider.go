@@ -11,7 +11,7 @@ type ScanService interface {
 	GetParameterDescriptions() map[string]string
 	GetParameterDescription(string) (string, error)
 	CreateScanContext(map[string]string) (ScanContext, error)  // params may be nil
-	AsScanProviderDesc() apitypes.ScanProviderDesc
+	AsScanProviderDesc() *apitypes.ScanProviderDesc
 }
 
 type ScanContext interface {

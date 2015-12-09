@@ -21,6 +21,7 @@ import (
 	//"strconv"
 	//"strings"
 	//"time"
+	"strconv"
 
 	// My packages:
 	"safeharbor/apitypes"
@@ -30,12 +31,10 @@ import (
 type ClairServiceStub struct {
 	Host string
 	Port int
-	Params = map[string]string{
-		"MinimumPriority": "The minimum priority level of vulnerabilities to report",
-	}
+	Params map[string]string
 }
 
-func (clairSvc *ClairService) GetName() string { return "clair" }
+func (clairSvc *ClairServiceStub) GetName() string { return "clair" }
 
 func CreateClairServiceStub(params map[string]string) (ScanService, error) {
 	
@@ -52,7 +51,10 @@ func CreateClairServiceStub(params map[string]string) (ScanService, error) {
 	return &ClairService{
 		Host: host,
 		Port: port,
-	}
+		Params: map[string]string{
+			"MinimumPriority": "The minimum priority level of vulnerabilities to report",
+		},
+	}, nil
 }
 
 func (clairSvc *ClairServiceStub) GetEndpoint() string {
@@ -87,7 +89,7 @@ func (clairSvc *ClairServiceStub) CreateScanContext(params map[string]string) (S
 	}, nil
 }
 
-func (clairSvc *ClairServiceStub) AsScanProviderDesc() apitypes.ScanProviderDesc {
+func (clairSvc *ClairServiceStub) AsScanProviderDesc() *apitypes.ScanProviderDesc {
 	var params = []apitypes.ParameterInfo{}
 	for name, desc := range clairSvc.Params {
 		params = append(params, *apitypes.NewParameterInfo(name, desc))
@@ -142,10 +144,12 @@ func (clairContext *ClairRestContextStub) ScanImage(imageName string) (*ScanResu
 	// Get vulnerabilities
 	fmt.Println("Getting image's vulnerabilities")
 	var vulnerabilities = []Vulnerability{
-		ID: "12345-XYZ-4",
-		Link: "http://somewhere.cert.org",
-		Priority: "High",
-		Description: "A very bad vulnerability",
+		Vulnerability{
+			ID: "12345-XYZ-4",
+			Link: "http://somewhere.cert.org",
+			Priority: "High",
+			Description: "A very bad vulnerability",
+		},
 	}
 	if len(vulnerabilities) == 0 {
 		fmt.Println("No vulnerabilities found for image")
