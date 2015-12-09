@@ -152,14 +152,16 @@ func NewServer(debug bool, noauthor bool, port int, adapter string, secretSalt s
 	
 	
 	// Install scanning services.
-	var isType bool
-	var clairConfig map[string]string
-	clairConfig, isType = config.ScanServices["clair"].(map[string]string)
-	if clairConfig == nil {
+	var obj interface{} = config.ScanServices["clair"]
+	if obj == nil {
 		fmt.Println("Cound not find configuration for the clair scanning service")
 		fmt.Println("Type of clair config is", reflect.TypeOf(config.ScanServices["clair"]))
+		fmt.Println(config.ScanServices["clair"])
 		os.Exit(1);
 	}
+	var clairConfig map[string]string
+	var isType bool
+	clairConfig, isType = obj.(map[string]string)
 	if ! isType {
 		fmt.Println("Configuration of clair services is ill-formed")
 		os.Exit(1);
