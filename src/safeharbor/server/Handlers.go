@@ -333,14 +333,10 @@ func deleteGroup(server *Server, sessionToken *apitypes.SessionToken, values url
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
 		group.getRealmId(), "deleteGroup"); failMsg != nil { return failMsg }
 	
-	// Remove users from the group.
-	....
-	
-	// Remove ACL entries referenced by the group.
-	....
-	
-	
-	return apitypes.NewFailureDesc("Not implemented yet: deleteGroup")
+	var groupName string = group.getName()
+	err = realm.deleteGroup(group)
+	if err != nil { return NewFailureDesc(err.Error()) }
+	return NewResult(200, "Group '" + groupName + "' deleted")
 }
 
 /*******************************************************************************
@@ -1118,14 +1114,8 @@ func setPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	
 	// Get the current ACLEntry, if there is one.
 	var aclEntry ACLEntry
-	aclEntry, err = party.getACLEntryForResourceId(resourceId)
+	aclEntry, err = resource.setAccess(party, mask)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if aclEntry == nil {
-		aclEntry, err = server.dbClient.dbCreateACLEntry(resourceId, partyId, mask)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	} else {
-		aclEntry.setPermissionMask(mask)
-	}
 	
 	return aclEntry.asPermissionDesc()
 }
@@ -1180,18 +1170,8 @@ func addPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	
 	// Get the current ACLEntry, if there is one.
 	var aclEntry ACLEntry
-	aclEntry, err = party.getACLEntryForResourceId(resourceId)
+	aclEntry, err = resource.addAccess(party, mask)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if aclEntry == nil {
-		aclEntry, err = server.dbClient.dbCreateACLEntry(resourceId, partyId, mask)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	} else {
-		// Add the new mask.
-		var curmask []bool = aclEntry.getPermissionMask()
-		for index, _ := range curmask {
-			curmask[index] = curmask[index] || mask[index]
-		}
-	}
 	
 	return aclEntry.asPermissionDesc()
 }

@@ -4,12 +4,15 @@
  *    "Type Definitions For REST Calls and Responses"
  * of the design,
  *    https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
+ * These types are serializable via JSON.
  * All types have these:
  *    A New<type> function - Creates a new instance of the type.
  *    A Get<type> function - Constructs an instance from data provided in a map.
- *    A asResponse method - Returns a string representation of the instance,
+ *    A AsResponse method - Returns a string representation of the instance,
  *      suitable for writing to an HTTP response body. The format is defined in
- *      the design in the slide "API REST Binding".
+ *      the design in the slide "API REST Binding". We could use go's built-in
+ *		JSON formatting for this, but we do it manually to have better control
+ *		of what gets sent.
  */
 
 package apitypes
@@ -25,7 +28,7 @@ import (
 	//"runtime/debug"
 	
 	// My packages:
-	//"rest"
+	//"safeharbor/rest"
 )
 
 /*******************************************************************************

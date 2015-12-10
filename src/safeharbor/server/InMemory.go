@@ -1,6 +1,8 @@
 /*******************************************************************************
  * In-memory implementation of the methods defined in Persist.go.
  *
+ * These methods do not perform any authorization - that is done by the handlers.
+ * 
  * The Group, Permission, Repo, Dockerfile, Image, User, and Realm have
  * asGroupDesc, asPermissionDesc, asRepoDesc, asDockerfileDesc, asImageDesc,
  * asUserDesc, and asRealmDesc methods, respectively - these methods construct
@@ -9,6 +11,13 @@
  * that are needed by the handler methods defined in the API (slides titled
  * "SafeHarbor REST API" of the desgin), which are implemented by the functions
  * in Handlers.go.
+ * 
+ * Note on referential integrity:
+ * ------------------------------
+ * At present, referential integrity is not maintained. The intention is to
+ * provide a limited optimistic system whereby certain types of errors will
+ * indicate harmless inconsistency so that the client can retry those actions
+ * if desired. This needs to be added to the contract (in Persist.go).
  */
 
 package server
@@ -128,6 +137,10 @@ func (client *InMemClient) getPersistentObject(id string) PersistObj {
 	return allObjects[id]
 }
 
+// Placeholder - write back to persistent storage.
+func (persObj *InMemPersistObj) writeBack() error {
+	return nil
+}
 
 /*******************************************************************************
  * 
@@ -169,6 +182,44 @@ func (client *InMemClient) NewInMemResource(name string, desc string) *InMemReso
 		Description: desc,
 		CreationTime: time.Now(),
 	}
+}
+
+func (resource *InMemResource) setAccess(party Party, mask []bool) (ACLEntry, error) {
+	var aclEntry ACLEntry
+	var err error
+	aclEntry, err = party.getACLEntryForResourceId(resource.getId())
+	if err != nil { return err }
+	if aclEntry == nil {
+		aclEntry, err = realm.Client.dbCreateACLEntry(resource.getId(), party.getId()(, mask)
+		if err != nil { return nil, err }
+	} else {
+		aclEntry.setPermissionMask(mask)
+		if err = aclEntry.writeBack(); err != nil { return nil, err }
+	}
+	
+	return aclEntry, nil
+}
+
+func (resource *InMemResource) addAccess(party Party, mask []bool) (ACLEntry, error) {
+	var aclEntry ACLEntry
+	var err error
+	aclEntry, err = party.getACLEntryForResourceId(resource.getId())
+	if err != nil { return err }
+	if aclEntry == nil {
+		aclEntry, err = server.dbClient.dbCreateACLEntry(resource.getId(), party.getId(), mask)
+		if err != nil { return err }
+	} else {
+		// Add the new mask.
+		var curmask []bool = aclEntry.getPermissionMask()
+		for index, _ := range curmask {
+			curmask[index] = curmask[index] || mask[index]
+		}
+		if err = aclEntry.writeBack(); err != nil { return nil, err }
+	}
+}
+
+func (resource *InMemResource) removeAllAccess() {
+	....
 }
 
 func (resource *InMemResource) getName() string {
@@ -697,6 +748,13 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	return newRealm, nil
 }
 
+func (client *InMemClient) dbDeleteRealm(realmId string) error {
+	....
+	realm.removeAllAccess()
+	// Delete all resources owned by the realm.
+	....
+}
+
 func (client *InMemClient) dbGetAllRealmIds() []string {
 	return allRealmIds
 }
@@ -869,6 +927,27 @@ func (realm *InMemRealm) getRepoByName(repoName string) (Repo, error) {
 	return nil, nil
 }
 
+func (realm *InMemRealm) deleteRepo(repo Repo) error {
+	
+	repo.removeAllAccess()
+	
+	// Delete all resources owned by the repo.
+	....
+	
+}
+
+func (realm *InMemRealm) deleteGroup(group Group) error {
+
+	
+	// Remove users from the group.
+	....
+	
+	// Remove ACL entries referenced by the group.
+	....
+	
+	return nil
+}
+
 func (realm *InMemRealm) isRealm() bool { return true }
 
 /*******************************************************************************
@@ -971,6 +1050,13 @@ func (repo *InMemRepo) getScanConfigByName(name string) (ScanConfig, error) {
 
 func (repo *InMemRepo) getParentId() string {
 	return repo.RealmId
+}
+
+func (repo *InMemRepo) deleteResource(resource Resource) error {
+	
+	resource.removeAllAccess()
+	// Delete all events that reference the resource.
+	....
 }
 
 func (repo *InMemRepo) isRepo() bool { return true }

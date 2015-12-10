@@ -1,7 +1,11 @@
 /*******************************************************************************
  * This file defines the methods that a persistence implementation should have for
- * creating the object types defined in the Access Control Model - see
+ * creating the object types defined in the Access Control Model and Docker Image
+ * Workflow Model - see
  * https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
+ * The implementations should perform complete actions - i.e., maintain referential
+ * integrity and satisfy all constraints and relationships.
+ * Authorization (access control) is not part of the contract, however.
  */
 
 package server
@@ -17,7 +21,7 @@ type DBClient interface {
 	dbGetUserByUserId(string) User
 	dbCreateGroup(string, string, string) (Group, error)
 	dbCreateUser(string, string, string, string, string) (User, error)
-	dbCreateACLEntry(string, string, []bool) (ACLEntry, error)
+	dbCreateACLEntry(resourceId string, partyId string, permissionMask []bool) (ACLEntry, error)
 	dbCreateRealm(*apitypes.RealmInfo, string) (Realm, error)
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
@@ -25,6 +29,7 @@ type DBClient interface {
 	dbCreateScanConfig(string, string, string, string, []string, string, string) (ScanConfig, error)
 	dbCreateScanEvent(string, string, string, string, string) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
+	dbDeleteRealm(realmId string) error
 	dbGetAllRealmIds() []string
 	getPersistentObject(id string) PersistObj
 	getResource(string) (Resource, error)
@@ -109,6 +114,9 @@ type Resource interface {
 	isRepo() bool
 	isDockerfile() bool
 	isDockerImage() bool
+	setAccess(Party, permissionMask []bool) (ACLEntry, error)
+	addAccess(Party, permissionMask []bool) (ACLEntry, error)
+	removeAllAccess()
 }
 
 type Realm interface {
@@ -131,6 +139,8 @@ type Realm interface {
 	addGroup(Group)
 	addUser(User)
 	addRepo(Repo)
+	deleteRepo(Repo) error
+	deleteGroup(Group) error
 }
 
 type Repo interface {
@@ -146,6 +156,7 @@ type Repo interface {
 	addScanConfig(ScanConfig)
 	getScanConfigByName(string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
+	deleteResource(Resource) error
 	
 	//getDatasetIds() []string
 	//getFlagIds() []string
@@ -174,10 +185,6 @@ type DockerImage interface {
 	
 	//getScanEventIds() []string
 }
-
-
-
-// For Image Workflow:
 
 type ParameterValue interface {
 	PersistObj
