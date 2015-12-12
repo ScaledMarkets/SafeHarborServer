@@ -194,7 +194,7 @@ func logout(server *Server, sessionToken *apitypes.SessionToken, values url.Valu
 	
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 	
-	server.authSvc.invalidateSessionId(sessionToken.UniqueSessionId)
+	server.authService.invalidateSessionId(sessionToken.UniqueSessionId)
 	return apitypes.NewResult(200, "Logged out")
 }
 
@@ -249,16 +249,17 @@ func disableUser(server *Server, sessionToken *apitypes.SessionToken, values url
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
+	var userObjId string
+	var err error
 	userObjId, err = apitypes.GetRequiredPOSTFieldValue(values, "UserObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var user User
-	var err error
 	user, err = server.dbClient.getUser(userObjId)
-	if err != nil { return NewFailureResp(err.Error()) }
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
-		user.getRealm().getId(), "disableUser"); failMsg != nil { return failMsg }
+		user.getRealmId(), "disableUser"); failMsg != nil { return failMsg }
 	
 	// Prevent the user from authenticating.
 	user.setActive(false)
@@ -328,15 +329,18 @@ func deleteGroup(server *Server, sessionToken *apitypes.SessionToken, values url
 	
 	var group Group
 	group, err = server.dbClient.getGroup(groupId)
-	if err != nil { return NewFailureResp(err.Error()) }
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
 		group.getRealmId(), "deleteGroup"); failMsg != nil { return failMsg }
 	
 	var groupName string = group.getName()
+	var realm Realm
+	realm, err = group.getRealm()
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	err = realm.deleteGroup(group)
-	if err != nil { return NewFailureDesc(err.Error()) }
-	return NewResult(200, "Group '" + groupName + "' deleted")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	return apitypes.NewResult(200, "Group '" + groupName + "' deleted")
 }
 
 /*******************************************************************************

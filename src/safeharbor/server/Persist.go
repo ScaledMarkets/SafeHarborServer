@@ -6,8 +6,8 @@
  * The implementations should perform complete actions - i.e., maintain referential
  * integrity and satisfy all constraints and relationships.
  * Authorization (access control) is not part of the contract, however.
- */
-
+ */ 
+ 
 package server
 
 import (
@@ -51,6 +51,7 @@ type DBClient interface {
 type PersistObj interface {
 	getId() string
 	getDBClient() DBClient
+	writeBack() error
 }
 
 /* A Party is a User or a Group. Parties act on Resources. */
@@ -59,10 +60,11 @@ type Party interface {
 	setActive(bool)
 	isActive() bool
 	getRealmId() string
+	getRealm() (Realm, error)
 	getName() string
 	getCreationTime() time.Time
 	getACLEntryIds() []string
-	addACLEntry(ACLEntry)
+	addACLEntry(ACLEntry) error
 	getACLEntryForResourceId(string) (ACLEntry, error)
 }
 
@@ -80,9 +82,9 @@ type User interface {
 	Party
 	getUserId() string
 	hasGroupWithId(string) bool
-	asUserDesc() *apitypes.UserDesc
 	addGroupId(string) error
 	getGroupIds() []string
+	asUserDesc() *apitypes.UserDesc
 	
 	//getEventIds() []string
 }
@@ -92,14 +94,14 @@ type ACLEntry interface {
 	getResourceId() string
 	getPartyId() string
 	getPermissionMask() []bool
-	setPermissionMask([]bool)
+	setPermissionMask([]bool) error
 	asPermissionDesc() *apitypes.PermissionDesc
 }
 
 type ACL interface {
 	PersistObj
 	getACLEntryIds() []string
-	addACLEntry(ACLEntry)
+	addACLEntry(ACLEntry) error
 }
 
 /* A Resource is something that a party can act upon. */
@@ -114,9 +116,10 @@ type Resource interface {
 	isRepo() bool
 	isDockerfile() bool
 	isDockerImage() bool
-	setAccess(Party, permissionMask []bool) (ACLEntry, error)
-	addAccess(Party, permissionMask []bool) (ACLEntry, error)
-	removeAllAccess()
+	setAccess(party Party, permissionMask []bool) (ACLEntry, error)
+	addAccess(party Party, permissionMask []bool) (ACLEntry, error)
+	removeAccess(Party) error
+	removeAllAccess() error
 }
 
 type Realm interface {
@@ -136,9 +139,9 @@ type Realm interface {
 	getUserByUserId(string) (User, error)
 	asRealmDesc() *apitypes.RealmDesc
 	getGroupIds() []string
-	addGroup(Group)
-	addUser(User)
-	addRepo(Repo)
+	addGroup(Group) error
+	addUser(User) error
+	addRepo(Repo) error
 	deleteRepo(Repo) error
 	deleteGroup(Group) error
 }
@@ -151,9 +154,9 @@ type Repo interface {
 	getRealm() (Realm, error)
 	getDockerfileIds() []string
 	getDockerImageIds() []string
-	addDockerfile(Dockerfile)
-	addDockerImage(DockerImage)
-	addScanConfig(ScanConfig)
+	addDockerfile(Dockerfile) error
+	addDockerImage(DockerImage) error
+	addScanConfig(ScanConfig) error
 	getScanConfigByName(string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
 	deleteResource(Resource) error
@@ -168,7 +171,7 @@ type Dockerfile interface {
 	asDockerfileDesc() *apitypes.DockerfileDesc
 	getRepo() (Repo, error)
 	getDockerfileExecEventIds() []string
-	addEventId(string)
+	addEventId(string) error
 }
 
 type Image interface {
@@ -191,7 +194,7 @@ type ParameterValue interface {
 	getName() string
 	//getTypeName() string
 	getStringValue() string
-	setStringValue(string)
+	setStringValue(string) error
 	getConfigId() string
 	asParameterValueDesc() *apitypes.ParameterValueDesc
 }
