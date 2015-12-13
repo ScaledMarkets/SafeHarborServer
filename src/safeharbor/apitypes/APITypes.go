@@ -734,7 +734,7 @@ type FlagDesc struct {
 	ImageURL string
 }
 
-func NewFlagDesc(expr, repoId, imageURL string) {
+func NewFlagDesc(expr, repoId, imageURL string) *FlagDesc {
 	return &FlagDesc{
 		Expression: expr,
 		RepoId: repoId,
@@ -799,7 +799,7 @@ type DockerfileExecEventDesc struct {
 }
 
 func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
-	dockerfileId string) *ScanEventDesc {
+	dockerfileId string) *DockerfileExecEventDesc {
 	return &DockerfileExecEventDesc{
 		EventDesc: *NewEventDesc(objId, when, userId),
 		DockerfileId: dockerfileId,
@@ -808,7 +808,7 @@ func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
 
 func (eventDesc *DockerfileExecEventDesc) AsResponse() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\", " +
-		"\"DockefileId\": \"%s\""}",
+		"\"DockefileId\": \"%s\"}",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId,
 		eventDesc.DockerfileId)
 }

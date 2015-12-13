@@ -17,6 +17,11 @@ import (
 	"safeharbor/apitypes"
 )
 
+// Custom error type that indicates that data inconsistency was detected.
+type DataError interface {
+	asFailureDesc() *apitypes.FailureDesc
+}
+
 type DBClient interface {
 	dbGetUserByUserId(string) User
 	dbCreateGroup(string, string, string) (Group, error)
@@ -246,7 +251,7 @@ type ImageUploadEvent interface {
 }
 
 type Flag interface {
-	PersistObj
+	Resource
 	getExpr() string
 	getRepoId() string
 }

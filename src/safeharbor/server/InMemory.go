@@ -18,12 +18,12 @@
  * For each concrete (non-abstract) type that has a writeBack() method, the New<type>
  * function writes the new instance to persistent storage.
  * 
- * Note on referential integrity:
- * ------------------------------
- * At present, referential integrity is not maintained. The intention is to
- * provide a limited optimistic system whereby certain types of errors will
- * indicate harmless inconsistency so that the client can retry those actions
- * if desired. This needs to be added to the contract (in Persist.go).
+ * Strategies for referential integrity:
+ * -------------------------------------
+ * 1. Persistent data is not cached in this layer - every handler action retrieves
+ * data anew.
+ * 2. Changes are not written to the database until it is known that there are no errors.
+ * 3. If a consistency error is detected, a custom error type, DataError, is returned.
  */
 
 package server
@@ -40,6 +40,25 @@ import (
 	
 	"safeharbor/apitypes"
 )
+
+/*******************************************************************************
+ * Implements DataError.
+ */
+type InMemDataError struct {
+	error
+}
+
+var _ DataError = &InMemDataError{}
+
+func NewInMemDataError(msg string) *InMemDataError {
+	return &InMemDataError{
+		error: errors.New(msg),
+	}
+}
+
+func (dataErr *InMemDataError) asFailureDesc() *apitypes.FailureDesc {
+	return apitypes.NewFailureDesc(dataErr.Error())
+}
 
 /*******************************************************************************
  * Contains all persistence functionality. Implementing these methods provides
@@ -65,10 +84,23 @@ func NewPersistence() *Persistence {
 // Return the persistent object that is identified by the specified unique id.
 // An object's Id is assigned to it by the function that creates the object.
 func (client *InMemClient) getPersistentObject(id string) PersistObj {
+	// TBD:
+	// Read JSON from the database, using the id as the key; then deserialize
+	// (unmarshall) the JSON into an object. The outermost JSON object will be
+	// a field name - that field name is the name of the go object type; reflection
+	// will be used to identify the go type, and set the fields in the type using
+	// values from the hashmap that is built by the unmarshalling.
 	return client.allObjects[id]
 }
 
 func (persist *Persistence) writeBack(obj PersistObj) error {
+	// TBD:
+	// Serialize (marshall) the object to JSON, and store it in redis using the
+	// object's Id as the key. When the object is written out, it will be
+	// written as,
+	//    "<typename>": { <object fields> }
+	// so that getPersistentObject will later be able to make the JSON to the
+	// appropriate go type, using reflection.
 	return nil
 }
 
@@ -78,7 +110,8 @@ func (persist *Persistence) addObject(obj PersistObj) error {
 }
 
 func (persist *Persistence) deleteObject(obj PersistObj) error {
-	....
+	// TBD:
+	return nil
 }
 
 func (persist *Persistence) addRealm(newRealm Realm) error {
@@ -967,9 +1000,9 @@ func (client *InMemClient) dbDeactivateRealm(realmId string) error {
 	if err != nil { return err }
 	
 	// Remove all ACL entries for each of the realm's repos, and each of their resources.
-	for _, repoId := realm.getRepoIds() {
+	for _, repoId := range realm.getRepoIds() {
 		var repo Repo
-		repo, err = client.getRepo()
+		repo, err = client.getRepo(repoId)
 		if err != nil { return err }
 		
 		err = repo.removeAllAccess()
@@ -998,7 +1031,7 @@ func (client *InMemClient) dbDeactivateRealm(realmId string) error {
 	
 	// Inactivate all groups owned by the realm.
 	for _, groupId := range realm.getGroupIds() {
-		user group Group
+		var group Group
 		group, err = client.getGroup(groupId)
 		if err != nil { return err }
 		group.setActive(false)
@@ -1010,6 +1043,7 @@ func (client *InMemClient) dbDeactivateRealm(realmId string) error {
 func (client *InMemClient) removeAllAccess(resourceIds []string) error {
 	for _, id := range resourceIds {
 		var resource Resource
+		var err error
 		resource, err = client.getResource(id)
 		if err != nil { return err }
 		err = resource.removeAllAccess()
