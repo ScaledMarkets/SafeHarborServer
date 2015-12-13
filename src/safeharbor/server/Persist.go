@@ -29,7 +29,7 @@ type DBClient interface {
 	dbCreateScanConfig(string, string, string, string, []string, string, string) (ScanConfig, error)
 	dbCreateScanEvent(string, string, string, string, string) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
-	dbDeleteRealm(realmId string) error
+	dbDeactivateRealm(realmId string) error
 	dbGetAllRealmIds() []string
 	getPersistentObject(id string) PersistObj
 	getResource(string) (Resource, error)
@@ -154,6 +154,8 @@ type Repo interface {
 	getRealm() (Realm, error)
 	getDockerfileIds() []string
 	getDockerImageIds() []string
+	getScanConfigIds() []string
+	getFlagIds() []string
 	addDockerfile(Dockerfile) error
 	addDockerImage(DockerImage) error
 	addScanConfig(ScanConfig) error
@@ -243,18 +245,8 @@ type ImageUploadEvent interface {
 	ImageCreationEvent
 }
 
-type Dataset interface {
-	PersistObj
-	getRepoId() string
-	getRepoExternalObjPath() string
-	//RepoExternalObjId string
-	getScanEventIds() []string
-}
-
 type Flag interface {
 	PersistObj
 	getExpr() string
 	getRepoId() string
-	getRepoExternalObjPath() string
-	getRepoExternalObjId() string
 }

@@ -32,19 +32,24 @@ import (
 )
 
 /*******************************************************************************
- * Mask constants, for convenience.
+ * Authorization model: <User> Can<capability> the <Resource>.
+ * A capability pertains to a Resource and the Resource''s child Resources.
+ * Note: For the purpose of authorization, Users and Groups are treated like Resources
+ * of the owning Realm; thus, e.g., a User must have CanWrite for a Realm in order
+ * to be able to modify User accounts or Groups for that Realm.
  */
-var CreateMask []bool = []bool{true, false, false, false, false}
+var CanCreateIn int = 0	// Create new child resources.
+var CanRead int = 1		// Read or download.
+var CanWrite int = 2	// Modify.
+var CanExecute int = 3	// Execute a dockerfile or a scan config.
+var CanDelete int = 4	// Delete or inactivate.
+
+// Mask constants for convenience.
+var CreateInMask []bool = []bool{true, false, false, false, false}
 var ReadMask []bool = []bool{false, true, false, false, false}
 var WriteMask []bool = []bool{false, false, true, false, false}
 var ExecuteMask []bool = []bool{false, false, false, true, false}
 var DeleteMask []bool = []bool{false, false, false, false, true}
-
-var CanCreate int = 0
-var CanRead int = 1
-var CanWrite int = 2
-var CanExecute int = 3
-var CanDelete int = 4
 
 /*******************************************************************************
  * All types defined here include this type as a go "anonymous field".
@@ -558,13 +563,13 @@ func NewPermissionMask(mask []bool) *PermissionMask {
 
 func (mask *PermissionMask) GetMask() []bool { return mask.Mask }
 
-func (mask *PermissionMask) CanCreate() bool { return mask.Mask[0] }
+func (mask *PermissionMask) CanCreateIn() bool { return mask.Mask[0] }
 func (mask *PermissionMask) CanRead() bool { return mask.Mask[1] }
 func (mask *PermissionMask) CanWrite() bool { return mask.Mask[2] }
 func (mask *PermissionMask) CanExecute() bool { return mask.Mask[3] }
 func (mask *PermissionMask) CanDelete() bool { return mask.Mask[4] }
 
-func (mask *PermissionMask) SetCanCreate(can bool) { mask.Mask[0] = can }
+func (mask *PermissionMask) SetCanCreateIn(can bool) { mask.Mask[0] = can }
 func (mask *PermissionMask) SetCanRead(can bool) { mask.Mask[1] = can }
 func (mask *PermissionMask) SetCanWrite(can bool) { mask.Mask[2] = can }
 func (mask *PermissionMask) SetCanExecute(can bool) { mask.Mask[3] = can }
@@ -572,8 +577,8 @@ func (mask *PermissionMask) SetCanDelete(can bool) { mask.Mask[4] = can }
 
 func (mask *PermissionMask) AsResponse() string {
 	return fmt.Sprintf(
-		"{\"CanCreate\": %d, \"CanRead\": %d, \"CanWrite\": %d, \"CanExecute\": %d, \"CanDelete\": %d}",
-		mask.CanCreate, mask.CanRead, mask.CanWrite, mask.CanExecute, mask.CanDelete)
+		"{\"CanCreateIn\": %d, \"CanRead\": %d, \"CanWrite\": %d, \"CanExecute\": %d, \"CanDelete\": %d}",
+		mask.CanCreateIn, mask.CanRead, mask.CanWrite, mask.CanExecute, mask.CanDelete)
 }
 
 /*******************************************************************************
@@ -601,9 +606,9 @@ func NewPermissionDesc(aclEntryId string, resourceId string, partyId string,
 func (desc *PermissionDesc) AsResponse() string {
 	return fmt.Sprintf(
 		"{\"ACLEntryId\": \"%s\", \"ResourceId\": \"%s\", \"PartyId\": \"%s\", " +
-		"\"Create\": %s, \"Read\": %s, \"Write\": %s, \"Execute\": %s, \"Delete\": %s}",
+		"\"CanCreateIn\": %s, \"CanRead\": %s, \"CanWrite\": %s, \"CanExecute\": %s, \"CanDelete\": %s}",
 		desc.ACLEntryId, desc.ResourceId, desc.PartyId,
-		BoolToString(desc.CanCreate()), BoolToString(desc.CanRead()),
+		BoolToString(desc.CanCreateIn()), BoolToString(desc.CanRead()),
 		BoolToString(desc.CanWrite()), BoolToString(desc.CanExecute()),
 		BoolToString(desc.CanDelete()))
 }
@@ -722,6 +727,24 @@ func (scanConfig *ScanConfigDesc) AsResponse() string {
 /*******************************************************************************
  * 
  */
+type FlagDesc struct {
+	BaseType
+	Expression string
+	RepoId string
+	ImageURL string
+}
+
+func NewFlagDesc(expr, repoId, imageURL string) {
+	return &FlagDesc{
+		Expression: expr,
+		RepoId: repoId,
+		ImageURL: imageURL,
+	}
+}
+
+/*******************************************************************************
+ * 
+ */
 type EventDesc struct {
 	BaseType
 	EventId string
@@ -765,6 +788,29 @@ func (eventDesc *ScanEventDesc) AsResponse() string {
 		"\"ScanConfigId\": \"%s\", \"Score\": \"%s\"}",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId,
 		eventDesc.ScanConfigId, eventDesc.Score)
+}
+
+/*******************************************************************************
+ * 
+ */
+type DockerfileExecEventDesc struct {
+	EventDesc
+	DockerfileId string
+}
+
+func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
+	dockerfileId string) *ScanEventDesc {
+	return &DockerfileExecEventDesc{
+		EventDesc: *NewEventDesc(objId, when, userId),
+		DockerfileId: dockerfileId,
+	}
+}
+
+func (eventDesc *DockerfileExecEventDesc) AsResponse() string {
+	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\", " +
+		"\"DockefileId\": \"%s\""}",
+		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId,
+		eventDesc.DockerfileId)
 }
 
 

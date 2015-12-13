@@ -2,12 +2,15 @@
 # This box is not part of the deployment.
 
 @vmboxname = "bento/centos-7.1"  # contains guest additions
+@SafeHarborPort = 6000
+#@SafeHarborPort = ENV['SafeHarborPort']
 
 Vagrant.configure(2) do |config|
 
 	# Configure the OS.
 	config.vm.box = @vmboxname
 	config.vm.hostname = "SafeHarborCentosBuildBox"
+	config.vm.network "forwarded_port", guest: @SafeHarborPort, host: @SafeHarborPort
 	
 	# Install the go tools.
 	config.vm.provision "shell", inline: <<-SHELL
@@ -37,6 +40,29 @@ Vagrant.configure(2) do |config|
 		sudo yum install -y zip
 		cd package; zip safeharborserver *
 		mv safeharborserver.zip /vagrant
+	SHELL
+	
+	# Install docker engine.
+	config.vm.provision "shell", inline: <<-SHELL
+		sudo yum -y update
+		sudo tee /etc/yum.repos.d/docker.repo <<-'EOF'
+			[dockerrepo]
+			name=Docker Repository
+			baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+			enabled=1
+			gpgcheck=1
+			gpgkey=https://yum.dockerproject.org/gpg
+			EOF
+		sudo yum -y install docker-engine
+		sudo service docker start
+		sudo docker run hello-world
+	SHELL
+	
+	# Install clair.
+	config.vm.provision "shell", inline: <<-SHELL
+		sudo docker pull quay.io/coreos/clair
+		# To run clair:
+		#sudo docker run -i -t -m 500M -v /tmp:/tmp -p 6060:6060 quay.io/coreos/clair:latest --db-type=bolt --db-path=/db/database
 	SHELL
 
 end

@@ -212,7 +212,7 @@ func createUser(server *Server, sessionToken *apitypes.SessionToken, values url.
 	userInfo, err = apitypes.GetUserInfo(values)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
-	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateMask, userInfo.RealmId,
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateInMask, userInfo.RealmId,
 		"createUser"); failMsg != nil { return failMsg }
 	
 	// Legacy - uses Cesanta. Probably remove this.
@@ -296,7 +296,7 @@ func createGroup(server *Server, sessionToken *apitypes.SessionToken, values url
 	if addMeStr == "true" { addMe = true }
 	fmt.Println(fmt.Sprintf("AddMe=%s", addMeStr))
 
-	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateMask, realmId,
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateInMask, realmId,
 		"createGroup"); failMsg != nil { return failMsg }
 	
 	var group Group
@@ -550,12 +550,23 @@ func createRealm(server *Server, sessionToken *apitypes.SessionToken, values url
  * Arguments: RealmId
  * Returns: apitypes.Result
  */
-func deleteRealm(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+func deactivateRealm(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return apitypes.NewFailureDesc("Not implemented yet: deleteRealm")
+	var realmId string
+	var err error
+	realmId, err = apitypes.GetRequiredPOSTFieldValue(values, "RealmId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.DeleteMask, realmId,
+		"deactivateRealm"); failMsg != nil { return failMsg }
+	
+	err = server.dbClient.dbDeactivateRealm(realmId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	return apitypes.NewResult(200, "Realm deactivated")
 }
 
 /*******************************************************************************
@@ -773,13 +784,31 @@ func getAllRealms(server *Server, sessionToken *apitypes.SessionToken, values ur
 }
 
 /*******************************************************************************
- * Arguments: RealmId, <name>
+ * Arguments: RealmId, Name, Description, <optional: File attachment>
  * Returns: apitypes.RepoDesc
  */
 func createRepo(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+	var failMsg *apitypes.FailureDesc = authenticateSession(server, sessionToken)
+	if failMsg != nil { // no session Id found; see if it was sent as an HTTP parameter.
+		// We do this because the client is likely to invoke this method directly
+		// from a javascript app in a browser instead of from the middle tier,
+		// and the browser/javascript framework is not likely going to allow
+		// the javascript app to set a cookie for a domain to which _IT_ has
+		// not authenticated directly. (The authenticate method is most likely
+		// called by the middle tier - not a javascript app.) To get around this,
+		// we allow the addAndExecDockerfile method to provide the session Id
+		// as an HTTP parameter, instead of via the normal mechanism (a cookie).
+		
+		var sessionId string
+		valuear, found := values["SessionId"]
+		if ! found { return failMsg }
+		sessionId = valuear[0]
+		if sessionId == "" { return failMsg }
+		sessionToken = server.authService.validateSessionId(sessionId)  // returns nil if invalid
+		if sessionToken == nil { return failMsg }
+	}
 
 	fmt.Println("Creating repo...")
 	var err error
@@ -795,7 +824,7 @@ func createRepo(server *Server, sessionToken *apitypes.SessionToken, values url.
 	repoDesc, err = apitypes.GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
-	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateMask, realmId,
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateInMask, realmId,
 		"createRepo"); failMsg != nil { return failMsg }
 	
 	fmt.Println("Creating repo", repoName)
@@ -932,7 +961,7 @@ func addDockerfile(server *Server, sessionToken *apitypes.SessionToken, values u
 	desc, err = apitypes.GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
-	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateMask, repoId,
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateInMask, repoId,
 		"addDockerfile"); failMsg != nil { return failMsg }
 	
 	var dbClient = server.dbClient
@@ -1620,8 +1649,8 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 
 
 /*******************************************************************************
- * Arguments: ScanConfigId, Desc, RepoId, ProviderName, Params…, SuccessGraphicImageURL, FailureGraphicImageURL
- * Returns: 
+ * Arguments: ScanConfigId, Desc, RepoId, ProviderName, Params..., optional image file
+ * Returns: ScanConfigDesc
  */
 func replaceScanConfig(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -1724,8 +1753,8 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 }
 
 /*******************************************************************************
- * Arguments: 
- * Returns: 
+ * Arguments: UserId
+ * Returns: EventDesc...
  */
 func getUserEvents(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -1737,8 +1766,8 @@ func getUserEvents(server *Server, sessionToken *apitypes.SessionToken, values u
 }
 
 /*******************************************************************************
- * Arguments: 
- * Returns: 
+ * Arguments: ImageId
+ * Returns: EventDesc...
  */
 func getImageEvents(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -1750,8 +1779,8 @@ func getImageEvents(server *Server, sessionToken *apitypes.SessionToken, values 
 }
 
 /*******************************************************************************
- * Arguments: 
- * Returns: 
+ * Arguments: ImageId
+ * Returns: EventDesc (has empty fields, if there are no events)
  */
 func getImageStatus(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -1763,8 +1792,8 @@ func getImageStatus(server *Server, sessionToken *apitypes.SessionToken, values 
 }
 
 /*******************************************************************************
- * Arguments: 
- * Returns: 
+ * Arguments: DockerfileId
+ * Returns: DockerfileExecEventDesc...
  */
 func getDockerfileEvents(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -1776,8 +1805,8 @@ func getDockerfileEvents(server *Server, sessionToken *apitypes.SessionToken, va
 }
 
 /*******************************************************************************
- * Arguments: 
- * Returns: 
+ * Arguments: Name, image file
+ * Returns: FlagDesc
  */
 func defineFlag(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {

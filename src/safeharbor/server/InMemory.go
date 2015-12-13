@@ -42,25 +42,75 @@ import (
 )
 
 /*******************************************************************************
- * The Client type, and methods required by the Client interface in Persist.go.
+ * Contains all persistence functionality. Implementing these methods provides
+ * persistence.
+ *
+ * Redis bindings for go: http://redis.io/clients#go
+ * Chosen binding: https://github.com/hoisie/redis
  */
-type InMemClient struct {
-	Server *Server
-	uniqueId int64
+type Persistence struct {
 	allObjects map[string]PersistObj
 	allUsers map[string]User
 	allRealmIds []string
+}
+
+func NewPersistence() *Persistence {
+	return &Persistence{
+		allRealmIds:  make([]string, 0),
+		allObjects: make(map[string]PersistObj),
+		allUsers: make(map[string]User),
+	}
+}
+
+// Return the persistent object that is identified by the specified unique id.
+// An object's Id is assigned to it by the function that creates the object.
+func (client *InMemClient) getPersistentObject(id string) PersistObj {
+	return client.allObjects[id]
+}
+
+func (persist *Persistence) writeBack(obj PersistObj) error {
+	return nil
+}
+
+func (persist *Persistence) addObject(obj PersistObj) error {
+	persist.allObjects[obj.getId()] = obj
+	return persist.writeBack(obj)
+}
+
+func (persist *Persistence) deleteObject(obj PersistObj) error {
+	....
+}
+
+func (persist *Persistence) addRealm(newRealm Realm) error {
+	persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
+	return persist.addObject(newRealm)
+}
+
+func (persist *Persistence) dbGetAllRealmIds() []string {
+	return persist.allRealmIds
+}
+
+func (persist *Persistence) addUser(user User) error {
+	persist.allUsers[user.getUserId()] = user
+	return persist.addObject(user)
+}
+
+/*******************************************************************************
+ * The Client type, and methods required by the Client interface in Persist.go.
+ */
+type InMemClient struct {
+	Persistence
+	Server *Server
+	uniqueId int64
 }
 
 func NewInMemClient(server *Server) DBClient {
 	
 	// Create and return a new InMemClient.
 	var client = &InMemClient{
+		Persistence: *NewPersistence(),
 		Server: server,
 		uniqueId: 5,
-		allRealmIds:  make([]string, 0),
-		allObjects: make(map[string]PersistObj),
-		allUsers: make(map[string]User),
 	}
 	
 	client.init()
@@ -107,29 +157,6 @@ func (client *InMemClient) init() {
 	}
 	
 	fmt.Println("Repository initialized")
-}
-
-func (client *InMemClient) writeBack(obj PersistObj) error {
-	return nil
-}
-
-func (client *InMemClient) addObject(obj PersistObj) error {
-	client.allObjects[obj.getId()] = obj
-	return client.writeBack(obj)
-}
-
-func (client *InMemClient) addRealm(newRealm Realm) error {
-	client.allRealmIds = append(client.allRealmIds, newRealm.getId())
-	return client.addObject(newRealm)
-}
-
-func (client *InMemClient) dbGetAllRealmIds() []string {
-	return client.allRealmIds
-}
-
-func (client *InMemClient) addUser(user User) error {
-	client.allUsers[user.getUserId()] = user
-	return client.addObject(user)
 }
 
 func (client *InMemClient) dbGetUserByUserId(userId string) User {
@@ -200,12 +227,6 @@ func (persObj *InMemPersistObj) getId() string {
 
 func (persObj *InMemPersistObj) getDBClient() DBClient {
 	return persObj.Client
-}
-
-// Return the persistent object that is identified by the specified unique id.
-// An object's Id is assigned to it by the function that creates the object.
-func (client *InMemClient) getPersistentObject(id string) PersistObj {
-	return client.allObjects[id]
 }
 
 // Placeholder - write back to persistent storage.
@@ -934,13 +955,66 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	return newRealm, nil
 }
 
-func (client *InMemClient) dbDeleteRealm(realmId string) error {
-	//....
-	//realm.removeAllAccess()
-	// Delete all resources owned by the realm.
-	//....
+func (client *InMemClient) dbDeactivateRealm(realmId string) error {
 	
-	//writeBack
+	var err error
+	var realm Realm
+	realm, err = client.getRealm(realmId)
+	if err != nil { return err }
+	
+	// Remove all ACL entries for the realm.
+	err = realm.removeAllAccess()
+	if err != nil { return err }
+	
+	// Remove all ACL entries for each of the realm's repos, and each of their resources.
+	for _, repoId := realm.getRepoIds() {
+		var repo Repo
+		repo, err = client.getRepo()
+		if err != nil { return err }
+		
+		err = repo.removeAllAccess()
+		if err != nil { return err }
+		
+		err = client.removeAllAccess(repo.getDockerfileIds())
+		if err != nil { return err }
+
+		err = client.removeAllAccess(repo.getDockerImageIds())
+		if err != nil { return err }
+
+		err = client.removeAllAccess(repo.getScanConfigIds())
+		if err != nil { return err }
+
+		err = client.removeAllAccess(repo.getFlagIds())
+		if err != nil { return err }
+	}
+	
+	// Inactivate all users owned by the realm.
+	for _, userObjId := range realm.getUserObjIds() {
+		var user User
+		user, err = client.getUser(userObjId)
+		if err != nil { return err }
+		user.setActive(false)
+	}
+	
+	// Inactivate all groups owned by the realm.
+	for _, groupId := range realm.getGroupIds() {
+		user group Group
+		group, err = client.getGroup(groupId)
+		if err != nil { return err }
+		group.setActive(false)
+	}
+	
+	return nil
+}
+
+func (client *InMemClient) removeAllAccess(resourceIds []string) error {
+	for _, id := range resourceIds {
+		var resource Resource
+		resource, err = client.getResource(id)
+		if err != nil { return err }
+		err = resource.removeAllAccess()
+		if err != nil { return err }
+	}
 	return nil
 }
 
@@ -1148,6 +1222,7 @@ type InMemRepo struct {
 	DockerfileIds []string
 	DockerImageIds []string
 	ScanConfigIds []string
+	FlagIds []string
 	FileDirectory string  // where this repo's files are stored
 }
 
@@ -1162,6 +1237,7 @@ func (client *InMemClient) NewInMemRepo(realmId, name, desc string) (*InMemRepo,
 		DockerfileIds: make([]string, 0),
 		DockerImageIds: make([]string, 0),
 		ScanConfigIds: make([]string, 0),
+		FlagIds: make([]string, 0),
 		FileDirectory: "",
 	}
 	return newRepo, client.addObject(newRepo)
@@ -1222,6 +1298,14 @@ func (repo *InMemRepo) getDockerfileIds() []string {
 
 func (repo *InMemRepo) getDockerImageIds() []string {
 	return repo.DockerImageIds
+}
+
+func (repo *InMemRepo) getScanConfigIds() []string {
+	return repo.ScanConfigIds
+}
+
+func (repo *InMemRepo) getFlagIds() []string {
+	return repo.FlagIds
 }
 
 func (repo *InMemRepo) addDockerfile(dockerfile Dockerfile) error {
@@ -1700,6 +1784,37 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 	}
 	
 	return apitypes.NewScanConfigDesc(scanConfig.Id, scanConfig.ProviderName, paramValueDescs)
+}
+
+/*******************************************************************************
+ * 
+ */
+type InMemFlag struct {
+	InMemResource
+	Expression string
+	RepoId string
+}
+
+func (client *InMemClient) NewInMemFlag(name, desc, expr, repoId string) (*InMemFlag, error) {
+	
+	var resource *InMemResource
+	var err error
+	resource, err = client.NewInMemResource(name, desc)
+	if err != nil { return nil, err }
+	var flag = &InMemFlag{
+		InMemResource: *resource,
+		Expression: expr,
+		RepoId: repoId,
+	}
+	return flag, client.addObject(flag)
+}
+
+func (flag *InMemFlag) getExpr() string {
+	return flag.Expression
+}
+
+func (flag *InMemFlag) getRepoId() string {
+	return flag.RepoId
 }
 
 /*******************************************************************************

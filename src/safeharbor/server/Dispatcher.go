@@ -58,7 +58,7 @@ func NewDispatcher() *Dispatcher {
 		"createRealmAnon": createRealmAnon,
 		"createRealm": createRealm,
 		"getRealmDesc": getRealmDesc,
-		"deleteRealm": deleteRealm,
+		"deactivateRealm": deactivateRealm,
 		"addRealmUser": addRealmUser,
 		"getRealmUsers": getRealmUsers,
 		"remRealmUser": remRealmUser,
