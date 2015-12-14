@@ -1270,6 +1270,7 @@ func getPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	}
 	fmt.Println("G")
 	var p = apitypes.NewPermissionDesc(aclEntry.getId(), resourceId, partyId, mask)
+	fmt.Println("H")
 	return p
 }
 
