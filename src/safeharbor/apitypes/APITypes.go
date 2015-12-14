@@ -60,10 +60,15 @@ type BaseType struct {
 }
 
 type RespIntfTp interface {  // response interface type
-	AsResponse() string
+	AsJSON() string
+	As
 }
 
-func (b *BaseType) AsResponse() string {
+func (b *BaseType) AsJSON() string {
+	return ""
+}
+
+func (b *BaseType) SendFile() string {
 	return ""
 }
 
@@ -85,9 +90,29 @@ func NewResult(status int, message string) *Result {
 	}
 }
 
-func (result *Result) AsResponse() string {
+func (result *Result) AsJSON() string {
 	return fmt.Sprintf("{\"Status\": \"%d\", \"Message\": \"%s\"}",
 		result.Status, result.Message)
+}
+
+/*******************************************************************************
+ * 
+ */
+type FileResponse struct {
+	BaseType
+	Status int  // HTTP status code (e.g., 200 is success)
+	TempFilePath string  // should be removed after content is retrieved
+}
+
+func NewFileResponse(status int, tempFilePath string) *FileResponse {
+	return &FileResponse{
+		Status: status,
+		TempFilePath: tempFilePath,
+	}
+}
+
+func (response *FileResponse) SendFile() string {
+	return response.TempFilePath
 }
 
 /*******************************************************************************
@@ -107,7 +132,7 @@ func NewFailureDesc(reason string) *FailureDesc {
 	}
 }
 
-func (failureDesc *FailureDesc) AsResponse() string {
+func (failureDesc *FailureDesc) AsJSON() string {
 	return NewFailureMessage(failureDesc.Reason, failureDesc.HTTPCode)
 }
 
@@ -140,7 +165,7 @@ func GetCredentials(values url.Values) (*Credentials, error) {
 	return NewCredentials(userid, pswd), nil
 }
 
-func (creds *Credentials) AsResponse() string {
+func (creds *Credentials) AsJSON() string {
 	return fmt.Sprintf("{\"UserId\": \"%s\"}", creds.UserId)
 }
 
@@ -172,7 +197,7 @@ func (sessionToken *SessionToken) SetIsAdminUser(isAdmin bool) {
 	sessionToken.IsAdmin = isAdmin
 }
 
-func (sessionToken *SessionToken) AsResponse() string {
+func (sessionToken *SessionToken) AsJSON() string {
 	return fmt.Sprintf("{\"UniqueSessionId\": \"%s\", \"AuthenticatedUserid\": \"%s\", " +
 		"\"RealmId\": \"%s\", \"IsAdmin\": %s}",
 		sessionToken.UniqueSessionId, sessionToken.AuthenticatedUserid,
@@ -201,19 +226,19 @@ func NewGroupDesc(groupId, realmId, groupName, desc string, creationDate time.Ti
 	}
 }
 
-func (groupDesc *GroupDesc) AsResponse() string {
+func (groupDesc *GroupDesc) AsJSON() string {
 	return fmt.Sprintf("{\"RealmId\": \"%s\", \"GroupName\": \"%s\", \"CreationDate\": %s, \"GroupId\": \"%s\", \"Description\": \"%s\"}",
 		groupDesc.RealmId, groupDesc.GroupName, groupDesc.CreationDate, groupDesc.GroupId, groupDesc.Description)
 }
 
 type GroupDescs []*GroupDesc
 
-func (groupDescs GroupDescs) AsResponse() string {
+func (groupDescs GroupDescs) AsJSON() string {
 	var response string = "[\n"
 	var firstTime bool = true
 	for _, desc := range groupDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.AsResponse()
+		response = response + desc.AsJSON()
 	}
 	response = response + "]"
 	return response
@@ -266,7 +291,7 @@ func GetUserInfo(values url.Values) (*UserInfo, error) {
 	return NewUserInfo(userid, name, email, pswd, realmId), nil
 }
 
-func (userInfo *UserInfo) AsResponse() string {
+func (userInfo *UserInfo) AsJSON() string {
 	return fmt.Sprintf("{\"UserId\": \"%s\", \"UserName\": \"%s\", \"EmailAddress\": \"%s\", \"RealmId\": \"%s\"}",
 		userInfo.UserId, userInfo.UserName, userInfo.EmailAddress, userInfo.RealmId)
 }
@@ -293,7 +318,7 @@ func NewUserDesc(id, userId, userName, realmId string, canModRealms []string) *U
 	}
 }
 
-func (userDesc *UserDesc) AsResponse() string {
+func (userDesc *UserDesc) AsJSON() string {
 	var response string = fmt.Sprintf("{\"Id\": \"%s\", \"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\", \"CanModifyTheseRealms\": [",
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId)
 	for i, adminRealmId := range userDesc.CanModifyTheseRealms {
@@ -306,12 +331,12 @@ func (userDesc *UserDesc) AsResponse() string {
 
 type UserDescs []*UserDesc
 
-func (userDescs UserDescs) AsResponse() string {
+func (userDescs UserDescs) AsJSON() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range userDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.AsResponse()
+		response = response + desc.AsJSON()
 	}
 	response = response + "]"
 	return response
@@ -337,20 +362,20 @@ func NewRealmDesc(id string, name string, orgName string, adminUserId string) *R
 	}
 }
 
-func (realmDesc *RealmDesc) AsResponse() string {
+func (realmDesc *RealmDesc) AsJSON() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"RealmName\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
 		realmDesc.Id, realmDesc.RealmName, realmDesc.OrgFullName, realmDesc.AdminUserId)
 }
 
 type RealmDescs []*RealmDesc
 
-func (realmDescs RealmDescs) AsResponse() string {
+func (realmDescs RealmDescs) AsJSON() string {
 	
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range realmDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.AsResponse()
+		response = response + desc.AsJSON()
 	}
 	response = response + "]"
 	return response
@@ -388,7 +413,7 @@ func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 	return NewRealmInfo(name, orgFullName, desc)
 }
 
-func (realmInfo *RealmInfo) AsResponse() string {
+func (realmInfo *RealmInfo) AsJSON() string {
 	return fmt.Sprintf("{\"RealmName\": \"%s\", \"OrgFullName\": \"%s\"}",
 		realmInfo.RealmName, realmInfo.OrgFullName)
 }
@@ -419,7 +444,7 @@ func NewRepoDesc(id string, realmId string, name string, desc string,
 	}
 }
 
-func (repoDesc *RepoDesc) AsResponse() string {
+func (repoDesc *RepoDesc) AsJSON() string {
 	var resp string = fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", " +
 		"\"RepoName\": \"%s\", \"Description\": \"%s\", \"CreationDate\": %s, " +
 		"\"DockerfileIds\": [",
@@ -442,12 +467,12 @@ func (repoDesc *RepoDesc) AsResponse() string {
 
 type RepoDescs []*RepoDesc
 
-func (repoDescs RepoDescs) AsResponse() string {
+func (repoDescs RepoDescs) AsJSON() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range repoDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.AsResponse()
+		response = response + desc.AsJSON()
 	}
 	response = response + "]"
 	return response
@@ -473,19 +498,19 @@ func NewDockerfileDesc(id string, repoId string, name string, desc string) *Dock
 	}
 }
 
-func (dockerfileDesc *DockerfileDesc) AsResponse() string {
+func (dockerfileDesc *DockerfileDesc) AsJSON() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"RepoId\": \"%s\", \"DockerfileName\": \"%s\", \"Description\": \"%s\"}",
 		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.DockerfileName, dockerfileDesc.Description)
 }
 
 type DockerfileDescs []*DockerfileDesc
 
-func (dockerfileDescs DockerfileDescs) AsResponse() string {
+func (dockerfileDescs DockerfileDescs) AsJSON() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range dockerfileDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.AsResponse()
+		response = response + desc.AsJSON()
 	}
 	response = response + "]"
 	return response
@@ -530,7 +555,7 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 	return imageDesc.Name
 }
 
-func (imageDesc *DockerImageDesc) AsResponse() string {
+func (imageDesc *DockerImageDesc) AsJSON() string {
 	return fmt.Sprintf("{\"ObjId\": \"%s\", \"Name\": \"%s\", " +
 		"\"Description\": \"%s\", \"CreationDate\": %s}",
 		imageDesc.ObjId, imageDesc.Name, imageDesc.Description, imageDesc.CreationDate)
@@ -538,12 +563,12 @@ func (imageDesc *DockerImageDesc) AsResponse() string {
 
 type DockerImageDescs []*DockerImageDesc
 
-func (imageDescs DockerImageDescs) AsResponse() string {
+func (imageDescs DockerImageDescs) AsJSON() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range imageDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.AsResponse()
+		response = response + desc.AsJSON()
 	}
 	response = response + "]"
 	return response
@@ -577,7 +602,7 @@ func (mask *PermissionMask) SetCanWrite(can bool) { mask.Mask[2] = can }
 func (mask *PermissionMask) SetCanExecute(can bool) { mask.Mask[3] = can }
 func (mask *PermissionMask) SetCanDelete(can bool) { mask.Mask[4] = can }
 
-func (mask *PermissionMask) AsResponse() string {
+func (mask *PermissionMask) AsJSON() string {
 	return fmt.Sprintf(
 		"{\"CanCreateIn\": %d, \"CanRead\": %d, \"CanWrite\": %d, \"CanExecute\": %d, \"CanDelete\": %d}",
 		mask.CanCreateIn, mask.CanRead, mask.CanWrite, mask.CanExecute, mask.CanDelete)
@@ -605,7 +630,7 @@ func NewPermissionDesc(aclEntryId string, resourceId string, partyId string,
 	}
 }
 
-func (desc *PermissionDesc) AsResponse() string {
+func (desc *PermissionDesc) AsJSON() string {
 	return fmt.Sprintf(
 		"{\"ACLEntryId\": \"%s\", \"ResourceId\": \"%s\", \"PartyId\": \"%s\", " +
 		"\"CanCreateIn\": %s, \"CanRead\": %s, \"CanWrite\": %s, \"CanExecute\": %s, \"CanDelete\": %s}",
@@ -630,7 +655,7 @@ func NewParameterInfo(name string, desc string) *ParameterInfo {
 	}
 }
 
-func (parameterInfo *ParameterInfo) AsResponse() string {
+func (parameterInfo *ParameterInfo) AsJSON() string {
 	return fmt.Sprintf("{\"Name\": \"%s\", \"Description\": \"%s\"}",
 		parameterInfo.Name, parameterInfo.Description)
 }
@@ -651,13 +676,13 @@ func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc 
 	}
 }
 
-func (scanProviderDesc *ScanProviderDesc) AsResponse() string {
+func (scanProviderDesc *ScanProviderDesc) AsJSON() string {
 	var response string = fmt.Sprintf("{\"ProviderName\": \"%s\", \"Parameters\": [",
 		scanProviderDesc.ProviderName)
 	var firstTime bool = true
 	for _, paramInfo := range scanProviderDesc.Parameters {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + paramInfo.AsResponse()
+		response = response + paramInfo.AsJSON()
 	}
 	response = response + "]}"
 	return response
@@ -665,12 +690,12 @@ func (scanProviderDesc *ScanProviderDesc) AsResponse() string {
 
 type ScanProviderDescs []*ScanProviderDesc
 
-func (scanProviderDescs ScanProviderDescs) AsResponse() string {
+func (scanProviderDescs ScanProviderDescs) AsJSON() string {
 	var response string = "["
 	var firstTime bool = true
 	for _, desc := range scanProviderDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
-		response = response + desc.AsResponse()
+		response = response + desc.AsJSON()
 	}
 	response = response + "]"
 	return response
@@ -693,7 +718,7 @@ func NewParameterValueDesc(name string, strValue string) *ParameterValueDesc {
 	}
 }
 
-func (desc *ParameterValueDesc) AsResponse() string {
+func (desc *ParameterValueDesc) AsJSON() string {
 	return fmt.Sprintf("{\"Name\": \"%s\", \"Value\": \"%s\"}",
 		desc.Name, desc.StringValue)
 }
@@ -716,12 +741,12 @@ func NewScanConfigDesc(id string, provName string, paramValueDescs []*ParameterV
 	}
 }
 
-func (scanConfig *ScanConfigDesc) AsResponse() string {
+func (scanConfig *ScanConfigDesc) AsJSON() string {
 	var s string = fmt.Sprintf("{\"Id\": \"%s\", \"ProviderName\": \"%s\", " +
 		"\"ParameterValueDescs\": [", scanConfig.Id, scanConfig.ProviderName)
 	for i, paramValueDesc := range scanConfig.ParameterValueDescs {
 		if i > 0 { s = s + ",\n" }
-		s = s + paramValueDesc.AsResponse()
+		s = s + paramValueDesc.AsJSON()
 	}
 	return s + "\n]}"
 }
@@ -762,7 +787,7 @@ func NewEventDesc(objId string, when time.Time, userId string) *EventDesc {
 	}
 }
 
-func (eventDesc *EventDesc) AsResponse() string {
+func (eventDesc *EventDesc) AsJSON() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\"}",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId)
 }
@@ -785,7 +810,7 @@ func NewScanEventDesc(objId string, when time.Time, userId string,
 	}
 }
 
-func (eventDesc *ScanEventDesc) AsResponse() string {
+func (eventDesc *ScanEventDesc) AsJSON() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\", " +
 		"\"ScanConfigId\": \"%s\", \"Score\": \"%s\"}",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId,
@@ -808,7 +833,7 @@ func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
 	}
 }
 
-func (eventDesc *DockerfileExecEventDesc) AsResponse() string {
+func (eventDesc *DockerfileExecEventDesc) AsJSON() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\", " +
 		"\"DockefileId\": \"%s\"}",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId,

@@ -371,6 +371,8 @@ func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apityp
 	// Create a temporary directory to serve as the build context.
 	var tempDirPath string
 	tempDirPath, err = ioutil.TempDir("", "")
+	//....TO DO: Is the above a security problem? Do we need to use a private
+	// directory? I think so.
 	defer os.RemoveAll(tempDirPath)
 	fmt.Println("Temp directory = ", tempDirPath)
 

@@ -135,12 +135,12 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 		printHTTPParameters(values)
 	}
 	var result apitypes.RespIntfTp = handler(dispatcher.server, sessionToken, values, files)
-	fmt.Println("Returning result:", result.AsResponse())
+	fmt.Println("Returning result:", result.AsJSON())
 	
 	// Detect whether an error occurred.
 	failureDesc, isType := result.(*apitypes.FailureDesc)
 	if isType {
-		http.Error(w, failureDesc.AsResponse(), failureDesc.HTTPCode)
+		http.Error(w, failureDesc.AsJSON(), failureDesc.HTTPCode)
 		fmt.Printf("Error:", failureDesc.Reason)
 		return
 	}
@@ -155,11 +155,34 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
  * string consisting of name=value lines.
  */
 func returnOkResponse(headers http.Header, writer http.ResponseWriter, result apitypes.RespIntfTp) {
-	var response string = result.AsResponse()
-	fmt.Println("Response:")
-	fmt.Println(response)
-	writer.WriteHeader(http.StatusOK)
-	io.WriteString(writer, response)
+	var jsonResponse string = result.AsJSON()
+	
+	if jsonResponse == "" {
+		var filePath string = result.SendFile()
+		if filePath == "" {
+			io.WriteString(writer, "Internal error: No JSON response or file path in result")
+			return
+		}
+		// Write the file to the response writer. It is assumed that the file is
+		// a temp file.
+		f, err := os.Open(path)
+		defer os.Remove(filePath)
+		if err != nil {
+			io.WriteString(writer, err.Error())
+			return
+		}
+		_, err = io.Copy(writer, f)
+		
+		if err != nil {
+			io.WriteString(writer, err.Error())
+			return
+		}
+	} else {
+		fmt.Println("Response:")
+		fmt.Println(jsonResponse)
+		writer.WriteHeader(http.StatusOK)
+		io.WriteString(writer, jsonResponse)
+	}
 }
 
 /*******************************************************************************

@@ -13,7 +13,7 @@ import (
 	//"errors"
 	//"bufio"
 	//"io"
-	//"io/ioutil"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	//"strconv"
@@ -1093,7 +1093,37 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return apitypes.NewFailureDesc("Not implemented yet: downloadImage")
+	var imageId string
+	var err error
+	imageId, err = apitypes.GetRequiredPOSTFieldValue(values, "ImageId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var dbClient DBClient = server.dbClient
+	resource, err = dbClient.getResource(imageId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if resource == nil { return apitypes.NewFailureDesc("Unable to identify resource with Id " + imageId) }
+	var image Image
+	var isType, bool
+	image, isType = resource.(Image)
+	if ! isType { return apitypes.NewFailureDesc("Resource with Id " + imageId + " is not an Image") }
+	var dockerImage DockerImage
+	dockerImage, isType = image.(DockerImage)
+	if ! isType { return apitypes.NewFailureDesc("Image is not a docker image") }
+	
+	var tempFile *os.File
+	tempFile, err = ioutil.TempFile("", "")
+	// TO DO: Is the above a security issue?
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	var tempFilePath = tempFile.Name()
+	
+	var imageFullName string = dockerImage.getFullName()
+	var stderr bytes.Buffer
+	var cmd *Cmd= exec.Command("docker", "save", "-o"+tempFilePath, imageFullName)
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil { return apitypes.NewFailureDesc(errors.New(stderr.String())) }
+	
+	return apitypes.NewFileResponse(200, tempFilePath)
 }
 
 /*******************************************************************************
