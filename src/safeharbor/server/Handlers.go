@@ -1230,20 +1230,16 @@ func getPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	fmt.Println("A")
 	var partyId string
 	var err error
 	partyId, err = apitypes.GetRequiredPOSTFieldValue(values, "PartyId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("B")
 	var resourceId string
 	resourceId, err = apitypes.GetRequiredPOSTFieldValue(values, "ResourceId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("C")
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, resourceId,
 		"getPermission"); failMsg != nil { return failMsg }
-	fmt.Println("D")
 	
 	// Identify the Resource.
 	var dbClient DBClient = server.dbClient
@@ -1253,25 +1249,22 @@ func getPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	// Identify the Party.
 	var party Party
 	party, err = dbClient.getParty(partyId)
-	fmt.Println("E")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if party == nil { return apitypes.NewFailureDesc("Unable to identify party with Id " + partyId) }
 	
 	// Return the ACLEntry.
 	var aclEntry ACLEntry
 	aclEntry, err = party.getACLEntryForResourceId(resourceId)
-	fmt.Println("F")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var mask []bool
+	var aclEntryId string = ""
 	if aclEntry == nil {
 		mask = make([]bool, 5)
 	} else {
 		mask = aclEntry.getPermissionMask()
+		aclEntryId = aclEntry.getId()
 	}
-	fmt.Println("G")
-	var p = apitypes.NewPermissionDesc(aclEntry.getId(), resourceId, partyId, mask)
-	fmt.Println("H")
-	return p
+	return apitypes.NewPermissionDesc(aclEntryId, resourceId, partyId, mask)
 }
 
 /*******************************************************************************
