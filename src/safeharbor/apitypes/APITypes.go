@@ -38,11 +38,13 @@ import (
  * of the owning Realm; thus, e.g., a User must have CanWrite for a Realm in order
  * to be able to modify User accounts or Groups for that Realm.
  */
-var CanCreateIn int = 0	// Create new child resources.
-var CanRead int = 1		// Read or download.
-var CanWrite int = 2	// Modify.
-var CanExecute int = 3	// Execute a dockerfile or a scan config.
-var CanDelete int = 4	// Delete or inactivate.
+const (
+	CanCreateIn uint = iota	// Create new child resources.
+	CanRead					// Read or download.
+	CanWrite				// Modify.
+	CanExecute				// Execute a dockerfile or a scan config.
+	CanDelete				// Delete or inactivate.
+)
 
 // Mask constants for convenience.
 var CreateInMask []bool = []bool{true, false, false, false, false}

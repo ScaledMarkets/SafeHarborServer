@@ -979,7 +979,7 @@ func addDockerfile(server *Server, sessionToken *apitypes.SessionToken, values u
 }
 
 /*******************************************************************************
- * Arguments: DockerfileId, File
+ * Arguments: DockerfileId, Description (optional), File
  * Returns: apitypes.Result
  */
 func replaceDockerfile(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
@@ -1086,7 +1086,7 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 
 /*******************************************************************************
  * Arguments: ImageId
- * Returns: io.Reader
+ * Returns: file content
  */
 func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
