@@ -19,6 +19,7 @@ import (
 	//"strconv"
 	"strings"
 	"reflect"
+	"bytes"
 	//"time"
 	
 	// My packages:
@@ -1099,11 +1100,12 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var dbClient DBClient = server.dbClient
+	var resource Resource
 	resource, err = dbClient.getResource(imageId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if resource == nil { return apitypes.NewFailureDesc("Unable to identify resource with Id " + imageId) }
 	var image Image
-	var isType, bool
+	var isType bool
 	image, isType = resource.(Image)
 	if ! isType { return apitypes.NewFailureDesc("Resource with Id " + imageId + " is not an Image") }
 	var dockerImage DockerImage
@@ -1116,12 +1118,14 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var tempFilePath = tempFile.Name()
 	
-	var imageFullName string = dockerImage.getFullName()
+	var imageFullName string
+	imageFullName, err = dockerImage.getFullName()
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var stderr bytes.Buffer
-	var cmd *Cmd= exec.Command("docker", "save", "-o"+tempFilePath, imageFullName)
+	var cmd *exec.Cmd= exec.Command("docker", "save", "-o"+tempFilePath, imageFullName)
 	cmd.Stderr = &stderr
 	err = cmd.Run()
-	if err != nil { return apitypes.NewFailureDesc(errors.New(stderr.String())) }
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return apitypes.NewFileResponse(200, tempFilePath)
 }

@@ -61,7 +61,7 @@ type BaseType struct {
 
 type RespIntfTp interface {  // response interface type
 	AsJSON() string
-	As
+	SendFile() string
 }
 
 func (b *BaseType) AsJSON() string {
@@ -244,6 +244,10 @@ func (groupDescs GroupDescs) AsJSON() string {
 	return response
 }
 
+func (groupDescs GroupDescs) SendFile() string {
+	return ""
+}
+
 /*******************************************************************************
  * 
  */
@@ -342,6 +346,10 @@ func (userDescs UserDescs) AsJSON() string {
 	return response
 }
 
+func (userDescs UserDescs) SendFile() string {
+	return ""
+}
+
 /*******************************************************************************
  * 
  */
@@ -379,6 +387,10 @@ func (realmDescs RealmDescs) AsJSON() string {
 	}
 	response = response + "]"
 	return response
+}
+
+func (realmDescs RealmDescs) SendFile() string {
+	return ""
 }
 
 /*******************************************************************************
@@ -478,6 +490,10 @@ func (repoDescs RepoDescs) AsJSON() string {
 	return response
 }
 
+func (repoDescs RepoDescs) SendFile() string {
+	return ""
+}
+
 /*******************************************************************************
  * 
  */
@@ -514,6 +530,10 @@ func (dockerfileDescs DockerfileDescs) AsJSON() string {
 	}
 	response = response + "]"
 	return response
+}
+
+func (dockerfileDescs DockerfileDescs) SendFile() string {
+	return ""
 }
 
 /*******************************************************************************
@@ -572,6 +592,10 @@ func (imageDescs DockerImageDescs) AsJSON() string {
 	}
 	response = response + "]"
 	return response
+}
+
+func (imageDescs DockerImageDescs) SendFile() string {
+	return ""
 }
 
 /*******************************************************************************
@@ -699,6 +723,10 @@ func (scanProviderDescs ScanProviderDescs) AsJSON() string {
 	}
 	response = response + "]"
 	return response
+}
+
+func (providerDescs ScanProviderDescs) SendFile() string {
+	return ""
 }
 
 /*******************************************************************************
