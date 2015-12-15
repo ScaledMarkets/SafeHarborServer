@@ -179,6 +179,7 @@ type Dockerfile interface {
 	getRepo() (Repo, error)
 	getDockerfileExecEventIds() []string
 	addEventId(string) error
+	replaceDockerfileFile(filepath, desc string) error
 }
 
 type Image interface {

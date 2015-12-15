@@ -273,43 +273,11 @@ func authorizeHandlerAction(server *Server, sessionToken *apitypes.SessionToken,
 func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient, repo Repo,
 	desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
 	
-	var headers []*multipart.FileHeader = files["filename"]
-	if len(headers) == 0 { return nil, nil }
-	if len(headers) > 1 { return nil, errors.New("Too many files posted") }
-	
-	var header *multipart.FileHeader = headers[0]
-	var filename string = header.Filename	
-	fmt.Println("Filename:", filename)
-	
-	var file multipart.File
+	var filepath string
 	var err error
-	file, err = header.Open()
-	if err != nil { return nil, errors.New(err.Error()) }
-	if file == nil { return nil, errors.New("Internal Error") }	
-	
-	// Create a filename for the new file.
-	var filepath = repo.getFileDirectory() + "/" + filename
-	if fileExists(filepath) {
-		filepath, err = createUniqueFilename(repo.getFileDirectory(), filename)
-		if err != nil {
-			fmt.Println(err.Error())
-			return nil, errors.New(err.Error())
-		}
-	}
-	if fileExists(filepath) {
-		fmt.Println("********Internal error: file exists but it should not:" + filepath)
-		return nil, errors.New("********Internal error: file exists but it should not:" + filepath)
-	}
-	
-	// Save the file data to a permanent file.
-	var bytes []byte
-	bytes, err = ioutil.ReadAll(file)
-	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
-	if err != nil {
-		fmt.Println(err.Error())
-		return nil, errors.New("While writing dockerfile, " + err.Error())
-	}
-	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
+	filepath, err = captureFile(files)
+	if err != nil { return nil, err }
+	if filepath == "" { return nil, errors.New("No file was found") }
 	
 	// Add the file to the specified repo's set of Dockerfiles.
 	var dockerfile Dockerfile
@@ -325,6 +293,65 @@ func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient, re
 	fmt.Println("Created ACL entry")
 	
 	return dockerfile, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func replaceDockerfileFile(sessionToken *apitypes.SessionToken, dockerfile Dockerfile,
+	desc string, files map[string][]*multipart.FileHeader) error {
+	
+	var filepath string
+	var err error
+	filepath, err = captureFile(files)
+	if err != nil { return err }
+	if filepath == "" { return errors.New("No file was found") }
+	
+	return dockerfile.replaceDockerfile(filepath, desc)
+}
+
+/*******************************************************************************
+ * 
+ */
+func captureFile(files map[string][]*multipart.FileHeader) (string, error) {
+	var headers []*multipart.FileHeader = files["filename"]
+	if len(headers) == 0 { return "", nil }
+	if len(headers) > 1 { return "", errors.New("Too many files posted") }
+	
+	var header *multipart.FileHeader = headers[0]
+	var filename string = header.Filename	
+	fmt.Println("Filename:", filename)
+	
+	var file multipart.File
+	var err error
+	file, err = header.Open()
+	if err != nil { return "", errors.New(err.Error()) }
+	if file == nil { return "", errors.New("Internal Error") }	
+	
+	// Create a filename for the new file.
+	var filepath = repo.getFileDirectory() + "/" + filename
+	if fileExists(filepath) {
+		filepath, err = createUniqueFilename(repo.getFileDirectory(), filename)
+		if err != nil {
+			fmt.Println(err.Error())
+			return "", errors.New(err.Error())
+		}
+	}
+	if fileExists(filepath) {
+		fmt.Println("********Internal error: file exists but it should not:" + filepath)
+		return "", errors.New("********Internal error: file exists but it should not:" + filepath)
+	}
+	
+	// Save the file data to a permanent file.
+	var bytes []byte
+	bytes, err = ioutil.ReadAll(file)
+	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
+	if err != nil {
+		fmt.Println(err.Error())
+		return "", errors.New("While writing dockerfile, " + err.Error())
+	}
+	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
+	return filepath, nil
 }
 
 /*******************************************************************************

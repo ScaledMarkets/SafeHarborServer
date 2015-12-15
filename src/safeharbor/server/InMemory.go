@@ -1396,7 +1396,7 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 type InMemDockerfile struct {
 	InMemResource
 	RepoId string
-	FilePath string  // make immutable
+	FilePath string
 	DockerfileExecEventIds []string
 }
 
@@ -1447,6 +1447,20 @@ func (client *InMemClient) getDockerfile(id string) (Dockerfile, error) {
 	dockerfile, isType = obj.(Dockerfile)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Dockerfile") }
 	return dockerfile, nil
+}
+
+func (dockerfile *InMemDockerfile) replaceDockerfileFile(filepath, desc string) error {
+	
+	if desc == "" { desc = dockerfile.getDescription() }  // use current description.
+	
+	var oldFilePath = dockerfile.getExternalFilePath()
+	
+	dockerfile.FilePath = filepath
+	dockerfile.Description = desc
+	dockerfile.CreationTime = time.Now()
+	
+	// Delete old file.
+	os.Remove(oldFilePath)
 }
 
 func (dockerfile *InMemDockerfile) getRepo() (Repo, error) {

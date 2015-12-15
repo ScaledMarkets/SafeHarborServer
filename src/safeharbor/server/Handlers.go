@@ -950,8 +950,6 @@ func addDockerfile(server *Server, sessionToken *apitypes.SessionToken, values u
 	
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	fmt.Println("addDockerfile handler")
-	
 	// Identify the repo.
 	var repoId string
 	var err error
@@ -988,7 +986,23 @@ func replaceDockerfile(server *Server, sessionToken *apitypes.SessionToken, valu
 
 	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
 
-	return apitypes.NewFailureDesc("Not implemented yet: replaceDockerfile")
+	var dockerfileId string
+	var desc string
+	var err error
+	dockerfileId, err = apitypes.GetRequiredPOSTFieldValue(values, "DockerfileId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	desc = apitypes.GetPOSTFieldValue(values, "Description")
+	
+	var dockerfile Dockerfile
+	dockerfile, err = server.dbClient.getDockerfile(dockerfileId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.EditMask,
+		dockerfileId, "replaceDockerfile"); failMsg != nil { return failMsg }
+	
+	err = replaceDockerfileFile(session, dockerfile, desc, files)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	return apitypes.NewResult(200, "Dockerfile file replaced")
 }
 
 /*******************************************************************************
