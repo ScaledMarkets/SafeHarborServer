@@ -19,7 +19,7 @@ import (
 	//"strconv"
 	"strings"
 	"reflect"
-	"bytes"
+	//"bytes"
 	//"time"
 	
 	// My packages:
@@ -1112,6 +1112,10 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 	dockerImage, isType = image.(DockerImage)
 	if ! isType { return apitypes.NewFailureDesc("Image is not a docker image") }
 	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, imageId,
+		"downloadImage"); failMsg != nil { return failMsg }
+	
+	fmt.Println("Creating temp file to save the image to...")
 	var tempFile *os.File
 	tempFile, err = ioutil.TempFile("", "")
 	// TO DO: Is the above a security issue?
@@ -1121,9 +1125,10 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 	var imageFullName string
 	imageFullName, err = dockerImage.getFullName()
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	var stderr bytes.Buffer
+	//var stderr bytes.Buffer
 	var cmd *exec.Cmd= exec.Command("docker", "save", "-o"+tempFilePath, imageFullName)
-	cmd.Stderr = &stderr
+	//cmd.Stderr = &stderr
+	fmt.Println(fmt.Sprintf("Running docker save -o%s %s", tempFilePath, imageFullName))
 	err = cmd.Run()
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
