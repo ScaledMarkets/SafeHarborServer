@@ -1148,15 +1148,15 @@ func setPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	resourceId, err = apitypes.GetRequiredPOSTFieldValue(values, "ResourceId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var smask []string = make([]string, 5)
-	smask[0], err = apitypes.GetRequiredPOSTFieldValue(values, "Create")
+	smask[0], err = apitypes.GetRequiredPOSTFieldValue(values, "CanCreateIn")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[1], err = apitypes.GetRequiredPOSTFieldValue(values, "Read")
+	smask[1], err = apitypes.GetRequiredPOSTFieldValue(values, "CanRead")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[2], err = apitypes.GetRequiredPOSTFieldValue(values, "Write")
+	smask[2], err = apitypes.GetRequiredPOSTFieldValue(values, "CanWrite")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[3], err = apitypes.GetRequiredPOSTFieldValue(values, "Execute")
+	smask[3], err = apitypes.GetRequiredPOSTFieldValue(values, "CanExecute")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[4], err = apitypes.GetRequiredPOSTFieldValue(values, "Delete")
+	smask[4], err = apitypes.GetRequiredPOSTFieldValue(values, "CanDelete")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var mask []bool
