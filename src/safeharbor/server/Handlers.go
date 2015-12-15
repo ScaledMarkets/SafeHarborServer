@@ -1126,7 +1126,7 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 	imageFullName, err = dockerImage.getFullName()
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	//var stderr bytes.Buffer
-	var cmd *exec.Cmd= exec.Command("docker", "save", "-o"+tempFilePath, imageFullName)
+	var cmd *exec.Cmd= exec.Command("docker", "save", "-o", tempFilePath, imageFullName)
 	//cmd.Stderr = &stderr
 	fmt.Println(fmt.Sprintf("Running docker save -o%s %s", tempFilePath, imageFullName))
 	err = cmd.Run()
