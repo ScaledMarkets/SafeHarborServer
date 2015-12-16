@@ -94,6 +94,10 @@ func NewDispatcher() *Dispatcher {
 		"getImageStatus": getImageStatus,
 		"getDockerfileEvents": getDockerfileEvents,
 		"defineFlag": defineFlag,
+		"getGroupDesc": getGroupDesc,
+		"getRepoDesc": getRepoDesc,
+		"getDockerImageDesc": getDockerImageDesc,
+		"getDockerfileDesc": getDockerfileDesc,
 	}
 	
 	var dispatcher *Dispatcher = &Dispatcher{

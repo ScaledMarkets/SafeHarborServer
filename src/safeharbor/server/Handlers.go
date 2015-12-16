@@ -991,6 +991,90 @@ func addDockerfile(server *Server, sessionToken *apitypes.SessionToken, values u
 }
 
 /*******************************************************************************
+ * Arguments: GroupId
+ * Returns: GroupDesc
+ */
+func getGroupDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
+	// Identify the group.
+	var groupId string
+	var err error
+	groupId, err = apitypes.GetRequiredPOSTFieldValue(values, "GroupId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var group Group
+	group, err = server.dbClient.getGroup(groupId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	return group.asGroupDesc()
+}
+
+/*******************************************************************************
+ * Arguments: RepoId
+ * Returns: RepoDesc
+ */
+func getRepoDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
+	// Identify the repo.
+	var repoId string
+	var err error
+	repoId, err = apitypes.GetRequiredPOSTFieldValue(values, "RepoId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var repo Repo
+	repo, err = server.dbClient.getRepo(repoId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	return repo.asRepoDesc()
+}
+
+/*******************************************************************************
+ * Arguments: DockerImageId
+ * Returns: DockerImageDesc
+ */
+func getDockerImageDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
+	// Identify the repo.
+	var imageId string
+	var err error
+	imageId, err = apitypes.GetRequiredPOSTFieldValue(values, "DockerImageId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var image DockerImage
+	image, err = server.dbClient.getDockerImage(imageId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	return image.asDockerImageDesc()
+}
+
+/*******************************************************************************
+ * Arguments: DockerfileId
+ * Returns: DockerfileDesc
+ */
+func getDockerfileDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	if failMsg := authenticateSession(server, sessionToken); failMsg != nil { return failMsg }
+
+	// Identify the dockerfile.
+	var dockerfileId string
+	var err error
+	dockerfileId, err = apitypes.GetRequiredPOSTFieldValue(values, "DockerfileId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var dockerfile Dockerfile
+	dockerfile, err = server.dbClient.getDockerfile(dockerfileId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	return dockerfile.asDockerfileDesc()
+}
+
+/*******************************************************************************
  * Arguments: DockerfileId, Description (optional), File
  * Returns: apitypes.Result
  */
