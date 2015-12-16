@@ -991,16 +991,17 @@ func replaceDockerfile(server *Server, sessionToken *apitypes.SessionToken, valu
 	var err error
 	dockerfileId, err = apitypes.GetRequiredPOSTFieldValue(values, "DockerfileId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	desc = apitypes.GetPOSTFieldValue(values, "Description")
+	desc, err = apitypes.GetPOSTFieldValue(values, "Description")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var dockerfile Dockerfile
 	dockerfile, err = server.dbClient.getDockerfile(dockerfileId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
-	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.EditMask,
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
 		dockerfileId, "replaceDockerfile"); failMsg != nil { return failMsg }
 	
-	err = replaceDockerfileFile(session, dockerfile, desc, files)
+	err = replaceDockerfileFile(sessionToken, dockerfile, desc, files)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	return apitypes.NewResult(200, "Dockerfile file replaced")
 }

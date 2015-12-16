@@ -273,15 +273,17 @@ func authorizeHandlerAction(server *Server, sessionToken *apitypes.SessionToken,
 func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient, repo Repo,
 	desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
 	
+	var name string
 	var filepath string
 	var err error
-	filepath, err = captureFile(files)
+	
+	name, filepath, err = captureFile(repo, files)
 	if err != nil { return nil, err }
 	if filepath == "" { return nil, errors.New("No file was found") }
-	
+
 	// Add the file to the specified repo's set of Dockerfiles.
 	var dockerfile Dockerfile
-	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), filename, desc, filepath)
+	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), name, desc, filepath)
 	if err != nil { return nil, errors.New(err.Error()) }
 	
 	// Create an ACL entry for the new file, to allow access by the current user.
@@ -301,32 +303,36 @@ func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient, re
 func replaceDockerfileFile(sessionToken *apitypes.SessionToken, dockerfile Dockerfile,
 	desc string, files map[string][]*multipart.FileHeader) error {
 	
-	var filepath string
+	var repo Repo
 	var err error
-	filepath, err = captureFile(files)
+	repo, err = dockerfile.getRepo()
+	if err != nil { return err }
+	
+	var filepath string
+	_, filepath, err = captureFile(repo, files)
 	if err != nil { return err }
 	if filepath == "" { return errors.New("No file was found") }
 	
-	return dockerfile.replaceDockerfile(filepath, desc)
+	return dockerfile.replaceDockerfileFile(filepath, desc)
 }
 
 /*******************************************************************************
  * 
  */
-func captureFile(files map[string][]*multipart.FileHeader) (string, error) {
+func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, string, error) {
+
+	var err error
 	var headers []*multipart.FileHeader = files["filename"]
-	if len(headers) == 0 { return "", nil }
-	if len(headers) > 1 { return "", errors.New("Too many files posted") }
-	
+	if len(headers) == 0 { return "", "", nil }
+	if len(headers) > 1 { return "", "", errors.New("Too many files posted") }
 	var header *multipart.FileHeader = headers[0]
 	var filename string = header.Filename	
 	fmt.Println("Filename:", filename)
 	
 	var file multipart.File
-	var err error
 	file, err = header.Open()
-	if err != nil { return "", errors.New(err.Error()) }
-	if file == nil { return "", errors.New("Internal Error") }	
+	if err != nil { return "", "", errors.New(err.Error()) }
+	if file == nil { return "", "", errors.New("Internal Error") }	
 	
 	// Create a filename for the new file.
 	var filepath = repo.getFileDirectory() + "/" + filename
@@ -334,12 +340,12 @@ func captureFile(files map[string][]*multipart.FileHeader) (string, error) {
 		filepath, err = createUniqueFilename(repo.getFileDirectory(), filename)
 		if err != nil {
 			fmt.Println(err.Error())
-			return "", errors.New(err.Error())
+			return "", "", errors.New(err.Error())
 		}
 	}
 	if fileExists(filepath) {
 		fmt.Println("********Internal error: file exists but it should not:" + filepath)
-		return "", errors.New("********Internal error: file exists but it should not:" + filepath)
+		return "", "", errors.New("********Internal error: file exists but it should not:" + filepath)
 	}
 	
 	// Save the file data to a permanent file.
@@ -348,10 +354,10 @@ func captureFile(files map[string][]*multipart.FileHeader) (string, error) {
 	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
 	if err != nil {
 		fmt.Println(err.Error())
-		return "", errors.New("While writing dockerfile, " + err.Error())
+		return "", "", errors.New("While writing dockerfile, " + err.Error())
 	}
 	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
-	return filepath, nil
+	return filename, filepath, nil
 }
 
 /*******************************************************************************

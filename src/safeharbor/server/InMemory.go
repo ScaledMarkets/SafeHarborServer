@@ -1460,7 +1460,7 @@ func (dockerfile *InMemDockerfile) replaceDockerfileFile(filepath, desc string) 
 	dockerfile.CreationTime = time.Now()
 	
 	// Delete old file.
-	os.Remove(oldFilePath)
+	return os.Remove(oldFilePath)
 }
 
 func (dockerfile *InMemDockerfile) getRepo() (Repo, error) {
