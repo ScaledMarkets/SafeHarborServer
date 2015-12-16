@@ -839,8 +839,15 @@ func createRepo(server *Server, sessionToken *apitypes.SessionToken, values url.
 		[]bool{ true, true, true, true, true } )
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	_, err = createDockerfile(sessionToken, server.dbClient, repo, repo.getDescription(), values, files)
+	var name string
+	var filepath string
+	name, filepath, err = captureFile(repo, files)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if filepath != "" { // a file was attached - presume that it is a dockerfile
+		_, err = createDockerfile(sessionToken, server.dbClient, repo,
+			name, filepath, repo.getDescription())
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	}
 	
 	return repo.asRepoDesc()
 }
@@ -969,8 +976,14 @@ func addDockerfile(server *Server, sessionToken *apitypes.SessionToken, values u
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if repo == nil { return apitypes.NewFailureDesc("Repo does not exist") }
 	
+	var name string
+	var filepath string
+	name, filepath, err = captureFile(repo, files)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if filepath == "" { return apitypes.NewFailureDesc("No file was found") }
+	
 	var dockerfile Dockerfile
-	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, desc, values, files)
+	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, name, filepath, desc)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if dockerfile == nil { return apitypes.NewFailureDesc("No dockerfile was attached") }
 	
@@ -1001,7 +1014,15 @@ func replaceDockerfile(server *Server, sessionToken *apitypes.SessionToken, valu
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
 		dockerfileId, "replaceDockerfile"); failMsg != nil { return failMsg }
 	
-	err = replaceDockerfileFile(sessionToken, dockerfile, desc, files)
+	var repo Repo
+	repo, err = dockerfile.getRepo()
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	var filepath string
+	_, filepath, err = captureFile(repo, files)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if filepath == "" { return apitypes.NewFailureDesc("No file was found") }
+	
+	err = dockerfile.replaceDockerfileFile(filepath, desc)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	return apitypes.NewResult(200, "Dockerfile file replaced")
 }
@@ -1088,8 +1109,14 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	desc, err = apitypes.GetRequiredPOSTFieldValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
+	var name string
+	var filepath string
+	name, filepath, err = captureFile(repo, files)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if filepath == "" { return apitypes.NewFailureDesc("No file was found") }
+	
 	var dockerfile Dockerfile
-	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, desc, values, files)
+	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, name, filepath, desc)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if dockerfile == nil { return apitypes.NewFailureDesc("No dockerfile was attached") }
 	

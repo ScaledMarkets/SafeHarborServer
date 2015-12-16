@@ -270,19 +270,12 @@ func authorizeHandlerAction(server *Server, sessionToken *apitypes.SessionToken,
 /*******************************************************************************
  * 
  */
-func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient, repo Repo,
-	desc string, values url.Values, files map[string][]*multipart.FileHeader) (Dockerfile, error) {
+func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient,
+	repo Repo, name, filepath, desc string) (Dockerfile, error) {
 	
-	var name string
-	var filepath string
-	var err error
-	
-	name, filepath, err = captureFile(repo, files)
-	if err != nil { return nil, err }
-	if filepath == "" { return nil, errors.New("No file was found") }
-
 	// Add the file to the specified repo's set of Dockerfiles.
 	var dockerfile Dockerfile
+	var err error
 	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), name, desc, filepath)
 	if err != nil { return nil, errors.New(err.Error()) }
 	
@@ -295,25 +288,6 @@ func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient, re
 	fmt.Println("Created ACL entry")
 	
 	return dockerfile, nil
-}
-
-/*******************************************************************************
- * 
- */
-func replaceDockerfileFile(sessionToken *apitypes.SessionToken, dockerfile Dockerfile,
-	desc string, files map[string][]*multipart.FileHeader) error {
-	
-	var repo Repo
-	var err error
-	repo, err = dockerfile.getRepo()
-	if err != nil { return err }
-	
-	var filepath string
-	_, filepath, err = captureFile(repo, files)
-	if err != nil { return err }
-	if filepath == "" { return errors.New("No file was found") }
-	
-	return dockerfile.replaceDockerfileFile(filepath, desc)
 }
 
 /*******************************************************************************
