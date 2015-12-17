@@ -12,7 +12,7 @@ package server
 
 import (
 	"time"
-	"os"
+	//"os"
 	
 	"safeharbor/apitypes"
 )
@@ -31,8 +31,9 @@ type DBClient interface {
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string, string) (DockerImage, error)
-	dbCreateScanConfig(string, string, string, string, []string, string, string) (ScanConfig, error)
-	dbCreateScanEvent(string, string, string, string, string) (ScanEvent, error)
+	dbCreateScanConfig(name, desc, repoId, providerName string, paramValueIds []string, successExpr, flagId string) (ScanConfig, error)
+	dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error)
+	dbCreateScanEvent(string, string, string, string) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
 	dbDeactivateRealm(realmId string) error
 	dbGetAllRealmIds() []string
@@ -48,6 +49,8 @@ type DBClient interface {
 	getDockerImage(string) (DockerImage, error)
 	getScanConfig(string) (ScanConfig, error)
 	getParameterValue(string) (ParameterValue, error)
+	getFlag(string) (Flag, error)
+	getScanEvent(string) (ScanEvent, error)
 	getRealmsAdministeredByUser(string) ([]string, error)  // those realms for which user can edit the realm
 	init()
 	printDatabase()
@@ -164,6 +167,7 @@ type Repo interface {
 	addDockerfile(Dockerfile) error
 	addDockerImage(DockerImage) error
 	addScanConfig(ScanConfig) error
+	addFlag(Flag) error
 	getScanConfigByName(string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
 	deleteResource(Resource) error
@@ -192,9 +196,9 @@ type DockerImage interface {
 	//ImageCreationEvent
 	getDockerImageTag() string  // Return same as getName().
 	getFullName() (string, error)  // Return the fully qualified docker image path.
+	getScanEventIds() []string // ordered from oldest to newest
+	getMostRecentScanEventId() string
 	asDockerImageDesc() *apitypes.DockerImageDesc
-	
-	//getScanEventIds() []string
 }
 
 type ParameterValue interface {
@@ -209,16 +213,22 @@ type ParameterValue interface {
 
 type ScanConfig interface {
 	Resource
+	getSuccessExpr() string
 	getRepoId() string
-	getExternalObjPath() string
-	getCurrentExtObjId() string
-	getAsTempFile(string) (*os.File, error)
 	getProviderName() string
 	getParameterValueIds() []string
-	getSuccessGraphicImageURL() string
-	getFailureGraphicImageURL() string
 	setParameterValue(string, string) (ParameterValue, error)
+	setFlagId(string) error
+	getFlagId() string
 	asScanConfigDesc() *apitypes.ScanConfigDesc
+}
+
+type Flag interface {
+	Resource
+	getRepoId() string
+	getSuccessImagePath() string
+	getSuccessImageURL() string
+	asFlagDesc() *apitypes.FlagDesc
 }
 
 type Event interface {
@@ -234,7 +244,6 @@ type ScanEvent interface {
 	getScanConfigId() string
 	getActualParameterValueIds() []string
 	asScanEventDesc() *apitypes.ScanEventDesc
-	getScanConfigExternalObjId() string
 }
 
 type ImageCreationEvent interface {
@@ -249,10 +258,4 @@ type DockerfileExecEvent interface {
 
 type ImageUploadEvent interface {
 	ImageCreationEvent
-}
-
-type Flag interface {
-	Resource
-	getExpr() string
-	getRepoId() string
 }

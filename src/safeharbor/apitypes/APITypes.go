@@ -155,11 +155,11 @@ func NewCredentials(uid string, pwd string) *Credentials {
 func GetCredentials(values url.Values) (*Credentials, error) {
 	var err error
 	var userid string
-	userid, err = GetRequiredPOSTFieldValue(values, "UserId")
+	userid, err = GetRequiredHTTPParameterValue(values, "UserId")
 	if err != nil { return nil, err }
 	
 	var pswd string
-	pswd, err = GetRequiredPOSTFieldValue(values, "Password")
+	pswd, err = GetRequiredHTTPParameterValue(values, "Password")
 	if err != nil { return nil, err }
 	
 	return NewCredentials(userid, pswd), nil
@@ -273,23 +273,23 @@ func NewUserInfo(userid, name, email, pswd, realmId string) *UserInfo {
 func GetUserInfo(values url.Values) (*UserInfo, error) {
 	var err error
 	var userid string
-	userid, err = GetRequiredPOSTFieldValue(values, "UserId")
+	userid, err = GetRequiredHTTPParameterValue(values, "UserId")
 	if err != nil { return nil, err }
 	
 	var name string
-	name, err = GetRequiredPOSTFieldValue(values, "UserName")
+	name, err = GetRequiredHTTPParameterValue(values, "UserName")
 	if err != nil { return nil, err }
 	
 	var email string
-	email, err = GetRequiredPOSTFieldValue(values, "EmailAddress")
+	email, err = GetRequiredHTTPParameterValue(values, "EmailAddress")
 	if err != nil { return nil, err }
 	
 	var pswd string
-	pswd, err = GetRequiredPOSTFieldValue(values, "Password")
+	pswd, err = GetRequiredHTTPParameterValue(values, "Password")
 	if err != nil { return nil, err }
 	
 	var realmId string
-	realmId, err = GetPOSTFieldValue(values, "RealmId") // optional
+	realmId, err = GetHTTPParameterValue(values, "RealmId") // optional
 	if err != nil { return nil, err }
 	
 	return NewUserInfo(userid, name, email, pswd, realmId), nil
@@ -416,11 +416,11 @@ func NewRealmInfo(realmName string, orgName string, desc string) (*RealmInfo, er
 func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 	var err error
 	var name, orgFullName, desc string
-	name, err = GetRequiredPOSTFieldValue(values, "RealmName")
+	name, err = GetRequiredHTTPParameterValue(values, "RealmName")
 	if err != nil { return nil, err }
-	orgFullName, err = GetRequiredPOSTFieldValue(values, "OrgFullName")
+	orgFullName, err = GetRequiredHTTPParameterValue(values, "OrgFullName")
 	if err != nil { return nil, err }
-	desc, err = GetPOSTFieldValue(values, "Description")
+	desc, err = GetHTTPParameterValue(values, "Description")
 	if err != nil { return nil, err }
 	return NewRealmInfo(name, orgFullName, desc)
 }
@@ -576,9 +576,9 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 }
 
 func (imageDesc *DockerImageDesc) AsJSON() string {
-	return fmt.Sprintf("{\"ObjId\": \"%s\", \"Name\": \"%s\", " +
+	return fmt.Sprintf("{\"ObjId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", " +
 		"\"Description\": \"%s\", \"CreationDate\": %s}",
-		imageDesc.ObjId, imageDesc.Name, imageDesc.Description, imageDesc.CreationDate)
+		imageDesc.ObjId, imageDesc.RepoId, imageDesc.Name, imageDesc.Description, imageDesc.CreationDate)
 }
 
 type DockerImageDescs []*DockerImageDesc
@@ -758,20 +758,25 @@ type ScanConfigDesc struct {
 	BaseType
 	Id string
 	ProviderName string
+	SuccessExpression string
+	FlagId string
 	ParameterValueDescs []*ParameterValueDesc
 }
 
-func NewScanConfigDesc(id string, provName string, paramValueDescs []*ParameterValueDesc) *ScanConfigDesc {
+func NewScanConfigDesc(id, provName, expr, flagId string, paramValueDescs []*ParameterValueDesc) *ScanConfigDesc {
 	return &ScanConfigDesc{
 		Id: id,
 		ProviderName: provName,
+		SuccessExpression: expr,
 		ParameterValueDescs: paramValueDescs,
 	}
 }
 
 func (scanConfig *ScanConfigDesc) AsJSON() string {
 	var s string = fmt.Sprintf("{\"Id\": \"%s\", \"ProviderName\": \"%s\", " +
-		"\"ParameterValueDescs\": [", scanConfig.Id, scanConfig.ProviderName)
+		"\"SuccessExpression\": \"%s\", \"FlagId\": \"%s\", " +
+		"\"ParameterValueDescs\": [", scanConfig.Id, scanConfig.ProviderName,
+		scanConfig.SuccessExpression, scanConfig.FlagId)
 	for i, paramValueDesc := range scanConfig.ParameterValueDescs {
 		if i > 0 { s = s + ",\n" }
 		s = s + paramValueDesc.AsJSON()
@@ -784,17 +789,20 @@ func (scanConfig *ScanConfigDesc) AsJSON() string {
  */
 type FlagDesc struct {
 	BaseType
-	Expression string
 	RepoId string
 	ImageURL string
 }
 
-func NewFlagDesc(expr, repoId, imageURL string) *FlagDesc {
+func NewFlagDesc(repoId, imageURL string) *FlagDesc {
 	return &FlagDesc{
-		Expression: expr,
 		RepoId: repoId,
 		ImageURL: imageURL,
 	}
+}
+
+func (flagDesc *FlagDesc) AsJSON() string {
+	return fmt.Sprintf("{\"RepoId\": \"%s\", \"ImageURL\": \"%s\"}",
+		flagDesc.RepoId, flagDesc.ImageURL)
 }
 
 /*******************************************************************************
@@ -890,7 +898,7 @@ func FormatTimeAsJavascriptDate(curTime time.Time) string {
 /*******************************************************************************
  * 
  */
-func GetPOSTFieldValue(values url.Values, name string) (string, error) {
+func GetHTTPParameterValue(values url.Values, name string) (string, error) {
 	valuear, found := values[name]
 	if ! found { return "", nil }
 	if len(valuear) == 0 { return "", nil }
@@ -900,10 +908,10 @@ func GetPOSTFieldValue(values url.Values, name string) (string, error) {
 /*******************************************************************************
  * 
  */
-func GetRequiredPOSTFieldValue(values url.Values, name string) (string, error) {
+func GetRequiredHTTPParameterValue(values url.Values, name string) (string, error) {
 	var value string
 	var err error
-	value, err = GetPOSTFieldValue(values, name)
+	value, err = GetHTTPParameterValue(values, name)
 	if err != nil { return "", err }
 	if value == "" { return "", errors.New(fmt.Sprintf("POST field not found: %s", name)) }
 	return value, nil

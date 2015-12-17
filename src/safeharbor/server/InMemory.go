@@ -34,7 +34,7 @@ import (
 	"errors"
 	"reflect"
 	"os"
-	"io/ioutil"
+	//"io/ioutil"
 	"crypto/sha1"
 	"time"
 	
@@ -1357,6 +1357,11 @@ func (repo *InMemRepo) addScanConfig(config ScanConfig) error {
 	return repo.writeBack()
 }
 
+func (repo *InMemRepo) addFlag(flag Flag) error {
+	repo.FlagIds = append(repo.FlagIds, flag.getId())
+	return repo.writeBack()
+}
+
 func (repo *InMemRepo) getScanConfigByName(name string) (ScanConfig, error) {
 	for _, configId := range repo.ScanConfigIds {
 		var config ScanConfig
@@ -1534,6 +1539,7 @@ func (image *InMemImage) getParentId() string {
  */
 type InMemDockerImage struct {
 	InMemImage
+	ScanEventIds []string
 }
 
 func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string) (*InMemDockerImage, error) {
@@ -1543,6 +1549,7 @@ func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string) (*InMe
 	if err != nil { return nil, err }
 	var newDockerImage = &InMemDockerImage{
 		InMemImage: *image,
+		ScanEventIds: []string{},
 	}
 	return newDockerImage, client.addObject(newDockerImage)
 }
@@ -1588,6 +1595,19 @@ func (image *InMemDockerImage) getFullName() (string, error) {
 	realm, err = image.Client.getRealm(repo.getRealmId())
 	if err != nil { return "", err }
 	return (realm.getName() + "/" + repo.getName() + ":" + image.Name), nil
+}
+
+func (image *InMemDockerImage) getScanEventIds() []string {
+	return image.ScanEventIds
+}
+
+func (image *InMemDockerImage) getMostRecentScanEventId() string {
+	var numOfIds = len(image.ScanEventIds)
+	if numOfIds == 0 {
+		return ""
+	} else {
+		return image.ScanEventIds[numOfIds-1]
+	}
 }
 
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
@@ -1658,36 +1678,34 @@ func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.Paramete
  */
 type InMemScanConfig struct {
 	InMemResource
+	SuccessExpression string
 	RepoId string
-	ExternalObjPath string
 	ProviderName string
 	ParameterValueIds []string
-	SuccessGraphicImageURL string
-	FailureGraphicImageURL string
+	FlagId string
 }
 
 func (client *InMemClient) NewInMemScanConfig(name, desc, repoId,
-	providerName string, paramValueIds []string, successGraphicImageURL,
-	failureGraphicImageURL string) (*InMemScanConfig, error) {
+	providerName string, paramValueIds []string, successExpr string,
+	flagId string) (*InMemScanConfig, error) {
+	
 	var resource *InMemResource
 	var err error
 	resource, err = client.NewInMemResource(name, desc)
 	if err != nil { return nil, err }
 	var scanConfig = &InMemScanConfig{
 		InMemResource: *resource,
+		SuccessExpression: successExpr,
 		RepoId: repoId,
-		ExternalObjPath: "",
 		ProviderName: providerName,
 		ParameterValueIds: paramValueIds,
-		SuccessGraphicImageURL: successGraphicImageURL,
-		FailureGraphicImageURL: failureGraphicImageURL,
+		FlagId: flagId,
 	}
 	return scanConfig, client.addObject(scanConfig)
 }
 
 func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
-	providerName string, paramValueIds []string, successGraphicImageURL,
-	failureGraphicImageURL string) (ScanConfig, error) {
+	providerName string, paramValueIds []string, successExpr, flagId string) (ScanConfig, error) {
 	
 	// Check if a scanConfig with that name already exists within the repo.
 	var repo Repo
@@ -1708,9 +1726,7 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	//var scanConfigId string = createUniqueDbObjectId()
 	var scanConfig *InMemScanConfig
 	scanConfig, err = client.NewInMemScanConfig(name, desc, repoId, providerName,
-		paramValueIds, successGraphicImageURL, failureGraphicImageURL)
-	var externalObjPath string = repo.getFileDirectory() + "/" + scanConfig.getId()
-	scanConfig.ExternalObjPath = externalObjPath
+		paramValueIds, successExpr, flagId)
 	err = scanConfig.writeBack()
 	if err != nil { return nil, err }
 	
@@ -1731,41 +1747,12 @@ func (client *InMemClient) getScanConfig(id string) (ScanConfig, error) {
 	return scanConfig, nil
 }
 
+func (scanConfig *InMemScanConfig) getSuccessExpr() string {
+	return scanConfig.SuccessExpression
+}
+
 func (scanConfig *InMemScanConfig) getRepoId() string {
 	return scanConfig.RepoId
-}
-
-func (scanConfig *InMemScanConfig) getExternalObjPath() string {
-	return scanConfig.ExternalObjPath
-}
-
-func (scanConfig *InMemScanConfig) getCurrentExtObjId() string {
-	return scanConfig.ExternalObjPath  // temporary - until we incorporate git.
-		// Then we will replace this with the hash and path.
-		// See https://stackoverflow.com/questions/2466735/how-to-checkout-only-one-file-from-git-repository
-		// See also https://git-scm.com/docs/git-hash-object
-}
-
-func (scanConfig *InMemScanConfig) getAsTempFile(extObjId string) (*os.File, error) {
-	var tempfile *os.File
-	var err error
-	tempfile, err = ioutil.TempFile("", "")
-	if err != nil {
-		return nil, errors.New("Error: Unable to create temp file")
-	}
-	
-	// Copy the specified file object to the temp file.
-	var bytes []byte
-	var sourcefile *os.File
-	sourcefile, err = os.Open(extObjId) // for now, we treat the extObjId as a file path.
-	bytes, err = ioutil.ReadAll(sourcefile)
-	err = ioutil.WriteFile(tempfile.Name(), bytes, os.ModePerm)
-	if err != nil {
-		fmt.Println(err.Error())
-		return nil, errors.New("While writing dockerfile, " + err.Error())
-	}
-	
-	return tempfile, nil
 }
 
 func (scanConfig *InMemScanConfig) getProviderName() string {
@@ -1774,14 +1761,6 @@ func (scanConfig *InMemScanConfig) getProviderName() string {
 
 func (scanConfig *InMemScanConfig) getParameterValueIds() []string {
 	return scanConfig.ParameterValueIds
-}
-
-func (scanConfig *InMemScanConfig) getSuccessGraphicImageURL() string {
-	return scanConfig.SuccessGraphicImageURL
-}
-
-func (scanConfig *InMemScanConfig) getFailureGraphicImageURL() string {
-	return scanConfig.FailureGraphicImageURL
 }
 
 func (scanConfig *InMemScanConfig) setParameterValue(name, strValue string) (ParameterValue, error) {
@@ -1814,6 +1793,17 @@ func (scanConfig *InMemScanConfig) setParameterValue(name, strValue string) (Par
 	return paramValue, nil
 }
 
+func (scanConfig *InMemScanConfig) setFlagId(id string) error {
+	var err error
+	scanConfig.FlagId = id
+	err = scanConfig.writeBack()
+	return err
+}
+
+func (scanConfig *InMemScanConfig) getFlagId() string {
+	return scanConfig.FlagId
+}
+
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
 	for _, valueId := range scanConfig.ParameterValueIds {
@@ -1831,7 +1821,8 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 		paramValueDescs = append(paramValueDescs, paramValue.asParameterValueDesc())
 	}
 	
-	return apitypes.NewScanConfigDesc(scanConfig.Id, scanConfig.ProviderName, paramValueDescs)
+	return apitypes.NewScanConfigDesc(scanConfig.Id, scanConfig.ProviderName,
+		scanConfig.SuccessExpression, scanConfig.FlagId, paramValueDescs)
 }
 
 /*******************************************************************************
@@ -1839,11 +1830,12 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
  */
 type InMemFlag struct {
 	InMemResource
-	Expression string
 	RepoId string
+	SuccessImagePath string
 }
 
-func (client *InMemClient) NewInMemFlag(name, desc, expr, repoId string) (*InMemFlag, error) {
+func (client *InMemClient) NewInMemFlag(name, desc, repoId,
+	successImagePath string) (*InMemFlag, error) {
 	
 	var resource *InMemResource
 	var err error
@@ -1851,18 +1843,60 @@ func (client *InMemClient) NewInMemFlag(name, desc, expr, repoId string) (*InMem
 	if err != nil { return nil, err }
 	var flag = &InMemFlag{
 		InMemResource: *resource,
-		Expression: expr,
 		RepoId: repoId,
+		SuccessImagePath: successImagePath,
 	}
 	return flag, client.addObject(flag)
 }
 
-func (flag *InMemFlag) getExpr() string {
-	return flag.Expression
+func (client *InMemClient) dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error) {
+	var flag Flag
+	var err error
+	flag, err = client.NewInMemFlag(name, desc, repoId, successImagePath)
+	if err != nil { return nil, err }
+	
+	var repo Repo
+	repo, err = client.getRepo(repoId)
+	if err != nil { return nil, err }
+	
+	// Add to repo's list of flags.
+	err = repo.addFlag(flag)
+	if err != nil { return nil, err }
+
+	// Make persistent.
+	err = flag.writeBack()
+	
+	return flag, err
+}
+
+func (client *InMemClient) getFlag(id string) (Flag, error) {
+	var flag Flag
+	var isType bool
+	var obj PersistObj = client.getPersistentObject(id)
+	if obj == nil { return nil, nil }
+	flag, isType = obj.(Flag)
+	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
+	return flag, nil
 }
 
 func (flag *InMemFlag) getRepoId() string {
 	return flag.RepoId
+}
+
+func (flag *InMemFlag) setSuccessImagePath(path string) {
+	flag.SuccessImagePath = path
+}
+
+func (flag *InMemFlag) getSuccessImagePath() string {
+	return flag.SuccessImagePath
+}
+
+func (flag *InMemFlag) getSuccessImageURL() string {
+	return flag.Client.Server.GetHTTPResourceScheme() + "://getFlagImage/?Id=" + flag.getId()
+}
+
+func (flag *InMemFlag) asFlagDesc() *apitypes.FlagDesc {
+	return apitypes.NewFlagDesc(flag.RepoId, flag.getSuccessImageURL())
 }
 
 /*******************************************************************************
@@ -1902,26 +1936,24 @@ type InMemScanEvent struct {
 	ScanConfigId string
 	DockerImageId string
 	Score string
-	ScanConfigExternalObjId string
 	ActualParameterValueIds []string
 }
 
 func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
-	score, extObjId string, actParamValueIds []string) (*InMemScanEvent, error) {
+	score string, actParamValueIds []string) (*InMemScanEvent, error) {
 	
 	var scanEvent *InMemScanEvent = &InMemScanEvent{
 		InMemEvent: *client.NewInMemEvent(userObjId),
 		ScanConfigId: scanConfigId,
 		DockerImageId: imageId,
 		Score: score,
-		ScanConfigExternalObjId: extObjId,
 		ActualParameterValueIds: actParamValueIds,
 	}
 	return scanEvent, client.addObject(scanEvent)
 }
 
 func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
-	userObjId, score, extObjId string) (ScanEvent, error) {
+	userObjId, score string) (ScanEvent, error) {
 	
 	// Create actual ParameterValues for the Event, using the current ParameterValues
 	// that exist for the ScanConfig.
@@ -1945,13 +1977,23 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 
 	//var id string = createUniqueDbObjectId()
 	var scanEvent *InMemScanEvent
-	scanEvent, err = client.NewInMemScanEvent(scanConfigId, imageId, userObjId, score, extObjId,
+	scanEvent, err = client.NewInMemScanEvent(scanConfigId, imageId, userObjId, score,
 		actParamValueIds)
 	if err != nil { return nil, err }
 	err = scanEvent.writeBack()
 	if err != nil { return nil, err }
 
 	fmt.Println("Created ScanEvent")
+	return scanEvent, nil
+}
+
+func (client *InMemClient) getScanEvent(id string) (ScanEvent, error) {
+	var scanEvent ScanEvent
+	var isType bool
+	var obj PersistObj = client.getPersistentObject(id)
+	if obj == nil { return nil, nil }
+	scanEvent, isType = obj.(ScanEvent)
+	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return scanEvent, nil
 }
 
@@ -1969,10 +2011,6 @@ func (event *InMemScanEvent) getScanConfigId() string {
 
 func (event *InMemScanEvent) getActualParameterValueIds() []string {
 	return event.ActualParameterValueIds
-}
-
-func (event *InMemScanEvent) getScanConfigExternalObjId() string {
-	return event.ScanConfigExternalObjId
 }
 
 func (event *InMemScanEvent) asScanEventDesc() *apitypes.ScanEventDesc {

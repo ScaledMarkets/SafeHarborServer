@@ -44,6 +44,10 @@ type Server struct {
 	Debug bool
 }
 
+const (
+	ProtocolScheme = "http"  // change to https when we enable that.
+)
+
 /*******************************************************************************
  * Create a Server structure. This includes reading in the auth server cert.
  */
@@ -430,6 +434,10 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 
 	fmt.Println("Calling handleRequest")
 	server.dispatcher.handleRequest(sessionToken, headers, writer, reqName, values, files)
+}
+
+func (server *Server) GetHTTPResourceScheme() string {
+	return ProtocolScheme
 }
 
 /*******************************************************************************

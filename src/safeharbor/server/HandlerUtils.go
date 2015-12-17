@@ -353,7 +353,7 @@ func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apityp
 	if err != nil { return nil, err }
 
 	var imageName string
-	imageName, err = apitypes.GetRequiredPOSTFieldValue(values, "ImageName")
+	imageName, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageName")
 	if err != nil { return nil, err }
 	if imageName == "" { return nil, errors.New("No HTTP parameter found for ImageName") }
 	if ! localDockerImageNameIsValid(imageName) {
