@@ -88,7 +88,7 @@ func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *apitypes
 	var sessionId = getSessionId(httpReq)
 	fmt.Println("obtained session id:", sessionId)
 	if sessionId != "" {
-		sessionToken = authSvc.validateSessionId(sessionId)  // returns nil if invalid
+		sessionToken = authSvc.identifySession(sessionId)  // returns nil if invalid
 	}
 	
 	return sessionToken
@@ -283,7 +283,7 @@ func (authService *AuthService) setSessionId(sessionToken *apitypes.SessionToken
  * Validate the specified session id. If valid, return a apitypes.SessionToken with
  * the identity of the session owner.
  */
-func (authSvc *AuthService) validateSessionId(sessionId string) *apitypes.SessionToken {
+func (authSvc *AuthService) identifySession(sessionId string) *apitypes.SessionToken {
 	
 	var credentials *apitypes.Credentials = authSvc.Sessions[sessionId]
 	

@@ -54,7 +54,7 @@ func CreateClairServiceStub(params map[string]interface{}) (ScanService, error) 
 	port, err = strconv.Atoi(portStr)
 	if err != nil { return nil, err }
 	
-	return &ClairService{
+	return &ClairServiceStub{
 		Host: host,
 		Port: port,
 		Params: map[string]string{

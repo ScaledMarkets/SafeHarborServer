@@ -204,9 +204,29 @@ func assertErrIsNil(err error, msg string) {
 /*******************************************************************************
  * Authenticate the session token.
  */
-func authenticateSession(server *Server, sessionToken *apitypes.SessionToken) *apitypes.FailureDesc {
+func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
+	values url.Values) *apitypes.FailureDesc {
 	
-	if sessionToken == nil { return apitypes.NewFailureDesc("Unauthenticated") }
+	if sessionToken == nil {
+
+		// no session Id found; see if it was sent as an HTTP parameter.
+		// We do this because the client is likely to invoke this method directly
+		// from a javascript app in a browser instead of from the middle tier,
+		// and the browser/javascript framework is not likely going to allow
+		// the javascript app to set a cookie for a domain to which _IT_ has
+		// not authenticated directly. (The authenticate method is most likely
+		// called by the middle tier - not a javascript app.) To get around this,
+		// we allow the addAndExecDockerfile method to provide the session Id
+		// as an HTTP parameter, instead of via the normal mechanism (a cookie).
+		
+		var sessionId string
+		valuear, found := values["SessionId"]
+		if ! found { return apitypes.NewFailureDesc("Unauthenticated - no session Id found") }
+		sessionId = valuear[0]
+		if sessionId == "" { return apitypes.NewFailureDesc("Unauthenticated - session Id appears to be malformed") }
+		sessionToken = server.authService.identifySession(sessionId)  // returns nil if invalid
+		if sessionToken == nil { return apitypes.NewFailureDesc("Unauthenticated - session Id is invalid") }
+	}
 
 	if ! server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
 		return apitypes.NewFailureDesc("Invalid session Id")
