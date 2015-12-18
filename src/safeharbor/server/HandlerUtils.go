@@ -252,6 +252,8 @@ func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
 	}
 	fmt.Println("L****")
 	
+	if sessionToken == nil { fmt.Println("sessionToken is nil") }
+	fmt.Println("Returning from authenticateSession")
 	return sessionToken, nil
 }
 
