@@ -205,7 +205,7 @@ func assertErrIsNil(err error, msg string) {
  * Authenticate the session token.
  */
 func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
-	values url.Values) *apitypes.FailureDesc {
+	values url.Values) (*apitypes.SessionToken, *apitypes.FailureDesc) {
 	
 	if sessionToken == nil {
 
@@ -221,15 +221,15 @@ func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
 		
 		var sessionId string
 		valuear, found := values["SessionId"]
-		if ! found { return apitypes.NewFailureDesc("Unauthenticated - no session Id found") }
+		if ! found { return nil, apitypes.NewFailureDesc("Unauthenticated - no session Id found") }
 		sessionId = valuear[0]
-		if sessionId == "" { return apitypes.NewFailureDesc("Unauthenticated - session Id appears to be malformed") }
+		if sessionId == "" { return nil, apitypes.NewFailureDesc("Unauthenticated - session Id appears to be malformed") }
 		sessionToken = server.authService.identifySession(sessionId)  // returns nil if invalid
-		if sessionToken == nil { return apitypes.NewFailureDesc("Unauthenticated - session Id is invalid") }
+		if sessionToken == nil { return nil, apitypes.NewFailureDesc("Unauthenticated - session Id is invalid") }
 	}
 
 	if ! server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
-		return apitypes.NewFailureDesc("Invalid session Id")
+		return nil, apitypes.NewFailureDesc("Invalid session Id")
 	}
 	
 	// Identify the user.
@@ -237,10 +237,10 @@ func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
 	fmt.Println("userid=", userId)
 	var user User = server.dbClient.dbGetUserByUserId(userId)
 	if user == nil {
-		return apitypes.NewFailureDesc("user object cannot be identified from user id " + userId)
+		return nil, apitypes.NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
 	
-	return nil
+	return sessionToken, nil
 }
 
 /*******************************************************************************

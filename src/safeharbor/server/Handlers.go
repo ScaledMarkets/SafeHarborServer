@@ -193,7 +193,7 @@ func authenticate(server *Server, sessionToken *apitypes.SessionToken, values ur
 func logout(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	server.authService.invalidateSessionId(sessionToken.UniqueSessionId)
 	return apitypes.NewResult(200, "Logged out")
@@ -206,7 +206,7 @@ func logout(server *Server, sessionToken *apitypes.SessionToken, values url.Valu
 func createUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var err error
 	var userInfo *apitypes.UserInfo
@@ -248,7 +248,7 @@ func createUser(server *Server, sessionToken *apitypes.SessionToken, values url.
 func disableUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var userObjId string
 	var err error
@@ -275,7 +275,7 @@ func disableUser(server *Server, sessionToken *apitypes.SessionToken, values url
 func createGroup(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -321,7 +321,7 @@ func createGroup(server *Server, sessionToken *apitypes.SessionToken, values url
 func deleteGroup(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var groupId string
 	var err error
@@ -351,7 +351,7 @@ func deleteGroup(server *Server, sessionToken *apitypes.SessionToken, values url
 func getGroupUsers(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var groupId string
@@ -390,7 +390,7 @@ func getGroupUsers(server *Server, sessionToken *apitypes.SessionToken, values u
 func addGroupUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var groupId string
@@ -434,7 +434,7 @@ func addGroupUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 func remGroupUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	return apitypes.NewFailureDesc("Not implemented yet: remGroupUser")
 }
@@ -500,7 +500,7 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 func getRealmDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var err error
 	var realmId string
@@ -525,7 +525,7 @@ func getRealmDesc(server *Server, sessionToken *apitypes.SessionToken, values ur
 func createRealm(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var realmInfo *apitypes.RealmInfo
@@ -554,7 +554,7 @@ func createRealm(server *Server, sessionToken *apitypes.SessionToken, values url
 func deactivateRealm(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var realmId string
 	var err error
@@ -577,7 +577,7 @@ func deactivateRealm(server *Server, sessionToken *apitypes.SessionToken, values
 func addRealmUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -607,7 +607,7 @@ func addRealmUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 func remRealmUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	return apitypes.NewFailureDesc("Not implemented yet: remRealmUser")
 }
@@ -619,7 +619,7 @@ func remRealmUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 func getRealmUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -652,7 +652,7 @@ func getRealmUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 func getRealmUsers(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var realmId string
 	var err error
@@ -686,7 +686,7 @@ func getRealmUsers(server *Server, sessionToken *apitypes.SessionToken, values u
 func getRealmGroups(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var groupDescs apitypes.GroupDescs = make([]*apitypes.GroupDesc, 0)
 	var realmId string
@@ -722,7 +722,7 @@ func getRealmGroups(server *Server, sessionToken *apitypes.SessionToken, values 
 func getRealmRepos(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -763,7 +763,7 @@ func getRealmRepos(server *Server, sessionToken *apitypes.SessionToken, values u
 func getAllRealms(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var realmIds []string = server.dbClient.dbGetAllRealmIds()
 	
@@ -791,7 +791,7 @@ func getAllRealms(server *Server, sessionToken *apitypes.SessionToken, values ur
 func createRepo(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	fmt.Println("Creating repo...")
 	var err error
@@ -841,7 +841,7 @@ func createRepo(server *Server, sessionToken *apitypes.SessionToken, values url.
 func deleteRepo(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	return apitypes.NewFailureDesc("Not implemented yet: deleteRepo")
 }
@@ -853,7 +853,7 @@ func deleteRepo(server *Server, sessionToken *apitypes.SessionToken, values url.
 func getDockerfiles(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var repoId string
@@ -894,7 +894,7 @@ func getDockerfiles(server *Server, sessionToken *apitypes.SessionToken, values 
 func getImages(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var repoId string
@@ -937,7 +937,7 @@ func getImages(server *Server, sessionToken *apitypes.SessionToken, values url.V
 func addDockerfile(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the repo.
 	var repoId string
@@ -979,7 +979,7 @@ func addDockerfile(server *Server, sessionToken *apitypes.SessionToken, values u
 func getGroupDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the group.
 	var groupId string
@@ -1000,7 +1000,7 @@ func getGroupDesc(server *Server, sessionToken *apitypes.SessionToken, values ur
 func getRepoDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the repo.
 	var repoId string
@@ -1021,7 +1021,7 @@ func getRepoDesc(server *Server, sessionToken *apitypes.SessionToken, values url
 func getDockerImageDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the repo.
 	var imageId string
@@ -1042,7 +1042,7 @@ func getDockerImageDesc(server *Server, sessionToken *apitypes.SessionToken, val
 func getDockerfileDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the dockerfile.
 	var dockerfileId string
@@ -1063,7 +1063,7 @@ func getDockerfileDesc(server *Server, sessionToken *apitypes.SessionToken, valu
 func replaceDockerfile(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var dockerfileId string
 	var desc string
@@ -1102,7 +1102,7 @@ func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values 
 
 	fmt.Println("Entered execDockerfile")
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the Dockerfile.
 	var err error
@@ -1137,7 +1137,8 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 
 	fmt.Println("Entered addAndExecDockerfile")
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var repoId string
 	var err error
@@ -1182,7 +1183,7 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var imageId string
 	var err error
@@ -1232,7 +1233,7 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 func setPermission(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Get the mask that we will use to overwrite the current mask.
 	var partyId string
@@ -1289,7 +1290,7 @@ func setPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 func addPermission(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Get the mask that we will be adding to the current mask.
 	var partyId string
@@ -1345,7 +1346,7 @@ func addPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 func remPermission(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	return apitypes.NewFailureDesc("Not implemented yet: remPermission")
 }
@@ -1357,7 +1358,7 @@ func remPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 func getPermission(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var partyId string
 	var err error
@@ -1421,7 +1422,7 @@ func getMyDesc(server *Server, sessionToken *apitypes.SessionToken, values url.V
 func getMyGroups(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var groupDescs apitypes.GroupDescs = make([]*apitypes.GroupDesc, 0)
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
@@ -1447,7 +1448,7 @@ func getMyGroups(server *Server, sessionToken *apitypes.SessionToken, values url
 func getMyRealms(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var realms map[string]Realm = make(map[string]Realm)
 	
@@ -1487,7 +1488,7 @@ func getMyRealms(server *Server, sessionToken *apitypes.SessionToken, values url
 func getMyRepos(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	// Traverse the user's ACL entries; form the union of the repos that the user
 	// has explicit access to, and the repos that belong to the realms that the user
@@ -1548,7 +1549,7 @@ func getMyRepos(server *Server, sessionToken *apitypes.SessionToken, values url.
 func getMyDockerfiles(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var realms map[string]Realm = make(map[string]Realm)
 	var repos map[string]Repo = make(map[string]Repo)
@@ -1618,7 +1619,7 @@ func getMyDockerfiles(server *Server, sessionToken *apitypes.SessionToken, value
 func getMyDockerImages(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var realms map[string]Realm = make(map[string]Realm)
 	var repos map[string]Repo = make(map[string]Repo)
@@ -1688,7 +1689,7 @@ func getMyDockerImages(server *Server, sessionToken *apitypes.SessionToken, valu
 func getScanProviders(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var providerDescs apitypes.ScanProviderDescs = make([]*apitypes.ScanProviderDesc, 0)
 	var services []providers.ScanService = server.GetScanServices()
@@ -1706,7 +1707,7 @@ func getScanProviders(server *Server, sessionToken *apitypes.SessionToken, value
 func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var repoId string
 	var name string
@@ -1800,7 +1801,7 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 func getFlagImage(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var flagId string
 	var err error
@@ -1825,7 +1826,7 @@ func getFlagImage(server *Server, sessionToken *apitypes.SessionToken, values ur
 func defineFlag(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var repoId string
 	var err error
@@ -1866,7 +1867,7 @@ func defineFlag(server *Server, sessionToken *apitypes.SessionToken, values url.
 func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var scanConfigId, imageObjId string
 	var err error
@@ -1952,7 +1953,7 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 func getDockerImageStatus(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var imageId string
 	var err error
@@ -1985,7 +1986,7 @@ func getDockerImageStatus(server *Server, sessionToken *apitypes.SessionToken, v
 func getScanConfigDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var scanConfigId string
 	var err error
@@ -2009,7 +2010,7 @@ func getScanConfigDesc(server *Server, sessionToken *apitypes.SessionToken, valu
 func getFlagDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var flagId string
 	var err error
@@ -2044,7 +2045,7 @@ func replaceScanConfig(server *Server, sessionToken *apitypes.SessionToken, valu
 func getUserEvents(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	//....
 	return apitypes.NewFailureDesc("Not implemented yet: getUserEvents")
@@ -2057,7 +2058,7 @@ func getUserEvents(server *Server, sessionToken *apitypes.SessionToken, values u
 func getDockerImageEvents(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	//....
 	return apitypes.NewFailureDesc("Not implemented yet: getImageEvents")
@@ -2070,7 +2071,7 @@ func getDockerImageEvents(server *Server, sessionToken *apitypes.SessionToken, v
 func getDockerfileEvents(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	//....
 	return apitypes.NewFailureDesc("Not implemented yet: getDockerfileEvents")
