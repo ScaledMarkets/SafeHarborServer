@@ -1139,39 +1139,47 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	
 	var failMsg apitypes.RespIntfTp
 	if sessionToken, failMsg = authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	fmt.Println(">>>>A****")
 	
 	var repoId string
 	var err error
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	fmt.Println(">>>>B****")
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, repoId,
 		"addAndExecDockerfile"); failMsg != nil { return failMsg }
 	
+	fmt.Println(">>>>C****")
 	var dbClient = server.dbClient
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if repo == nil { return apitypes.NewFailureDesc("Repo does not exist") }
+	fmt.Println(">>>>D****")
 	
 	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	fmt.Println(">>>>E****")
 
 	var name string
 	var filepath string
 	name, filepath, err = captureFile(repo, files)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if filepath == "" { return apitypes.NewFailureDesc("No file was found") }
+	fmt.Println(">>>>F****")
 	
 	var dockerfile Dockerfile
 	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, name, filepath, desc)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if dockerfile == nil { return apitypes.NewFailureDesc("No dockerfile was attached") }
+	fmt.Println(">>>>G****")
 	
 	var image DockerImage
 	image, err = buildDockerfile(server, dockerfile, sessionToken, dbClient, values)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	fmt.Println(">>>>H****")
 	
 	return image.asDockerImageDesc()
 }
