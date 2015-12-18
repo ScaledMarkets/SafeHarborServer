@@ -1138,7 +1138,8 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	fmt.Println("Entered addAndExecDockerfile")
 	
 	var failMsg apitypes.RespIntfTp
-	if sessionToken, failMsg = authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	sessionToken, failMsg = authenticateSession(server, sessionToken, values)
+	if failMsg != nil { return failMsg }
 	fmt.Println(">>>>A****")
 	
 	var repoId string
