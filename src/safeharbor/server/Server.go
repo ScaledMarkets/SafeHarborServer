@@ -51,7 +51,8 @@ const (
 /*******************************************************************************
  * Create a Server structure. This includes reading in the auth server cert.
  */
-func NewServer(debug bool, noauthor bool, port int, adapter string, secretSalt string) *Server {
+func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
+	adapter string, secretSalt string) *Server {
 	
 	// Read configuration. (Defined in a JSON file.)
 	fmt.Println("Reading configuration")
@@ -172,8 +173,11 @@ func NewServer(debug bool, noauthor bool, port int, adapter string, secretSalt s
 		os.Exit(1);
 	}
 	var scanSvc providers.ScanService
-	scanSvc, err = providers.CreateClairServiceStub(clairConfig) // for testing only
-	//scanSvc, err = providers.CreateClairService(clairConfig)
+	if stubScanners {
+		scanSvc, err = providers.CreateClairServiceStub(clairConfig) // for testing only
+	} else {
+		scanSvc, err = providers.CreateClairService(clairConfig) // for testing only
+	}
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1);

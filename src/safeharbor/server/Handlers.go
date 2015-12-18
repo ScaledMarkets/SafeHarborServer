@@ -1819,16 +1819,44 @@ func getFlagImage(server *Server, sessionToken *apitypes.SessionToken, values ur
 }
 
 /*******************************************************************************
- * Arguments: RepoId, Name, image file
+ * Arguments: RepoId, Name, Description, image file
  * Returns: FlagDesc
  */
 func defineFlag(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
 	if failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	
+	var repoId string
+	var err error
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var name string
+	name, err = apitypes.GetRequiredHTTPParameterValue(values, "Name")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var desc string
+	desc, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var repo Repo
+	repo, err = server.dbClient.getRepo(repoId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var successImagePath string
+	_, successImagePath, err = captureFile(repo, files)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if successImagePath == "" { return apitypes.NewFailureDesc("No file attached") }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateInMask, repoId,
+		"defineFlag"); failMsg != nil { return failMsg }
 
-	//....
-	return apitypes.NewFailureDesc("Not implemented yet: defineFlag")
+	var flag Flag
+	flag, err = server.dbClient.dbCreateFlag(name, desc, repoId, successImagePath)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	return flag.asFlagDesc()
 }
 
 /*******************************************************************************
