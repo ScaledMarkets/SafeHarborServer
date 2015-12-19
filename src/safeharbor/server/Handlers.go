@@ -1765,26 +1765,31 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
-	var repoId string
-	var name string
-	var desc string
 	var err error
-
+	var providerName string
+	providerName, err = apitypes.GetRequiredHTTPParameterValue(values, "ProviderName")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var scanService providers.ScanService
+	scanService = server.GetScanService(providerName)
+	if scanService == nil { return apitypes.NewFailureDesc(
+		"Unable to identify a scan service named '" + providerName + "'")
+	}
+	
+	var name string
 	name, err = apitypes.GetRequiredHTTPParameterValue(values, "Name")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
+	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
+	var repoId string
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, repoId,
 		"defineScanConfig"); failMsg != nil { return failMsg }
-	
-	var providerName string
-	providerName, err = apitypes.GetRequiredHTTPParameterValue(values, "ProviderName")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var successExpr string = ""
 	successExpr, err = apitypes.GetHTTPParameterValue(values, "SuccessExpression")
@@ -1796,34 +1801,31 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 		providerName, paramValueIds, successExpr, "")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	// Look for each parameter required by the provider.
+	// Retrieve and set the provider parameters.
 	for key, valueAr := range values {
 		if strings.HasPrefix(key, "scan.") {
 			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
 				"Parameter " + key + " is ill-formatted")
 			}
-			var name string = strings.TrimPrefix(key, "scan.")
+			var paramName string = strings.TrimPrefix(key, "scan.")
 			// See if the parameter is known by the scanner.
-			var scanService providers.ScanService
-			scanService = server.GetScanService(providerName)
-			if scanService == nil { return apitypes.NewFailureDesc(
-				"Unable to identify a scan service named '" + providerName + "'")
-			}
-			var value string = valueAr[0]
-			var pval ParameterValue
-			pval, err = scanConfig.setParameterValue(name, value)
+			_, err = scanService.GetParameterDescription(paramName)
 			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-			paramValueIds = append(paramValueIds, pval.getId())
+			// Create a ParameterValue and attach it to the ScanConfig.
+			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
+				"Value for scan parameter '" + paramName + "' is ill-formed") }
+			var value string = valueAr[0]
+			_, err = scanConfig.setParameterValue(paramName, value)
+			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		}
 	}
 	
 	// Add ACL entry to enable the current user to access what he/she just created.
 	var userId string = sessionToken.AuthenticatedUserid
 	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil { return apitypes.NewFailureDesc(
+		"Internal error - could not identify user after use has been authenticated") }
 
-	var obj PersistObj = server.dbClient.getPersistentObject(user.getId())
-	assertThat(obj != nil, "Internal error in defineScanConfig: obj is nil")
-	
 	_, err = server.dbClient.dbCreateACLEntry(scanConfig.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -1832,6 +1834,86 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	var imageFilepath string
 	var repo Repo
 	repo, err = server.dbClient.getRepo(repoId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	_, imageFilepath, err = captureFile(repo, files)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if imageFilepath != "" { // a file was attached - presume that it is an image
+		var flag Flag
+		flag, err = server.dbClient.dbCreateFlag(name, desc, repoId, imageFilepath)
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		err = scanConfig.setFlagId(flag.getId())
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		// Add ACL entry.
+		_, err = server.dbClient.dbCreateACLEntry(flag.getId(), user.getId(),
+			[]bool{ true, true, true, true, true } )
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	}
+	
+	return scanConfig.asScanConfigDesc()
+}
+
+/*******************************************************************************
+ * Arguments: ScanConfigId, Name, Desc, ProviderName, Params..., SuccessExpression, file
+ * Returns: ScanConfigDesc
+ */
+func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+		
+	// Update only the fields that are specified.
+	var err error
+
+	var canConfigId string
+	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(values, "ScanConfigId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var scanConfig ScanConfig
+	scanConfig, err = servrer.dbClient.getScanConfig(scanConfigId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
+		scanConfig.getRepoId(), "defineScanConfig"); failMsg != nil { return failMsg }
+	
+	var name string
+	name, err = apitypes.GetHTTPParameterValue(values, "Name")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var desc string
+	desc, err = apitypes.GetHTTPParameterValue(values, "Description")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var providerName string
+	providerName, err = apitypes.GetHTTPParameterValue(values, "ProviderName")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var successExpr string = ""
+	successExpr, err = apitypes.GetHTTPParameterValue(values, "SuccessExpression")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	// Retrieve and set the provider parameters.
+	for key, valueAr := range values {
+		if strings.HasPrefix(key, "scan.") {
+			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
+				"Parameter " + key + " is ill-formatted")
+			}
+			var paramName string = strings.TrimPrefix(key, "scan.")
+			// See if the parameter is known by the scanner.
+			_, err = scanService.GetParameterDescription(paramName)
+			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+			// Create a ParameterValue and attach it to the ScanConfig.
+			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
+				"Value for scan parameter '" + paramName + "' is ill-formed") }
+			var value string = valueAr[0]
+			_, err = scanConfig.setParameterValue(paramName, value)
+			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		}
+	}
+	
+	// Add success image, if one was attached.
+	var imageFilepath string
+	var repo Repo
+	repo, err = server.dbClient.getRepo(scanConfig.getRepoId())
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	_, imageFilepath, err = captureFile(repo, files)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -2081,17 +2163,6 @@ func getFlagDesc(server *Server, sessionToken *apitypes.SessionToken, values url
 		"getFlagDesc"); failMsg != nil { return failMsg }
 	
 	return flag.asFlagDesc()
-}
-
-/*******************************************************************************
- * Arguments: ScanConfigId, Desc, RepoId, ProviderName, Params..., optional image file
- * Returns: ScanConfigDesc
- */
-func replaceScanConfig(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
-	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
-
-	//....
-	return apitypes.NewFailureDesc("Not implemented yet: replaceScanConfig")
 }
 
 /*******************************************************************************

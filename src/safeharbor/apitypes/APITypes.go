@@ -834,23 +834,33 @@ func (eventDesc *EventDesc) AsJSON() string {
 type ScanEventDesc struct {
 	EventDesc
 	ScanConfigId string
+	ProviderName string
+    ParameterValueDescs []ParameterValueDesc
 	Score string
 }
 
 func NewScanEventDesc(objId string, when time.Time, userId string,
-	scanConfigId string, score string) *ScanEventDesc {
+	scanConfigId, providerName string, paramValueDescs []string, score string) *ScanEventDesc {
 	return &ScanEventDesc{
 		EventDesc: *NewEventDesc(objId, when, userId),
 		ScanConfigId: scanConfigId,
+		ProviderName: providerName,
+		ParameterValueDescs: paramValuesDescs
 		Score: score,
 	}
 }
 
 func (eventDesc *ScanEventDesc) AsJSON() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\", " +
-		"\"ScanConfigId\": \"%s\", \"Score\": \"%s\"}",
+	var s = fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\", " +
+		"\"ScanConfigId\": \"%s\", \"ProviderName\": \"%s\", \"Score\": \"%s\",",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId,
-		eventDesc.ScanConfigId, eventDesc.Score)
+		eventDesc.ScanConfigId, eventDesc.ProviderName, eventDesc.Score)
+	
+	for i, valueDesc := range eventDesc.ParameterValueDescs {
+		if i > 0 { s = s + ", " }
+		s = s + valueDesc.AsJSON()
+	}
+	s = s + "}"
 }
 
 /*******************************************************************************

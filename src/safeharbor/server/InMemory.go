@@ -108,7 +108,7 @@ func (persist *Persistence) writeBack(obj PersistObj) error {
 	return nil
 }
 
-func (persist *Persistence) waitOnObjectForLock(obj PersistObj, timeoutSeconds int) error {
+func (persist *Persistence) waitForLockOnObject(obj PersistObj, timeoutSeconds int) error {
 	// TBD
 	return nil
 }
@@ -276,7 +276,7 @@ func (persObj *InMemPersistObj) getDBClient() DBClient {
 }
 
 func (persObj *InMemPersistObj) waitForLock() error {
-	return persObj.Client.waitOnObjectForLock(persObj, LockTimeoutSeconds)
+	return persObj.Client.waitForLockOnObject(persObj, LockTimeoutSeconds)
 }
 
 func (persObj *InMemPersistObj) releaseLock() {
