@@ -1155,6 +1155,9 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 			fmt.Println("Confirming that fd is not nil...")
 			if fd == nil {
 				fmt.Println("fd is nil!!!!! WTF??")
+				if failMsg != nil {
+					fmt.Println("And failMsg is still not nil")
+				}
 			} else {
 				fmt.Println("Confirmed: fd is not nil")
 				fmt.Println("About to dereference fd...")
