@@ -1137,9 +1137,10 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 
 	fmt.Println("Entered addAndExecDockerfile")
 	
-	var failMsg apitypes.RespIntfTp = nil
+	var failMsg *apitypes.FailureDesc = nil
 	sessionToken, failMsg = authenticateSession(server, sessionToken, values)
 	fmt.Println("Returned from authenticateSession")
+	/*
 	if failMsg == nil {
 		fmt.Println("failMsg is nil")
 	} else {
@@ -1168,6 +1169,7 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 			fmt.Println("Cast failed: NOT a *apitypes.FailureDesc")
 		}
 	}
+	*/
 	if failMsg != nil { return failMsg }
 	fmt.Println(">>>>A****")
 	
