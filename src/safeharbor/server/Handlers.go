@@ -1151,9 +1151,16 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 		fd, isType = failMsg.(*apitypes.FailureDesc)
 		fmt.Println("...type-casted failMsg")
 		if isType {
-			fmt.Println("Cast succeeded: about to dereference it...")
-			fmt.Println("fd is a *apitypes.FailureDesc; Reason =", fd.Reason)
-			fmt.Println("...dereference succeeded.")
+			fmt.Println("Cast succeeded: it is a *apitypes.FailureDesc")
+			fmt.Println("Confirming that fd is not nil...")
+			if fd == nil {
+				fmt.Println("fd is nil!!!!! WTF??")
+			} else {
+				fmt.Println("Confirmed: fd is not nil")
+				fmt.Println("About to dereference fd...")
+				fmt.Println("fd is a *apitypes.FailureDesc; Reason =", fd.Reason)
+				fmt.Println("...dereference succeeded.")
+			}
 		} else {
 			fmt.Println("Cast failed: NOT a *apitypes.FailureDesc")
 		}
