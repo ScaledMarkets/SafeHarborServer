@@ -1147,7 +1147,9 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 		fmt.Println("failMsg is a", reflect.TypeOf(failMsg))
 		var isType bool
 		var fd *apitypes.FailureDesc
+		fmt.Println("About to type-cast failMsg...")
 		fd, isType = failMsg.(*apitypes.FailureDesc)
+		fmt.Println("...type-casted failMsg")
 		if isType {
 			fmt.Println("fd is a *apitypes.FailureDesc; Reason =", fd.Reason)
 		} else {
