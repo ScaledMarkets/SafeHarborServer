@@ -1140,9 +1140,19 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	var failMsg apitypes.RespIntfTp = nil
 	sessionToken, failMsg = authenticateSession(server, sessionToken, values)
 	fmt.Println("Returned from authenticateSession")
-	if failMsg == nil { fmt.Println("failMsg is nil") } else {
+	if failMsg == nil {
+		fmt.Println("failMsg is nil")
+	} else {
 		fmt.Println("failMsg is NOT nil")
 		fmt.Println("failMsg is a", reflect.TypeOf(failMsg))
+		var isType bool
+		var fd *apitypes.FailureDesc
+		fd, isType = failMsg.(*apitypes.FailureDesc)
+		if isType {
+			fmt.Println("fd is a *apitypes.FailureDesc; Reason =", fd.Reason)
+		} else {
+			fmt.Println("NOT a *apitypes.FailureDesc")
+		}
 	}
 	if failMsg != nil { return failMsg }
 	fmt.Println(">>>>A****")
