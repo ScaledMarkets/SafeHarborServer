@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"io/ioutil"
 	//"time"
+	"reflect"
 	
 	"safeharbor/apitypes"
 	//"safeharbor/providers"
@@ -254,7 +255,12 @@ func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
 	
 	if sessionToken == nil { fmt.Println("sessionToken is nil") }
 	fmt.Println("Returning from authenticateSession")
-	return sessionToken, nil
+	var fd *apitypes.FailureDesc = nil
+	if fd == nil { fmt.Println("fd is nil") } else {
+		fmt.Println("fd is NOT nil")
+		fmt.Println("fd is a", reflect.TypeOf(fd))
+	}
+	return sessionToken, fd
 }
 
 /*******************************************************************************
