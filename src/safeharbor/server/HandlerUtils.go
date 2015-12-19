@@ -220,47 +220,28 @@ func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
 		// we allow the addAndExecDockerfile method to provide the session Id
 		// as an HTTP parameter, instead of via the normal mechanism (a cookie).
 		
-		fmt.Println("A****")
 		var sessionId string
 		valuear, found := values["SessionId"]
-		fmt.Println("B****")
 		if ! found { return nil, apitypes.NewFailureDesc("Unauthenticated - no session Id found") }
-		fmt.Println("C****")
 		sessionId = valuear[0]
 		if sessionId == "" { return nil, apitypes.NewFailureDesc("Unauthenticated - session Id appears to be malformed") }
-		fmt.Println("D****")
 		sessionToken = server.authService.identifySession(sessionId)  // returns nil if invalid
-		fmt.Println("E****")
 		if sessionToken == nil { return nil, apitypes.NewFailureDesc("Unauthenticated - session Id is invalid") }
-		fmt.Println("F****")
 	}
 
-	fmt.Println("G****")
 	if ! server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
-		fmt.Println("H****")
 		return nil, apitypes.NewFailureDesc("Invalid session Id")
 	}
 	
 	// Identify the user.
-	fmt.Println("I****")
 	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("J****")
 	fmt.Println("userid=", userId)
 	var user User = server.dbClient.dbGetUserByUserId(userId)
-	fmt.Println("K****")
 	if user == nil {
 		return nil, apitypes.NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
-	fmt.Println("L****")
 	
-	if sessionToken == nil { fmt.Println("sessionToken is nil") }
-	fmt.Println("Returning from authenticateSession")
-	var fd *apitypes.FailureDesc = nil
-	if fd == nil { fmt.Println("fd is nil") } else {
-		fmt.Println("fd is NOT nil")
-		fmt.Println("fd is a", reflect.TypeOf(fd))
-	}
-	return sessionToken, fd
+	return sessionToken, nil
 }
 
 /*******************************************************************************

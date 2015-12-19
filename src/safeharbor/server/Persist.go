@@ -83,6 +83,7 @@ type Group interface {
 	hasUserWithId(string) bool
 	addUserId(string) error
 	addUser(User)
+	remUser(User) error
 	asGroupDesc() *apitypes.GroupDesc
 }
 

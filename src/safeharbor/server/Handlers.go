@@ -436,7 +436,29 @@ func remGroupUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	return apitypes.NewFailureDesc("Not implemented yet: remGroupUser")
+	var err error
+	var groupId string
+	groupId, err = apitypes.GetRequiredHTTPParameterValue(values, "GroupId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var userObjId string
+	userObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserObjId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, groupId,
+		"remGroupUser"); failMsg != nil { return failMsg }
+	
+	var group Group
+	group, err = server.dbClient.getGroup(groupId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var user User
+	user, err = server.dbClient.getUser(userObjId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	err = group.remUser(user)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	return apitypes.NewResult(200, "User " + user.getName() + " removed from group " + group.getName())
 }
 
 /*******************************************************************************
@@ -1139,79 +1161,40 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	
 	var failMsg *apitypes.FailureDesc = nil
 	sessionToken, failMsg = authenticateSession(server, sessionToken, values)
-	fmt.Println("Returned from authenticateSession")
-	/*
-	if failMsg == nil {
-		fmt.Println("failMsg is nil")
-	} else {
-		fmt.Println("failMsg is NOT nil")
-		fmt.Println("failMsg is a", reflect.TypeOf(failMsg))
-		var isType bool
-		var fd *apitypes.FailureDesc
-		fmt.Println("About to type-cast failMsg...")
-		fd, isType = failMsg.(*apitypes.FailureDesc)
-		fmt.Println("...type-casted failMsg")
-		if isType {
-			fmt.Println("Cast succeeded: it is a *apitypes.FailureDesc")
-			fmt.Println("Confirming that fd is not nil...")
-			if fd == nil {
-				fmt.Println("fd is nil!!!!! WTF??")
-				if failMsg != nil {
-					fmt.Println("And failMsg is still not nil")
-				}
-			} else {
-				fmt.Println("Confirmed: fd is not nil")
-				fmt.Println("About to dereference fd...")
-				fmt.Println("fd is a *apitypes.FailureDesc; Reason =", fd.Reason)
-				fmt.Println("...dereference succeeded.")
-			}
-		} else {
-			fmt.Println("Cast failed: NOT a *apitypes.FailureDesc")
-		}
-	}
-	*/
 	if failMsg != nil { return failMsg }
-	fmt.Println(">>>>A****")
 	
 	var repoId string
 	var err error
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println(">>>>B****")
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, repoId,
 		"addAndExecDockerfile"); failMsg != nil { return failMsg }
 	
-	fmt.Println(">>>>C****")
 	var dbClient = server.dbClient
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if repo == nil { return apitypes.NewFailureDesc("Repo does not exist") }
-	fmt.Println(">>>>D****")
 	
 	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println(">>>>E****")
 
 	var name string
 	var filepath string
 	name, filepath, err = captureFile(repo, files)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if filepath == "" { return apitypes.NewFailureDesc("No file was found") }
-	fmt.Println(">>>>F****")
 	
 	var dockerfile Dockerfile
 	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, name, filepath, desc)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if dockerfile == nil { return apitypes.NewFailureDesc("No dockerfile was attached") }
-	fmt.Println(">>>>G****")
 	
 	var image DockerImage
 	image, err = buildDockerfile(server, dockerfile, sessionToken, dbClient, values)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println(">>>>H****")
 	
 	return image.asDockerImageDesc()
 }
@@ -1351,6 +1334,7 @@ func addPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	smask[4], err = apitypes.GetRequiredHTTPParameterValue(values, "CanDelete")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
 	var mask []bool
 	mask, err = apitypes.ToBoolAr(smask)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -1381,14 +1365,46 @@ func addPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 
 /*******************************************************************************
  * Arguments: PartyId, ResourceId, PermissionMask
- * Returns: PermissionDesc
+ * Returns: Result
  */
 func remPermission(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	return apitypes.NewFailureDesc("Not implemented yet: remPermission")
+	// Get the mask that we will be subracting from the current mask.
+	var partyId string
+	var err error
+	partyId, err = apitypes.GetRequiredHTTPParameterValue(values, "PartyId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	resourceId, err = apitypes.GetRequiredHTTPParameterValue(values, "ResourceId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var mask []bool
+	mask, err = apitypes.ToBoolAr(smask)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, resourceId,
+		"remPermission"); failMsg != nil { return failMsg }
+	
+	// Identify the Resource.
+	var dbClient DBClient = server.dbClient
+	var resource Resource
+	resource, err = dbClient.getResource(resourceId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if resource == nil { return apitypes.NewFailureDesc("Unable to identify resource with Id " + resourceId) }
+	
+	// Identify the Party.
+	var party Party
+	party, err = dbClient.getParty(partyId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if party == nil { return apitypes.NewFailureDesc("Unable to identify party with Id " + partyId) }
+	
+	// Get the current ACLEntry, if there is one.
+	err = resource.removeAccess(party)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	return apitypes.NewResult(200, "All permission removed")
 }
 
 /*******************************************************************************

@@ -41,6 +41,10 @@ import (
 	"safeharbor/apitypes"
 )
 
+const (
+	LockTimeoutSeconds int = 2
+)
+
 /*******************************************************************************
  * Implements DataError.
  */
@@ -102,6 +106,15 @@ func (persist *Persistence) writeBack(obj PersistObj) error {
 	// so that getPersistentObject will later be able to make the JSON to the
 	// appropriate go type, using reflection.
 	return nil
+}
+
+func (persist *Persistence) waitOnObjectForLock(obj PersistObj, timeoutSeconds int) error {
+	// TBD
+	return nil
+}
+
+func (persist *Persistence) releaseLock(obj PersistObj) {
+	// TBD
 }
 
 func (persist *Persistence) addObject(obj PersistObj) error {
@@ -260,6 +273,14 @@ func (persObj *InMemPersistObj) getId() string {
 
 func (persObj *InMemPersistObj) getDBClient() DBClient {
 	return persObj.Client
+}
+
+func (persObj *InMemPersistObj) waitForLock() error {
+	return persObj.Client.waitOnObjectForLock(persObj, LockTimeoutSeconds)
+}
+
+func (persObj *InMemPersistObj) releaseLock() {
+	persObj.Client.releaseLock(persObj)
 }
 
 // Placeholder - write back to persistent storage.
@@ -657,6 +678,20 @@ func (group *InMemGroup) addUserId(userObjId string) error {
 	err = group.writeBack()
 	
 	return err
+}
+
+func (group *InMemGroup) remUser(user User) error {
+	group.waitForLock()
+	defer group.releaseLock()
+	var userId string = user.getId()
+	for i, id := range group.UserObjIds {
+		if id == userId {
+			group.UserObjIds = append(group.UserObjIds[0:i], group.UserObjIds[i+1:]...)
+			group.writeBack()
+			return nil
+		}
+	}
+	return errors.New("Did not find user in this group")
 }
 
 func (group *InMemGroup) addUser(user User) {
