@@ -53,6 +53,30 @@ func (authSvc *AuthService) clearAllSessions() {
 }
 
 /*******************************************************************************
+ * 
+ */
+func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
+	return authSvc.computeHash(pswd).Sum(authSvc.secretSalt)
+}
+
+/*******************************************************************************
+ * 
+ */
+func (authSvc *AuthService) PasswordIsValid(pswd string) bool {
+	var untrustedHash string = parts[1]
+	var actualSaltedHashBytes []byte =
+		authSvc.computeHash(uniqueNonRandomValue).Sum(authSvc.secretSalt)
+	
+	var savedPswdHash = authSvc.computeHash(pswd).Sum(authSvc.secretSalt)
+	var prospectivePswdHash = authSvc.computeHash(pswd).Sum(authSvc.secretSalt)
+	if len(savedPswdHash) != len(prospectivePswdHash) return false
+	for i, b := range savedPswdHash {
+		if savedPswdHash[i] != prospectivePswdHash[i] return false
+	}
+	return true
+}
+
+/*******************************************************************************
  * Create a new user session. This presumes that the credentials have been verified.
  */
 func (authSvc *AuthService) createSession(creds *apitypes.Credentials) *apitypes.SessionToken {
@@ -135,6 +159,9 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 	if user == nil {
 		return false, errors.New("user object cannot be identified from user id " + userId)
 	}
+	
+	// Special case: Allow user all capabilities for their own user object.
+	if userId == resourceId { return true, nil }
 
 	// Verify that at most one field of the actionMask is true.
 	var nTrue = 0

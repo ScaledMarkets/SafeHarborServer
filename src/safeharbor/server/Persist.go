@@ -90,10 +90,15 @@ type Group interface {
 type User interface {
 	Party
 	getUserId() string
+	setPassword(string) error
 	hasGroupWithId(string) bool
 	addGroupId(string) error
 	getGroupIds() []string
 	asUserDesc() *apitypes.UserDesc
+	addLoginAttempt()
+	getMostRecentLoginAttempts() []string // each in seconds, Unix time
+	addEventId(string)
+	getEventIds() []string
 	
 	//getEventIds() []string
 }
@@ -221,6 +226,8 @@ type ScanConfig interface {
 	setParameterValue(string, string) (ParameterValue, error)
 	setFlagId(string) error
 	getFlagId() string
+	addScanEventId(id string)
+	getScanEventIds() []string
 	asScanConfigDesc() *apitypes.ScanConfigDesc
 }
 
@@ -236,6 +243,7 @@ type Event interface {
 	PersistObj
 	getWhen() time.Time
 	getUserObjId() string
+	asEventDesc() EventDesc
 }
 
 type ScanEvent interface {

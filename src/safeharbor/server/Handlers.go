@@ -163,14 +163,31 @@ func authenticate(server *Server, sessionToken *apitypes.SessionToken, values ur
 	// Verify credentials.
 	var user User = server.dbClient.dbGetUserByUserId(creds.UserId)
 	if user == nil {
-		return apitypes.NewFailureDesc("User was authenticated but not found in the database")
+		return apitypes.NewFailureDesc("User not found in the database")
 	}
 	
 	if ! user.isActive() { return apitypes.NewFailureDesc("User is not active") }
 	
+	// Check against brute force password attack.
+	var attempts []string = user.getMostRecentLoginAttempts()
+	if len(attempts >= server.MaxLoginAttemptsToRetain) && AreCloseInTime(attempts) {
+		server.LoginAlert(creds.UserId)
+		return apitypes.NewFailureDesc("Too many login attempts")
+	}
+	
+	// Verify password.
+	if ! server.authService.PasswordIsValid(creds.Password) {
+		return apitypes.NewFailureDesc("Invalid password")
+	}
+	
 	// Create new user session.
-	var token *apitypes.SessionToken = server.authService.createSession(creds)
-	token.SetRealmId(user.getRealmId())
+	var newSessionToken *apitypes.SessionToken = server.authService.createSession(creds)
+	newSessionToken.SetRealmId(user.getRealmId())
+	
+	// If the user had a prior session, invalidate it.
+	if sessionToken != nil {
+		server.authService.invalidateSessionId(sessionToken.UniqueSessionId)
+	}
 	
 	// Flag whether the user has Write access to the realm.
 	var realm Realm
@@ -180,10 +197,10 @@ func authenticate(server *Server, sessionToken *apitypes.SessionToken, values ur
 	entry, err = realm.getACLEntryForPartyId(user.getId())
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if entry != nil {
-		token.SetIsAdminUser(entry.getPermissionMask()[apitypes.CanWrite])
+		newSessionToken.SetIsAdminUser(entry.getPermissionMask()[apitypes.CanWrite])
 	}
 	
-	return token
+	return newSessionToken
 }
 
 /*******************************************************************************
@@ -266,6 +283,52 @@ func disableUser(server *Server, sessionToken *apitypes.SessionToken, values url
 	user.setActive(false)
 	
 	return apitypes.NewResult(200, "User with user Id '" + user.getUserId() + "' disabled")
+}
+
+/*******************************************************************************
+ * Arguments: UserId, OldPassword, NewPassword
+ * Returns: apitypes.Result
+ */
+func changePassword(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+
+	var usejId string
+	var err error
+	userId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	// Check that the userId is for the user who is currently logged in.
+	if sessionToken.AuthenticatedUserid != userId {
+		return apitypes.NewFailureDesc("Only an account owner may change their own password")
+	}
+	
+	var user User
+	user, err = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil { return apitypes.NewFailureDesc("User unidentified") }
+	
+	var oldPswd string
+	var err error
+	oldPswd, err = apitypes.GetRequiredHTTPParameterValue(values, "OldPassword")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if ! server.authService.PasswordIsValid(oldPswd) {
+		return apitypes.NewFailureDesc("Invalid password")
+	}
+	
+	var newPswd string
+	var err error
+	newPswd, err = apitypes.GetRequiredHTTPParameterValue(values, "NewPassword")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
+		user.getId(), "changePassword"); failMsg != nil { return failMsg }
+	
+	err = user.setPassword(newPswd)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	return apitypes.NewResult(200, "Password changed")
 }
 
 /*******************************************************************************
@@ -620,18 +683,6 @@ func addRealmUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 	err = realm.addUserId(userObjId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	return apitypes.NewResult(200, "User added to realm")
-}
-
-/*******************************************************************************
- * Arguments: RealmId, UserObjId
- * Returns: apitypes.Result
- */
-func remRealmUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
-	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
-
-	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
-
-	return apitypes.NewFailureDesc("Not implemented yet: remRealmUser")
 }
 
 /*******************************************************************************
@@ -2174,8 +2225,20 @@ func getUserEvents(server *Server, sessionToken *apitypes.SessionToken, values u
 	
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	//....
-	return apitypes.NewFailureDesc("Not implemented yet: getUserEvents")
+	var userId string = sessionToken.AuthenticatedUserid
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil { return apitypes.NewFailureDesc("Unidentified user, " + userId) }
+	var eventIds []string = user.getEventIds()
+	
+	var eventDescs []EventDesc = make([]EventDesc, 0)
+	for _, eventId := range eventIds {
+		var event Event
+		event, err = server.dbClient.getEvent(eventId)
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		eventDescs = append(eventDescs, event.asEventDesc())
+	}
+	
+	return eventDescs
 }
 
 /*******************************************************************************
@@ -2187,8 +2250,28 @@ func getDockerImageEvents(server *Server, sessionToken *apitypes.SessionToken, v
 	
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	//....
-	return apitypes.NewFailureDesc("Not implemented yet: getImageEvents")
+	var imageId string
+	var err error
+	imageId, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask,
+		imageId, "getDockerImageEvents"); failMsg != nil { return failMsg }
+	
+	var image DockerImage
+	image, err = server.dbClient.getDockerImage(imageId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var eventIds []string = image.getScanEventIds()
+	var eventDescs []EventDesc = make([]EventDesc, 0)
+	for _, eventId := range eventIds {
+		var event Event
+		event, err = server.dbClient.getEvent(eventId)
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		eventDescs = append(eventDescs, event.asEventDesc())
+	}
+	
+	return eventDescs
 }
 
 /*******************************************************************************
@@ -2200,6 +2283,26 @@ func getDockerfileEvents(server *Server, sessionToken *apitypes.SessionToken, va
 	
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	//....
-	return apitypes.NewFailureDesc("Not implemented yet: getDockerfileEvents")
+	var dockerfileId string
+	var err error
+	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(values, "DockerfileId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask,
+		dockerfileId, "getDockerfileEvents"); failMsg != nil { return failMsg }
+	
+	var dockerfile Dockerfile
+	dockerfile, err = server.dbClient.getDockerfile(dockerfileId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var eventIds []string = dockerfile.getDockerfileExecEventIds()
+	var eventDescs []EventDesc = make([]EventDesc, 0)
+	for _, eventId := range eventIds {
+		var event Event
+		event, err = server.dbClient.getEvent(eventId)
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		eventDescs = append(eventDescs, event.asEventDesc())
+	}
+	
+	return eventDescs
 }

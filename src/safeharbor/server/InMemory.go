@@ -24,6 +24,7 @@
  * data anew.
  * 2. Changes are not written to the database until it is known that there are no errors.
  * 3. If a consistency error is detected, a custom error type, DataError, is returned.
+ * 4. For cases where consistency is important, an object level lock is used.
  */
 
 package server
@@ -72,6 +73,7 @@ func (dataErr *InMemDataError) asFailureDesc() *apitypes.FailureDesc {
  * Chosen binding: https://github.com/hoisie/redis
  */
 type Persistence struct {
+	uniqueId int64
 	allObjects map[string]PersistObj
 	allUsers map[string]User
 	allRealmIds []string
@@ -79,22 +81,38 @@ type Persistence struct {
 
 func NewPersistence() *Persistence {
 	return &Persistence{
+		uniqueId: 5,
 		allRealmIds:  make([]string, 0),
 		allObjects: make(map[string]PersistObj),
 		allUsers: make(map[string]User),
 	}
 }
 
+// Create a globally unique id, to be used to uniquely identify a new persistent
+// object. The creation of the id must be done atomically.
+func (persist *Persistence) createUniqueDbObjectId() string {
+	return fmt.Sprintf("%d", atomic.AddInt64(&persist.uniqueId, 100000000))
+}
+
 // Return the persistent object that is identified by the specified unique id.
 // An object's Id is assigned to it by the function that creates the object.
-func (client *InMemClient) getPersistentObject(id string) PersistObj {
+func (persist *Persistence) getPersistentObject(id string) PersistObj {
 	// TBD:
 	// Read JSON from the database, using the id as the key; then deserialize
 	// (unmarshall) the JSON into an object. The outermost JSON object will be
 	// a field name - that field name is the name of the go object type; reflection
 	// will be used to identify the go type, and set the fields in the type using
 	// values from the hashmap that is built by the unmarshalling.
-	return client.allObjects[id]
+	return persist.allObjects[id]
+	
+	// Retrieve the object's value from redis.
+	// Parse the JSON, using a custom parser that builds the types that are
+	// defined in InMemory, using the New method of each type.
+	// For fields that are string arrays or boolean arrays, the make function
+	// is used to construct the required in-memory array.
+	// var constructor = client.MethodByName("New" + typeName)
+	// var obj = constructor(fieldValues...)
+	// return obj.(PersistObj)
 }
 
 func (persist *Persistence) writeBack(obj PersistObj) error {
@@ -110,6 +128,7 @@ func (persist *Persistence) writeBack(obj PersistObj) error {
 
 func (persist *Persistence) waitForLockOnObject(obj PersistObj, timeoutSeconds int) error {
 	// TBD
+	// If the current thread already has a lock on the specified object, merely return.
 	return nil
 }
 
@@ -147,7 +166,6 @@ func (persist *Persistence) addUser(user User) error {
 type InMemClient struct {
 	Persistence
 	Server *Server
-	uniqueId int64
 }
 
 func NewInMemClient(server *Server) DBClient {
@@ -156,7 +174,6 @@ func NewInMemClient(server *Server) DBClient {
 	var client = &InMemClient{
 		Persistence: *NewPersistence(),
 		Server: server,
-		uniqueId: 5,
 	}
 	
 	client.init()
@@ -207,12 +224,6 @@ func (client *InMemClient) init() {
 
 func (client *InMemClient) dbGetUserByUserId(userId string) User {
 	return client.allUsers[userId]
-}
-
-// Create a globally unique id, to be used to uniquely identify a new persistent
-// object. The creation of the id must be done atomically.
-func (client *InMemClient) createUniqueDbObjectId() string {
-	return fmt.Sprintf("%d", atomic.AddInt64(&client.uniqueId, 1))
 }
 
 // Create a directory for the Dockerfiles, images, and any other files owned
@@ -712,15 +723,17 @@ type InMemUser struct {
 	EmailAddress string
 	PasswordHash [20]byte
 	GroupIds []string
+	MostRecentLoginAttempts []string
+	EventIds []string
 }
 
 func (client *InMemClient) NewInMemUser(userId string, name string,
-	email string, pswdAsBytes []byte, realmId string) (*InMemUser, error) {
+	email string, ....pswdAsBytes []byte, realmId string) (*InMemUser, error) {
 	var newUser = &InMemUser{
 		InMemParty: *client.NewInMemParty(name, realmId),
 		UserId: userId,
 		EmailAddress: email,
-		PasswordHash: sha1.Sum(pswdAsBytes),
+		PasswordHash: client.Server.authService.CreatePasswordHash(pswd),
 		GroupIds: make([]string, 0),
 	}
 	return newUser, client.addUser(newUser)
@@ -740,9 +753,8 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	if realm == nil { return nil, errors.New("Realm with Id " + realmId + " not found") }
 	
 	//var userObjId string = createUniqueDbObjectId()
-	var pswdAsBytes []byte = []byte(pswd)
 	var newUser *InMemUser
-	newUser, err = client.NewInMemUser(userId, name, email, pswdAsBytes, realmId)
+	newUser, err = client.NewInMemUser(userId, name, email, pswd, realmId)
 	if err != nil { return nil, err }
 	
 	// Add to parent realm's list.
@@ -753,6 +765,12 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 
 	fmt.Println("Created user")
 	return newUser, nil
+}
+
+func (user *InMemUser) setPassword(pswd string) error {
+	var pswdAsBytes []byte = []byte(pswd)
+	user.PasswordHash = sha1.Sum(pswdAsBytes)
+	user.writeBack()
 }
 
 func (client *InMemClient) getUser(id string) (User, error) {
@@ -848,6 +866,27 @@ func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) ([]stri
 	}
 	
 	return realmIds, err
+}
+
+func (user *InMemUser) addLoginAttempt() {
+	var num = len(user.MostRecentLoginAttempts)
+	var max = user.Client.Server.server.MaxLoginAttemptsToRetain
+	if num > max { num = num - max }
+	user.MostRecentLoginAttempts = append(
+		user.MostRecentLoginAttempts[num:], fmt.Sprintf("%d", time.Now().Unix()))
+}
+
+func (user *InMemUser) getMostRecentLoginAttempts() []string {
+	return user.MostRecentLoginAttempts
+}
+
+func (user *InMemUser) addEventId(id string) {
+	user.EventIds = append(user.EventIds, id)
+	user.writeBack()
+}
+
+func (user *InMemUser) getEventIds() []string {
+	return user.EventIds
 }
 
 func (user *InMemUser) asUserDesc() *apitypes.UserDesc {
@@ -1718,6 +1757,7 @@ type InMemScanConfig struct {
 	ProviderName string
 	ParameterValueIds []string
 	FlagId string
+	ScanEventIds []string
 }
 
 func (client *InMemClient) NewInMemScanConfig(name, desc, repoId,
@@ -1837,6 +1877,15 @@ func (scanConfig *InMemScanConfig) setFlagId(id string) error {
 
 func (scanConfig *InMemScanConfig) getFlagId() string {
 	return scanConfig.FlagId
+}
+
+func (scanConfig *InMemScanConfig) addScanEventId(id string) {
+	scanConfig.ScanEventIds = append(scanConfig.ScanEventIds, id)
+	scanConfig.writeBack()
+}
+
+func (scanConfig *InMemScanConfig) getScanEventIds() []string {
+	return scanConfig.ScanEventIds
 }
 
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
@@ -2017,6 +2066,15 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 	if err != nil { return nil, err }
 	err = scanEvent.writeBack()
 	if err != nil { return nil, err }
+	
+	// Link to user.
+	var user User
+	user, err = client.getUser(userObjId)
+	if err != nil { return nil, err }
+	user.addEventId(scanEvent.getId())
+	
+	// Link to ScanConfig.
+	scanConfig.addScanEventId(scanEvent.getId())
 
 	fmt.Println("Created ScanEvent")
 	return scanEvent, nil
@@ -2051,6 +2109,10 @@ func (event *InMemScanEvent) getActualParameterValueIds() []string {
 func (event *InMemScanEvent) asScanEventDesc() *apitypes.ScanEventDesc {
 	return apitypes.NewScanEventDesc(event.Id, event.When, event.UserObjId,
 		event.ScanConfigId, event.Score)
+}
+
+func (event *InMemEvent) asEventDesc() *apitypes.EventDesc {
+	return event.asScanEventDesc()
 }
 
 /*******************************************************************************
@@ -2103,6 +2165,12 @@ func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId, imageId,
 	if err != nil { return nil, err }
 	dockerfile.addEventId(newDockerfileExecEvent.getId())
 	
+	// Link to user.
+	var user User
+	user, err = client.getUser(userObjId)
+	if err != nil { return nil, err }
+	user.addEventId(newDockerfileExecEvent.getId())
+	
 	return newDockerfileExecEvent, nil
 }
 
@@ -2112,4 +2180,13 @@ func (execEvent *InMemDockerfileExecEvent) getDockerfileId() string {
 
 func (execEvent *InMemDockerfileExecEvent) getDockerfileExternalObjId() string {
 	return execEvent.DockerfileExternalObjId
+}
+
+func (event *InMemEvent) asDockerfileExecEventDesc() *apitypes.EventDesc {
+	return NewDockerfileExecEventDesc(event.getId(), event.When, event.userObjId,
+		event.DockerfileId)
+}
+
+func (event *InMemEvent) asEventDesc() *apitypes.EventDesc {
+	return event.asDockerfileExecEventDesc()
 }

@@ -812,20 +812,33 @@ type EventDesc struct {
 	BaseType
 	EventId string
 	When time.Time
-	UserId string
+	UserObjId string
 }
 
-func NewEventDesc(objId string, when time.Time, userId string) *EventDesc {
+func NewEventDesc(objId string, when time.Time, userObjId string) *EventDesc {
 	return &EventDesc{
 		EventId: objId,
 		When: when,
-		UserId: userId,
+		UserObjId: userId,
 	}
 }
 
 func (eventDesc *EventDesc) AsJSON() string {
 	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\"}",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId)
+}
+
+type EventDescs []*EventDesc
+
+func (eventDescs EventDescs) AsJSON() string {
+	var response string = "["
+	var firstTime bool = true
+	for _, desc := range eventDescs {
+		if firstTime { firstTime = false } else { response = response + ",\n" }
+		response = response + desc.AsJSON()
+	}
+	response = response + "]"
+	return response
 }
 
 /*******************************************************************************

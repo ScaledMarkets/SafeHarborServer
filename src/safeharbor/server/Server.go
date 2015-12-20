@@ -41,6 +41,7 @@ type Server struct {
 	dispatcher *Dispatcher
 	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
 	Authorize bool
+	MaxLoginAttemptsToRetain int
 	Debug bool
 }
 
@@ -114,6 +115,7 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		Config:  config,
 		certPool: certPool,
 		dispatcher: dispatcher,
+		MaxLoginAttemptsToRetain: 5,
 	}
 	
 	server.dbClient = NewInMemClient(server)
@@ -187,6 +189,14 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 	}
 	
 	return server
+}
+
+/*******************************************************************************
+ * Warn the administrator that a user has attempted to log in more than
+ * MaxLoginAttemptsToRetain times.
+ */
+func (server *Server) LoginAlert(userId string) {
+	fmt.Println("*****Possible brute for attack for user Id " + userId)
 }
 
 /*******************************************************************************
