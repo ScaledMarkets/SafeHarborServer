@@ -50,6 +50,7 @@ type DBClient interface {
 	getScanConfig(string) (ScanConfig, error)
 	getParameterValue(string) (ParameterValue, error)
 	getFlag(string) (Flag, error)
+	getEvent(string) (Event, error)
 	getScanEvent(string) (ScanEvent, error)
 	getRealmsAdministeredByUser(string) ([]string, error)  // those realms for which user can edit the realm
 	init()
@@ -94,13 +95,11 @@ type User interface {
 	hasGroupWithId(string) bool
 	addGroupId(string) error
 	getGroupIds() []string
-	asUserDesc() *apitypes.UserDesc
 	addLoginAttempt()
 	getMostRecentLoginAttempts() []string // each in seconds, Unix time
 	addEventId(string)
 	getEventIds() []string
-	
-	//getEventIds() []string
+	asUserDesc() *apitypes.UserDesc
 }
 
 type ACLEntry interface {
@@ -122,8 +121,12 @@ type ACL interface {
 type Resource interface {
 	ACL
 	getName() string
+	setName(string) error
+	setNameDeferredUpdate(string)
 	getCreationTime() time.Time
 	getDescription() string
+	setDescription(string) error
+	setDescriptionDeferredUpdate(string)
 	getACLEntryForPartyId(string) (ACLEntry, error)
 	getParentId() string
 	isRealm() bool
@@ -138,7 +141,6 @@ type Resource interface {
 
 type Realm interface {
 	Resource
-	//getName() string
 	getAdminUserId() string
 	getFileDirectory() string
 	hasUserWithId(string) bool
@@ -151,18 +153,17 @@ type Realm interface {
 	getRepoIds() []string
 	addUserId(string) error
 	getUserByUserId(string) (User, error)
-	asRealmDesc() *apitypes.RealmDesc
 	getGroupIds() []string
 	addGroup(Group) error
 	addUser(User) error
 	addRepo(Repo) error
 	deleteRepo(Repo) error
 	deleteGroup(Group) error
+	asRealmDesc() *apitypes.RealmDesc
 }
 
 type Repo interface {
 	Resource
-	//getName() string
 	getFileDirectory() string
 	getRealmId() string
 	getRealm() (Realm, error)
@@ -175,21 +176,18 @@ type Repo interface {
 	addScanConfig(ScanConfig) error
 	addFlag(Flag) error
 	getScanConfigByName(string) (ScanConfig, error)
-	asRepoDesc() *apitypes.RepoDesc
 	deleteResource(Resource) error
-	
-	//getDatasetIds() []string
-	//getFlagIds() []string
+	asRepoDesc() *apitypes.RepoDesc
 }
 
 type Dockerfile interface {
 	Resource
 	getExternalFilePath() string
-	asDockerfileDesc() *apitypes.DockerfileDesc
 	getRepo() (Repo, error)
 	getDockerfileExecEventIds() []string
 	addEventId(string) error
 	replaceDockerfileFile(filepath, desc string) error
+	asDockerfileDesc() *apitypes.DockerfileDesc
 }
 
 type Image interface {
@@ -199,7 +197,6 @@ type Image interface {
 
 type DockerImage interface {
 	Image
-	//ImageCreationEvent
 	getDockerImageTag() string  // Return same as getName().
 	getFullName() (string, error)  // Return the fully qualified docker image path.
 	getScanEventIds() []string // ordered from oldest to newest
@@ -210,7 +207,6 @@ type DockerImage interface {
 type ParameterValue interface {
 	PersistObj
 	getName() string
-	//getTypeName() string
 	getStringValue() string
 	setStringValue(string) error
 	getConfigId() string
@@ -220,15 +216,22 @@ type ParameterValue interface {
 type ScanConfig interface {
 	Resource
 	getSuccessExpr() string
+	setSuccessExpression(string) error
+	setSuccessExpressionDeferredUpdate(string)
 	getRepoId() string
 	getProviderName() string
+	setProviderName(string) error
+	setProviderNameDeferredUpdate(string)
 	getParameterValueIds() []string
 	setParameterValue(string, string) (ParameterValue, error)
+	setParameterValueDeferredUpdate(string, string) (ParameterValue, error)
 	setFlagId(string) error
 	getFlagId() string
 	addScanEventId(id string)
 	getScanEventIds() []string
 	asScanConfigDesc() *apitypes.ScanConfigDesc
+
+
 }
 
 type Flag interface {
@@ -243,7 +246,7 @@ type Event interface {
 	PersistObj
 	getWhen() time.Time
 	getUserObjId() string
-	asEventDesc() EventDesc
+	asEventDesc() apitypes.EventDesc
 }
 
 type ScanEvent interface {

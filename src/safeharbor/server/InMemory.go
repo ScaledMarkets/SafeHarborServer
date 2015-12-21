@@ -36,7 +36,7 @@ import (
 	"reflect"
 	"os"
 	//"io/ioutil"
-	"crypto/sha1"
+	//"crypto/sha512"
 	"time"
 	
 	"safeharbor/apitypes"
@@ -444,12 +444,30 @@ func (resource *InMemResource) getName() string {
 	return resource.Name
 }
 
+func (resource *InMemResource) setName(name string) error {
+	resource.setNameDeferredUpdate(name)
+	return resource.writeBack()
+}
+
+func (resource *InMemResource) setNameDeferredUpdate(name string) {
+	resource.Name = name
+}
+
 func (resource *InMemResource) getCreationTime() time.Time {
 	return resource.CreationTime
 }
 
 func (resource *InMemResource) getDescription() string {
 	return resource.Description
+}
+
+func (resource *InMemResource) setDescription(desc string) error {
+	resource.setDescriptionDeferredUpdate(desc)
+	return resource.writeBack()
+}
+
+func (resource *InMemResource) setDescriptionDeferredUpdate(desc string) {
+	resource.Description = desc
 }
 
 func (resource *InMemResource) getACLEntryForPartyId(partyId string) (ACLEntry, error) {
@@ -721,14 +739,14 @@ type InMemUser struct {
 	InMemParty
 	UserId string
 	EmailAddress string
-	PasswordHash [20]byte
+	PasswordHash []byte
 	GroupIds []string
 	MostRecentLoginAttempts []string
 	EventIds []string
 }
 
 func (client *InMemClient) NewInMemUser(userId string, name string,
-	email string, ....pswdAsBytes []byte, realmId string) (*InMemUser, error) {
+	email string, pswd string, realmId string) (*InMemUser, error) {
 	var newUser = &InMemUser{
 		InMemParty: *client.NewInMemParty(name, realmId),
 		UserId: userId,
@@ -768,9 +786,9 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 }
 
 func (user *InMemUser) setPassword(pswd string) error {
-	var pswdAsBytes []byte = []byte(pswd)
-	user.PasswordHash = sha1.Sum(pswdAsBytes)
+	user.PasswordHash = user.Client.Server.authService.CreatePasswordHash(pswd)
 	user.writeBack()
+	return nil
 }
 
 func (client *InMemClient) getUser(id string) (User, error) {
@@ -870,7 +888,7 @@ func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) ([]stri
 
 func (user *InMemUser) addLoginAttempt() {
 	var num = len(user.MostRecentLoginAttempts)
-	var max = user.Client.Server.server.MaxLoginAttemptsToRetain
+	var max = user.Client.Server.MaxLoginAttemptsToRetain
 	if num > max { num = num - max }
 	user.MostRecentLoginAttempts = append(
 		user.MostRecentLoginAttempts[num:], fmt.Sprintf("%d", time.Now().Unix()))
@@ -1826,6 +1844,15 @@ func (scanConfig *InMemScanConfig) getSuccessExpr() string {
 	return scanConfig.SuccessExpression
 }
 
+func (scanConfig *InMemScanConfig) setSuccessExpression(expr string) error {
+	scanConfig.setSuccessExpressionDeferredUpdate(expr)
+	return scanConfig.writeBack()
+}
+
+func (scanConfig *InMemScanConfig) setSuccessExpressionDeferredUpdate(expr string) {
+	scanConfig.SuccessExpression = expr
+}
+
 func (scanConfig *InMemScanConfig) getRepoId() string {
 	return scanConfig.RepoId
 }
@@ -1834,11 +1861,30 @@ func (scanConfig *InMemScanConfig) getProviderName() string {
 	return scanConfig.ProviderName
 }
 
+func (scanConfig *InMemScanConfig) setProviderName(name string) error {
+	scanConfig.setProviderNameDeferredUpdate(name)
+	return scanConfig.writeBack()
+}
+
+func (scanConfig *InMemScanConfig) setProviderNameDeferredUpdate(name string) {
+	scanConfig.ProviderName = name
+}
+
 func (scanConfig *InMemScanConfig) getParameterValueIds() []string {
 	return scanConfig.ParameterValueIds
 }
 
 func (scanConfig *InMemScanConfig) setParameterValue(name, strValue string) (ParameterValue, error) {
+	var paramValue ParameterValue
+	var err error
+	paramValue, err = scanConfig.setParameterValueDeferredUpdate(name, strValue)
+	if err != nil { return paramValue, err }
+	err = paramValue.writeBack()
+	if err != nil { return paramValue, err }
+	return paramValue, scanConfig.writeBack()
+}
+
+func (scanConfig *InMemScanConfig) setParameterValueDeferredUpdate(name, strValue string) (ParameterValue, error) {
 	
 	// Check if a parameter value already exist for the parameter. If so, replace the value.
 	for _, id := range scanConfig.ParameterValueIds {
@@ -1863,8 +1909,6 @@ func (scanConfig *InMemScanConfig) setParameterValue(name, strValue string) (Par
 	paramValue, err = scanConfig.Client.NewInMemParameterValue(name, strValue, scanConfig.getId())
 	if err != nil { return nil, err }
 	scanConfig.ParameterValueIds = append(scanConfig.ParameterValueIds, paramValue.getId())
-	err = scanConfig.writeBack()
-	if err != nil { return nil, err }
 	return paramValue, nil
 }
 
@@ -2000,6 +2044,16 @@ func (client *InMemClient) NewInMemEvent(userObjId string) *InMemEvent {
 	}
 }
 
+func (client *InMemClient) getEvent(id string) (Event, error) {
+	var event Event
+	var isType bool
+	var obj PersistObj = client.getPersistentObject(id)
+	if obj == nil { return nil, nil }
+	event, isType = obj.(Event)
+	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
+	return event, nil
+}
+
 func (event *InMemEvent) getWhen() time.Time {
 	return event.When
 }
@@ -2008,7 +2062,7 @@ func (event *InMemEvent) getUserObjId() string {
 	return event.UserObjId
 }
 
-func (event *InMemEvent) asEventDesc() *apitypes.EventDesc {
+func (event *InMemEvent) asEventDesc() *apitypes.EventDescBase {
 	return apitypes.NewEventDesc(event.Id, event.When, event.UserObjId)
 }
 
@@ -2019,19 +2073,21 @@ type InMemScanEvent struct {
 	InMemEvent
 	ScanConfigId string
 	DockerImageId string
-	Score string
+	ProviderName string
 	ActualParameterValueIds []string
+	Score string
 }
 
 func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
-	score string, actParamValueIds []string) (*InMemScanEvent, error) {
+	providerName string, score string, actParamValueIds []string) (*InMemScanEvent, error) {
 	
 	var scanEvent *InMemScanEvent = &InMemScanEvent{
 		InMemEvent: *client.NewInMemEvent(userObjId),
 		ScanConfigId: scanConfigId,
 		DockerImageId: imageId,
-		Score: score,
+		ProviderName: providerName,
 		ActualParameterValueIds: actParamValueIds,
+		Score: score,
 	}
 	return scanEvent, client.addObject(scanEvent)
 }
@@ -2061,8 +2117,8 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 
 	//var id string = createUniqueDbObjectId()
 	var scanEvent *InMemScanEvent
-	scanEvent, err = client.NewInMemScanEvent(scanConfigId, imageId, userObjId, score,
-		actParamValueIds)
+	scanEvent, err = client.NewInMemScanEvent(scanConfigId, imageId, userObjId,
+		scanConfig.getProviderName(), score, actParamValueIds)
 	if err != nil { return nil, err }
 	err = scanEvent.writeBack()
 	if err != nil { return nil, err }
@@ -2107,11 +2163,24 @@ func (event *InMemScanEvent) getActualParameterValueIds() []string {
 }
 
 func (event *InMemScanEvent) asScanEventDesc() *apitypes.ScanEventDesc {
+	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
+	for _, valueId := range event.ActualParameterValueIds {
+		var value ParameterValue
+		var err error
+		value, err = event.Client.getParameterValue(valueId)
+		if err != nil {
+			fmt.Println("Internal error:", err.Error())
+			continue
+		}
+		paramValueDescs = append(paramValueDescs, value.asParameterValueDesc())
+	}
+	
 	return apitypes.NewScanEventDesc(event.Id, event.When, event.UserObjId,
-		event.ScanConfigId, event.Score)
+		event.ScanConfigId, event.ProviderName, paramValueDescs,
+		event.Score)
 }
 
-func (event *InMemEvent) asEventDesc() *apitypes.EventDesc {
+func (event *InMemScanEvent) asEventDesc() apitypes.EventDesc {
 	return event.asScanEventDesc()
 }
 
@@ -2182,11 +2251,11 @@ func (execEvent *InMemDockerfileExecEvent) getDockerfileExternalObjId() string {
 	return execEvent.DockerfileExternalObjId
 }
 
-func (event *InMemEvent) asDockerfileExecEventDesc() *apitypes.EventDesc {
-	return NewDockerfileExecEventDesc(event.getId(), event.When, event.userObjId,
+func (event *InMemDockerfileExecEvent) asDockerfileExecEventDesc() *apitypes.DockerfileExecEventDesc {
+	return apitypes.NewDockerfileExecEventDesc(event.getId(), event.When, event.UserObjId,
 		event.DockerfileId)
 }
 
-func (event *InMemEvent) asEventDesc() *apitypes.EventDesc {
+func (event *InMemDockerfileExecEvent) asEventDesc() apitypes.EventDesc {
 	return event.asDockerfileExecEventDesc()
 }

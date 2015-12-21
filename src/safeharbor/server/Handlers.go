@@ -170,10 +170,12 @@ func authenticate(server *Server, sessionToken *apitypes.SessionToken, values ur
 	
 	// Check against brute force password attack.
 	var attempts []string = user.getMostRecentLoginAttempts()
-	if len(attempts >= server.MaxLoginAttemptsToRetain) && AreCloseInTime(attempts) {
+	if len(attempts) >= server.MaxLoginAttemptsToRetain &&
+		apitypes.AreAllWithinTimePeriod(attempts, 600) {
 		server.LoginAlert(creds.UserId)
 		return apitypes.NewFailureDesc("Too many login attempts")
 	}
+	user.addLoginAttempt()
 	
 	// Verify password.
 	if ! server.authService.PasswordIsValid(creds.Password) {
@@ -294,7 +296,7 @@ func changePassword(server *Server, sessionToken *apitypes.SessionToken, values 
 
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	var usejId string
+	var userId string
 	var err error
 	userId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -305,11 +307,10 @@ func changePassword(server *Server, sessionToken *apitypes.SessionToken, values 
 	}
 	
 	var user User
-	user, err = server.dbClient.dbGetUserByUserId(userId)
+	user = server.dbClient.dbGetUserByUserId(userId)
 	if user == nil { return apitypes.NewFailureDesc("User unidentified") }
 	
 	var oldPswd string
-	var err error
 	oldPswd, err = apitypes.GetRequiredHTTPParameterValue(values, "OldPassword")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
@@ -318,7 +319,6 @@ func changePassword(server *Server, sessionToken *apitypes.SessionToken, values 
 	}
 	
 	var newPswd string
-	var err error
 	newPswd, err = apitypes.GetRequiredHTTPParameterValue(values, "NewPassword")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
@@ -1428,11 +1428,9 @@ func remPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	var err error
 	partyId, err = apitypes.GetRequiredHTTPParameterValue(values, "PartyId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	resourceId, err = apitypes.GetRequiredHTTPParameterValue(values, "ResourceId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	var mask []bool
-	mask, err = apitypes.ToBoolAr(smask)
+	var resourceId string
+	resourceId, err = apitypes.GetRequiredHTTPParameterValue(values, "ResourceId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, resourceId,
@@ -1443,7 +1441,8 @@ func remPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	var resource Resource
 	resource, err = dbClient.getResource(resourceId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if resource == nil { return apitypes.NewFailureDesc("Unable to identify resource with Id " + resourceId) }
+	if resource == nil { return apitypes.NewFailureDesc(
+		"Unable to identify resource with Id " + resourceId) }
 	
 	// Identify the Party.
 	var party Party
@@ -1915,12 +1914,12 @@ func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	// Update only the fields that are specified.
 	var err error
 
-	var canConfigId string
+	var scanConfigId string
 	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(values, "ScanConfigId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var scanConfig ScanConfig
-	scanConfig, err = servrer.dbClient.getScanConfig(scanConfigId)
+	scanConfig, err = server.dbClient.getScanConfig(scanConfigId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
@@ -1929,18 +1928,31 @@ func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	var name string
 	name, err = apitypes.GetHTTPParameterValue(values, "Name")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if name != "" { scanConfig.setNameDeferredUpdate(name) }
 	
 	var desc string
 	desc, err = apitypes.GetHTTPParameterValue(values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if desc != "" { scanConfig.setDescriptionDeferredUpdate(desc) }
 	
 	var providerName string
 	providerName, err = apitypes.GetHTTPParameterValue(values, "ProviderName")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if providerName != "" { scanConfig.setProviderNameDeferredUpdate(providerName) }
 	
 	var successExpr string = ""
 	successExpr, err = apitypes.GetHTTPParameterValue(values, "SuccessExpression")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if successExpr != "" { scanConfig.setSuccessExpressionDeferredUpdate(successExpr) }
+	
+	err = scanConfig.writeBack()
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var scanService providers.ScanService
+	scanService = server.GetScanService(providerName)
+	if scanService == nil { return apitypes.NewFailureDesc(
+		"Unable to identify a scan service named '" + providerName + "'")
+	}
 	
 	// Retrieve and set the provider parameters.
 	for key, valueAr := range values {
@@ -1962,6 +1974,10 @@ func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	}
 	
 	// Add success image, if one was attached.
+	var userId string = sessionToken.AuthenticatedUserid
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil { return apitypes.NewFailureDesc(
+		"Internal error - could not identify user after use has been authenticated") }
 	var imageFilepath string
 	var repo Repo
 	repo, err = server.dbClient.getRepo(scanConfig.getRepoId())
@@ -1970,7 +1986,7 @@ func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if imageFilepath != "" { // a file was attached - presume that it is an image
 		var flag Flag
-		flag, err = server.dbClient.dbCreateFlag(name, desc, repoId, imageFilepath)
+		flag, err = server.dbClient.dbCreateFlag(name, desc, repo.getId(), imageFilepath)
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		err = scanConfig.setFlagId(flag.getId())
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -2159,7 +2175,7 @@ func getDockerImageStatus(server *Server, sessionToken *apitypes.SessionToken, v
 	// Get the most recent ScanEvent, if any.
 	var eventId string = image.getMostRecentScanEventId()
 	if eventId == "" {
-		return apitypes.NewScanEventDesc("", time.Now(), "", "", "") // an empty ScanEventDesc
+		return apitypes.NewScanEventDesc("", time.Now(), "", "", "", nil, "") // an empty ScanEventDesc
 	} else {
 		var event ScanEvent
 		event, err = server.dbClient.getScanEvent(eventId)
@@ -2218,7 +2234,7 @@ func getFlagDesc(server *Server, sessionToken *apitypes.SessionToken, values url
 
 /*******************************************************************************
  * Arguments: UserId
- * Returns: EventDesc...
+ * Returns: EventDescBase...
  */
 func getUserEvents(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -2230,9 +2246,10 @@ func getUserEvents(server *Server, sessionToken *apitypes.SessionToken, values u
 	if user == nil { return apitypes.NewFailureDesc("Unidentified user, " + userId) }
 	var eventIds []string = user.getEventIds()
 	
-	var eventDescs []EventDesc = make([]EventDesc, 0)
+	var eventDescs apitypes.EventDescs = make([]apitypes.EventDesc, 0)
 	for _, eventId := range eventIds {
 		var event Event
+		var err error
 		event, err = server.dbClient.getEvent(eventId)
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		eventDescs = append(eventDescs, event.asEventDesc())
@@ -2243,7 +2260,7 @@ func getUserEvents(server *Server, sessionToken *apitypes.SessionToken, values u
 
 /*******************************************************************************
  * Arguments: ImageId
- * Returns: EventDesc...
+ * Returns: EventDescBase...
  */
 func getDockerImageEvents(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -2263,7 +2280,7 @@ func getDockerImageEvents(server *Server, sessionToken *apitypes.SessionToken, v
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var eventIds []string = image.getScanEventIds()
-	var eventDescs []EventDesc = make([]EventDesc, 0)
+	var eventDescs apitypes.EventDescs = make([]apitypes.EventDesc, 0)
 	for _, eventId := range eventIds {
 		var event Event
 		event, err = server.dbClient.getEvent(eventId)
@@ -2296,7 +2313,7 @@ func getDockerfileEvents(server *Server, sessionToken *apitypes.SessionToken, va
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var eventIds []string = dockerfile.getDockerfileExecEventIds()
-	var eventDescs []EventDesc = make([]EventDesc, 0)
+	var eventDescs apitypes.EventDescs = make([]apitypes.EventDesc, 0)
 	for _, eventId := range eventIds {
 		var event Event
 		event, err = server.dbClient.getEvent(eventId)

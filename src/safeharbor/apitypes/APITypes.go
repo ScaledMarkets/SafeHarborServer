@@ -808,27 +808,46 @@ func (flagDesc *FlagDesc) AsJSON() string {
 /*******************************************************************************
  * 
  */
-type EventDesc struct {
+type EventDesc interface {
+	RespIntfTp
+	GetEventId() string
+	GetWhen() time.Time
+	GetUserObjId() string
+}
+
+type EventDescBase struct {
 	BaseType
 	EventId string
 	When time.Time
 	UserObjId string
 }
 
-func NewEventDesc(objId string, when time.Time, userObjId string) *EventDesc {
-	return &EventDesc{
+func NewEventDesc(objId string, when time.Time, userObjId string) *EventDescBase {
+	return &EventDescBase{
 		EventId: objId,
 		When: when,
-		UserObjId: userId,
+		UserObjId: userObjId,
 	}
 }
 
-func (eventDesc *EventDesc) AsJSON() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\"}",
-		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId)
+func (eventDesc *EventDescBase) GetEventId() string {
+	return eventDesc.EventId
 }
 
-type EventDescs []*EventDesc
+func (eventDesc *EventDescBase) GetWhen() time.Time {
+	return eventDesc.When
+}
+
+func (eventDesc *EventDescBase) GetUserObjId() string {
+	return eventDesc.UserObjId
+}
+
+func (eventDesc *EventDescBase) AsJSON() string {
+	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\"}",
+		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId)
+}
+
+type EventDescs []EventDesc
 
 func (eventDescs EventDescs) AsJSON() string {
 	var response string = "["
@@ -841,32 +860,39 @@ func (eventDescs EventDescs) AsJSON() string {
 	return response
 }
 
+func (eventDescs EventDescs) SendFile() string {
+	return ""
+}
+
 /*******************************************************************************
  * 
  */
 type ScanEventDesc struct {
-	EventDesc
+	EventDescBase
 	ScanConfigId string
 	ProviderName string
-    ParameterValueDescs []ParameterValueDesc
+    ParameterValueDescs []*ParameterValueDesc
 	Score string
 }
 
-func NewScanEventDesc(objId string, when time.Time, userId string,
-	scanConfigId, providerName string, paramValueDescs []string, score string) *ScanEventDesc {
+func NewScanEventDesc(objId string, when time.Time, userObjId string,
+	scanConfigId, providerName string, paramValueDescs []*ParameterValueDesc,
+	score string) *ScanEventDesc {
 	return &ScanEventDesc{
-		EventDesc: *NewEventDesc(objId, when, userId),
+		EventDescBase: *NewEventDesc(objId, when, userObjId),
 		ScanConfigId: scanConfigId,
 		ProviderName: providerName,
-		ParameterValueDescs: paramValuesDescs
+		ParameterValueDescs: paramValueDescs,
 		Score: score,
 	}
 }
 
+type ScanEventDescs []*ScanEventDesc
+
 func (eventDesc *ScanEventDesc) AsJSON() string {
-	var s = fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\", " +
+	var s = fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
 		"\"ScanConfigId\": \"%s\", \"ProviderName\": \"%s\", \"Score\": \"%s\",",
-		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId,
+		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
 		eventDesc.ScanConfigId, eventDesc.ProviderName, eventDesc.Score)
 	
 	for i, valueDesc := range eventDesc.ParameterValueDescs {
@@ -874,28 +900,29 @@ func (eventDesc *ScanEventDesc) AsJSON() string {
 		s = s + valueDesc.AsJSON()
 	}
 	s = s + "}"
+	return s
 }
 
 /*******************************************************************************
  * 
  */
 type DockerfileExecEventDesc struct {
-	EventDesc
+	EventDescBase
 	DockerfileId string
 }
 
 func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
 	dockerfileId string) *DockerfileExecEventDesc {
 	return &DockerfileExecEventDesc{
-		EventDesc: *NewEventDesc(objId, when, userId),
+		EventDescBase: *NewEventDesc(objId, when, userId),
 		DockerfileId: dockerfileId,
 	}
 }
 
 func (eventDesc *DockerfileExecEventDesc) AsJSON() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserId\": \"%s\", " +
+	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
 		"\"DockefileId\": \"%s\"}",
-		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserId,
+		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
 		eventDesc.DockerfileId)
 }
 
@@ -903,6 +930,30 @@ func (eventDesc *DockerfileExecEventDesc) AsJSON() string {
 
 /****************************** Utility Methods ********************************
  ******************************************************************************/
+
+/*******************************************************************************
+ * Return true if the times in the array are within a period of ~ ten minutes of
+ * each other. The times are assumed to be in seconds, all based at the same
+ * starting epoch.
+ */
+func AreAllWithinTimePeriod(times []string, period int64) bool {
+	if len(times) == 0 { return true }
+	var earliestTime int64
+	var latestTime int64
+	for i, tstr := range times {
+		var t int64
+		fmt.Sscanf(tstr, "%d", &t)
+		if i == 0 {
+			earliestTime = t
+			latestTime = t
+		} else {
+			if t < earliestTime { earliestTime = t }
+			if t > latestTime { latestTime = t }
+			if latestTime - earliestTime > period { return false }
+		}
+	}
+	return true
+}
 
 /*******************************************************************************
  * Format the specified Time value into a string that Javascript will parse as

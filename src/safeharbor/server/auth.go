@@ -63,15 +63,11 @@ func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
  * 
  */
 func (authSvc *AuthService) PasswordIsValid(pswd string) bool {
-	var untrustedHash string = parts[1]
-	var actualSaltedHashBytes []byte =
-		authSvc.computeHash(uniqueNonRandomValue).Sum(authSvc.secretSalt)
-	
 	var savedPswdHash = authSvc.computeHash(pswd).Sum(authSvc.secretSalt)
 	var prospectivePswdHash = authSvc.computeHash(pswd).Sum(authSvc.secretSalt)
-	if len(savedPswdHash) != len(prospectivePswdHash) return false
-	for i, b := range savedPswdHash {
-		if savedPswdHash[i] != prospectivePswdHash[i] return false
+	if len(savedPswdHash) != len(prospectivePswdHash) { return false }
+	for i, _ := range savedPswdHash {
+		if savedPswdHash[i] != prospectivePswdHash[i] { return false }
 	}
 	return true
 }
