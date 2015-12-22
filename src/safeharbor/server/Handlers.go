@@ -1903,7 +1903,7 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 }
 
 /*******************************************************************************
- * Arguments: ScanConfigId, Name, Desc, ProviderName, Params..., SuccessExpression, file
+ * Arguments: ScanConfigId, Name, Description, ProviderName, Params..., SuccessExpression, file
  * Returns: ScanConfigDesc
  */
 func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
