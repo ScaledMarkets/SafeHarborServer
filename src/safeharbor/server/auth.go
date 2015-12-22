@@ -56,6 +56,9 @@ func (authSvc *AuthService) clearAllSessions() {
  * 
  */
 func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
+	fmt.Println("In CreatePasswordHash:")
+	fmt.Println("\tpswd='" + pswd + "'")
+	fmt.Println(fmt.Sprintf("\tlen(secretSalt=%d", authSvc.secretSalt))
 	return authSvc.computeHash(pswd).Sum(authSvc.secretSalt)
 }
 
