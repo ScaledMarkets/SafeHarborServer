@@ -118,8 +118,6 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		MaxLoginAttemptsToRetain: 5,
 	}
 	
-	server.dbClient = NewInMemClient(server)
-	
 	// Ensure that the file repository exists.
 	if ! fileExists(server.Config.FileRepoRootPath) {
 		fmt.Println("Repository does not exist,", server.Config.FileRepoRootPath)
@@ -130,6 +128,8 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 	
 	server.authService = NewAuthService(config.service,
 		config.AuthServerName, config.AuthPort, certPool, secretSalt)
+	
+	server.dbClient = NewInMemClient(server)
 	
 	// To do: Make this a TLS listener.
 	// Instantiate an HTTP server with the SafeHarbor server as the handler.
