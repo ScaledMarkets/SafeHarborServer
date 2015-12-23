@@ -70,7 +70,8 @@ func (dataErr *InMemDataError) asFailureDesc() *apitypes.FailureDesc {
  * persistence.
  *
  * Redis bindings for go: http://redis.io/clients#go
- * Chosen binding: https://github.com/hoisie/redis
+ * Chosen binding: https://github.com/alphazero/Go-Redis
+ * Alternative binding: https://github.com/hoisie/redis
  */
 type Persistence struct {
 	uniqueId int64

@@ -24,6 +24,8 @@ type Configuration struct {
 	ipaddr string
 	netIntfName string // e.g., eth0, en1, etc.
 	port int
+	RedisHost string
+	RedisPort int
 	LocalAuthCertPath string
 	LocalRootCertPath string // may be null
 	AuthServerName string
