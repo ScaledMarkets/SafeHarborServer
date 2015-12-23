@@ -387,6 +387,11 @@ func (resource *InMemResource) addAccess(party Party, mask []bool) (ACLEntry, er
 
 func (resource *InMemResource) removeAccess(party Party) error {
 	
+	// debug
+	fmt.Println("InMemory.removeAccess, before removal of access:")
+	resource.printACLs(party)
+	// end debug
+
 	var aclEntriesCopy []string
 	copy(aclEntriesCopy, resource.ACLEntryIds)
 	for index, id := range aclEntriesCopy {
@@ -413,7 +418,14 @@ func (resource *InMemResource) removeAccess(party Party) error {
 	}
 	
 	// debug
-	fmt.Println("InMemory.removeAccess:")
+	fmt.Println("InMemory.removeAccess, after removal of access:")
+	resource.printACLs(party)
+	// end debug
+	
+	return resource.writeBack()
+}
+
+func (resource *InMemResource) printACLs(party Party) {
 	fmt.Println("\tACL entries for resource " + resource.getName() + " now are:")
 	for _, id := range resource.ACLEntryIds {
 		var aclEntry ACLEntry
@@ -464,9 +476,6 @@ func (resource *InMemResource) removeAccess(party Party) error {
 		}
 		fmt.Println("\t\tparty: " + pty.getName() + ", resource: " + rsc.getName())
 	}
-	// end debug
-	
-	return resource.writeBack()
 }
 
 func (resource *InMemResource) removeAllAccess() error {
