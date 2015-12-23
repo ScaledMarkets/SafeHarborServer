@@ -129,7 +129,11 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 	server.authService = NewAuthService(config.service,
 		config.AuthServerName, config.AuthPort, certPool, secretSalt)
 	
-	server.dbClient = NewInMemClient(server)
+	server.dbClient, err = NewInMemClient(server)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1);
+	}
 	
 	// To do: Make this a TLS listener.
 	// Instantiate an HTTP server with the SafeHarbor server as the handler.

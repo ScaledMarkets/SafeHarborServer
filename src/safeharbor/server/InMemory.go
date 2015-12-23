@@ -80,19 +80,35 @@ type Persistence struct {
 	allRealmIds []string
 }
 
-func NewPersistence() *Persistence {
-	return &Persistence{
-		uniqueId: 5,
-		allRealmIds:  make([]string, 0),
+func NewPersistence() (*Persistence, error) {
+	var persist = &Persistence{
+		uniqueId: 100000005,
+		allRealmIds: make([]string, 0),
 		allObjects: make(map[string]PersistObj),
 		allUsers: make(map[string]User),
+	}
+	return persist, nil
+}
+
+// Load core database state. Database data is not cached, except for this core data.
+// If the data is not present in the database, it should be created and written out.
+func (persist *Persistence) load() error {
+	var int64 id
+	var err error
+	id, err = persist.readUniqueId()
+	if err != nil { return err }
+	if id != 0 {
+		persist.uniqueId = id
 	}
 }
 
 // Create a globally unique id, to be used to uniquely identify a new persistent
 // object. The creation of the id must be done atomically.
-func (persist *Persistence) createUniqueDbObjectId() string {
-	return fmt.Sprintf("%d", atomic.AddInt64(&persist.uniqueId, 100000000))
+func (persist *Persistence) createUniqueDbObjectId() (string, error) {
+	persist.uniqueId = fmt.Sprintf("%d", atomic.AddInt64(&persist.uniqueId, 1))
+	var err error = persist.writeUniqueId()
+	if err != nil { return err }
+	return id, nil
 }
 
 // Return the persistent object that is identified by the specified unique id.
@@ -147,6 +163,14 @@ func (persist *Persistence) deleteObject(obj PersistObj) error {
 	return nil
 }
 
+func (persist *Persistence) readUniqueId() (int64, error) {
+	return persist.uniqueId, nil
+}
+
+func (persist *Persistence) writeUniqueId() error {
+	return nil
+}
+
 func (persist *Persistence) addRealm(newRealm Realm) error {
 	persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
 	return persist.addObject(newRealm)
@@ -169,7 +193,7 @@ type InMemClient struct {
 	Server *Server
 }
 
-func NewInMemClient(server *Server) DBClient {
+func NewInMemClient(server *Server) (DBClient, error) {
 	
 	// Create and return a new InMemClient.
 	var client = &InMemClient{
@@ -177,13 +201,17 @@ func NewInMemClient(server *Server) DBClient {
 		Server: server,
 	}
 	
-	client.init()
-	return client
+	var err error = client.init()
+	if err != nil { return nil, err }
+	return client, nil
 }
 
 // Initilize the client object. This can be called later to reset the client's
 // state (i.e., to erase all objects).
-func (client *InMemClient) init() {
+func (client *InMemClient) init() error {
+	
+	var err error = client.load()
+	if err != nil { return err }
 	
 	// Remove the file repository - this is an in-memory implementation so we
 	// want to start empty.
@@ -221,6 +249,7 @@ func (client *InMemClient) init() {
 	}
 	
 	fmt.Println("Repository initialized")
+	return nil
 }
 
 func (client *InMemClient) dbGetUserByUserId(userId string) User {
@@ -270,8 +299,11 @@ type InMemPersistObj struct {  // abstract
 
 var _ PersistObj = &InMemPersistObj{}
 
-func (client *InMemClient) NewInMemPersistObj() *InMemPersistObj {
-	var id string = client.createUniqueDbObjectId()
+func (client *InMemClient) NewInMemPersistObj() (*InMemPersistObj, error) {
+	var id string
+	var err error
+	id, err = client.createUniqueDbObjectId()
+	if err != nil { return nil, err }
 	var obj *InMemPersistObj = &InMemPersistObj{
 		Id: id,
 		Client: client,
@@ -428,33 +460,44 @@ func (resource *InMemResource) removeAccess(party Party) error {
 }
 
 func (resource *InMemResource) printACLs(party Party) {
-	fmt.Println("\tACL entries for resource " + resource.getName() + " now are:")
-	for _, id := range resource.ACLEntryIds {
-		var aclEntry ACLEntry
-		var err error
-		aclEntry, err = resource.Client.getACLEntry(id)
-		if err != nil {
-			fmt.Println(err.Error())
-			continue
+	var resourceId string = resource.getId()
+	var curresource Resource = resource
+	for {
+		fmt.Println("\tACL entries for resource " + resource.getName() + " are:")
+		for _, id := range curresource.ACLEntryIds {
+			var aclEntry ACLEntry
+			var err error
+			aclEntry, err = curresource.Client.getACLEntry(id)
+			if err != nil {
+				fmt.Println(err.Error())
+				continue
+			}
+			var rcsId string = aclEntry.getResourceId()
+			var rsc Resource
+			rsc, err = resource.Client.getResource(rscId)
+			if err != nil {
+				fmt.Println(err.Error())
+				continue
+			}
+			var partyId string = aclEntry.getPartyId()
+			var pty Party
+			pty, err = curresource.Client.getParty(partyId)
+			if err != nil {
+				fmt.Println(err.Error())
+				continue
+			}
+			fmt.Println("\t\tparty: " + pty.getName() + " (" + id + "), resource: " +
+				rsc.getName() + " (" + rsc.getId() + ")")
 		}
-		var resourceId string = aclEntry.getResourceId()
-		var rsc Resource
-		rsc, err = resource.Client.getResource(resourceId)
+		resourceId = resource.getParentId()
+		if resourceId == "" { break }
+		curresource, err = resource.Client.getResource(resourceId)
 		if err != nil {
-			fmt.Println(err.Error())
-			continue
+			fmt.Priintln(err.Error())
+			break
 		}
-		var partyId string = aclEntry.getPartyId()
-		var pty Party
-		pty, err = resource.Client.getParty(partyId)
-		if err != nil {
-			fmt.Println(err.Error())
-			continue
-		}
-		fmt.Println("\t\tparty: " + pty.getName() + " (" + id + "), resource: " +
-			rsc.getName() + " (" + rsc.getId() + ")")
 	}
-	fmt.Println("\tACL entries for party " + party.getName() + " now are:")
+	fmt.Println("\tACL entries for party " + party.getName() + " are:")
 	for _, id := range party.getACLEntryIds() {
 		var aclEntry ACLEntry
 		var err error
