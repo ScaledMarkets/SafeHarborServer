@@ -412,6 +412,60 @@ func (resource *InMemResource) removeAccess(party Party) error {
 		}
 	}
 	
+	// debug
+	fmt.Println("InMemory.removeAccess:")
+	fmt.Println("\tACL entries for resource " + resource.getName() + " now are:")
+	for _, id := range resource.ACLEntryIds {
+		var aclEntry ACLEntry
+		var err error
+		aclEntry, err = resource.Client.getACLEntry(id)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+		var resourceId string = aclEntry.getResourceId()
+		var rsc Resource
+		rsc, err = resource.Client.getResource(resourceId)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+		var partyId string = aclEntry.getPartyId()
+		var pty Party
+		pty, err = resource.Client.getParty(partyId)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+		fmt.Println("\t\tparty: " + pty.getName() + ", resource: " + rsc.getName())
+	}
+	fmt.Println("\tACL entries for party " + party.getName() + " now are:")
+	for _, id := range party.getACLEntryIds() {
+		var aclEntry ACLEntry
+		var err error
+		aclEntry, err = resource.Client.getACLEntry(id)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+		var resourceId string = aclEntry.getResourceId()
+		var rsc Resource
+		rsc, err = resource.Client.getResource(resourceId)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+		var partyId string = aclEntry.getPartyId()
+		var pty Party
+		pty, err = resource.Client.getParty(partyId)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+		fmt.Println("\t\tparty: " + pty.getName() + ", resource: " + rsc.getName())
+	}
+	// end debug
+	
 	return resource.writeBack()
 }
 
