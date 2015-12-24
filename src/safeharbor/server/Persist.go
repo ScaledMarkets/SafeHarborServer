@@ -53,7 +53,7 @@ type DBClient interface {
 	getEvent(string) (Event, error)
 	getScanEvent(string) (ScanEvent, error)
 	getRealmsAdministeredByUser(string) ([]string, error)  // those realms for which user can edit the realm
-	init()
+	init() error
 	printDatabase()
 }
 

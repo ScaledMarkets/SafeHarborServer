@@ -93,22 +93,25 @@ func NewPersistence() (*Persistence, error) {
 // Load core database state. Database data is not cached, except for this core data.
 // If the data is not present in the database, it should be created and written out.
 func (persist *Persistence) load() error {
-	var int64 id
+	var id int64
 	var err error
 	id, err = persist.readUniqueId()
 	if err != nil { return err }
 	if id != 0 {
 		persist.uniqueId = id
 	}
+	return nil
 }
 
 // Create a globally unique id, to be used to uniquely identify a new persistent
 // object. The creation of the id must be done atomically.
 func (persist *Persistence) createUniqueDbObjectId() (string, error) {
-	persist.uniqueId = fmt.Sprintf("%d", atomic.AddInt64(&persist.uniqueId, 1))
+	
+	var id int64 = atomic.AddInt64(&persist.uniqueId, 1)
 	var err error = persist.writeUniqueId()
-	if err != nil { return err }
-	return id, nil
+	if err != nil { return "", err }
+	persist.uniqueId = id
+	return fmt.Sprintf("%d", id), nil
 }
 
 // Return the persistent object that is identified by the specified unique id.
@@ -196,12 +199,16 @@ type InMemClient struct {
 func NewInMemClient(server *Server) (DBClient, error) {
 	
 	// Create and return a new InMemClient.
+	var pers *Persistence
+	var err error
+	pers, err = NewPersistence()
+	if err != nil { return nil, err }
 	var client = &InMemClient{
-		Persistence: *NewPersistence(),
+		Persistence: *pers,
 		Server: server,
 	}
 	
-	var err error = client.init()
+	err = client.init()
 	if err != nil { return nil, err }
 	return client, nil
 }
@@ -215,7 +222,7 @@ func (client *InMemClient) init() error {
 	
 	// Remove the file repository - this is an in-memory implementation so we
 	// want to start empty.
-	var err error = os.RemoveAll(client.Server.Config.FileRepoRootPath)
+	err = os.RemoveAll(client.Server.Config.FileRepoRootPath)
 	if err != nil { fmt.Println(err.Error()) }
 	
 	// Recreate the file repository, but empty.
@@ -308,7 +315,7 @@ func (client *InMemClient) NewInMemPersistObj() (*InMemPersistObj, error) {
 		Id: id,
 		Client: client,
 	}
-	return obj
+	return obj, nil
 }
 
 func (persObj *InMemPersistObj) getId() string {
@@ -341,11 +348,15 @@ type InMemACL struct {
 }
 
 func (client *InMemClient) NewInMemACL() (*InMemACL, error) {
+	var pers *InMemPersistObj
+	var err error
+	pers, err = client.NewInMemPersistObj()
+	if err != nil { return nil, err }
 	var acl *InMemACL = &InMemACL{
-		InMemPersistObj: *client.NewInMemPersistObj(),
+		InMemPersistObj: *pers,
 		ACLEntryIds: make([]string, 0),
 	}
-	var err error = acl.writeBack()
+	err = acl.writeBack()
 	return acl, err
 }
 
@@ -464,15 +475,15 @@ func (resource *InMemResource) printACLs(party Party) {
 	var curresource Resource = resource
 	for {
 		fmt.Println("\tACL entries for resource " + resource.getName() + " are:")
-		for _, id := range curresource.ACLEntryIds {
+		for _, id := range curresource.getACLEntryIds() {
 			var aclEntry ACLEntry
 			var err error
-			aclEntry, err = curresource.Client.getACLEntry(id)
+			aclEntry, err = curresource.getDBClient().getACLEntry(id)
 			if err != nil {
 				fmt.Println(err.Error())
 				continue
 			}
-			var rcsId string = aclEntry.getResourceId()
+			var rscId string = aclEntry.getResourceId()
 			var rsc Resource
 			rsc, err = resource.Client.getResource(rscId)
 			if err != nil {
@@ -481,7 +492,7 @@ func (resource *InMemResource) printACLs(party Party) {
 			}
 			var partyId string = aclEntry.getPartyId()
 			var pty Party
-			pty, err = curresource.Client.getParty(partyId)
+			pty, err = curresource.getDBClient().getParty(partyId)
 			if err != nil {
 				fmt.Println(err.Error())
 				continue
@@ -491,9 +502,10 @@ func (resource *InMemResource) printACLs(party Party) {
 		}
 		resourceId = resource.getParentId()
 		if resourceId == "" { break }
+		var err error
 		curresource, err = resource.Client.getResource(resourceId)
 		if err != nil {
-			fmt.Priintln(err.Error())
+			fmt.Println(err.Error())
 			break
 		}
 	}
@@ -634,15 +646,19 @@ type InMemParty struct {  // abstract
 	ACLEntryIds []string
 }
 
-func (client *InMemClient) NewInMemParty(name string, realmId string) *InMemParty {
+func (client *InMemClient) NewInMemParty(name string, realmId string) (*InMemParty, error) {
+	var pers *InMemPersistObj
+	var err error
+	pers, err = client.NewInMemPersistObj()
+	if err != nil { return nil, err }
 	return &InMemParty{
-		InMemPersistObj: *client.NewInMemPersistObj(),
+		InMemPersistObj: *pers,
 		IsActive: true,
 		Name: name,
 		CreationTime: time.Now(),
 		RealmId: realmId,
 		ACLEntryIds: make([]string, 0),
-	}
+	}, nil
 }
 
 func (party *InMemParty) setActive(b bool) {
@@ -722,8 +738,12 @@ type InMemGroup struct {
 func (client *InMemClient) NewInMemGroup(realmId string, name string,
 	desc string) (*InMemGroup, error) {
 	
+	var group *InMemParty
+	var err error
+	group, err = client.NewInMemParty(name, realmId)
+	if err != nil { return nil, err }
 	var newGroup = &InMemGroup{
-		InMemParty: *client.NewInMemParty(/*groupId,*/ name, realmId),
+		InMemParty: *group,
 		Description: desc,
 		UserObjIds: make([]string, 0),
 	}
@@ -858,8 +878,13 @@ type InMemUser struct {
 
 func (client *InMemClient) NewInMemUser(userId string, name string,
 	email string, pswd string, realmId string) (*InMemUser, error) {
+	
+	var party *InMemParty
+	var err error
+	party, err = client.NewInMemParty(name, realmId)
+	if err != nil { return nil, err }
 	var newUser = &InMemUser{
-		InMemParty: *client.NewInMemParty(name, realmId),
+		InMemParty: *party,
 		UserId: userId,
 		EmailAddress: email,
 		PasswordHash: client.Server.authService.CreatePasswordHash(pswd),
@@ -1042,8 +1067,12 @@ type InMemACLEntry struct {
 func (client *InMemClient) NewInMemACLEntry(resourceId string, partyId string,
 	permissionMask []bool) (*InMemACLEntry, error) {
 	
+	var pers *InMemPersistObj
+	var err error
+	pers, err = client.NewInMemPersistObj()
+	if err != nil { return nil, err }
 	var newACLEntry *InMemACLEntry = &InMemACLEntry{
-		InMemPersistObj: *client.NewInMemPersistObj(),
+		InMemPersistObj: *pers,
 		ResourceId: resourceId,
 		PartyId: partyId,
 		PermissionMask: permissionMask,
@@ -1831,8 +1860,12 @@ type InMemParameterValue struct {
 }
 
 func (client *InMemClient) NewInMemParameterValue(name, value, configId string) (*InMemParameterValue, error) {
+	var pers *InMemPersistObj
+	var err error
+	pers, err = client.NewInMemPersistObj()
+	if err != nil { return nil, err }
 	var paramValue = &InMemParameterValue{
-		InMemPersistObj: *client.NewInMemPersistObj(),
+		InMemPersistObj: *pers,
 		Name: name,
 		StringValue: value,
 		ConfigId: configId,
@@ -2147,12 +2180,16 @@ type InMemEvent struct {  // abstract
 	UserObjId string
 }
 
-func (client *InMemClient) NewInMemEvent(userObjId string) *InMemEvent {
+func (client *InMemClient) NewInMemEvent(userObjId string) (*InMemEvent, error) {
+	var pers *InMemPersistObj
+	var err error
+	pers, err = client.NewInMemPersistObj()
+	if err != nil { return nil, err }
 	return &InMemEvent{
-		InMemPersistObj: *client.NewInMemPersistObj(),
+		InMemPersistObj: *pers,
 		When: time.Now(),
 		UserObjId: userObjId,
-	}
+	}, nil
 }
 
 func (client *InMemClient) getEvent(id string) (Event, error) {
@@ -2192,8 +2229,12 @@ type InMemScanEvent struct {
 func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
 	providerName string, score string, actParamValueIds []string) (*InMemScanEvent, error) {
 	
+	var event *InMemEvent
+	var err error
+	event, err = client.NewInMemEvent(userObjId)
+	if err != nil { return nil, err }
 	var scanEvent *InMemScanEvent = &InMemScanEvent{
-		InMemEvent: *client.NewInMemEvent(userObjId),
+		InMemEvent: *event,
 		ScanConfigId: scanConfigId,
 		DockerImageId: imageId,
 		ProviderName: providerName,
@@ -2303,11 +2344,16 @@ type InMemImageCreationEvent struct {  // abstract
 	ImageId string
 }
 
-func (client *InMemClient) NewInMemImageCreationEvent(userObjId, imageId string) *InMemImageCreationEvent {
+func (client *InMemClient) NewInMemImageCreationEvent(userObjId, 
+	imageId string) (*InMemImageCreationEvent, error) {
+	var event *InMemEvent
+	var err error
+	event, err = client.NewInMemEvent(userObjId)
+	if err != nil { return nil, err }
 	return &InMemImageCreationEvent{
-		InMemEvent: *client.NewInMemEvent(userObjId),
+		InMemEvent: *event,
 		ImageId: imageId,
-	}
+	}, nil
 }
 
 /*******************************************************************************
@@ -2322,8 +2368,12 @@ type InMemDockerfileExecEvent struct {
 func (client *InMemClient) NewInMemDockerfileExecEvent(dockerfileId, imageId,
 	userObjId string) (*InMemDockerfileExecEvent, error) {
 	
+	var ev *InMemImageCreationEvent
+	var err error
+	ev, err = client.NewInMemImageCreationEvent(userObjId, imageId)
+	if err != nil { return nil, err }
 	var event = &InMemDockerfileExecEvent{
-		InMemImageCreationEvent: *client.NewInMemImageCreationEvent(userObjId, imageId),
+		InMemImageCreationEvent: *ev,
 		DockerfileId: dockerfileId,
 		DockerfileExternalObjId: "",  // for when we add git
 	}
