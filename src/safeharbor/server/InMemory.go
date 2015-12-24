@@ -420,9 +420,16 @@ func (resource *InMemResource) addAccess(party Party, mask []bool) (ACLEntry, er
 	aclEntry, err = party.getACLEntryForResourceId(resource.getId())
 	if err != nil { return nil, err }
 	if aclEntry == nil {
+		// debug
+		fmt.Println("Creating ACL entry")
+		// end debug
 		aclEntry, err = resource.Client.dbCreateACLEntry(resource.getId(), party.getId(), mask)
 		if err != nil { return nil, err }
 	} else {
+		// debug
+		fmt.Println("Adding to existing ACL entry")
+		// end debug
+
 		// Add the new mask.
 		var curmask []bool = aclEntry.getPermissionMask()
 		for index, _ := range curmask {
@@ -485,7 +492,8 @@ func (resource *InMemResource) printACLs(party Party) {
 	var resourceId string = resource.getId()
 	var curresource Resource = resource
 	for {
-		fmt.Println("\tACL entries for resource " + resource.getName() + " are:")
+		fmt.Println("\tACL entries for resource " + resource.getName() + 
+			" (" + resource.getId() + ") are:")
 		for _, id := range curresource.getACLEntryIds() {
 			var aclEntry ACLEntry
 			var err error
@@ -520,7 +528,8 @@ func (resource *InMemResource) printACLs(party Party) {
 			break
 		}
 	}
-	fmt.Println("\tACL entries for party " + party.getName() + " are:")
+	fmt.Println("\tACL entries for party " + party.getName() + 
+		" (" + party.getId() + ") are:")
 	for _, id := range party.getACLEntryIds() {
 		var aclEntry ACLEntry
 		var err error
