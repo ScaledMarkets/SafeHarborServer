@@ -409,6 +409,12 @@ func (resource *InMemResource) setAccess(party Party, mask []bool) (ACLEntry, er
 }
 
 func (resource *InMemResource) addAccess(party Party, mask []bool) (ACLEntry, error) {
+
+	// debug
+	fmt.Println("InMemory.addAccess, before addition of access:")
+	resource.printACLs(party)
+	// end debug
+
 	var aclEntry ACLEntry
 	var err error
 	aclEntry, err = party.getACLEntryForResourceId(resource.getId())
@@ -425,6 +431,11 @@ func (resource *InMemResource) addAccess(party Party, mask []bool) (ACLEntry, er
 		if err = aclEntry.writeBack(); err != nil { return nil, err }
 	}
 	
+	// debug
+	fmt.Println("InMemory.addAccess, after addition of access:")
+	resource.printACLs(party)
+	// end debug
+
 	return aclEntry, nil
 }
 
