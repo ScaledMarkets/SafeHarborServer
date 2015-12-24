@@ -427,7 +427,11 @@ func (resource *InMemResource) addAccess(party Party, mask []bool) (ACLEntry, er
 		if err != nil { return nil, err }
 	} else {
 		// debug
-		fmt.Println("Adding to existing ACL entry")
+		fmt.Println("Adding to existing ACL entry for resource " + resource.getName() +
+			" (" + resource.getId() + "), party " + party.getName() +
+			" (" + party.getId() + ")")
+		fmt.Println("\tin ACLEntry: resourceId=" + aclEntry.getResourceId() +
+			", partyId=" + aclEntry.getPartyId())
 		// end debug
 
 		// Add the new mask.
