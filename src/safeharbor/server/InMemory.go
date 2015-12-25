@@ -501,8 +501,8 @@ func (resource *InMemResource) printACLs(party Party) {
 	var curresourceId string = resource.getId()
 	var curresource Resource = resource
 	for {
-		fmt.Println("\tACL entries for resource " + resource.getName() + 
-			" (" + resource.getId() + ") are:")
+		fmt.Println("\tACL entries for resource " + curresource.getName() + 
+			" (" + curresource.getId() + ") are:")
 		for _, entryId := range curresource.getACLEntryIds() {
 			var aclEntry ACLEntry
 			var err error
