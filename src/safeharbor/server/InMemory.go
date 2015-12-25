@@ -493,15 +493,15 @@ func (resource *InMemResource) removeAccess(party Party) error {
 }
 
 func (resource *InMemResource) printACLs(party Party) {
-	var resourceId string = resource.getId()
+	var curresourceId string = resource.getId()
 	var curresource Resource = resource
 	for {
 		fmt.Println("\tACL entries for resource " + resource.getName() + 
 			" (" + resource.getId() + ") are:")
-		for _, id := range curresource.getACLEntryIds() {
+		for _, entryId := range curresource.getACLEntryIds() {
 			var aclEntry ACLEntry
 			var err error
-			aclEntry, err = curresource.getDBClient().getACLEntry(id)
+			aclEntry, err = curresource.getDBClient().getACLEntry(entryId)
 			if err != nil {
 				fmt.Println(err.Error())
 				continue
@@ -513,20 +513,20 @@ func (resource *InMemResource) printACLs(party Party) {
 				fmt.Println(err.Error())
 				continue
 			}
-			var partyId string = aclEntry.getPartyId()
+			var ptyId string = aclEntry.getPartyId()
 			var pty Party
-			pty, err = curresource.getDBClient().getParty(partyId)
+			pty, err = curresource.getDBClient().getParty(ptyId)
 			if err != nil {
 				fmt.Println(err.Error())
 				continue
 			}
-			fmt.Println("\t\tparty: " + pty.getName() + " (" + id + "), resource: " +
+			fmt.Println("\t\tparty: " + pty.getName() + " (" + ptyId + "), resource: " +
 				rsc.getName() + " (" + rsc.getId() + ")")
 		}
-		resourceId = resource.getParentId()
-		if resourceId == "" { break }
+		curresourceId = curresource.getParentId()
+		if curresourceId == "" { break }
 		var err error
-		curresource, err = resource.Client.getResource(resourceId)
+		curresource, err = resource.Client.getResource(curresourceId)
 		if err != nil {
 			fmt.Println(err.Error())
 			break
@@ -542,9 +542,9 @@ func (resource *InMemResource) printACLs(party Party) {
 			fmt.Println(err.Error())
 			continue
 		}
-		var resourceId string = aclEntry.getResourceId()
+		var rscId string = aclEntry.getResourceId()
 		var rsc Resource
-		rsc, err = resource.Client.getResource(resourceId)
+		rsc, err = resource.Client.getResource(rscId)
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
