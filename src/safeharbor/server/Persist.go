@@ -74,6 +74,7 @@ type Party interface {
 	getCreationTime() time.Time
 	getACLEntryIds() []string
 	addACLEntry(ACLEntry) error
+	removeACLEntry(entry ACLEntry) error
 	getACLEntryForResourceId(string) (ACLEntry, error)
 }
 
