@@ -657,8 +657,8 @@ func (client *InMemClient) getResource(resourceId string) (Resource, error) {
 
 func (resource *InMemResource) getParentId() string {
 	fmt.Println("Internal error - getParentId called on abstract type InMemResource")
-	fmt.Println(fmt.Sprintf("resource: %s (%s), is a %s"),
-		resource.getName(), resource.getId(), reflect.TypeOf(resource).String())
+	fmt.Println(fmt.Sprintf("resource: %s (%s), is a %s",
+		resource.getName(), resource.getId(), reflect.TypeOf(resource).String()))
 	return ""
 }
 
