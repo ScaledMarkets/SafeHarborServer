@@ -376,10 +376,12 @@ type InMemResource struct {  // abstract
 	InMemACL
 	Name string
 	Description string
+	ParentId string
 	CreationTime time.Time
 }
 
-func (client *InMemClient) NewInMemResource(name string, desc string) (*InMemResource, error) {
+func (client *InMemClient) NewInMemResource(name string, desc string,
+	parentId string) (*InMemResource, error) {
 	var acl *InMemACL
 	var err error
 	acl, err = client.NewInMemACL()
@@ -388,6 +390,7 @@ func (client *InMemClient) NewInMemResource(name string, desc string) (*InMemRes
 		InMemACL: *acl,
 		Name: name,
 		Description: desc,
+		ParentId: parentId,
 		CreationTime: time.Now(),
 	}, nil
 }
@@ -656,10 +659,7 @@ func (client *InMemClient) getResource(resourceId string) (Resource, error) {
 }
 
 func (resource *InMemResource) getParentId() string {
-	fmt.Println("Internal error - getParentId called on abstract type InMemResource")
-	fmt.Println(fmt.Sprintf("resource: %s (%s), is a %s",
-		resource.getName(), resource.getId(), reflect.TypeOf(resource).String()))
-	return ""
+	return resource.ParentId
 }
 
 func (resource *InMemResource) isRealm() bool { return false }
@@ -1209,7 +1209,7 @@ type InMemRealm struct {
 func (client *InMemClient) NewInMemRealm(realmInfo *apitypes.RealmInfo, adminUserId string) (*InMemRealm, error) {
 	var resource *InMemResource
 	var err error
-	resource, err = client.NewInMemResource(realmInfo.RealmName, realmInfo.Description)
+	resource, err = client.NewInMemResource(realmInfo.RealmName, realmInfo.Description, "")
 	if err != nil { return nil, err }
 	var newRealm *InMemRealm = &InMemRealm{
 		InMemResource: *resource,
@@ -1522,7 +1522,6 @@ func (realm *InMemRealm) isRealm() bool { return true }
  */
 type InMemRepo struct {
 	InMemResource
-	RealmId string
 	DockerfileIds []string
 	DockerImageIds []string
 	ScanConfigIds []string
@@ -1533,11 +1532,10 @@ type InMemRepo struct {
 func (client *InMemClient) NewInMemRepo(realmId, name, desc string) (*InMemRepo, error) {
 	var resource *InMemResource
 	var err error
-	resource, err = client.NewInMemResource(name, desc)
+	resource, err = client.NewInMemResource(name, desc, realmId)
 	if err != nil { return nil, err }
 	var newRepo *InMemRepo = &InMemRepo{
 		InMemResource: *resource,
-		RealmId: realmId,
 		DockerfileIds: make([]string, 0),
 		DockerImageIds: make([]string, 0),
 		ScanConfigIds: make([]string, 0),
@@ -1586,12 +1584,12 @@ func (client *InMemClient) getRepo(id string) (Repo, error) {
 	return repo, nil
 }
 
-func (repo *InMemRepo) getRealmId() string { return repo.RealmId }
+func (repo *InMemRepo) getRealmId() string { return repo.ParentId }
 
 func (repo *InMemRepo) getRealm() (Realm, error) {
 	var realm Realm
 	var isType bool
-	realm, isType = repo.Client.getPersistentObject(repo.RealmId).(Realm)
+	realm, isType = repo.Client.getPersistentObject(repo.getRealmId()).(Realm)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return realm, nil
 }
@@ -1646,10 +1644,6 @@ func (repo *InMemRepo) getScanConfigByName(name string) (ScanConfig, error) {
 	return nil, nil
 }
 
-func (repo *InMemRepo) getParentId() string {
-	return repo.RealmId
-}
-
 func (repo *InMemRepo) deleteResource(resource Resource) error {
 	
 	resource.removeAllAccess()
@@ -1661,7 +1655,7 @@ func (repo *InMemRepo) deleteResource(resource Resource) error {
 func (repo *InMemRepo) isRepo() bool { return true }
 
 func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
-	return apitypes.NewRepoDesc(repo.Id, repo.RealmId, repo.Name, repo.Description,
+	return apitypes.NewRepoDesc(repo.Id, repo.getRealmId(), repo.Name, repo.Description,
 		repo.CreationTime, repo.getDockerfileIds())
 }
 
@@ -1670,7 +1664,6 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
  */
 type InMemDockerfile struct {
 	InMemResource
-	RepoId string
 	FilePath string
 	DockerfileExecEventIds []string
 }
@@ -1680,11 +1673,10 @@ func (client *InMemClient) NewInMemDockerfile(repoId, name, desc,
 	
 	var resource *InMemResource
 	var err error
-	resource, err = client.NewInMemResource(name, desc)
+	resource, err = client.NewInMemResource(name, desc, repoId)
 	if err != nil { return nil, err }
 	var newDockerfile *InMemDockerfile = &InMemDockerfile{
 		InMemResource: *resource,
-		RepoId: repoId,
 		FilePath: filepath,
 		DockerfileExecEventIds: make([]string, 0),
 	}
@@ -1738,10 +1730,14 @@ func (dockerfile *InMemDockerfile) replaceDockerfileFile(filepath, desc string) 
 	return os.Remove(oldFilePath)
 }
 
+func (dockerfile *InMemDockerfile) getRepoId() string {
+	return dockerfile.ParentId
+}
+
 func (dockerfile *InMemDockerfile) getRepo() (Repo, error) {
 	var repo Repo
 	var isType bool
-	repo, isType = dockerfile.Client.getPersistentObject(dockerfile.RepoId).(Repo)
+	repo, isType = dockerfile.Client.getPersistentObject(dockerfile.getRepoId()).(Repo)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return repo, nil
 }
@@ -1760,11 +1756,7 @@ func (dockerfile *InMemDockerfile) getExternalFilePath() string {
 }
 
 func (dockerfile *InMemDockerfile) asDockerfileDesc() *apitypes.DockerfileDesc {
-	return apitypes.NewDockerfileDesc(dockerfile.Id, dockerfile.RepoId, dockerfile.Name, dockerfile.Description)
-}
-
-func (dockerfile *InMemDockerfile) getParentId() string {
-	return dockerfile.RepoId
+	return apitypes.NewDockerfileDesc(dockerfile.Id, dockerfile.getRepoId(), dockerfile.Name, dockerfile.Description)
 }
 
 func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
@@ -1774,17 +1766,15 @@ func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
  */
 type InMemImage struct {  // abstract
 	InMemResource
-	RepoId string
 }
 
 func (client *InMemClient) NewInMemImage(name, desc, repoId string) (*InMemImage, error) {
 	var resource *InMemResource
 	var err error
-	resource, err = client.NewInMemResource(name, desc)
+	resource, err = client.NewInMemResource(name, desc, repoId)
 	if err != nil { return nil, err }
 	return &InMemImage{
 		InMemResource: *resource,
-		RepoId: repoId,
 	}, nil
 }
 
@@ -1792,16 +1782,16 @@ func (image *InMemImage) getName() string {
 	return image.Name
 }
 
+func (image *InMemImage) getRepoId() string {
+	return image.ParentId
+}
+
 func (image *InMemImage) getRepo() (Repo, error) {
 	var repo Repo
 	var isType bool
-	repo, isType = image.Client.getPersistentObject(image.RepoId).(Repo)
+	repo, isType = image.Client.getPersistentObject(image.getRepoId()).(Repo)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return repo, nil
-}
-
-func (image *InMemImage) getParentId() string {
-	return image.RepoId
 }
 
 /*******************************************************************************
@@ -1860,7 +1850,7 @@ func (image *InMemDockerImage) getFullName() (string, error) {
 	var repo Repo
 	var realm Realm
 	var err error
-	repo, err = image.Client.getRepo(image.RepoId)
+	repo, err = image.Client.getRepo(image.getRepoId())
 	if err != nil { return "", err }
 	realm, err = image.Client.getRealm(repo.getRealmId())
 	if err != nil { return "", err }
@@ -1881,7 +1871,7 @@ func (image *InMemDockerImage) getMostRecentScanEventId() string {
 }
 
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
-	return apitypes.NewDockerImageDesc(image.Id, image.RepoId, image.Name, image.Description, image.CreationTime)
+	return apitypes.NewDockerImageDesc(image.Id, image.getRepoId(), image.Name, image.Description, image.CreationTime)
 }
 
 func (image *InMemDockerImage) isDockerImage() bool { return true }
@@ -1953,7 +1943,6 @@ func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.Paramete
 type InMemScanConfig struct {
 	InMemResource
 	SuccessExpression string
-	RepoId string
 	ProviderName string
 	ParameterValueIds []string
 	FlagId string
@@ -1966,12 +1955,11 @@ func (client *InMemClient) NewInMemScanConfig(name, desc, repoId,
 	
 	var resource *InMemResource
 	var err error
-	resource, err = client.NewInMemResource(name, desc)
+	resource, err = client.NewInMemResource(name, desc, repoId)
 	if err != nil { return nil, err }
 	var scanConfig = &InMemScanConfig{
 		InMemResource: *resource,
 		SuccessExpression: successExpr,
-		RepoId: repoId,
 		ProviderName: providerName,
 		ParameterValueIds: paramValueIds,
 		FlagId: flagId,
@@ -2036,7 +2024,7 @@ func (scanConfig *InMemScanConfig) setSuccessExpressionDeferredUpdate(expr strin
 }
 
 func (scanConfig *InMemScanConfig) getRepoId() string {
-	return scanConfig.RepoId
+	return scanConfig.ParentId
 }
 
 func (scanConfig *InMemScanConfig) getProviderName() string {
@@ -2114,10 +2102,6 @@ func (scanConfig *InMemScanConfig) getScanEventIds() []string {
 	return scanConfig.ScanEventIds
 }
 
-func (scanConfig *InMemScanConfig) getParentId() string {
-	return scanConfig.RepoId
-}
-
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
 	for _, valueId := range scanConfig.ParameterValueIds {
@@ -2144,7 +2128,6 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
  */
 type InMemFlag struct {
 	InMemResource
-	RepoId string
 	SuccessImagePath string
 }
 
@@ -2153,11 +2136,10 @@ func (client *InMemClient) NewInMemFlag(name, desc, repoId,
 	
 	var resource *InMemResource
 	var err error
-	resource, err = client.NewInMemResource(name, desc)
+	resource, err = client.NewInMemResource(name, desc, repoId)
 	if err != nil { return nil, err }
 	var flag = &InMemFlag{
 		InMemResource: *resource,
-		RepoId: repoId,
 		SuccessImagePath: successImagePath,
 	}
 	return flag, client.addObject(flag)
@@ -2194,7 +2176,7 @@ func (client *InMemClient) getFlag(id string) (Flag, error) {
 }
 
 func (flag *InMemFlag) getRepoId() string {
-	return flag.RepoId
+	return flag.ParentId
 }
 
 func (flag *InMemFlag) setSuccessImagePath(path string) {
@@ -2209,12 +2191,8 @@ func (flag *InMemFlag) getSuccessImageURL() string {
 	return flag.Client.Server.GetHTTPResourceScheme() + "://getFlagImage/?Id=" + flag.getId()
 }
 
-func (flag *InMemFlag) getParentId() string {
-	return flag.RepoId
-}
-
 func (flag *InMemFlag) asFlagDesc() *apitypes.FlagDesc {
-	return apitypes.NewFlagDesc(flag.RepoId, flag.getSuccessImageURL())
+	return apitypes.NewFlagDesc(flag.getRepoId(), flag.getSuccessImageURL())
 }
 
 /*******************************************************************************

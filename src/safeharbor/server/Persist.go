@@ -184,6 +184,7 @@ type Repo interface {
 type Dockerfile interface {
 	Resource
 	getExternalFilePath() string
+	getRepoId() string
 	getRepo() (Repo, error)
 	getDockerfileExecEventIds() []string
 	addEventId(string) error
@@ -193,6 +194,7 @@ type Dockerfile interface {
 
 type Image interface {
 	Resource
+	getRepoId() string
 	getRepo() (Repo, error)
 }
 
