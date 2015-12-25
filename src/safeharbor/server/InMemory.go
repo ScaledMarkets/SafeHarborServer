@@ -476,11 +476,11 @@ func (resource *InMemResource) removeAccess(party Party) error {
 			}
 			
 			// Remove the ACL entry id from the resource's ACL entry list.
-			fmt.Println(fmt.Sprintf("\tRemoving id %s at position %d", entryId, index))
+			fmt.Println(fmt.Sprintf("\tRemoving ACL entry %s at position %d", entryId, index))
 			resource.ACLEntryIds = apitypes.RemoveAt(index, resource.ACLEntryIds)
 			
 			// Remove from party's list as well
-			fmt.Println(fmt.Sprintf("\tRemoving id %s from party Id list", entryId))
+			fmt.Println(fmt.Sprintf("\tRemoving ACL entry %s from party Id list", entryId))
 			err = party.removeACLEntry(aclEntry)
 			if err != nil { return err }
 		}
@@ -522,7 +522,7 @@ func (resource *InMemResource) printACLs(party Party) {
 				fmt.Println(err.Error())
 				continue
 			}
-			fmt.Println("\t\tparty: " + pty.getName() + " (" + ptyId + "), resource: " +
+			fmt.Println("\t\tEntry Id " + entryId + ": party: " + pty.getName() + " (" + ptyId + "), resource: " +
 				rsc.getName() + " (" + rsc.getId() + ")")
 		}
 		curresourceId = curresource.getParentId()
@@ -536,10 +536,10 @@ func (resource *InMemResource) printACLs(party Party) {
 	}
 	fmt.Println("\tACL entries for party " + party.getName() + 
 		" (" + party.getId() + ") are:")
-	for _, id := range party.getACLEntryIds() {
+	for _, entryId := range party.getACLEntryIds() {
 		var aclEntry ACLEntry
 		var err error
-		aclEntry, err = resource.Client.getACLEntry(id)
+		aclEntry, err = resource.Client.getACLEntry(entryId)
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
@@ -558,7 +558,7 @@ func (resource *InMemResource) printACLs(party Party) {
 			fmt.Println(err.Error())
 			continue
 		}
-		fmt.Println("\t\tparty: " + pty.getName() + " (" + id + "), resource: " +
+		fmt.Println("\t\tEntry Id " + entryId + ": party: " + pty.getName() + " (" + partyId + "), resource: " +
 			rsc.getName() + " (" + rsc.getId() + ")")
 	}
 }
