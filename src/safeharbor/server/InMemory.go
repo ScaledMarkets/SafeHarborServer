@@ -457,7 +457,7 @@ func (resource *InMemResource) removeAccess(party Party) error {
 	resource.printACLs(party)
 	// end debug
 
-	var aclEntriesCopy []string
+	var aclEntriesCopy []string = make([]string, len(resource.ACLEntryIds))
 	copy(aclEntriesCopy, resource.ACLEntryIds)
 	fmt.Println(fmt.Sprintf("Copied %d ids", len(resource.ACLEntryIds)))
 	fmt.Println(fmt.Sprintf("aclEntriesCopy has %d + elements", len(aclEntriesCopy)))
