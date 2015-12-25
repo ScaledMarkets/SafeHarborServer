@@ -481,8 +481,15 @@ func (resource *InMemResource) removeAccess(party Party) error {
 			
 			// Remove from party's list as well
 			fmt.Println(fmt.Sprintf("\tRemoving id %s from party Id list", entryId))
-			var inMemParty = party.(*InMemParty)
+			var inMemParty *InMemParty
+			var isType bool
+			inMemParty, isType = party.(*InMemParty)
+			if ! isType {
+				fmt.Println("Internal error: party is a " + reflect.TypeOf(party).String())
+			}
+			fmt.Println("removeAccess:A")
 			inMemParty.ACLEntryIds = apitypes.RemoveFrom(entryId, inMemParty.ACLEntryIds)
+			fmt.Println("removeAccess:b")
 			err = party.writeBack()
 			if err != nil { return err }
 		}

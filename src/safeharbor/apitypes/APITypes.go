@@ -1072,13 +1072,20 @@ func sanitize(value string) (string, error) {
  */
 func RemoveFrom(value string, originalList []string) []string {
 	var newList []string = make([]string, len(originalList))
+	fmt.Println("RemoveFrom:A")
 	copy(newList, originalList)
+	fmt.Println("RemoveFrom:B")
 	for index, s := range originalList {
+		fmt.Println("RemoveFrom:C")
 		if s == value {
+			fmt.Println("RemoveFrom:D")
 			newList = RemoveAt(index, newList)
+			fmt.Println("RemoveFrom:E")
 			return newList
 		}
+		fmt.Println("RemoveFrom:F")
 	}
+	fmt.Println("RemoveFrom:G")
 	return newList
 }
 
@@ -1087,14 +1094,19 @@ func RemoveFrom(value string, originalList []string) []string {
  */
 func RemoveAt(position int, originalList []string) []string {
 	var firstPart []string
+	fmt.Println("RemoveAt:A")
 	if position == 0 {
+		fmt.Println("RemoveAt:B")
 		firstPart = []string{}
 	} else {
+		fmt.Println("RemoveAt:C")
 		firstPart = originalList[0:position-1]
 	}
 	if position >= (len(originalList)-1) { // nothing to append
+		fmt.Println("RemoveAt:D")
 		return firstPart
 	} else {
+		fmt.Println("RemoveAt:E")
 		return append(firstPart, originalList[position+1:]...)
 	}
 }
