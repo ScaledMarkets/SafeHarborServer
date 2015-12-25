@@ -1070,7 +1070,7 @@ func sanitize(value string) (string, error) {
  * Utility to remove a value from an array of strings.
  */
 func RemoveFrom(value string, originalList []string) []string {
-	var newList []string
+	var newList []string = make([]string, len(originalList))
 	copy(newList, originalList)
 	for index, s := range originalList {
 		if s == value { newList = RemoveAt(index, newList) }
