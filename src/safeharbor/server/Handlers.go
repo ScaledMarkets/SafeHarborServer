@@ -1408,7 +1408,6 @@ func addPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	
 	// Get the current ACLEntry, if there is one.
 	var aclEntry ACLEntry
-	fmt.Println("Before calling addAccess, partyId=" + partyId)
 	aclEntry, err = resource.addAccess(party, mask)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	

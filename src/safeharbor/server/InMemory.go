@@ -459,10 +459,14 @@ func (resource *InMemResource) removeAccess(party Party) error {
 
 	var aclEntriesCopy []string
 	copy(aclEntriesCopy, resource.ACLEntryIds)
-	for index, id := range aclEntriesCopy {
+	fmt.Println(fmt.Sprintf("Copied %d ids", len(resource.ACLEntryIds)))
+	fmt.Println(fmt.Sprintf("aclEntriesCopy has %d + elements", len(aclEntriesCopy)))
+	fmt.Println("For each entry,")
+	for index, entryId := range aclEntriesCopy {
+		fmt.Println("\tentry entryId=" + entryId)
 		var aclEntry ACLEntry
 		var err error
-		aclEntry, err = resource.Client.getACLEntry(id)
+		aclEntry, err = resource.Client.getACLEntry(entryId)
 		if err != nil { return err }
 		
 		if aclEntry.getPartyId() == party.getId() {
@@ -472,13 +476,13 @@ func (resource *InMemResource) removeAccess(party Party) error {
 			}
 			
 			// Remove the ACL entry id from the resource's ACL entry list.
-			fmt.Println(fmt.Sprintf("Removing id %s at position %d", id, index))
+			fmt.Println(fmt.Sprintf("\tRemoving id %s at position %d", entryId, index))
 			resource.ACLEntryIds = apitypes.RemoveAt(index, resource.ACLEntryIds)
 			
 			// Remove from party's list as well
-			fmt.Println(fmt.Sprintf("Removing id %s from party Id list", id))
+			fmt.Println(fmt.Sprintf("\tRemoving id %s from party Id list", entryId))
 			var inMemParty = party.(*InMemParty)
-			inMemParty.ACLEntryIds = apitypes.RemoveFrom(id, inMemParty.ACLEntryIds)
+			inMemParty.ACLEntryIds = apitypes.RemoveFrom(entryId, inMemParty.ACLEntryIds)
 			err = party.writeBack()
 			if err != nil { return err }
 		}
