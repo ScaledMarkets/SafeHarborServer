@@ -1093,14 +1093,11 @@ func RemoveFrom(value string, originalList []string) []string {
  * Utility to remove a value from a specified location in an array of strings.
  */
 func RemoveAt(position int, originalList []string) []string {
-	var firstPart []string
+	var firstPart []string = []string{}
 	fmt.Println("RemoveAt:A")
-	if position == 0 {
-		fmt.Println("RemoveAt:B")
-		firstPart = []string{}
-	} else {
+	if position > 0 {
 		fmt.Println("RemoveAt:C")
-		firstPart = originalList[0:position-1]
+		firstPart = append(firstPart, originalList[0:position]...)
 	}
 	if position >= (len(originalList)-1) { // nothing to append
 		fmt.Println("RemoveAt:D")
