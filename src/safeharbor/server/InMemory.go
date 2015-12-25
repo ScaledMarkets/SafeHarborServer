@@ -526,7 +526,11 @@ func (resource *InMemResource) printACLs(party Party) {
 				rsc.getName() + " (" + rsc.getId() + ")")
 		}
 		curresourceId = curresource.getParentId()
-		if curresourceId == "" { break }
+		if curresourceId == "" {
+			fmt.Println(fmt.Sprintf("\tResource %s (%s) has not parentId",
+				curresource.getName(), curresource.getId()))
+			break
+		}
 		var err error
 		curresource, err = resource.Client.getResource(curresourceId)
 		if err != nil {
