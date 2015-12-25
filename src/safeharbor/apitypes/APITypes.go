@@ -1067,13 +1067,17 @@ func sanitize(value string) (string, error) {
 }
 
 /*******************************************************************************
- * Utility to remove a value from an array of strings.
+ * Utility to remove a value from an array of strings. It is assumed that the
+ * value is not present in the array more than one time.
  */
 func RemoveFrom(value string, originalList []string) []string {
 	var newList []string = make([]string, len(originalList))
 	copy(newList, originalList)
 	for index, s := range originalList {
-		if s == value { newList = RemoveAt(index, newList) }
+		if s == value {
+			newList = RemoveAt(index, newList)
+			return newList
+		}
 	}
 	return newList
 }
@@ -1088,5 +1092,9 @@ func RemoveAt(position int, originalList []string) []string {
 	} else {
 		firstPart = originalList[0:position-1]
 	}
-	return append(firstPart, originalList[position+1:]...)
+	if position >= (len(originalList)-1) { // nothing to append
+		return firstPart
+	} else {
+		return append(firstPart, originalList[position+1:]...)
+	}
 }
