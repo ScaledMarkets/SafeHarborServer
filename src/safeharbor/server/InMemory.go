@@ -656,6 +656,9 @@ func (client *InMemClient) getResource(resourceId string) (Resource, error) {
 }
 
 func (resource *InMemResource) getParentId() string {
+	fmt.Println("Internal error - getParentId called on abstract type InMemResource")
+	fmt.Println(fmt.Sprintf("resource: %s (%s), is a %s"),
+		resource.getName(), resource.getId(), reflect.TypeOf(resource).String())
 	return ""
 }
 
@@ -2111,6 +2114,10 @@ func (scanConfig *InMemScanConfig) getScanEventIds() []string {
 	return scanConfig.ScanEventIds
 }
 
+func (scanConfig *InMemScanConfig) getParentId() string {
+	return scanConfig.RepoId
+}
+
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
 	for _, valueId := range scanConfig.ParameterValueIds {
@@ -2200,6 +2207,10 @@ func (flag *InMemFlag) getSuccessImagePath() string {
 
 func (flag *InMemFlag) getSuccessImageURL() string {
 	return flag.Client.Server.GetHTTPResourceScheme() + "://getFlagImage/?Id=" + flag.getId()
+}
+
+func (flag *InMemFlag) getParentId() string {
+	return flag.RepoId
 }
 
 func (flag *InMemFlag) asFlagDesc() *apitypes.FlagDesc {
