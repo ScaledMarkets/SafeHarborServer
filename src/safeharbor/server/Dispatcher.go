@@ -50,6 +50,7 @@ func NewDispatcher() *Dispatcher {
 		"logout": logout,
 		"createUser": createUser,
 		"disableUser": disableUser,
+		"reenableUser": reenableUser,
 		"changePassword": changePassword,
 		"createGroup": createGroup,
 		"deleteGroup": deleteGroup,
@@ -61,6 +62,7 @@ func NewDispatcher() *Dispatcher {
 		"getRealmDesc": getRealmDesc,
 		"deactivateRealm": deactivateRealm,
 		"addRealmUser": addRealmUser,
+		"remRealmUser": remRealmUser,
 		"getRealmUsers": getRealmUsers,
 		"getRealmUser": getRealmUser,
 		"getRealmGroups": getRealmGroups,
@@ -101,6 +103,12 @@ func NewDispatcher() *Dispatcher {
 		"getScanConfigDesc": getScanConfigDesc,
 		"getFlagDesc": getFlagDesc,
 		"getFlagImage": getFlagImage,
+		"getMyScanConfigs": getMyScanConfigs,
+		"getScanConfigDescByName": getScanConfigDescByName,
+		"remScanConfig": remScanConfig,
+		"getMyFlags": getMyFlags,
+		"getFlagDescByName": getFlagDescByName,
+		"remFlag": remFlag,
 	}
 	
 	var dispatcher *Dispatcher = &Dispatcher{

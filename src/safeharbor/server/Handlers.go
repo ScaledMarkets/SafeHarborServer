@@ -288,6 +288,33 @@ func disableUser(server *Server, sessionToken *apitypes.SessionToken, values url
 }
 
 /*******************************************************************************
+ * Arguments: UserObjId
+ * Returns: apitypes.Result
+ */
+func reenableUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	var userObjId string
+	var err error
+	userObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserObjId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var user User
+	user, err = server.dbClient.getUser(userObjId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
+		user.getRealmId(), "reenableUser"); failMsg != nil { return failMsg }
+	
+	if user.isActive() { return apitypes.NewFailureDesc("User " + user.getUserId() + " is already active") }
+	
+	// Enable the user to authenticate.
+	user.setActive(true)
+	
+	return apitypes.NewResult(200, "User with user Id '" + user.getUserId() + "' reenabled")
+}
+
+/*******************************************************************************
  * Arguments: UserId, OldPassword, NewPassword
  * Returns: apitypes.Result
  */
@@ -683,6 +710,18 @@ func addRealmUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 	err = realm.addUserId(userObjId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	return apitypes.NewResult(200, "User added to realm")
+}
+
+/*******************************************************************************
+ * Arguments: RealmId, UserObjId
+ * Returns: apitypes.Result
+ */
+func remRealmUser(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+	
+	return apitypes.NewFailureDesc("Not implemented yet")
 }
 
 /*******************************************************************************
@@ -2000,7 +2039,7 @@ func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 }
 
 /*******************************************************************************
- * Arguments: URL
+ * Arguments: FlagId
  * Returns: image file
  */
 func getFlagImage(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
@@ -2322,4 +2361,76 @@ func getDockerfileEvents(server *Server, sessionToken *apitypes.SessionToken, va
 	}
 	
 	return eventDescs
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: ScanConfigDesc...
+ */
+func getMyScanConfigs(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+
+	return apitypes.NewFailureDesc("Not implemented yet")
+}
+
+/*******************************************************************************
+ * Arguments: RepoId, ScanConfigName
+ * Returns: ScanConfigDesc
+ */
+func getScanConfigDescByName(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+
+	return apitypes.NewFailureDesc("Not implemented yet")
+}
+
+/*******************************************************************************
+ * Arguments: ScanConfigId
+ * Returns: Result
+ */
+func remScanConfig(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+
+	return apitypes.NewFailureDesc("Not implemented yet")
+}
+
+/*******************************************************************************
+ * Arguments: 
+ * Returns: FlagDesc...
+ */
+func getMyFlags(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+
+	return apitypes.NewFailureDesc("Not implemented yet")
+}
+
+/*******************************************************************************
+ * Arguments: Repoid, FlagName
+ * Returns: FlagDesc
+ */
+func getFlagDescByName(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+
+	return apitypes.NewFailureDesc("Not implemented yet")
+}
+
+/*******************************************************************************
+ * Arguments: FlagId
+ * Returns: Result
+ */
+func remFlag(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+
+	return apitypes.NewFailureDesc("Not implemented yet")
 }

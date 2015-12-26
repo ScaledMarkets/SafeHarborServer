@@ -36,6 +36,7 @@ type DBClient interface {
 	dbCreateScanEvent(string, string, string, string) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
 	dbDeactivateRealm(realmId string) error
+	dbReactivateRealm(realmId string) error
 	dbGetAllRealmIds() []string
 	getPersistentObject(id string) PersistObj
 	getResource(string) (Resource, error)
@@ -134,6 +135,8 @@ type Resource interface {
 	isRepo() bool
 	isDockerfile() bool
 	isDockerImage() bool
+	isScanConfig() bool
+	isFlag() bool
 	setAccess(party Party, permissionMask []bool) (ACLEntry, error)
 	addAccess(party Party, permissionMask []bool) (ACLEntry, error)
 	removeAccess(Party) error
@@ -158,7 +161,6 @@ type Realm interface {
 	addGroup(Group) error
 	addUser(User) error
 	addRepo(Repo) error
-	deleteRepo(Repo) error
 	deleteGroup(Group) error
 	asRealmDesc() *apitypes.RealmDesc
 }
@@ -177,7 +179,6 @@ type Repo interface {
 	addScanConfig(ScanConfig) error
 	addFlag(Flag) error
 	getScanConfigByName(string) (ScanConfig, error)
-	deleteResource(Resource) error
 	asRepoDesc() *apitypes.RepoDesc
 }
 

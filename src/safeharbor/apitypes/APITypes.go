@@ -789,20 +789,24 @@ func (scanConfig *ScanConfigDesc) AsJSON() string {
  */
 type FlagDesc struct {
 	BaseType
+	FlagId string
 	RepoId string
+	Name string
 	ImageURL string
 }
 
-func NewFlagDesc(repoId, imageURL string) *FlagDesc {
+func NewFlagDesc(flagId, repoId, name, imageURL string) *FlagDesc {
 	return &FlagDesc{
+		FlagId: flagId,
 		RepoId: repoId,
+		Name: name,
 		ImageURL: imageURL,
 	}
 }
 
 func (flagDesc *FlagDesc) AsJSON() string {
-	return fmt.Sprintf("{\"RepoId\": \"%s\", \"ImageURL\": \"%s\"}",
-		flagDesc.RepoId, flagDesc.ImageURL)
+	return fmt.Sprintf("{\"FlagId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", \"ImageURL\": \"%s\"}",
+		flagDesc.FlagId, flagDesc.RepoId, flagDesc.Name, flagDesc.ImageURL)
 }
 
 /*******************************************************************************

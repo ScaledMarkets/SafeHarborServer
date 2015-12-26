@@ -662,10 +662,35 @@ func (resource *InMemResource) getParentId() string {
 	return resource.ParentId
 }
 
-func (resource *InMemResource) isRealm() bool { return false }
-func (resource *InMemResource) isRepo() bool { return false }
-func (resource *InMemResource) isDockerfile() bool { return false }
-func (resource *InMemResource) isDockerImage() bool { return false }
+func (resource *InMemResource) isRealm() bool {
+	fmt.Println("Internal ERROR: isRealm called on abstract type 'Resource'")
+	return false
+}
+
+func (resource *InMemResource) isRepo() bool {
+	fmt.Println("Internal ERROR: isRepo called on abstract type 'Resource'")
+	return false
+}
+
+func (resource *InMemResource) isDockerfile() bool {
+	fmt.Println("Internal ERROR: isDockerfile called on abstract type 'Resource'")
+	return false
+}
+
+func (resource *InMemResource) isDockerImage() bool {
+	fmt.Println("Internal ERROR: isDockerImage called on abstract type 'Resource'")
+	return false
+}
+
+func (resource *InMemResource) isScanConfig() bool {
+	fmt.Println("Internal ERROR: isScanConfig called on abstract type 'Resource'")
+	return false
+}
+
+func (resource *InMemResource) isFlag() bool {
+	fmt.Println("Internal ERROR: isFlag called on abstract type 'Resource'")
+	return false
+}
 
 /*******************************************************************************
  * 
@@ -1494,25 +1519,36 @@ func (realm *InMemRealm) getRepoByName(repoName string) (Repo, error) {
 	return nil, nil
 }
 
-func (realm *InMemRealm) deleteRepo(repo Repo) error {
-	
-	//repo.removeAllAccess()
-	
-	// Delete all resources owned by the repo.
-	//....
-	return nil
-}
-
 func (realm *InMemRealm) deleteGroup(group Group) error {
 
-	
 	// Remove users from the group.
-	//....
+	for _, userObjId := range group.getUserObjIds() {
+		var user User
+		user, err = realm.Client.getUser(userObjId)
+		if err != nil { return err }
+		err = remUser(user)
+		if err != nil { return err }
+	}
 	
 	// Remove ACL entries referenced by the group.
-	//....
+	var entryIds []string = group.getACLEntryIds()
+	var entriesCopy []string = make([]string, len(entryIds))
+	copy(entryIdsCopy, entryIds)
+	for _, entryId := range entryIdsCopy {
+		var resource Resource
+		resource, err = realm.Client.getResource(entry.getResourceId())
+		if err != nil { return err }
+		var party Party
+		party, err = realm.Client.getParty(entry.getPartyId())
+		if err != nil { return err }
+		err = resource.removeAccess(party) error
+		if err != nil { return err }
+	}
 	
-	return nil
+	// Remove the group from its realm.
+	realm.GroupIds = apitypes.RemoveFrom(group.getId(), realm.GroupIds)
+	
+	return realm.writeBack()
 }
 
 func (realm *InMemRealm) isRealm() bool { return true }
@@ -1642,14 +1678,6 @@ func (repo *InMemRepo) getScanConfigByName(name string) (ScanConfig, error) {
 		if config.getName() == name { return config, nil }
 	}
 	return nil, nil
-}
-
-func (repo *InMemRepo) deleteResource(resource Resource) error {
-	
-	resource.removeAllAccess()
-	// Delete all events that reference the resource.
-	//....
-	return nil
 }
 
 func (repo *InMemRepo) isRepo() bool { return true }
@@ -2102,6 +2130,10 @@ func (scanConfig *InMemScanConfig) getScanEventIds() []string {
 	return scanConfig.ScanEventIds
 }
 
+func (resource *InMemScanConfig) isScanConfig() bool {
+	return true
+}
+
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
 	for _, valueId := range scanConfig.ParameterValueIds {
@@ -2191,8 +2223,13 @@ func (flag *InMemFlag) getSuccessImageURL() string {
 	return flag.Client.Server.GetHTTPResourceScheme() + "://getFlagImage/?Id=" + flag.getId()
 }
 
+func (resource *InMemFlag) isFlag() bool {
+	return true
+}
+
 func (flag *InMemFlag) asFlagDesc() *apitypes.FlagDesc {
-	return apitypes.NewFlagDesc(flag.getRepoId(), flag.getSuccessImageURL())
+	return apitypes.NewFlagDesc(flag.getId(), flag.getRepoId(), flag.getName(),
+		flag.getSuccessImageURL())
 }
 
 /*******************************************************************************
