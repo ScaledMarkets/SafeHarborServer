@@ -17,7 +17,6 @@ import (
 	"net/url"
 	"io/ioutil"
 	//"time"
-	//"reflect"
 	
 	"safeharbor/apitypes"
 	//"safeharbor/providers"
@@ -203,7 +202,8 @@ func assertErrIsNil(err error, msg string) {
 }
 
 /*******************************************************************************
- * Authenticate the session token.
+ * Authenticate the session, using either the session token or an HTTP parameter
+ * that provides a valid session Id.
  */
 func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
 	values url.Values) (*apitypes.SessionToken, *apitypes.FailureDesc) {
@@ -464,4 +464,119 @@ func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apityp
 	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), image.getId(), user.getId())
 	
 	return image, nil
+}
+
+/*******************************************************************************
+ * Create a map of the leaf resources (resources that are not containers for other
+ * resources) that the specified user has access to. The map is keyed on each
+ * resource''s object Id.
+ */
+func getLeafResources(dbClient DBClient, user User,
+	leafType ResourceType) (map[string]Resource, error) {
+	
+	var realms map[string]Realm = make(map[string]Realm)
+	var repos map[string]Repo = make(map[string]Repo)
+	var leaves map[string]Resource = make(map[string]Resource)
+	
+	var aclEntrieIds []string = user.getACLEntryIds()
+	var err error
+	fmt.Println("For each acl entry...")
+	for _, aclEntryId := range aclEntrieIds {
+		fmt.Println("\taclEntryId:", aclEntryId)
+		var aclEntry ACLEntry
+		aclEntry, err = dbClient.getACLEntry(aclEntryId)
+		if err != nil { return nil, err }
+		var resourceId string = aclEntry.getResourceId()
+		var resource Resource
+		resource, err = dbClient.getResource(resourceId)
+		if err != nil { return nil, err }
+		switch v := resource.(type) {
+			case Realm: realms[v.getId()] = v
+				fmt.Println("\t\ta Realm")
+			case Repo: repos[v.getId()] = v
+				fmt.Println("\t\ta Repo")
+			case Dockerfile: if leafType == ADockerfile { leaves[v.getId()] = v }
+			case DockerImage: if leafType == ADockerImage { leaves[v.getId()] = v }
+			case ScanConfig: if leafType == AScanConfig { leaves[v.getId()] = v }
+			case Flag: if leafType == AFlag { leaves[v.getId()] = v }
+		}
+	}
+	fmt.Println("For each realm...")
+	for _, realm := range realms {
+		fmt.Println("For each repo of realm id", realm.getId(), "...")
+		// Add all of the repos belonging to realm.
+		for _, repoId := range realm.getRepoIds() {
+			fmt.Println("\tadding repoId", repoId)
+			var r Repo
+			var err error
+			r, err = dbClient.getRepo(repoId)
+			if err != nil { return nil, err }
+			if r == nil { return nil, errors.New("No repo found for Id " + repoId) }
+			repos[repoId] = r
+		}
+	}
+	for _, repo := range repos {
+		switch leafType {
+			case ADockerfile: err = mapRepoDockerfileIds(dbClient, repo, leaves)
+			case ADockerImage: err = mapRepoDockerImageIds(dbClient, repo, leaves)
+			case AScanConfig: err = mapRepoScanConfigIds(dbClient, repo, leaves)
+			case AFlag: err = mapRepoFlagIds(dbClient, repo, leaves)
+			default: return nil, errors.New("Internal error: unrecognized repository object type")
+		}
+		if err != nil { return nil, err }
+	}
+	
+	return leaves, nil
+}
+
+func mapRepoDockerfileIds(dbClient DBClient, repo Repo, leaves map[string]Resource) error {
+		
+	for _, dockerfileId := range repo.getDockerfileIds() {
+		var d Dockerfile
+		var err error
+		d, err = dbClient.getDockerfile(dockerfileId)
+		if err != nil { return err }
+		if d == nil { return errors.New("Internal Error: No dockerfile found for Id " + dockerfileId) }
+		leaves[dockerfileId] = d
+	}
+	return nil
+}
+
+func mapRepoDockerImageIds(dbClient DBClient, repo Repo, leaves map[string]Resource) error {
+		
+	for _, id := range repo.getDockerImageIds() {
+		var d DockerImage
+		var err error
+		d, err = dbClient.getDockerImage(id)
+		if err != nil { return err }
+		if d == nil { return errors.New("Internal Error: No docker image found for Id " + id) }
+		leaves[id] = d
+	}
+	return nil
+}
+
+func mapRepoScanConfigIds(dbClient DBClient, repo Repo, leaves map[string]Resource) error {
+		
+	for _, id := range repo.getScanConfigIds() {
+		var d ScanConfig
+		var err error
+		d, err = dbClient.getScanConfig(id)
+		if err != nil { return err }
+		if d == nil { return errors.New("Internal Error: No scan config found for Id " + id) }
+		leaves[id] = d
+	}
+	return nil
+}
+
+func mapRepoFlagIds(dbClient DBClient, repo Repo, leaves map[string]Resource) error {
+		
+	for _, id := range repo.getFlagIds() {
+		var d Flag
+		var err error
+		d, err = dbClient.getFlag(id)
+		if err != nil { return err }
+		if d == nil { return errors.New("Internal Error: No flag found for Id " + id) }
+		leaves[id] = d
+	}
+	return nil
 }

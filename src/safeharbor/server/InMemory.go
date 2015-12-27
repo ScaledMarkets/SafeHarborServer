@@ -1399,6 +1399,21 @@ func (realm *InMemRealm) addUserId(userObjId string) error {
 	return err
 }
 
+func (realm *InMemRealm) removeUserId(userObjId string) error {
+	
+	var user User
+	var isType bool
+	user, isType = realm.Client.getPersistentObject(userObjId).(User)
+	if ! isType { return errors.New("Internal error: object is an unexpected type") }
+	if user == nil { return errors.New("Could not identify user with obj Id " + userObjId) }
+	if user.getRealmId() != "" {
+		return errors.New("User with obj Id " + userObjId + " belongs to another realm")
+	}
+	realm.UserObjIds = apitypes.RemoveFrom(userObjId, realm.UserObjIds)
+	var err error = realm.writeBack()
+	return err
+}
+
 func (realm *InMemRealm) getGroupIds() []string {
 	return realm.GroupIds
 }
@@ -1524,24 +1539,26 @@ func (realm *InMemRealm) deleteGroup(group Group) error {
 	// Remove users from the group.
 	for _, userObjId := range group.getUserObjIds() {
 		var user User
+		var err error
 		user, err = realm.Client.getUser(userObjId)
 		if err != nil { return err }
-		err = remUser(user)
+		err = group.remUser(user)
 		if err != nil { return err }
 	}
 	
 	// Remove ACL entries referenced by the group.
 	var entryIds []string = group.getACLEntryIds()
-	var entriesCopy []string = make([]string, len(entryIds))
+	var entryIdsCopy []string = make([]string, len(entryIds))
 	copy(entryIdsCopy, entryIds)
 	for _, entryId := range entryIdsCopy {
 		var resource Resource
+		var err error
 		resource, err = realm.Client.getResource(entry.getResourceId())
 		if err != nil { return err }
 		var party Party
 		party, err = realm.Client.getParty(entry.getPartyId())
 		if err != nil { return err }
-		err = resource.removeAccess(party) error
+		err = resource.removeAccess(party)
 		if err != nil { return err }
 	}
 	
@@ -1828,9 +1845,11 @@ func (image *InMemImage) getRepo() (Repo, error) {
 type InMemDockerImage struct {
 	InMemImage
 	ScanEventIds []string
+	Signature []byte
 }
 
-func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string) (*InMemDockerImage, error) {
+func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string,
+	signature []byte) (*InMemDockerImage, error) {
 	var image *InMemImage
 	var err error
 	image, err = client.NewInMemImage(name, desc, repoId)
@@ -1856,6 +1875,12 @@ func (client *InMemClient) dbCreateDockerImage(repoId, dockerImageTag, desc stri
 	if err != nil { return nil, err }
 	fmt.Println("Created DockerImage")
 	err = repo.addDockerImage(newDockerImage)  // Add to repo's list.
+
+	var signature []byte
+	signature, err = newDockerImage.computeSignature()
+	if err != nil { return newDockerImage, err }
+	newDockerImage.Signature = signature
+	
 	return newDockerImage, err
 }
 
@@ -1867,6 +1892,16 @@ func (client *InMemClient) getDockerImage(id string) (DockerImage, error) {
 	image, isType = obj.(DockerImage)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a DockerImage") }
 	return image, nil
+}
+
+func (image *InMemDockerImage) getSignature() []byte {
+	return image.Signature
+}
+
+func (image *InMemDockerImage) computeSignature() ([]byte, error) {
+	//TBD.... implement this for real
+	return new([20]byte)
+	//return ComputeFileSignature(filepath)
 }
 
 func (image *InMemDockerImage) getDockerImageTag() string {
@@ -1899,7 +1934,8 @@ func (image *InMemDockerImage) getMostRecentScanEventId() string {
 }
 
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
-	return apitypes.NewDockerImageDesc(image.Id, image.getRepoId(), image.Name, image.Description, image.CreationTime)
+	return apitypes.NewDockerImageDesc(image.Id, image.getRepoId(), image.Name,
+		image.Description, image.CreationTime, image.Signature)
 }
 
 func (image *InMemDockerImage) isDockerImage() bool { return true }

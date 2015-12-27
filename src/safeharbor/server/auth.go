@@ -56,7 +56,7 @@ func (authSvc *AuthService) clearAllSessions() {
  * 
  */
 func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
-	return authSvc.computeHash(pswd).Sum(authSvc.secretSalt)
+	return authSvc.computeHash(pswd).Sum([]byte{})
 }
 
 /*******************************************************************************
@@ -100,12 +100,12 @@ func (authSvc *AuthService) invalidateSessionId(sessionId string) {
  * Obtain the session Id, if any, and validate it; return nil if no Id found
  * or the Id is not valid.
  */
-func (authSvc *AuthService) authenticateRequest(httpReq *http.Request) *apitypes.SessionToken {
+func (authSvc *AuthService) authenticateRequestCookie(httpReq *http.Request) *apitypes.SessionToken {
 	
 	var sessionToken *apitypes.SessionToken = nil
 	
 	fmt.Println("authenticating request...")
-	var sessionId = getSessionId(httpReq)
+	var sessionId = getSessionIdFromCookie(httpReq)
 	fmt.Println("obtained session id:", sessionId)
 	if sessionId != "" {
 		sessionToken = authSvc.identifySession(sessionId)  // returns nil if invalid
@@ -250,11 +250,11 @@ func (server *Server) partyHasAccess(party Party, actionMask []bool, resource Re
 
 /*******************************************************************************
  * Returns the session id header value, or "" if there is none.
- * Used by authenticateRequest.
+ * Used by authenticateRequestCookie.
  */
-func getSessionId(httpReq *http.Request) string {
-	assertThat(httpReq != nil, "In getSessionId, httpReq is nil")
-	assertThat(httpReq.Header != nil, "In getSessionId, httpReq.Header is nil")
+func getSessionIdFromCookie(httpReq *http.Request) string {
+	assertThat(httpReq != nil, "In getSessionIdFromCookie, httpReq is nil")
+	assertThat(httpReq.Header != nil, "In getSessionIdFromCookie, httpReq.Header is nil")
 	
 	var cookie *http.Cookie
 	var err error
@@ -265,14 +265,6 @@ func getSessionId(httpReq *http.Request) string {
 	}
 	
 	var sessionId = cookie.Value
-	
-	//if httpReq.Header["Session-Id"] == nil { // No authenticated session has been established.
-	//	fmt.Println("No Session-Id header found.")
-	//	return ""
-	//}
-	//assertThat(len(httpReq.Header["Session-Id"]) > 0, "In getSessionId, len(httpReq.Header[Session-Id]) == 0")
-	//var sessionId string = httpReq.Header["Session-Id"][0]
-	
 	
 	if len(sessionId) == 0 { return "" }
 	return sessionId
@@ -357,5 +349,6 @@ func (authSvc *AuthService) computeHash(s string) hash.Hash {
 	var hash hash.Hash = sha512.New()
 	var bytes []byte = []byte(s)
 	hash.Write(bytes)
+	hash.Write(authSvc.secretSalt)
 	return hash
 }

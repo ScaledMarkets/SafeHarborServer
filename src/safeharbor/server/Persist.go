@@ -143,6 +143,17 @@ type Resource interface {
 	removeAllAccess() error
 }
 
+type ResourceType int
+
+const (
+	ARealm ResourceType = iota
+	ARepo
+	ADockerfile
+	ADockerImage
+	AScanConfig
+	AFlag
+)
+
 type Realm interface {
 	Resource
 	getAdminUserId() string
@@ -156,6 +167,7 @@ type Realm interface {
 	getUserObjIds() []string
 	getRepoIds() []string
 	addUserId(string) error
+	removeUserId(string) error
 	getUserByUserId(string) (User, error)
 	getGroupIds() []string
 	addGroup(Group) error
@@ -206,6 +218,8 @@ type DockerImage interface {
 	getScanEventIds() []string // ordered from oldest to newest
 	getMostRecentScanEventId() string
 	asDockerImageDesc() *apitypes.DockerImageDesc
+	getSignature() []byte
+	computeSignature() []byte
 }
 
 type ParameterValue interface {

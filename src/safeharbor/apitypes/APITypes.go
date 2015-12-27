@@ -563,11 +563,14 @@ func NewImageDesc(objId, repoId, name, desc string, creationTime time.Time) *Ima
  */
 type DockerImageDesc struct {
 	ImageDesc
+	Signature []byte
 }
 
-func NewDockerImageDesc(objId, repoId, name, desc string, creationTime time.Time) *DockerImageDesc {
+func NewDockerImageDesc(objId, repoId, name, desc string, creationTime time.Time,
+	signature []byte) *DockerImageDesc {
 	return &DockerImageDesc{
 		ImageDesc: *NewImageDesc(objId, repoId, name, desc, creationTime),
+		Signature: signature,
 	}
 }
 
@@ -576,9 +579,17 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 }
 
 func (imageDesc *DockerImageDesc) AsJSON() string {
-	return fmt.Sprintf("{\"ObjId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", " +
-		"\"Description\": \"%s\", \"CreationDate\": %s}",
-		imageDesc.ObjId, imageDesc.RepoId, imageDesc.Name, imageDesc.Description, imageDesc.CreationDate)
+	var s = fmt.Sprintf("{\"ObjId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", " +
+		"\"Description\": \"%s\", \"CreationDate\": %s, " +
+		"\"Signature\": [",
+		imageDesc.ObjId, imageDesc.RepoId, imageDesc.Name, imageDesc.Description,
+		imageDesc.CreationDate)
+	for i, b := range imageDesc.Signature {
+		if i > 0 { s = s + ", " }
+		s = s + fmt.Sprintf("%d", b)
+	}
+	s = s + "]}"
+	return s
 }
 
 type DockerImageDescs []*DockerImageDesc
@@ -784,6 +795,23 @@ func (scanConfig *ScanConfigDesc) AsJSON() string {
 	return s + "\n]}"
 }
 
+type ScanConfigDescs []*ScanConfigDesc
+
+func (scanConfigDescs ScanConfigDescs) AsJSON() string {
+	var response string = "["
+	var firstTime bool = true
+	for _, desc := range scanConfigDescs {
+		if firstTime { firstTime = false } else { response = response + ",\n" }
+		response = response + desc.AsJSON()
+	}
+	response = response + "]"
+	return response
+}
+
+func (scanConfigDescs ScanConfigDescs) SendFile() string {
+	return ""
+}
+
 /*******************************************************************************
  * 
  */
@@ -807,6 +835,23 @@ func NewFlagDesc(flagId, repoId, name, imageURL string) *FlagDesc {
 func (flagDesc *FlagDesc) AsJSON() string {
 	return fmt.Sprintf("{\"FlagId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", \"ImageURL\": \"%s\"}",
 		flagDesc.FlagId, flagDesc.RepoId, flagDesc.Name, flagDesc.ImageURL)
+}
+
+type FlagDescs []*FlagDesc
+
+func (flagDescs FlagDescs) AsJSON() string {
+	var response string = "["
+	var firstTime bool = true
+	for _, desc := range flagDescs {
+		if firstTime { firstTime = false } else { response = response + ",\n" }
+		response = response + desc.AsJSON()
+	}
+	response = response + "]"
+	return response
+}
+
+func (flagDescs FlagDescs) SendFile() string {
+	return ""
 }
 
 /*******************************************************************************
@@ -1076,20 +1121,13 @@ func sanitize(value string) (string, error) {
  */
 func RemoveFrom(value string, originalList []string) []string {
 	var newList []string = make([]string, len(originalList))
-	fmt.Println("RemoveFrom:A")
 	copy(newList, originalList)
-	fmt.Println("RemoveFrom:B")
 	for index, s := range originalList {
-		fmt.Println("RemoveFrom:C")
 		if s == value {
-			fmt.Println("RemoveFrom:D")
 			newList = RemoveAt(index, newList)
-			fmt.Println("RemoveFrom:E")
 			return newList
 		}
-		fmt.Println("RemoveFrom:F")
 	}
-	fmt.Println("RemoveFrom:G")
 	return newList
 }
 
@@ -1098,16 +1136,12 @@ func RemoveFrom(value string, originalList []string) []string {
  */
 func RemoveAt(position int, originalList []string) []string {
 	var firstPart []string = []string{}
-	fmt.Println("RemoveAt:A")
 	if position > 0 {
-		fmt.Println("RemoveAt:C")
 		firstPart = append(firstPart, originalList[0:position]...)
 	}
 	if position >= (len(originalList)-1) { // nothing to append
-		fmt.Println("RemoveAt:D")
 		return firstPart
 	} else {
-		fmt.Println("RemoveAt:E")
 		return append(firstPart, originalList[position+1:]...)
 	}
 }

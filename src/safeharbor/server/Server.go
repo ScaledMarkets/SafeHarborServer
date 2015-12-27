@@ -338,21 +338,15 @@ func (server *Server) getHttpHandler() http.Handler {
  */
 func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Request) {
 	
+	fmt.Println("------------incoming request------------")
 	defer httpReq.Body.Close() // ensure that request body is always closed.
 
 	if server.Debug { printHeaders(httpReq) }
 	
 	// Authenitcate session or user.
 	var sessionToken *apitypes.SessionToken = nil
-	sessionToken = server.authService.authenticateRequest(httpReq)
-	if sessionToken == nil { fmt.Println("Server.ServeHTTP: Session token is nil") }
-	
-	//if sessionToken == nil { //return authent failure
-	//	fmt.Println("Failed to authenticate - request being denied")
-	//	apitypes.RespondWithClientError(writer, "Failed to authenticate - request being denied")
-	//	return
-	//}
-	//fmt.Println("authenticated request")
+	sessionToken = server.authService.authenticateRequestCookie(httpReq)
+	if sessionToken == nil { fmt.Println("Server.ServeHTTP: SessionId cookie is nil") }
 	
 	// Set a header with the API Version for all responses.
 	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS?redirectlocale=en-US&redirectslug=HTTP_access_control#Access-Control-Allow-Credentials
@@ -365,6 +359,7 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	
 	server.dispatch(sessionToken, writer, httpReq)
 	server.authService.addSessionIdToResponse(sessionToken, writer)
+	fmt.Println("---returning from request---")
 }
 
 /*******************************************************************************

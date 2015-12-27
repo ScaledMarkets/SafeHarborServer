@@ -61,10 +61,9 @@ func NewDispatcher() *Dispatcher {
 		"createRealm": createRealm,
 		"getRealmDesc": getRealmDesc,
 		"deactivateRealm": deactivateRealm,
-		"addRealmUser": addRealmUser,
-		"remRealmUser": remRealmUser,
+		"moveUserToRealm": moveUserToRealm,
 		"getRealmUsers": getRealmUsers,
-		"getRealmUser": getRealmUser,
+		"getUserDesc": getUserDesc,
 		"getRealmGroups": getRealmGroups,
 		"getRealmRepos": getRealmRepos,
 		"getAllRealms": getAllRealms,
@@ -127,7 +126,6 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	headers http.Header, w http.ResponseWriter, reqName string, values url.Values,
 	files map[string][]*multipart.FileHeader) {
 
-	fmt.Println("------------------------")
 	fmt.Printf("Dispatcher: handleRequest for '%s'\n", reqName)
 	var handler, found = dispatcher.handlers[reqName]
 	if ! found {
@@ -162,7 +160,6 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	
 	returnOkResponse(headers, w, result)
 	fmt.Printf("Handled %s\n", reqName)
-	fmt.Println()
 }
 
 /*******************************************************************************
