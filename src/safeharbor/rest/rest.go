@@ -149,7 +149,7 @@ func ParseResponseBodyToMap(body io.ReadCloser) (map[string]interface{}, error) 
 	//var dec *json.Decoder = json.NewDecoder(body)
 	//err := dec.Decode(&obj)
 	if err != nil { return nil, err }
-	//assertErrIsNil(err, "When unmarshalling obj")
+	//AssertErrIsNil(err, "When unmarshalling obj")
 	
 	
 	//var result map[string]interface{}

@@ -195,7 +195,7 @@ func assertThat(condition bool, msg string) {
 /*******************************************************************************
  * 
  */
-func assertErrIsNil(err error, msg string) {
+func AssertErrIsNil(err error, msg string) {
 	if err == nil { return }
 	fmt.Print(msg)
 	panic(err)

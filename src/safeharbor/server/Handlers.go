@@ -1725,7 +1725,6 @@ func getMyDockerImages(server *Server, sessionToken *apitypes.SessionToken, valu
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	var dockerfileDescs = make([]*apitypes.DockerfileDesc, 0)
 	
 	var err error
 	var leaves map[string]Resource
@@ -1755,7 +1754,6 @@ func getMyScanConfigs(server *Server, sessionToken *apitypes.SessionToken, value
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	var dockerfileDescs = make([]*apitypes.DockerfileDesc, 0)
 	
 	var err error
 	var leaves map[string]Resource
@@ -1785,7 +1783,6 @@ func getMyFlags(server *Server, sessionToken *apitypes.SessionToken, values url.
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	var dockerfileDescs = make([]*apitypes.DockerfileDesc, 0)
 	
 	var err error
 	var leaves map[string]Resource

@@ -36,7 +36,6 @@ type DBClient interface {
 	dbCreateScanEvent(string, string, string, string) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
 	dbDeactivateRealm(realmId string) error
-	dbReactivateRealm(realmId string) error
 	dbGetAllRealmIds() []string
 	getPersistentObject(id string) PersistObj
 	getResource(string) (Resource, error)
@@ -219,7 +218,7 @@ type DockerImage interface {
 	getMostRecentScanEventId() string
 	asDockerImageDesc() *apitypes.DockerImageDesc
 	getSignature() []byte
-	computeSignature() []byte
+	computeSignature() ([]byte, error)
 }
 
 type ParameterValue interface {

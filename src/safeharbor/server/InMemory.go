@@ -1551,8 +1551,11 @@ func (realm *InMemRealm) deleteGroup(group Group) error {
 	var entryIdsCopy []string = make([]string, len(entryIds))
 	copy(entryIdsCopy, entryIds)
 	for _, entryId := range entryIdsCopy {
-		var resource Resource
 		var err error
+		var entry ACLEntry
+		entry, err = realm.Client.getACLEntry(entryId)
+		if err != nil { return err }
+		var resource Resource
 		resource, err = realm.Client.getResource(entry.getResourceId())
 		if err != nil { return err }
 		var party Party
@@ -1871,7 +1874,7 @@ func (client *InMemClient) dbCreateDockerImage(repoId, dockerImageTag, desc stri
 	//var imageObjId string = createUniqueDbObjectId()
 	var newDockerImage *InMemDockerImage
 	var err error
-	newDockerImage, err = client.NewInMemDockerImage(dockerImageTag, desc, repoId)
+	newDockerImage, err = client.NewInMemDockerImage(dockerImageTag, desc, repoId, nil)
 	if err != nil { return nil, err }
 	fmt.Println("Created DockerImage")
 	err = repo.addDockerImage(newDockerImage)  // Add to repo's list.
@@ -1900,7 +1903,7 @@ func (image *InMemDockerImage) getSignature() []byte {
 
 func (image *InMemDockerImage) computeSignature() ([]byte, error) {
 	//TBD.... implement this for real
-	return new([20]byte)
+	return make([]byte, 20), nil
 	//return ComputeFileSignature(filepath)
 }
 
