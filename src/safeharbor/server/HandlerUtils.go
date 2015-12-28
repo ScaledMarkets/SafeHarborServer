@@ -9,18 +9,14 @@ import (
 	"fmt"
 	"errors"
 	"os"
-	"os/exec"
-	"io"
 	"strconv"
 	"strings"
 	"regexp"
 	"net/url"
 	"io/ioutil"
-	//"time"
 	
+	// Our packages:
 	"safeharbor/apitypes"
-	//"safeharbor/providers"
-	//"safeharbor/rest"
 )
 
 /*******************************************************************************
@@ -377,87 +373,16 @@ func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apityp
 	imageName, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageName")
 	if err != nil { return nil, err }
 	if imageName == "" { return nil, errors.New("No HTTP parameter found for ImageName") }
-	if ! localDockerImageNameIsValid(imageName) {
-		return nil, errors.New(fmt.Sprintf("Image name '%s' is not valid - must be " +
-			"of format <name>[:<tag>]", imageName))
-	}
-	fmt.Println("Image name =", imageName)
 	
-	// Check if am image with that name already exists.
-	var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "inspect", imageName)
-	var output []byte
-	output, err = cmd.CombinedOutput()
-	var outputStr string = string(output)
-	if ! strings.HasPrefix(outputStr, "Error") {
-		return nil, errors.New("An image with name " + imageName + " already exists.")
-	}
-	
-	// Verify that the image name conforms to Docker's requirements.
-	err = nameConformsToSafeHarborImageNameRules(imageName)
+	var outputStr string
+	outputStr, err = server.DockerService.BuildDockerfile(dockerfile, realm, repo, imageName)
 	if err != nil { return nil, err }
-	
-	// Create a temporary directory to serve as the build context.
-	var tempDirPath string
-	tempDirPath, err = ioutil.TempDir("", "")
-	//....TO DO: Is the above a security problem? Do we need to use a private
-	// directory? I think so.
-	defer os.RemoveAll(tempDirPath)
-	fmt.Println("Temp directory = ", tempDirPath)
-
-	// Copy dockerfile to that directory.
-	var in, out *os.File
-	in, err = os.Open(dockerfile.getExternalFilePath())
-	if err != nil { return nil, err }
-	var dockerfileCopyPath string = tempDirPath + "/" + dockerfile.getName()
-	out, err = os.Create(dockerfileCopyPath)
-	if err != nil { return nil, err }
-	_, err = io.Copy(out, in)
-	if err != nil { return nil, err }
-	err = out.Close()
-	if err != nil { return nil, err }
-	fmt.Println("Copied Dockerfile to " + dockerfileCopyPath)
-	
-//	fmt.Println("Changing directory to '" + tempDirPath + "'")
-//	err = os.Chdir(tempDirPath)
-//	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	
-	// Create a the docker build command.
-	// https://docs.docker.com/reference/commandline/build/
-	// REPOSITORY                      TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
-	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
-	// Image id format: <hash>[:TAG]
-	
-	var imageFullName string = realm.getName() + "/" + repo.getName() + ":" + imageName
-	cmd = exec.Command("/usr/bin/docker", "build",
-	"--file", tempDirPath + "/" + dockerfile.getName(), "--tag", imageFullName, tempDirPath)
-	
-	// Execute the command in the temporary directory.
-	// This initiates processing of the dockerfile.
-	output, err = cmd.CombinedOutput()
-	outputStr = string(output)
-	fmt.Println("...finished processing dockerfile.")
-	fmt.Println("Output from docker build command:")
-	fmt.Println(outputStr)
-	fmt.Println()
-	fmt.Println("End of output from docker build command.")
-	
-	fmt.Println("Files in " + tempDirPath + ":")
-	dirfiles, _ := ioutil.ReadDir(tempDirPath)
-	for _, f := range dirfiles {
-		fmt.Println("\t" + f.Name())
-	}
-	
-	if err != nil {
-		fmt.Println()
-		fmt.Println("Returning from buildDockerfile, with error")
-		return nil, errors.New(err.Error() + ", " + outputStr)
-	}
-	fmt.Println("Performed docker build command successfully.")
 	
 	// Add a record for the image to the database.
+	// (This automatically computes the signature.)
 	var image DockerImage
 	image, err = dbClient.dbCreateDockerImage(repo.getId(),
-		imageName, dockerfile.getDescription())
+		imageName, dockerfile.getDescription(), outputStr)
 	fmt.Println("Created docker image object.")
 	
 	// Create an event to record that this happened.
@@ -478,9 +403,10 @@ func getLeafResources(dbClient DBClient, user User,
 	var repos map[string]Repo = make(map[string]Repo)
 	var leaves map[string]Resource = make(map[string]Resource)
 	
+	// Add leaves for which there are direct entries, and while doing that,
+	// create a list of realms and repos that the user has access to.
 	var aclEntrieIds []string = user.getACLEntryIds()
 	var err error
-	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
 		fmt.Println("\taclEntryId:", aclEntryId)
 		var aclEntry ACLEntry
@@ -499,9 +425,11 @@ func getLeafResources(dbClient DBClient, user User,
 			case DockerImage: if leafType == ADockerImage { leaves[v.getId()] = v }
 			case ScanConfig: if leafType == AScanConfig { leaves[v.getId()] = v }
 			case Flag: if leafType == AFlag { leaves[v.getId()] = v }
+			default: return nil, errors.New("Internal error: unexpected repository object type")
 		}
 	}
-	fmt.Println("For each realm...")
+	// Create composite list of repos that the user has access to, either directly
+	// or as a result of having access to the owning realm.
 	for _, realm := range realms {
 		fmt.Println("For each repo of realm id", realm.getId(), "...")
 		// Add all of the repos belonging to realm.
@@ -515,13 +443,14 @@ func getLeafResources(dbClient DBClient, user User,
 			repos[repoId] = r
 		}
 	}
+	// Add the leaves that belong to each of those repos.
 	for _, repo := range repos {
 		switch leafType {
 			case ADockerfile: err = mapRepoDockerfileIds(dbClient, repo, leaves)
 			case ADockerImage: err = mapRepoDockerImageIds(dbClient, repo, leaves)
 			case AScanConfig: err = mapRepoScanConfigIds(dbClient, repo, leaves)
 			case AFlag: err = mapRepoFlagIds(dbClient, repo, leaves)
-			default: return nil, errors.New("Internal error: unrecognized repository object type")
+			default: return nil, errors.New("Internal error: unexpected repository object type")
 		}
 		if err != nil { return nil, err }
 	}

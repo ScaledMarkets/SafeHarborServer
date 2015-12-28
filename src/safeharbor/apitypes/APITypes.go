@@ -564,13 +564,15 @@ func NewImageDesc(objId, repoId, name, desc string, creationTime time.Time) *Ima
 type DockerImageDesc struct {
 	ImageDesc
 	Signature []byte
+	OutputFromBuild string
 }
 
 func NewDockerImageDesc(objId, repoId, name, desc string, creationTime time.Time,
-	signature []byte) *DockerImageDesc {
+	signature []byte, outputFromBuild string) *DockerImageDesc {
 	return &DockerImageDesc{
 		ImageDesc: *NewImageDesc(objId, repoId, name, desc, creationTime),
 		Signature: signature,
+		OutputFromBuild: outputFromBuild,
 	}
 }
 
@@ -588,7 +590,8 @@ func (imageDesc *DockerImageDesc) AsJSON() string {
 		if i > 0 { s = s + ", " }
 		s = s + fmt.Sprintf("%d", b)
 	}
-	s = s + "]}"
+	s = s + fmt.Sprintf("], \"OutputFromBuild\": \"%s\"}",
+		EncodeStringForJSON(imageDesc.OutputFromBuild))
 	return s
 }
 
@@ -1144,4 +1147,18 @@ func RemoveAt(position int, originalList []string) []string {
 	} else {
 		return append(firstPart, originalList[position+1:]...)
 	}
+}
+
+/*******************************************************************************
+ * 
+ * Utility to encode an arbitrary string value, which might contain quotes and other
+ * characters, so that it can be safely and securely transported as a JSON string value,
+ * delimited by double quotes. Ref. http://json.org/.
+ */
+func EncodeStringForJSON(value string) string {
+	// Replace each occurrence of double-quote and backslash with backslash double-quote
+	// or backslash backslash, respectively.
+	
+	var encodedValue = strings.Replace(value, "\\", "\\\\", -1)
+	return strings.Replace(encodedValue, "\"", "\\\"", -1)
 }

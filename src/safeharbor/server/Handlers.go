@@ -8,21 +8,13 @@ package server
 import (
 	"net/url"
 	"mime/multipart"
-	//"net/textproto"
 	"fmt"
-	//"errors"
-	//"bufio"
-	//"io"
-	"io/ioutil"
-	"os"
 	"os/exec"
-	//"strconv"
 	"strings"
 	"reflect"
-	//"bytes"
 	"time"
 	
-	// My packages:
+	// Our packages:
 	"safeharbor/providers"
 	"safeharbor/apitypes"
 )
@@ -1232,7 +1224,6 @@ func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values 
 	fmt.Println("Dockerfile name =", dockerfile.getName())
 	
 	var image DockerImage
-	
 	image, err = buildDockerfile(server, dockerfile, sessionToken, dbClient, values)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
@@ -1317,22 +1308,9 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, imageObjId,
 		"downloadImage"); failMsg != nil { return failMsg }
-	
-	fmt.Println("Creating temp file to save the image to...")
-	var tempFile *os.File
-	tempFile, err = ioutil.TempFile("", "")
-	// TO DO: Is the above a security issue?
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	var tempFilePath = tempFile.Name()
-	
-	var imageFullName string
-	imageFullName, err = dockerImage.getFullName()
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	//var stderr bytes.Buffer
-	var cmd *exec.Cmd= exec.Command("docker", "save", "-o", tempFilePath, imageFullName)
-	//cmd.Stderr = &stderr
-	fmt.Println(fmt.Sprintf("Running docker save -o%s %s", tempFilePath, imageFullName))
-	err = cmd.Run()
+
+	var tempFilePath string
+	tempFilePath, err = server.DockerService.SaveImage(dockerImage)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return apitypes.NewFileResponse(200, tempFilePath)

@@ -352,3 +352,10 @@ func (authSvc *AuthService) computeHash(s string) hash.Hash {
 	hash.Write(authSvc.secretSalt)
 	return hash
 }
+
+/*******************************************************************************
+ * 
+ */
+func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error) {
+	return make([]byte, 20), nil
+}

@@ -1849,10 +1849,11 @@ type InMemDockerImage struct {
 	InMemImage
 	ScanEventIds []string
 	Signature []byte
+	OutputFromBuild string
 }
 
 func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string,
-	signature []byte) (*InMemDockerImage, error) {
+	signature []byte, outputFromBuild string) (*InMemDockerImage, error) {
 	var image *InMemImage
 	var err error
 	image, err = client.NewInMemImage(name, desc, repoId)
@@ -1860,11 +1861,13 @@ func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string,
 	var newDockerImage = &InMemDockerImage{
 		InMemImage: *image,
 		ScanEventIds: []string{},
+		OutputFromBuild: outputFromBuild,
 	}
 	return newDockerImage, client.addObject(newDockerImage)
 }
 
-func (client *InMemClient) dbCreateDockerImage(repoId, dockerImageTag, desc string) (DockerImage, error) {
+func (client *InMemClient) dbCreateDockerImage(repoId, dockerImageTag, desc string,
+	outputFromBuild string) (DockerImage, error) {
 	
 	var repo Repo
 	var isType bool
@@ -1874,7 +1877,8 @@ func (client *InMemClient) dbCreateDockerImage(repoId, dockerImageTag, desc stri
 	//var imageObjId string = createUniqueDbObjectId()
 	var newDockerImage *InMemDockerImage
 	var err error
-	newDockerImage, err = client.NewInMemDockerImage(dockerImageTag, desc, repoId, nil)
+	newDockerImage, err = client.NewInMemDockerImage(dockerImageTag, desc, repoId, nil,
+		outputFromBuild)
 	if err != nil { return nil, err }
 	fmt.Println("Created DockerImage")
 	err = repo.addDockerImage(newDockerImage)  // Add to repo's list.
@@ -1902,9 +1906,17 @@ func (image *InMemDockerImage) getSignature() []byte {
 }
 
 func (image *InMemDockerImage) computeSignature() ([]byte, error) {
-	//TBD.... implement this for real
-	return make([]byte, 20), nil
-	//return ComputeFileSignature(filepath)
+	var err error
+	var tempFilePath string
+	tempFilePath, err = image.Client.Server.DockerService.SaveImage(image)
+	if err != nil { return nil, err }
+	defer os.RemoveAll(tempFilePath)
+	//return make([]byte, 20), nil
+	return image.Client.Server.authService.ComputeFileSignature(tempFilePath)
+}
+
+func (image *InMemDockerImage) getOutputFromBuild() string {
+	return image.OutputFromBuild
 }
 
 func (image *InMemDockerImage) getDockerImageTag() string {
@@ -1938,7 +1950,7 @@ func (image *InMemDockerImage) getMostRecentScanEventId() string {
 
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
 	return apitypes.NewDockerImageDesc(image.Id, image.getRepoId(), image.Name,
-		image.Description, image.CreationTime, image.Signature)
+		image.Description, image.CreationTime, image.Signature, image.OutputFromBuild)
 }
 
 func (image *InMemDockerImage) isDockerImage() bool { return true }
