@@ -334,7 +334,6 @@ func (persObj *InMemPersistObj) releaseLock() {
 	persObj.Client.releaseLock(persObj)
 }
 
-// Placeholder - write back to persistent storage.
 func (persObj *InMemPersistObj) writeBack() error {
 	return persObj.Client.writeBack(persObj)
 }
@@ -478,13 +477,17 @@ func (resource *InMemResource) removeAccess(party Party) error {
 				return errors.New("Internal error: an ACL entry's resource Id does not match the resource whose list it is a member of")
 			}
 			
+			// Remove from party's list.
+			fmt.Println(fmt.Sprintf("\tRemoving ACL entry %s from party Id list", entryId))
+			err = party.removeACLEntry(aclEntry)
+			if err != nil { return err }
+			
 			// Remove the ACL entry id from the resource's ACL entry list.
 			fmt.Println(fmt.Sprintf("\tRemoving ACL entry %s at position %d", entryId, index))
 			resource.ACLEntryIds = apitypes.RemoveAt(index, resource.ACLEntryIds)
 			
-			// Remove from party's list as well
-			fmt.Println(fmt.Sprintf("\tRemoving ACL entry %s from party Id list", entryId))
-			err = party.removeACLEntry(aclEntry)
+			// Remove from database.
+			err = resource.Client.deleteObject(aclEntry)
 			if err != nil { return err }
 		}
 	}
@@ -580,10 +583,7 @@ func (resource *InMemResource) removeAllAccess() error {
 		aclEntry, err = resource.Client.getACLEntry(id)
 		if err != nil { return err }
 		
-		// Remove all ACL entry ids from the resource's ACL entry list.
-		resource.ACLEntryIds = resource.ACLEntryIds[0:0]
-		
-		// Remove from party's list as well
+		// Remove from party's list.
 		var party Party
 		party, err = resource.Client.getParty(aclEntry.getPartyId())
 		if err != nil { return errors.New(err.Error()) }
@@ -591,7 +591,13 @@ func (resource *InMemResource) removeAllAccess() error {
 		inMemParty.ACLEntryIds = apitypes.RemoveFrom(id, inMemParty.ACLEntryIds)
 		err = party.writeBack()
 		if err != nil { return err }
+		
+		err = resource.Client.deleteObject(aclEntry)
+		if err != nil { return err }
 	}
+		
+	// Remove all ACL entry ids from the resource's ACL entry list.
+	resource.ACLEntryIds = resource.ACLEntryIds[0:0]
 	
 	return resource.writeBack()
 }
@@ -764,6 +770,8 @@ func (party *InMemParty) addACLEntry(entry ACLEntry) error {
 
 func (party *InMemParty) removeACLEntry(entry ACLEntry) error {
 	party.ACLEntryIds = apitypes.RemoveFrom(entry.getId(), party.ACLEntryIds)
+	var err error = party.Client.deleteObject(entry)
+	if err != nil { return err }
 	return party.writeBack()
 }
 
@@ -903,13 +911,15 @@ func (group *InMemGroup) addUserId(userObjId string) error {
 	return err
 }
 
-func (group *InMemGroup) remUser(user User) error {
+func (group *InMemGroup) removeUser(user User) error {
 	group.waitForLock()
 	defer group.releaseLock()
 	var userId string = user.getId()
 	for i, id := range group.UserObjIds {
 		if id == userId {
 			group.UserObjIds = append(group.UserObjIds[0:i], group.UserObjIds[i+1:]...)
+			var err error = group.Client.deleteObject(user)
+			if err != nil { return err }
 			group.writeBack()
 			return nil
 		}
@@ -1104,6 +1114,30 @@ func (user *InMemUser) addEventId(id string) {
 
 func (user *InMemUser) getEventIds() []string {
 	return user.EventIds
+}
+
+func (user *InMemUser) removeEvent(event Event) error {
+	
+	// If a ScanEvent, then remove from ScanConfig and remove actual ParameterValues.
+	var scanEvent ScanEvent
+	var isType bool
+	scanEvent, isType = event.(ScanEvent)
+	if isType {
+		var scanConfig ScanConfig
+		var err error
+		scanConfig, err = user.Client.getScanConfig(scanEvent.getScanConfigId())
+		if err != nil { return err }
+		err = scanConfig.removeScanEventId(scanEvent.getId())
+		if err != nil { return err }
+		err = scanEvent.removeAllParameterValues()
+		if err != nil { return err }
+	}
+	
+	user.EventIds = apitypes.RemoveFrom(event.getId(), user.EventIds)
+	
+	var err error = user.Client.deleteObject(event)
+	if err != nil { return err }
+	return user.writeBack()
 }
 
 func (user *InMemUser) asUserDesc() *apitypes.UserDesc {
@@ -1410,7 +1444,9 @@ func (realm *InMemRealm) removeUserId(userObjId string) error {
 		return errors.New("User with obj Id " + userObjId + " belongs to another realm")
 	}
 	realm.UserObjIds = apitypes.RemoveFrom(userObjId, realm.UserObjIds)
-	var err error = realm.writeBack()
+	var err error = realm.Client.deleteObject(user)
+	if err != nil { return err }
+	err = realm.writeBack()
 	return err
 }
 
@@ -1542,7 +1578,7 @@ func (realm *InMemRealm) deleteGroup(group Group) error {
 		var err error
 		user, err = realm.Client.getUser(userObjId)
 		if err != nil { return err }
-		err = group.remUser(user)
+		err = group.removeUser(user)
 		if err != nil { return err }
 	}
 	
@@ -1678,6 +1714,83 @@ func (repo *InMemRepo) addDockerImage(image DockerImage) error {
 
 func (repo *InMemRepo) addScanConfig(config ScanConfig) error {
 	repo.ScanConfigIds = append(repo.ScanConfigIds, config.getId())
+	return repo.writeBack()
+}
+
+func (repo *InMemRepo) removeScanConfig(config ScanConfig) error {
+	if len(config.getScanEventIds()) > 0 { return errors.New(
+		"Cannot remove ScanConfig: it is referenced by ScanEvents; the associated " +
+		"dockerfile(s) would have to be removed first")
+	}
+	// Remove config's parameter values.
+	config.removeAllParameterValues()
+	
+	// Remove reference from the flag.
+	var flagId string = config.getFlagId()
+	if flagId != "" {
+		var err error
+		var flag Flag
+		flag, err = repo.Client.getFlag(flagId)
+		if err != nil { return err }
+		err = flag.removeScanConfigRef(config.getId())
+		if err != nil { return err }
+	}
+
+	// Remove from repo.
+	repo.ScanConfigIds = apitypes.RemoveFrom(config.getId(), repo.ScanConfigIds)
+
+	// Remove from database.
+	var err error = repo.Client.deleteObject(config)
+	if err != nil { return err }
+	
+	return repo.writeBack()
+}
+
+func (repo *InMemRepo) removeFlag(flag Flag) error {
+	if len(flag.usedByScanConfigIds()) > 0 { return errors.New(
+		"Cannot remove Flag: it is referenced by one or more ScanConfigs")
+	}
+
+	// Remove the graphic file associated with the flag.
+	var err error = os.Remove(flag.getSuccessImagePath())
+	if err != nil { return err }
+	
+	// Remove from repo.
+	repo.FlagIds = apitypes.RemoveFrom(flag.getId(), repo.FlagIds)
+	
+	// Remove from database.
+	err = repo.Client.deleteObject(flag)
+	if err != nil { return err }
+	
+	return repo.writeBack()
+}
+
+func (repo *InMemRepo) removeDockerImage(image DockerImage) error {
+	
+	// Remove events.
+	for _, eventId := range image.getScanEventIds() {
+		var event Event
+		var err error
+		event, err = repo.Client.getEvent(eventId)
+		if err != nil { return err }
+		var user User
+		user, err = repo.Client.getUser(event.getUserObjId())
+		if err != nil { return err }
+		err = user.removeEvent(event)
+		if err != nil { return err }
+	}
+	
+	// Remove ACL entries.
+	var err error = image.removeAllAccess()
+	if err != nil { return err }
+	
+	// Remove from docker.
+	err = repo.Client.Server.DockerService.RemoveDockerImage(image)
+	if err != nil { return err }
+	
+	// Remove from database.
+	err = repo.Client.deleteObject(image)
+	if err != nil { return err }
 	return repo.writeBack()
 }
 
@@ -1911,7 +2024,6 @@ func (image *InMemDockerImage) computeSignature() ([]byte, error) {
 	tempFilePath, err = image.Client.Server.DockerService.SaveImage(image)
 	if err != nil { return nil, err }
 	defer os.RemoveAll(tempFilePath)
-	//return make([]byte, 20), nil
 	return image.Client.Server.authService.ComputeFileSignature(tempFilePath)
 }
 
@@ -2069,6 +2181,11 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	var scanConfig *InMemScanConfig
 	scanConfig, err = client.NewInMemScanConfig(name, desc, repoId, providerName,
 		paramValueIds, successExpr, flagId)
+	var flag Flag
+	flag, err = scanConfig.Client.getFlag(flagId)
+	if err != nil { return nil, err }
+	err = flag.addScanConfigRef(scanConfig.getId())
+	if err != nil { return nil, err }
 	err = scanConfig.writeBack()
 	if err != nil { return nil, err }
 	
@@ -2152,7 +2269,6 @@ func (scanConfig *InMemScanConfig) setParameterValueDeferredUpdate(name, strValu
 	}
 	
 	// Did not find a value for a parameter of that name - create a new ParameterValue.
-	//var pvId string = createUniqueDbObjectId()
 	var paramValue *InMemParameterValue
 	var err error
 	paramValue, err = scanConfig.Client.NewInMemParameterValue(name, strValue, scanConfig.getId())
@@ -2161,11 +2277,51 @@ func (scanConfig *InMemScanConfig) setParameterValueDeferredUpdate(name, strValu
 	return paramValue, nil
 }
 
+func (scanConfig *InMemScanConfig) removeParameterValue(name string) error {
+	for i, id := range scanConfig.ParameterValueIds {
+		var pv ParameterValue
+		var err error
+		pv, err = scanConfig.getDBClient().getParameterValue(id)
+		if err != nil { return err }
+		if pv == nil {
+			fmt.Println("Internal ERROR: broken ParameterValue list for scan config " + scanConfig.getName())
+			continue
+		}
+		if pv.getName() == name {
+			scanConfig.ParameterValueIds = apitypes.RemoveAt(i, scanConfig.ParameterValueIds)
+			err = scanConfig.Client.deleteObject(pv)
+			if err != nil { return err }
+			return scanConfig.writeBack()
+		}
+	}
+	return errors.New("Did not find parameter named '" + name + "'")
+}
+
+func (scanConfig *InMemScanConfig) removeAllParameterValues() error {
+	for _, paramValueId := range scanConfig.getParameterValueIds() {
+		var err error
+		var paramValue ParameterValue
+		paramValue, err = scanConfig.Client.getParameterValue(paramValueId)
+		if err != nil { return err }
+		scanConfig.Client.deleteObject(paramValue)
+	}
+	scanConfig.ParameterValueIds = make([]string, 0)
+	return scanConfig.writeBack()
+}
+
 func (scanConfig *InMemScanConfig) setFlagId(id string) error {
+	if scanConfig.FlagId == id { return nil } // nothing to do
+	var flag Flag
 	var err error
+	flag, err = scanConfig.Client.getFlag(id)
+	if err != nil { return err }
+	if scanConfig.FlagId != "" { // already set
+		flag.removeScanConfigRef(scanConfig.getId())
+	}
 	scanConfig.FlagId = id
-	err = scanConfig.writeBack()
-	return err
+	err = flag.addScanConfigRef(scanConfig.getId())  // adds non-redundantly
+	if err != nil { return err }
+	return scanConfig.writeBack()
 }
 
 func (scanConfig *InMemScanConfig) getFlagId() string {
@@ -2179,6 +2335,11 @@ func (scanConfig *InMemScanConfig) addScanEventId(id string) {
 
 func (scanConfig *InMemScanConfig) getScanEventIds() []string {
 	return scanConfig.ScanEventIds
+}
+
+func (scanConfig *InMemScanConfig) removeScanEventId(eventId string) error {
+	scanConfig.ScanEventIds = apitypes.RemoveFrom(eventId, scanConfig.ScanEventIds)
+	return scanConfig.writeBack()
 }
 
 func (resource *InMemScanConfig) isScanConfig() bool {
@@ -2212,6 +2373,7 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 type InMemFlag struct {
 	InMemResource
 	SuccessImagePath string
+	UsedByScanConfigIds []string
 }
 
 func (client *InMemClient) NewInMemFlag(name, desc, repoId,
@@ -2224,6 +2386,7 @@ func (client *InMemClient) NewInMemFlag(name, desc, repoId,
 	var flag = &InMemFlag{
 		InMemResource: *resource,
 		SuccessImagePath: successImagePath,
+		UsedByScanConfigIds: make([]string, 0),
 	}
 	return flag, client.addObject(flag)
 }
@@ -2272,6 +2435,20 @@ func (flag *InMemFlag) getSuccessImagePath() string {
 
 func (flag *InMemFlag) getSuccessImageURL() string {
 	return flag.Client.Server.GetHTTPResourceScheme() + "://getFlagImage/?Id=" + flag.getId()
+}
+
+func (flag *InMemFlag) addScanConfigRef(scanConfigId string) error {
+	flag.UsedByScanConfigIds = apitypes.AddUniquely(scanConfigId, flag.UsedByScanConfigIds)
+	return flag.writeBack()
+}
+
+func (flag *InMemFlag) removeScanConfigRef(scanConfigId string) error {
+	flag.UsedByScanConfigIds = apitypes.RemoveFrom(scanConfigId, flag.UsedByScanConfigIds)
+	return flag.writeBack()
+}
+
+func (flag *InMemFlag) usedByScanConfigIds() []string {
+	return flag.UsedByScanConfigIds
 }
 
 func (resource *InMemFlag) isFlag() bool {
@@ -2424,6 +2601,18 @@ func (event *InMemScanEvent) getScanConfigId() string {
 
 func (event *InMemScanEvent) getActualParameterValueIds() []string {
 	return event.ActualParameterValueIds
+}
+
+func (event *InMemScanEvent) removeAllParameterValues() error {
+	for _, paramId := range event.ActualParameterValueIds {
+		var param ParameterValue
+		var err error
+		param, err = event.Client.getParameterValue(paramId)
+		if err != nil { return err }
+		event.Client.deleteObject(param)
+	}
+	event.ActualParameterValueIds = make([]string, 0)
+	return event.writeBack()
 }
 
 func (event *InMemScanEvent) asScanEventDesc() *apitypes.ScanEventDesc {

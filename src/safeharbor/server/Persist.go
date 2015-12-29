@@ -85,7 +85,7 @@ type Group interface {
 	hasUserWithId(string) bool
 	addUserId(string) error
 	addUser(User)
-	remUser(User) error
+	removeUser(User) error
 	asGroupDesc() *apitypes.GroupDesc
 }
 
@@ -100,6 +100,7 @@ type User interface {
 	getMostRecentLoginAttempts() []string // each in seconds, Unix time
 	addEventId(string)
 	getEventIds() []string
+	removeEvent(Event) error
 	asUserDesc() *apitypes.UserDesc
 }
 
@@ -188,7 +189,10 @@ type Repo interface {
 	addDockerfile(Dockerfile) error
 	addDockerImage(DockerImage) error
 	addScanConfig(ScanConfig) error
+	removeScanConfig(ScanConfig) error
 	addFlag(Flag) error
+	removeFlag(Flag) error
+	removeDockerImage(DockerImage) error
 	getScanConfigByName(string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
 }
@@ -243,10 +247,13 @@ type ScanConfig interface {
 	getParameterValueIds() []string
 	setParameterValue(string, string) (ParameterValue, error)
 	setParameterValueDeferredUpdate(string, string) (ParameterValue, error)
+	removeParameterValue(name string) error
+	removeAllParameterValues() error
 	setFlagId(string) error
 	getFlagId() string
 	addScanEventId(id string)
 	getScanEventIds() []string
+	removeScanEventId(string) error
 	asScanConfigDesc() *apitypes.ScanConfigDesc
 
 
@@ -257,6 +264,9 @@ type Flag interface {
 	getRepoId() string
 	getSuccessImagePath() string
 	getSuccessImageURL() string
+	addScanConfigRef(string) error
+	removeScanConfigRef(string) error
+	usedByScanConfigIds() []string
 	asFlagDesc() *apitypes.FlagDesc
 }
 
@@ -273,6 +283,7 @@ type ScanEvent interface {
 	getDockerImageId() string
 	getScanConfigId() string
 	getActualParameterValueIds() []string
+	removeAllParameterValues() error
 	asScanEventDesc() *apitypes.ScanEventDesc
 }
 

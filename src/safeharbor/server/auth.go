@@ -7,8 +7,7 @@ package server
 import (
 	"fmt"
 	"net/http"
-	//"net/url"
-	//"io"
+	"os"
 	"strings"
 	//"crypto/tls"
 	"crypto/x509"
@@ -63,8 +62,9 @@ func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
  * 
  */
 func (authSvc *AuthService) PasswordIsValid(pswd string) bool {
-	var savedPswdHash = authSvc.computeHash(pswd).Sum(authSvc.secretSalt)
-	var prospectivePswdHash = authSvc.computeHash(pswd).Sum(authSvc.secretSalt)
+	var empty = []byte{}
+	var savedPswdHash = authSvc.computeHash(pswd).Sum(empty)
+	var prospectivePswdHash = authSvc.computeHash(pswd).Sum(empty)
 	if len(savedPswdHash) != len(prospectivePswdHash) { return false }
 	for i, _ := range savedPswdHash {
 		if savedPswdHash[i] != prospectivePswdHash[i] { return false }
@@ -335,27 +335,47 @@ func (authSvc *AuthService) sessionIdIsValid(sessionId string) bool {
 	
 	var uniqueNonRandomValue string = parts[0]
 	var untrustedHash string = parts[1]
-	var actualSaltedHashBytes []byte =
-		authSvc.computeHash(uniqueNonRandomValue).Sum(authSvc.secretSalt)
+	var empty = []byte{}
+	var actualSaltedHashBytes []byte = authSvc.computeHash(uniqueNonRandomValue).Sum(empty)
 	
 	return untrustedHash == fmt.Sprintf("%x", actualSaltedHashBytes)
 }
 
 /*******************************************************************************
- * 
+ * Compute a SHA-512 has of the specified string. Salt the hash so that the
+ * hash value cannot be forged or identified via a lookup table.
  */
 func (authSvc *AuthService) computeHash(s string) hash.Hash {
 	
 	var hash hash.Hash = sha512.New()
 	var bytes []byte = []byte(s)
-	hash.Write(bytes)
 	hash.Write(authSvc.secretSalt)
+	hash.Write(bytes)
 	return hash
 }
 
 /*******************************************************************************
- * 
+ * Return the SHA-512 hash of the content of the specified file. Should not be salted
+ * because the hash is intended to be reproducible by third parties, given the
+ * original file.
  */
 func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error) {
-	return make([]byte, 20), nil
+	
+	var file *os.File
+	var err error
+	file, err = os.Open(filepath)
+	if err != nil { return nil, err }
+	var buf = make([]byte, 100000)
+	var hash hash.Hash = sha512.New()
+	for {
+		var numBytesRead int
+		numBytesRead, err = file.Read(buf)
+		if numBytesRead == 0 { break }
+		hash.Write(buf)
+		if err != nil { break }
+		if numBytesRead < 100000 { break }
+	}
+	
+	var empty = []byte{}
+	return hash.Sum(empty), nil
 }

@@ -824,6 +824,7 @@ type FlagDesc struct {
 	RepoId string
 	Name string
 	ImageURL string
+	UsedByConfigIds []string
 }
 
 func NewFlagDesc(flagId, repoId, name, imageURL string) *FlagDesc {
@@ -832,12 +833,20 @@ func NewFlagDesc(flagId, repoId, name, imageURL string) *FlagDesc {
 		RepoId: repoId,
 		Name: name,
 		ImageURL: imageURL,
+		UsedByConfigIds: make([]string, 0),
 	}
 }
 
 func (flagDesc *FlagDesc) AsJSON() string {
-	return fmt.Sprintf("{\"FlagId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", \"ImageURL\": \"%s\"}",
+	var s = fmt.Sprintf("{\"FlagId\": \"%s\", \"RepoId\": \"%s\", " +
+		"\"Name\": \"%s\", \"ImageURL\": \"%s\", \"UsedByConfig\": [",
 		flagDesc.FlagId, flagDesc.RepoId, flagDesc.Name, flagDesc.ImageURL)
+	for i, configId := range flagDesc.UsedByConfigIds {
+		if i > 0 { s = ", " + s }
+		s = s + configId
+	}
+	s = s + "]}"
+	return s
 }
 
 type FlagDescs []*FlagDesc
@@ -1119,6 +1128,24 @@ func sanitize(value string) (string, error) {
 }
 
 /*******************************************************************************
+ * 
+ */
+func Contains(value string, originalList []string) bool {
+	for _, s := range originalList {
+		if s == value { return true }
+	}
+	return false
+}
+
+/*******************************************************************************
+ * 
+ */
+func AddUniquely(value string, originalList []string) []string {
+	if Contains(value, originalList) { return originalList }
+	return append(originalList, value)
+}
+
+/*******************************************************************************
  * Utility to remove a value from an array of strings. It is assumed that the
  * value is not present in the array more than one time.
  */
@@ -1133,6 +1160,7 @@ func RemoveFrom(value string, originalList []string) []string {
 	}
 	return newList
 }
+
 
 /*******************************************************************************
  * Utility to remove a value from a specified location in an array of strings.

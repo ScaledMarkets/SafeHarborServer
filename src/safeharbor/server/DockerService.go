@@ -80,8 +80,9 @@ func (docker *DockerService) BuildDockerfile(dockerfile Dockerfile, realm Realm,
 	// Image id format: <hash>[:TAG]
 	
 	var imageFullName string = realm.getName() + "/" + repo.getName() + ":" + imageName
-	cmd = exec.Command("/usr/bin/docker", "build",
-	"--file", tempDirPath + "/" + dockerfile.getName(), "--tag", imageFullName, tempDirPath)
+	cmd = exec.Command("docker", "build", 
+		"--file", tempDirPath + "/" + dockerfile.getName(),
+		"--tag", imageFullName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
@@ -124,11 +125,22 @@ func (docker *DockerService) SaveImage(dockerImage DockerImage) (string, error) 
 	var imageFullName string
 	imageFullName, err = dockerImage.getFullName()
 	if err != nil { return "", err }
-	//var stderr bytes.Buffer
-	var cmd *exec.Cmd= exec.Command("docker", "save", "-o", tempFilePath, imageFullName)
-	//cmd.Stderr = &stderr
+	var cmd *exec.Cmd = exec.Command("docker", "save", "-o", tempFilePath, imageFullName)
 	fmt.Println(fmt.Sprintf("Running docker save -o%s %s", tempFilePath, imageFullName))
 	err = cmd.Run()
 	if err != nil { return "", err }
 	return tempFilePath, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func (docker *DockerService) RemoveDockerImage(dockerImage DockerImage) error {
+	var imageFullName string
+	var err error
+	imageFullName, err = dockerImage.getFullName()
+	if err != nil { return err }
+	var cmd *exec.Cmd = exec.Command("docker", "rmi", imageFullName)
+	fmt.Println(fmt.Sprintf("Running docker rmi %s", imageFullName))
+	return cmd.Run()
 }

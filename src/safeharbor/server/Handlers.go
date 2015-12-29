@@ -537,7 +537,7 @@ func remGroupUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 	var user User
 	user, err = server.dbClient.getUser(userObjId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	err = group.remUser(user)
+	err = group.removeUser(user)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return apitypes.NewResult(200, "User " + user.getName() + " removed from group " + group.getName())
@@ -2325,7 +2325,33 @@ func getScanConfigDescByName(server *Server, sessionToken *apitypes.SessionToken
 	
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	return apitypes.NewFailureDesc("Not implemented yet")
+	var err error
+	var repoId string
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var configName string
+	configName, err = apitypes.GetRequiredHTTPParameterValue(values, "ScanConfigName")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask,
+		repoId, "getScanConfigDescByName"); failMsg != nil { return failMsg }
+	
+	var repo Repo
+	repo, err = server.dbClient.getRepo(repoId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	for _, scanConfigId := range repo.getScanConfigIds() {
+		var scanConfig ScanConfig
+		scanConfig, err = server.dbClient.getScanConfig(scanConfigId)
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if scanConfig.getName() == configName {
+			return scanConfig.asScanConfigDesc()
+		}
+	}
+	
+	return apitypes.NewFailureDesc("ScanConfig with name " + configName +
+		" not found in repo " + repo.getName())
 }
 
 /*******************************************************************************
@@ -2337,11 +2363,29 @@ func remScanConfig(server *Server, sessionToken *apitypes.SessionToken, values u
 	
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	return apitypes.NewFailureDesc("Not implemented yet")
+	var err error
+	var scanConfigId string
+	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(values, "ScanConfigId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.DeleteMask,
+		scanConfigId, "remScanConfig"); failMsg != nil { return failMsg }
+	
+	var scanConfig ScanConfig
+	scanConfig, err = server.dbClient.getScanConfig(scanConfigId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var repo Repo
+	repo, err = server.dbClient.getRepo(scanConfig.getRepoId())
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		
+	err = repo.removeScanConfig(scanConfig)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	return apitypes.NewResult(200, "Scan config removed")
 }
 
 /*******************************************************************************
- * Arguments: Repoid, FlagName
+ * Arguments: RepoId, FlagName
  * Returns: FlagDesc
  */
 func getFlagDescByName(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
@@ -2349,7 +2393,33 @@ func getFlagDescByName(server *Server, sessionToken *apitypes.SessionToken, valu
 	
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	return apitypes.NewFailureDesc("Not implemented yet")
+	var err error
+	var repoId string
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var flagName string
+	flagName, err = apitypes.GetRequiredHTTPParameterValue(values, "FlagName")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask,
+		repoId, "getFlagDescByName"); failMsg != nil { return failMsg }
+	
+	var repo Repo
+	repo, err = server.dbClient.getRepo(repoId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	for _, flagId := range repo.getFlagIds() {
+		var flag Flag
+		flag, err = server.dbClient.getFlag(flagId)
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if flag.getName() == flagName {
+			return flag.asFlagDesc()
+		}
+	}
+	
+	return apitypes.NewFailureDesc("Flag with name " + flagName +
+		" not found in repo " + repo.getName())
 }
 
 /*******************************************************************************
@@ -2361,5 +2431,53 @@ func remFlag(server *Server, sessionToken *apitypes.SessionToken, values url.Val
 	
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	return apitypes.NewFailureDesc("Not implemented yet")
+	var err error
+	var flagId string
+	flagId, err = apitypes.GetRequiredHTTPParameterValue(values, "FlagId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.DeleteMask,
+		flagId, "remFlag"); failMsg != nil { return failMsg }
+	
+	var flag Flag
+	flag, err = server.dbClient.getFlag(flagId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var repo Repo
+	repo, err = server.dbClient.getRepo(flag.getRepoId())
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	err = repo.removeFlag(flag)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	return apitypes.NewResult(200, "Flag removed")
+}
+
+/*******************************************************************************
+ * Arguments: ImageId
+ * Returns: Result
+ */
+func remDockerImage(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+
+	var err error
+	var imageId string
+	imageId, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.DeleteMask,
+		imageId, "remDockerImage"); failMsg != nil { return failMsg }
+	
+	var image DockerImage
+	image, err = server.dbClient.getDockerImage(imageId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var repo Repo
+	repo, err = server.dbClient.getRepo(image.getRepoId())
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	err = repo.removeDockerImage(image)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	return apitypes.NewResult(200, "Docker image removed")
 }
