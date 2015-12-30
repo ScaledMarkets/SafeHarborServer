@@ -45,7 +45,11 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
 }
 
 /*******************************************************************************
- * 
+ * Compute a salted hash of the specified clear text password. The hash is suitable
+ * for storage and later use for validation of input passwords, using the
+ * companion function PasswordIsValid. Thus, the hash is required to be 
+ * cryptographically secure. The 512-bit SHA-2 algorithm, aka "SHA-512",
+ * is used.
  */
 func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
 	return authSvc.computeHash(pswd).Sum([]byte{})
@@ -67,29 +71,14 @@ func (authSvc *AuthService) PasswordIsValid(pswd string) bool {
 }
 
 /*******************************************************************************
- * Clear all sessions that are cached in the auth service.
- */
-func (authSvc *AuthService) clearAllSessions() {
-	authSvc.Sessions = make(map[string]*apitypes.Credentials)
-}
-
-/*******************************************************************************
- * Validate session Id: return true if valid, false otherwise.
+ * Validate session Id: return true if valid, false otherwise. Thus, a return
+ * of true indicates that the sessionId is recognized as having been created
+ * by this server and that it is not expired and is still considered to represent
+ * an active session.
  */
 func (authSvc *AuthService) sessionIdIsValid(sessionId string) bool {
 	
-	var parts []string = strings.Split(sessionId, ":")
-	if len(parts) != 2 {
-		fmt.Println("Ill-formatted sessionId:", sessionId)
-		return false
-	}
-	
-	var uniqueNonRandomValue string = parts[0]
-	var untrustedHash string = parts[1]
-	var empty = []byte{}
-	var actualSaltedHashBytes []byte = authSvc.computeHash(uniqueNonRandomValue).Sum(empty)
-	
-	return untrustedHash == fmt.Sprintf("%x", actualSaltedHashBytes)
+	return authSvc.validateSessionId(sessionId)
 }
 
 /*******************************************************************************
@@ -110,15 +99,24 @@ func (authSvc *AuthService) createSession(creds *apitypes.Credentials) *apitypes
 
 /*******************************************************************************
  * Remove the specified session Id from the set of authenticated session Ids.
+ * This effectively logs out the owner of that session.
  */
 func (authSvc *AuthService) invalidateSessionId(sessionId string) {
 	authSvc.Sessions[sessionId] = nil
 }
 
 /*******************************************************************************
+ * Clear all sessions that are cached in the auth service. The effect is that,
+ * after calling this method, no user is logged in.
+ */
+func (authSvc *AuthService) clearAllSessions() {
+	authSvc.Sessions = make(map[string]*apitypes.Credentials)
+}
+
+/*******************************************************************************
  * Verify that a request belongs to a valid session:
- * Obtain the session Id, if any, and validate it; return nil if no Id found
- * or the Id is not valid.
+ * Obtain the SessionId cookie, if any, and validate it; return nil if no SessionId
+ * cookie is found or the SessionId is not valid.
  */
 func (authSvc *AuthService) authenticateRequestCookie(httpReq *http.Request) *apitypes.SessionToken {
 	
@@ -137,16 +135,31 @@ func (authSvc *AuthService) authenticateRequestCookie(httpReq *http.Request) *ap
 /*******************************************************************************
  * 
  */
-
-func (authSvc *AuthService) addSessionIdToResponse(sessionToken *apitypes.SessionToken,
+func (authService *AuthService) addSessionIdToResponse(sessionToken *apitypes.SessionToken,
 	writer http.ResponseWriter) {
-
-	authSvc.setSessionId(sessionToken, writer)
+	
+	// Set cookie containing the session Id.
+	var cookie = &http.Cookie{
+		Name: "SessionId",
+		Value: sessionToken.UniqueSessionId,
+		//Path: 
+		//Domain: 
+		//Expires: 
+		//RawExpires: 
+		MaxAge: 86400,
+		Secure: false,  //....change to true later.
+		HttpOnly: true,
+		//Raw: 
+		//Unparsed: 
+	}
+	
+	http.SetCookie(writer, cookie)
 }
 
 /*******************************************************************************
  * Determine if a specified action is allowed on a specified resource.
- * The ACL set for the resource is used to make the determination.
+ * All handlers call this function.
+ * The set of ACLs owned by the resource are used to make the determination.
  * At most one field of the actionMask may be true.
  */
 func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask []bool,
@@ -295,7 +308,7 @@ func (server *Server) partyHasAccess(party Party, actionMask []bool, resource Re
 }
 
 /*******************************************************************************
- * Returns the session id header value, or "" if there is none.
+ * Returns the "SessionId" cookie value, or "" if there is none.
  * Used by authenticateRequestCookie.
  */
 func getSessionIdFromCookie(httpReq *http.Request) string {
@@ -317,30 +330,6 @@ func getSessionIdFromCookie(httpReq *http.Request) string {
 }
 
 /*******************************************************************************
- * Used by addSessionIdToResponse.
- */
-func (authService *AuthService) setSessionId(sessionToken *apitypes.SessionToken,
-	writer http.ResponseWriter) {
-	
-	// Set cookie containing the session Id.
-	var cookie = &http.Cookie{
-		Name: "SessionId",
-		Value: sessionToken.UniqueSessionId,
-		//Path: 
-		//Domain: 
-		//Expires: 
-		//RawExpires: 
-		MaxAge: 86400,
-		Secure: false,  //....change to true later.
-		HttpOnly: true,
-		//Raw: 
-		//Unparsed: 
-	}
-	
-	http.SetCookie(writer, cookie)
-}
-
-/*******************************************************************************
  * Validate the specified session id. If valid, return a apitypes.SessionToken with
  * the identity of the session owner.
  */
@@ -357,8 +346,28 @@ func (authSvc *AuthService) identifySession(sessionId string) *apitypes.SessionT
 }
 
 /*******************************************************************************
+ * Validate session Id: return true if valid, false otherwise.
+ * See also createUniqueSessionId.
+ */
+func (authSvc *AuthService) validateSessionId(sessionId string) bool {
+	
+	var parts []string = strings.Split(sessionId, ":")
+	if len(parts) != 2 {
+		fmt.Println("Ill-formatted sessionId:", sessionId)
+		return false
+	}
+	
+	var uniqueNonRandomValue string = parts[0]
+	var untrustedHash string = parts[1]
+	var empty = []byte{}
+	var actualSaltedHashBytes []byte = authSvc.computeHash(uniqueNonRandomValue).Sum(empty)
+	
+	return untrustedHash == fmt.Sprintf("%x", actualSaltedHashBytes)
+}
+
+/*******************************************************************************
  * Return a session id that is guaranteed to be unique, and that is completely
- * opaque and unforgeable.
+ * opaque and unforgeable. See also validateSessionId.
  */
 func (authSvc *AuthService) createUniqueSessionId() string {
 	
