@@ -413,30 +413,14 @@ func (resource *InMemResource) setAccess(party Party, mask []bool) (ACLEntry, er
 
 func (resource *InMemResource) addAccess(party Party, mask []bool) (ACLEntry, error) {
 
-	// debug
-	fmt.Println("InMemory.addAccess, before addition of access:")
-	resource.printACLs(party)
-	// end debug
-
 	var aclEntry ACLEntry
 	var err error
 	aclEntry, err = party.getACLEntryForResourceId(resource.getId())
 	if err != nil { return nil, err }
 	if aclEntry == nil {
-		// debug
-		fmt.Println("Creating ACL entry")
-		// end debug
 		aclEntry, err = resource.Client.dbCreateACLEntry(resource.getId(), party.getId(), mask)
 		if err != nil { return nil, err }
 	} else {
-		// debug
-		fmt.Println("Adding to existing ACL entry for resource " + resource.getName() +
-			" (" + resource.getId() + "), party " + party.getName() +
-			" (" + party.getId() + ")")
-		fmt.Println("\tin ACLEntry: resourceId=" + aclEntry.getResourceId() +
-			", partyId=" + aclEntry.getPartyId())
-		// end debug
-
 		// Add the new mask.
 		var curmask []bool = aclEntry.getPermissionMask()
 		for index, _ := range curmask {
@@ -444,22 +428,12 @@ func (resource *InMemResource) addAccess(party Party, mask []bool) (ACLEntry, er
 		}
 		if err = aclEntry.writeBack(); err != nil { return nil, err }
 	}
-	
-	// debug
-	fmt.Println("InMemory.addAccess, after addition of access:")
-	resource.printACLs(party)
-	// end debug
 
 	return aclEntry, nil
 }
 
 func (resource *InMemResource) removeAccess(party Party) error {
 	
-	// debug
-	fmt.Println("InMemory.removeAccess, before removal of access:")
-	resource.printACLs(party)
-	// end debug
-
 	var aclEntriesCopy []string = make([]string, len(resource.ACLEntryIds))
 	copy(aclEntriesCopy, resource.ACLEntryIds)
 	fmt.Println(fmt.Sprintf("Copied %d ids", len(resource.ACLEntryIds)))
@@ -492,11 +466,6 @@ func (resource *InMemResource) removeAccess(party Party) error {
 			if err != nil { return err }
 		}
 	}
-	
-	// debug
-	fmt.Println("InMemory.removeAccess, after removal of access:")
-	resource.printACLs(party)
-	// end debug
 	
 	return resource.writeBack()
 }
@@ -2202,13 +2171,10 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 		if err != nil { return nil, err }
 	}
 	err = scanConfig.writeBack()
-	fmt.Println("dbCreateScanConfig:L")  // debug
 	if err != nil { return nil, err }
 	
 	// Link to repo
-	fmt.Println("dbCreateScanConfig:M")  // debug
 	repo.addScanConfig(scanConfig)
-	fmt.Println("dbCreateScanConfig:N")  // debug
 	
 	fmt.Println("Created ScanConfig")
 	return scanConfig, nil

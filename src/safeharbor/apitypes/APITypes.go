@@ -462,18 +462,11 @@ func (repoDesc *RepoDesc) AsJSON() string {
 		"\"DockerfileIds\": [",
 		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName, repoDesc.Description,
 		repoDesc.CreationDate)
-	fmt.Println("1: resp=%s", resp)
-	fmt.Println(fmt.Sprintf("len(DockerfileIds)=%d", len(repoDesc.DockerfileIds)))
-	//fmt.Println("Printing stack:")
-	//debug.PrintStack()
 	for i, id := range repoDesc.DockerfileIds {
 		if i > 0 { resp = resp + ", " }
-		resp = resp + id
-		fmt.Println("Added " + id + " to resp")
+		resp = resp + fmt.Sprintf("\"%s\"", id)
 	}
-	fmt.Println("2: resp=%s", resp)
 	resp = resp + "]}"
-	fmt.Println("3: resp=%s", resp)
 	return resp
 }
 
