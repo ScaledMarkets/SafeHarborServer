@@ -658,7 +658,7 @@ func (client *InMemClient) getResource(resourceId string) (Resource, error) {
 	var resource Resource
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(resourceId)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	resource, isType = obj.(Resource)
 	if ! isType { return nil, errors.New("Object with Id " + resourceId + " is not a Resource") }
 	return resource, nil
@@ -745,7 +745,7 @@ func (client *InMemClient) getParty(partyId string) (Party, error) {
 	var party Party
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(partyId)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	party, isType = obj.(Party)
 	if ! isType { return nil, errors.New("Object with Id " + partyId + " is not a Party") }
 	return party, nil
@@ -860,7 +860,7 @@ func (client *InMemClient) getGroup(id string) (Group, error) {
 	var group Group
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	group, isType = obj.(Group)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Group") }
 	return group, nil
@@ -1004,7 +1004,7 @@ func (client *InMemClient) getUser(id string) (User, error) {
 	var user User
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	user, isType = obj.(User)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a User") }
 	return user, nil
@@ -1214,7 +1214,7 @@ func (client *InMemClient) getACLEntry(id string) (ACLEntry, error) {
 	var aclEntry ACLEntry
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	aclEntry, isType = obj.(ACLEntry)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return aclEntry, nil
@@ -1404,7 +1404,7 @@ func (client *InMemClient) getRealm(id string) (Realm, error) {
 	var realm Realm
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	realm, isType = obj.(Realm)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Realm") }
 	return realm, nil
@@ -1670,7 +1670,7 @@ func (client *InMemClient) getRepo(id string) (Repo, error) {
 	var repo Repo
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	repo, isType = obj.(Repo)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Repo") }
 	return repo, nil
@@ -1871,7 +1871,7 @@ func (client *InMemClient) getDockerfile(id string) (Dockerfile, error) {
 	var dockerfile Dockerfile
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	dockerfile, isType = obj.(Dockerfile)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Dockerfile") }
 	return dockerfile, nil
@@ -2008,7 +2008,7 @@ func (client *InMemClient) getDockerImage(id string) (DockerImage, error) {
 	var image DockerImage
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	image, isType = obj.(DockerImage)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a DockerImage") }
 	return image, nil
@@ -2096,7 +2096,7 @@ func (client *InMemClient) getParameterValue(id string) (ParameterValue, error) 
 	var pv ParameterValue
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	pv, isType = obj.(ParameterValue)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a ParameterValue") }
 	return pv, nil
@@ -2164,50 +2164,38 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	// Check if a scanConfig with that name already exists within the repo.
 	var repo Repo
 	var err error
-	fmt.Println("dbCreateScanConfig:A")
 	repo, err = client.getRepo(repoId)
-	fmt.Println("dbCreateScanConfig:B")
 	if err != nil { return nil, err }
-	fmt.Println("dbCreateScanConfig:C")
 	if repo == nil { return nil, errors.New(fmt.Sprintf(
 		"Unidentified repo for repo Id %s", repoId))
 	}
-	fmt.Println("dbCreateScanConfig:D")
 	var sc ScanConfig
-	fmt.Println("dbCreateScanConfig:E")
 	sc, err = repo.getScanConfigByName(name)
-	fmt.Println("dbCreateScanConfig:F")
 	if err != nil { return nil, err }
-	fmt.Println("dbCreateScanConfig:G")
 	if sc != nil { return nil, errors.New(
 		fmt.Sprintf("ScanConfig named %s already exists within repo %s", name,
 			repo.getName()))
 	}
-	fmt.Println("dbCreateScanConfig:H")
 	
 	//var scanConfigId string = createUniqueDbObjectId()
 	var scanConfig *InMemScanConfig
 	scanConfig, err = client.NewInMemScanConfig(name, desc, repoId, providerName,
 		paramValueIds, successExpr, flagId)
-	fmt.Println("dbCreateScanConfig:I")
-	var flag Flag
-	flag, err = scanConfig.Client.getFlag(flagId)
-	fmt.Println("dbCreateScanConfig:J")
-	if err != nil { return nil, err }
-	fmt.Println("dbCreateScanConfig:J.1")
-	if flag == nil { return nil, errors.New("Internal error - flag is nil") }
-	fmt.Println("dbCreateScanConfig:J.2")
-	err = flag.addScanConfigRef(scanConfig.getId())
-	fmt.Println("dbCreateScanConfig:K")
-	if err != nil { return nil, err }
+	if flagId != "" {
+		var flag Flag
+		flag, err = scanConfig.Client.getFlag(flagId)
+		if err != nil { return nil, err }
+		err = flag.addScanConfigRef(scanConfig.getId())
+		if err != nil { return nil, err }
+	}
 	err = scanConfig.writeBack()
-	fmt.Println("dbCreateScanConfig:L")
+	fmt.Println("dbCreateScanConfig:L")  // debug
 	if err != nil { return nil, err }
 	
 	// Link to repo
-	fmt.Println("dbCreateScanConfig:M")
+	fmt.Println("dbCreateScanConfig:M")  // debug
 	repo.addScanConfig(scanConfig)
-	fmt.Println("dbCreateScanConfig:N")
+	fmt.Println("dbCreateScanConfig:N")  // debug
 	
 	fmt.Println("Created ScanConfig")
 	return scanConfig, nil
@@ -2217,7 +2205,7 @@ func (client *InMemClient) getScanConfig(id string) (ScanConfig, error) {
 	var scanConfig ScanConfig
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	scanConfig, isType = obj.(ScanConfig)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return scanConfig, nil
@@ -2432,7 +2420,7 @@ func (client *InMemClient) getFlag(id string) (Flag, error) {
 	var flag Flag
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	flag, isType = obj.(Flag)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return flag, nil
@@ -2503,7 +2491,7 @@ func (client *InMemClient) getEvent(id string) (Event, error) {
 	var event Event
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	event, isType = obj.(Event)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return event, nil
@@ -2599,7 +2587,7 @@ func (client *InMemClient) getScanEvent(id string) (ScanEvent, error) {
 	var scanEvent ScanEvent
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, nil }
+	if obj == nil { return nil, errors.New("Object not found") }
 	scanEvent, isType = obj.(ScanEvent)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return scanEvent, nil

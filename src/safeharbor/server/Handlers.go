@@ -1807,69 +1807,48 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 	
-	fmt.Println("defineScanConfig:A")
-	
 	var err error
 	var providerName string
 	providerName, err = apitypes.GetRequiredHTTPParameterValue(values, "ProviderName")
-	fmt.Println("defineScanConfig:B")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("defineScanConfig:C")
 	
 	var scanService providers.ScanService
 	scanService = server.GetScanService(providerName)
-	fmt.Println("defineScanConfig:D")
 	if scanService == nil { return apitypes.NewFailureDesc(
 		"Unable to identify a scan service named '" + providerName + "'")
 	}
-	fmt.Println("defineScanConfig:E")
 	
 	var name string
 	name, err = apitypes.GetRequiredHTTPParameterValue(values, "Name")
-	fmt.Println("defineScanConfig:F")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("defineScanConfig:G")
 	
 	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
-	fmt.Println("defineScanConfig:H")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("defineScanConfig:I")
 	
 	var repoId string
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
-	fmt.Println("defineScanConfig:J")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("defineScanConfig:K")
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, repoId,
 		"defineScanConfig"); failMsg != nil { return failMsg }
 	
-	fmt.Println("defineScanConfig:L")
 	var successExpr string = ""
 	successExpr, err = apitypes.GetHTTPParameterValue(values, "SuccessExpression")
-	fmt.Println("defineScanConfig:M")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("defineScanConfig:N")
 	
 	var scanConfig ScanConfig
 	var paramValueIds []string = make([]string, 0)
-	fmt.Println("defineScanConfig:O")
 	scanConfig, err = server.dbClient.dbCreateScanConfig(name, desc, repoId,
 		providerName, paramValueIds, successExpr, "")
-	fmt.Println("defineScanConfig:P")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("defineScanConfig:Q")
 	
 	// Retrieve and set the provider parameters.
 	for key, valueAr := range values {
-		fmt.Println("defineScanConfig:R")
 		if strings.HasPrefix(key, "scan.") {
-			fmt.Println("defineScanConfig:S")
 			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
 				"Parameter " + key + " is ill-formatted")
 			}
-			fmt.Println("defineScanConfig:T")
 			var paramName string = strings.TrimPrefix(key, "scan.")
 			// See if the parameter is known by the scanner.
 			_, err = scanService.GetParameterDescription(paramName)
@@ -1884,14 +1863,11 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	}
 	
 	// Add ACL entry to enable the current user to access what he/she just created.
-	fmt.Println("defineScanConfig:U")
 	var userId string = sessionToken.AuthenticatedUserid
 	var user User = server.dbClient.dbGetUserByUserId(userId)
-	fmt.Println("defineScanConfig:V")
 	if user == nil { return apitypes.NewFailureDesc(
 		"Internal error - could not identify user after use has been authenticated") }
 
-	fmt.Println("defineScanConfig:W")
 	_, err = server.dbClient.dbCreateACLEntry(scanConfig.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
