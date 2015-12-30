@@ -2166,45 +2166,45 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	var err error
 	fmt.Println("dbCreateScanConfig:A")
 	repo, err = client.getRepo(repoId)
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:B")
 	if err != nil { return nil, err }
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:C")
 	if repo == nil { return nil, errors.New(fmt.Sprintf(
 		"Unidentified repo for repo Id %s", repoId))
 	}
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:D")
 	var sc ScanConfig
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:E")
 	sc, err = repo.getScanConfigByName(name)
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:F")
 	if err != nil { return nil, err }
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:G")
 	if sc != nil { return nil, errors.New(
 		fmt.Sprintf("ScanConfig named %s already exists within repo %s", name,
 			repo.getName()))
 	}
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:H")
 	
 	//var scanConfigId string = createUniqueDbObjectId()
 	var scanConfig *InMemScanConfig
 	scanConfig, err = client.NewInMemScanConfig(name, desc, repoId, providerName,
 		paramValueIds, successExpr, flagId)
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:I")
 	var flag Flag
 	flag, err = scanConfig.Client.getFlag(flagId)
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:J")
 	if err != nil { return nil, err }
 	err = flag.addScanConfigRef(scanConfig.getId())
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:K")
 	if err != nil { return nil, err }
 	err = scanConfig.writeBack()
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:L")
 	if err != nil { return nil, err }
 	
 	// Link to repo
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:M")
 	repo.addScanConfig(scanConfig)
-	fmt.Println("dbCreateScanConfig:A")
+	fmt.Println("dbCreateScanConfig:N")
 	
 	fmt.Println("Created ScanConfig")
 	return scanConfig, nil
@@ -2452,6 +2452,7 @@ func (flag *InMemFlag) getSuccessImageURL() string {
 }
 
 func (flag *InMemFlag) addScanConfigRef(scanConfigId string) error {
+	fmt.Println("addScanConfigRef:A")
 	flag.UsedByScanConfigIds = apitypes.AddUniquely(scanConfigId, flag.UsedByScanConfigIds)
 	return flag.writeBack()
 }
