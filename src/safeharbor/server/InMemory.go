@@ -38,7 +38,7 @@ import (
 	//"io/ioutil"
 	//"crypto/sha512"
 	"time"
-	"runtime/debug"	
+	//"runtime/debug"	
 	
 	"safeharbor/apitypes"
 )
@@ -670,39 +670,45 @@ func (resource *InMemResource) getParentId() string {
 }
 
 func (resource *InMemResource) isRealm() bool {
-	fmt.Println("Internal ERROR: isRealm called on abstract type 'Resource'")
-	debug.PrintStack()
-	return false
+	var res Resource = resource
+	var isType bool
+	_, isType = res.(Realm)
+	return isType
 }
 
 func (resource *InMemResource) isRepo() bool {
-	fmt.Println("Internal ERROR: isRepo called on abstract type 'Resource'")
-	debug.PrintStack()
-	return false
+	var res Resource = resource
+	var isType bool
+	_, isType = res.(Repo)
+	return isType
 }
 
 func (resource *InMemResource) isDockerfile() bool {
-	fmt.Println("Internal ERROR: isDockerfile called on abstract type 'Resource'")
-	debug.PrintStack()
-	return false
+	var res Resource = resource
+	var isType bool
+	_, isType = res.(Dockerfile)
+	return isType
 }
 
 func (resource *InMemResource) isDockerImage() bool {
-	fmt.Println("Internal ERROR: isDockerImage called on abstract type 'Resource'")
-	debug.PrintStack()
-	return false
+	var res Resource = resource
+	var isType bool
+	_, isType = res.(DockerImage)
+	return isType
 }
 
 func (resource *InMemResource) isScanConfig() bool {
-	fmt.Println("Internal ERROR: isScanConfig called on abstract type 'Resource'")
-	debug.PrintStack()
-	return false
+	var res Resource = resource
+	var isType bool
+	_, isType = res.(ScanConfig)
+	return isType
 }
 
 func (resource *InMemResource) isFlag() bool {
-	fmt.Println("Internal ERROR: isFlag called on abstract type 'Resource'")
-	debug.PrintStack()
-	return false
+	var res Resource = resource
+	var isType bool
+	_, isType = res.(Flag)
+	return isType
 }
 
 /*******************************************************************************
