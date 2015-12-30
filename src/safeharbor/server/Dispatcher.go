@@ -155,6 +155,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	if isType {
 		http.Error(w, failureDesc.AsJSON(), failureDesc.HTTPCode)
 		fmt.Printf("Error:", failureDesc.Reason)
+		w.WriteHeader(failureDesc.HTTPCode)
 		return
 	}
 	

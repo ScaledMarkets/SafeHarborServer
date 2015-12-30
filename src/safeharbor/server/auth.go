@@ -45,13 +45,6 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
 }
 
 /*******************************************************************************
- * Clear all sessions that are cached in the auth service.
- */
-func (authSvc *AuthService) clearAllSessions() {
-	authSvc.Sessions = make(map[string]*apitypes.Credentials)
-}
-
-/*******************************************************************************
  * 
  */
 func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
@@ -69,7 +62,34 @@ func (authSvc *AuthService) PasswordIsValid(pswd string) bool {
 	for i, _ := range savedPswdHash {
 		if savedPswdHash[i] != prospectivePswdHash[i] { return false }
 	}
+	fmt.Println("Password validated")
 	return true
+}
+
+/*******************************************************************************
+ * Clear all sessions that are cached in the auth service.
+ */
+func (authSvc *AuthService) clearAllSessions() {
+	authSvc.Sessions = make(map[string]*apitypes.Credentials)
+}
+
+/*******************************************************************************
+ * Validate session Id: return true if valid, false otherwise.
+ */
+func (authSvc *AuthService) sessionIdIsValid(sessionId string) bool {
+	
+	var parts []string = strings.Split(sessionId, ":")
+	if len(parts) != 2 {
+		fmt.Println("Ill-formatted sessionId:", sessionId)
+		return false
+	}
+	
+	var uniqueNonRandomValue string = parts[0]
+	var untrustedHash string = parts[1]
+	var empty = []byte{}
+	var actualSaltedHashBytes []byte = authSvc.computeHash(uniqueNonRandomValue).Sum(empty)
+	
+	return untrustedHash == fmt.Sprintf("%x", actualSaltedHashBytes)
 }
 
 /*******************************************************************************
@@ -209,6 +229,32 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 	}
 }
 
+/*******************************************************************************
+ * Return the SHA-512 hash of the content of the specified file. Should not be salted
+ * because the hash is intended to be reproducible by third parties, given the
+ * original file.
+ */
+func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error) {
+	
+	var file *os.File
+	var err error
+	file, err = os.Open(filepath)
+	if err != nil { return nil, err }
+	var buf = make([]byte, 100000)
+	var hash hash.Hash = sha512.New()
+	for {
+		var numBytesRead int
+		numBytesRead, err = file.Read(buf)
+		if numBytesRead == 0 { break }
+		hash.Write(buf)
+		if err != nil { break }
+		if numBytesRead < 100000 { break }
+	}
+	
+	var empty = []byte{}
+	return hash.Sum(empty), nil
+}
+
 
 /***************************** Internal Functions ******************************/
 
@@ -317,28 +363,10 @@ func (authSvc *AuthService) identifySession(sessionId string) *apitypes.SessionT
 func (authSvc *AuthService) createUniqueSessionId() string {
 	
 	var uniqueNonRandomValue string = fmt.Sprintf("%d", time.Now().UnixNano())
-	var saltedHashBytes []byte =
-		authSvc.computeHash(uniqueNonRandomValue).Sum(authSvc.secretSalt)
-	return uniqueNonRandomValue + ":" + fmt.Sprintf("%x", saltedHashBytes)
-}
-
-/*******************************************************************************
- * Validate session Id: return true if valid, false otherwise.
- */
-func (authSvc *AuthService) sessionIdIsValid(sessionId string) bool {
-	
-	var parts []string = strings.Split(sessionId, ":")
-	if len(parts) != 2 {
-		fmt.Println("Illegally formatted sessionId:", sessionId)
-		return false
-	}
-	
-	var uniqueNonRandomValue string = parts[0]
-	var untrustedHash string = parts[1]
 	var empty = []byte{}
-	var actualSaltedHashBytes []byte = authSvc.computeHash(uniqueNonRandomValue).Sum(empty)
-	
-	return untrustedHash == fmt.Sprintf("%x", actualSaltedHashBytes)
+	var saltedHashBytes []byte =
+		authSvc.computeHash(uniqueNonRandomValue).Sum(empty)
+	return uniqueNonRandomValue + ":" + fmt.Sprintf("%x", saltedHashBytes)
 }
 
 /*******************************************************************************
@@ -352,30 +380,4 @@ func (authSvc *AuthService) computeHash(s string) hash.Hash {
 	hash.Write(authSvc.secretSalt)
 	hash.Write(bytes)
 	return hash
-}
-
-/*******************************************************************************
- * Return the SHA-512 hash of the content of the specified file. Should not be salted
- * because the hash is intended to be reproducible by third parties, given the
- * original file.
- */
-func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error) {
-	
-	var file *os.File
-	var err error
-	file, err = os.Open(filepath)
-	if err != nil { return nil, err }
-	var buf = make([]byte, 100000)
-	var hash hash.Hash = sha512.New()
-	for {
-		var numBytesRead int
-		numBytesRead, err = file.Read(buf)
-		if numBytesRead == 0 { break }
-		hash.Write(buf)
-		if err != nil { break }
-		if numBytesRead < 100000 { break }
-	}
-	
-	var empty = []byte{}
-	return hash.Sum(empty), nil
 }
