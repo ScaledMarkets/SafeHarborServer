@@ -1903,7 +1903,7 @@ func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 		
-	// Update only the fields that are specified.
+	// Update only the fields that are specified and that are not empty strings.
 	var err error
 
 	var scanConfigId string
@@ -1937,14 +1937,14 @@ func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if successExpr != "" { scanConfig.setSuccessExpressionDeferredUpdate(successExpr) }
 	
-	err = scanConfig.writeBack()
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	
 	var scanService providers.ScanService
-	scanService = server.GetScanService(providerName)
+	scanService = server.GetScanService(scanConfig.getProviderName())
 	if scanService == nil { return apitypes.NewFailureDesc(
 		"Unable to identify a scan service named '" + providerName + "'")
 	}
+	
+	err = scanConfig.writeBack()
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	// Retrieve and set the provider parameters.
 	for key, valueAr := range values {
