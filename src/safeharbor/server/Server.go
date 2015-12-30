@@ -447,6 +447,14 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 		return
 	}
 
+	if values != nil {
+		var stringToLog string
+		stringToLog, err = apitypes.GetHTTPParameterValue(values, "Log")
+		if err == nil {
+			fmt.Println("Log:", stringToLog)
+		}
+	}
+	
 	fmt.Println("Calling handleRequest")
 	server.dispatcher.handleRequest(sessionToken, headers, writer, reqName, values, files)
 }

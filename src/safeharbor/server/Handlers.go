@@ -1880,6 +1880,7 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	_, imageFilepath, err = captureFile(repo, files)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if imageFilepath != "" { // a file was attached - presume that it is an image
+		fmt.Println("image attached...")
 		var flag Flag
 		flag, err = server.dbClient.dbCreateFlag(name, desc, repoId, imageFilepath)
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
