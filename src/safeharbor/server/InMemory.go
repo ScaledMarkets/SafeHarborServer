@@ -2164,33 +2164,47 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	// Check if a scanConfig with that name already exists within the repo.
 	var repo Repo
 	var err error
+	fmt.Println("dbCreateScanConfig:A")
 	repo, err = client.getRepo(repoId)
+	fmt.Println("dbCreateScanConfig:A")
 	if err != nil { return nil, err }
+	fmt.Println("dbCreateScanConfig:A")
 	if repo == nil { return nil, errors.New(fmt.Sprintf(
 		"Unidentified repo for repo Id %s", repoId))
 	}
+	fmt.Println("dbCreateScanConfig:A")
 	var sc ScanConfig
+	fmt.Println("dbCreateScanConfig:A")
 	sc, err = repo.getScanConfigByName(name)
+	fmt.Println("dbCreateScanConfig:A")
 	if err != nil { return nil, err }
+	fmt.Println("dbCreateScanConfig:A")
 	if sc != nil { return nil, errors.New(
 		fmt.Sprintf("ScanConfig named %s already exists within repo %s", name,
 			repo.getName()))
 	}
+	fmt.Println("dbCreateScanConfig:A")
 	
 	//var scanConfigId string = createUniqueDbObjectId()
 	var scanConfig *InMemScanConfig
 	scanConfig, err = client.NewInMemScanConfig(name, desc, repoId, providerName,
 		paramValueIds, successExpr, flagId)
+	fmt.Println("dbCreateScanConfig:A")
 	var flag Flag
 	flag, err = scanConfig.Client.getFlag(flagId)
+	fmt.Println("dbCreateScanConfig:A")
 	if err != nil { return nil, err }
 	err = flag.addScanConfigRef(scanConfig.getId())
+	fmt.Println("dbCreateScanConfig:A")
 	if err != nil { return nil, err }
 	err = scanConfig.writeBack()
+	fmt.Println("dbCreateScanConfig:A")
 	if err != nil { return nil, err }
 	
 	// Link to repo
+	fmt.Println("dbCreateScanConfig:A")
 	repo.addScanConfig(scanConfig)
+	fmt.Println("dbCreateScanConfig:A")
 	
 	fmt.Println("Created ScanConfig")
 	return scanConfig, nil
