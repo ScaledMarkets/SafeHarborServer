@@ -1885,6 +1885,7 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		err = scanConfig.setFlagId(flag.getId())
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if scanConfig.getFlagId() == "" { return apitypes.NewFailureDesc("Flag set failed") }
 		// Add ACL entry.
 		_, err = server.dbClient.dbCreateACLEntry(flag.getId(), user.getId(),
 			[]bool{ true, true, true, true, true } )
