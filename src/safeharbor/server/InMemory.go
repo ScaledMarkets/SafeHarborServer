@@ -2331,6 +2331,11 @@ func (resource *InMemScanConfig) isScanConfig() bool {
 }
 
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
+	
+	fmt.Println("asScanConfigDesc: FlagId=" + scanConfig.FlagId)  // debug
+	
+	
+	
 	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
 	for _, valueId := range scanConfig.ParameterValueIds {
 		var paramValue ParameterValue
@@ -2347,6 +2352,9 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 		paramValueDescs = append(paramValueDescs, paramValue.asParameterValueDesc())
 	}
 	
+	fmt.Println("asScanConfigDesc 2: FlagId=" + scanConfig.FlagId)  // debug
+	fmt.Println("asScanConfigDesc 2a: getFlagId()=" + scanConfig.getFlagId())  // debug
+
 	return apitypes.NewScanConfigDesc(scanConfig.Id, scanConfig.ProviderName,
 		scanConfig.SuccessExpression, scanConfig.FlagId, paramValueDescs)
 }

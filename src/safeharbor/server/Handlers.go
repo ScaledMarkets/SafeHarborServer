@@ -1893,6 +1893,9 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	}
 	
+	
+	fmt.Println("defineScanConfig: scanConfig.getFlagId()=" + scanConfig.getFlagId())  // debug
+	
 	return scanConfig.asScanConfigDesc()
 }
 
