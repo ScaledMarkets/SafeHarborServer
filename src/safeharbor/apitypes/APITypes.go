@@ -775,6 +775,7 @@ func NewScanConfigDesc(id, provName, expr, flagId string, paramValueDescs []*Par
 		Id: id,
 		ProviderName: provName,
 		SuccessExpression: expr,
+		FlagId: flagId,
 		ParameterValueDescs: paramValueDescs,
 	}
 }
