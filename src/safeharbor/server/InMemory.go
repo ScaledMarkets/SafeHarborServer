@@ -2194,6 +2194,7 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	flag, err = scanConfig.Client.getFlag(flagId)
 	fmt.Println("dbCreateScanConfig:J")
 	if err != nil { return nil, err }
+	fmt.Println("dbCreateScanConfig:J.1")
 	err = flag.addScanConfigRef(scanConfig.getId())
 	fmt.Println("dbCreateScanConfig:K")
 	if err != nil { return nil, err }
