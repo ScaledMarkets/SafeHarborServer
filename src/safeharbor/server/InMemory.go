@@ -159,6 +159,7 @@ func (persist *Persistence) addObject(obj PersistObj) error {
 
 func (persist *Persistence) deleteObject(obj PersistObj) error {
 	// TBD:
+	persist.allObjects[obj.getId()] = nil
 	return nil
 }
 
