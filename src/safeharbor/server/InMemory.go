@@ -1424,7 +1424,7 @@ func (realm *InMemRealm) removeUserId(userObjId string) error {
 	user, isType = realm.Client.getPersistentObject(userObjId).(User)
 	if ! isType { return errors.New("Internal error: object is an unexpected type") }
 	if user == nil { return errors.New("Could not identify user with obj Id " + userObjId) }
-	if user.getRealmId() != "" {
+	if user.getRealmId() != realm.getId() {
 		return errors.New("User with obj Id " + userObjId + " belongs to another realm")
 	}
 	realm.UserObjIds = apitypes.RemoveFrom(userObjId, realm.UserObjIds)
