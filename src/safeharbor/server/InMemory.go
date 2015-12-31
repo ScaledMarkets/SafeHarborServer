@@ -1413,6 +1413,8 @@ func (realm *InMemRealm) addUserId(userObjId string) error {
 		return errors.New("User with obj Id " + userObjId + " belongs to another realm")
 	}
 	realm.UserObjIds = append(realm.UserObjIds, userObjId)
+	var inMemUser = user.(*InMemUser)
+	inMemUser.RealmId = realm.getId()
 	var err error = realm.writeBack()
 	return err
 }
