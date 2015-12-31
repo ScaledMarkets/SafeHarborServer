@@ -710,7 +710,7 @@ func moveUserToRealm(server *Server, sessionToken *apitypes.SessionToken, values
 	fmt.Println("moveUserToRealm:F")  // debug
 	
 	var origRealm Realm
-	destRealm, err = server.dbClient.getRealm(user.getRealmId())
+	origRealm, err = server.dbClient.getRealm(user.getRealmId())
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	fmt.Println("moveUserToRealm:G")  // debug
 	
