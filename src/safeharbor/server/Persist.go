@@ -177,7 +177,8 @@ type Realm interface {
 	getUserObjIds() []string
 	getRepoIds() []string
 	addUserId(string) error
-	removeUserId(string) error
+	removeUserId(string) (User, error)
+	deleteUserId(string) error
 	getUserByUserId(string) (User, error)
 	getGroupIds() []string
 	addGroup(Group) error

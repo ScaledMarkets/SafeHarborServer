@@ -1417,18 +1417,30 @@ func (realm *InMemRealm) addUserId(userObjId string) error {
 	return err
 }
 
-func (realm *InMemRealm) removeUserId(userObjId string) error {
+func (realm *InMemRealm) removeUserId(userObjId string) (User, error) {
 	
 	var user User
 	var isType bool
 	user, isType = realm.Client.getPersistentObject(userObjId).(User)
-	if ! isType { return errors.New("Internal error: object is an unexpected type") }
-	if user == nil { return errors.New("Could not identify user with obj Id " + userObjId) }
+	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
+	if user == nil { return nil, errors.New("Could not identify user with obj Id " + userObjId) }
 	if user.getRealmId() != realm.getId() {
-		return errors.New("User with obj Id " + userObjId + " belongs to another realm")
+		return nil, errors.New("User with obj Id " + userObjId + " belongs to another realm")
 	}
 	realm.UserObjIds = apitypes.RemoveFrom(userObjId, realm.UserObjIds)
-	var err error = realm.Client.deleteObject(user)
+	var inMemUser = user.(*InMemUser)
+	inMemUser.RealmId = ""
+	var err error = realm.writeBack()
+	return user, err
+}
+
+func (realm *InMemRealm) deleteUserId(userObjId string) error {
+	
+	var user User
+	var err error
+	user, err = realm.removeUserId(userObjId)
+	if err != nil { return err }
+	err = realm.Client.deleteObject(user)
 	if err != nil { return err }
 	err = realm.writeBack()
 	return err

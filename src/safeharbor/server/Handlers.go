@@ -719,7 +719,7 @@ func moveUserToRealm(server *Server, sessionToken *apitypes.SessionToken, values
 	}
 	fmt.Println("moveUserToRealm:H")  // debug
 	
-	err = origRealm.removeUserId(userObjId)
+	_, err = origRealm.removeUserId(userObjId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	fmt.Println("moveUserToRealm:I")  // debug
 	err = destRealm.addUserId(userObjId)
