@@ -342,7 +342,7 @@ func (authSvc *AuthService) identifySession(sessionId string) *apitypes.SessionT
 	var credentials *apitypes.Credentials = authSvc.Sessions[sessionId]
 	
 	if credentials == nil {
-		fmt.Println("No credentials found for session id", sessionId)
+		fmt.Println("No session found for session id", sessionId)
 		return nil
 	}
 	
