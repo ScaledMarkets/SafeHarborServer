@@ -59,9 +59,12 @@ func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
  * 
  */
 func (authSvc *AuthService) PasswordIsValid(pswd string) bool {
+	fmt.Println("PasswordIsValid...")  // debug
 	var empty = []byte{}
 	var savedPswdHash = authSvc.computeHash(pswd).Sum(empty)
 	var prospectivePswdHash = authSvc.computeHash(pswd).Sum(empty)
+	fmt.Println("PasswordIsValid: savedPswdHash=" + string(savedPswdHash))  // debug
+	fmt.Println("PasswordIsValid: prospectivePswdHash=" + string(prospectivePswdHash))  // debug
 	if len(savedPswdHash) != len(prospectivePswdHash) { return false }
 	for i, _ := range savedPswdHash {
 		if savedPswdHash[i] != prospectivePswdHash[i] { return false }
