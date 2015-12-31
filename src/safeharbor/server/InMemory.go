@@ -1453,6 +1453,8 @@ func (realm *InMemRealm) getGroupIds() []string {
 func (realm *InMemRealm) addUser(user User) error {
 	realm.Client.addUser(user)
 	realm.UserObjIds = append(realm.UserObjIds, user.getId())
+	var inMemUser = user.(*InMemUser)
+	inMemUser.RealmId = realm.getId()
 	return realm.writeBack()
 }
 
