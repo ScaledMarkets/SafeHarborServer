@@ -738,22 +738,30 @@ func getUserDesc(server *Server, sessionToken *apitypes.SessionToken, values url
 
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
+	fmt.Println("getUserDesc:A")  // debug
 	var err error
 	var userId string
 	userId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserId")
+	fmt.Println("getUserDesc:B")  // debug
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	fmt.Println("getUserDesc:C")  // debug
 	
 	var user User
 	user = server.dbClient.dbGetUserByUserId(userId)
+	fmt.Println("getUserDesc:D")  // debug
 	if user == nil { return apitypes.NewFailureDesc("User with user id " + userId +
 		" not found.") }
+	fmt.Println("getUserDesc:E")  // debug
 	
 	var realm Realm
 	realm, err = user.getRealm()
+	fmt.Println("getUserDesc:F")  // debug
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	fmt.Println("getUserDesc:G")  // debug
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, realm.getId(),
 		"getUserDesc"); failMsg != nil { return failMsg }
+	fmt.Println("getUserDesc:H")  // debug
 	
 	return user.asUserDesc()
 }
