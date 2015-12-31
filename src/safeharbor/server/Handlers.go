@@ -681,9 +681,7 @@ func deactivateRealm(server *Server, sessionToken *apitypes.SessionToken, values
 func moveUserToRealm(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	fmt.Println("moveUserToRealm:A")  // debug
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
-	fmt.Println("moveUserToRealm:B")  // debug
 
 	var err error
 	var realmId string
@@ -692,39 +690,31 @@ func moveUserToRealm(server *Server, sessionToken *apitypes.SessionToken, values
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	userObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("moveUserToRealm:C")  // debug
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, realmId,
 		"moveUserToRealm"); failMsg != nil { return failMsg }
-	fmt.Println("moveUserToRealm:D")  // debug
 	
 	var destRealm Realm
 	destRealm, err = server.dbClient.getRealm(realmId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if destRealm == nil { return apitypes.NewFailureDesc("Cound not find realm with Id " + realmId) }
-	fmt.Println("moveUserToRealm:E")  // debug
 	
 	var user User
 	user, err = server.dbClient.getUser(userObjId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("moveUserToRealm:F")  // debug
 	
 	var origRealm Realm
 	origRealm, err = server.dbClient.getRealm(user.getRealmId())
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("moveUserToRealm:G")  // debug
 	
 	if origRealm.getId() == destRealm.getId() {
 		return apitypes.NewFailureDesc("The user is already in the destination realm")
 	}
-	fmt.Println("moveUserToRealm:H")  // debug
 	
 	_, err = origRealm.removeUserId(userObjId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("moveUserToRealm:I")  // debug
 	err = destRealm.addUserId(userObjId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("moveUserToRealm:J")  // debug
 	
 	return apitypes.NewResult(200, "User moved to realm")
 }
@@ -738,30 +728,22 @@ func getUserDesc(server *Server, sessionToken *apitypes.SessionToken, values url
 
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	fmt.Println("getUserDesc:A")  // debug
 	var err error
 	var userId string
 	userId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserId")
-	fmt.Println("getUserDesc:B")  // debug
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("getUserDesc:C")  // debug
 	
 	var user User
 	user = server.dbClient.dbGetUserByUserId(userId)
-	fmt.Println("getUserDesc:D")  // debug
 	if user == nil { return apitypes.NewFailureDesc("User with user id " + userId +
 		" not found.") }
-	fmt.Println("getUserDesc:E")  // debug
 	
 	var realm Realm
 	realm, err = user.getRealm()
-	fmt.Println("getUserDesc:F")  // debug
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("getUserDesc:G")  // debug
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, realm.getId(),
 		"getUserDesc"); failMsg != nil { return failMsg }
-	fmt.Println("getUserDesc:H")  // debug
 	
 	return user.asUserDesc()
 }
@@ -1910,9 +1892,6 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 			[]bool{ true, true, true, true, true } )
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	}
-	
-	
-	fmt.Println("defineScanConfig: scanConfig.getFlagId()=" + scanConfig.getFlagId())  // debug
 	
 	return scanConfig.asScanConfigDesc()
 }
