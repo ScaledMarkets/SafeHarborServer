@@ -3,15 +3,10 @@
  *
  * These methods do not perform any authorization - that is done by the handlers.
  * 
- * The Group, Permission, Repo, Dockerfile, Image, User, and Realm have
- * asGroupDesc, asPermissionDesc, asRepoDesc, asDockerfileDesc, asImageDesc,
- * asUserDesc, and asRealmDesc methods, respectively - these methods construct
- * instances of apitypes.GroupDesc, apitypes.PermissionDesc, apitypes.RepoDesc, apitypes.DockerfileDesc, ImageDesc,
- * and so on. These methods are a convenient way of constructing the return values
- * that are needed by the handler methods defined in the API (slides titled
- * "SafeHarbor REST API" of the desgin), which are implemented by the functions
- * in Handlers.go.
- *
+ * The Persistence struct implements persistence. It is extended by the Client struct,
+ * which implements the Client interface from Persist.go. Below that, the remaining
+ * types (structs) implement the various persistent object types from Persist.go.
+ * 
  * Each type has a New<type> function. The New function merely constructs an instance
  * of the type - it does not link the type in any relationships.
  * 

@@ -447,6 +447,8 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 		return
 	}
 
+	// Enable client to "log" an annotation in the server's stdout, to make it
+	// easier to find portions of server output that pertain to a given test.
 	if server.Debug && (values != nil) {
 		var stringToLog string
 		stringToLog, err = apitypes.GetHTTPParameterValue(values, "Log")

@@ -6,6 +6,15 @@
  * The implementations should perform complete actions - i.e., maintain referential
  * integrity and satisfy all constraints and relationships.
  * Authorization (access control) is not part of the contract, however.
+ *
+ * The Group, Permission, Repo, Dockerfile, Image, User, and Realm have
+ * asGroupDesc, asPermissionDesc, asRepoDesc, asDockerfileDesc, asImageDesc,
+ * asUserDesc, and asRealmDesc methods, respectively - these methods construct
+ * instances of apitypes.GroupDesc, apitypes.PermissionDesc, apitypes.RepoDesc, apitypes.DockerfileDesc, ImageDesc,
+ * and so on. These methods are a convenient way of constructing the return values
+ * that are needed by the handler methods defined in the API (slides titled
+ * "SafeHarbor REST API" of the desgin), which are implemented by the functions
+ * in Handlers.go.
  */ 
  
 package server

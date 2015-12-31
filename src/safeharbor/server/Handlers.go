@@ -1,6 +1,6 @@
 /*******************************************************************************
  * All of the REST handlers are contained here. These functions are called by
- * the ReqHandler.
+ * the handleRequest method in Dispatcher.go.
  */
 
 package server

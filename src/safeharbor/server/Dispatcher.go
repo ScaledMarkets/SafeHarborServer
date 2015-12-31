@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Dispatch incoming HTTP requests to the appropriate function.
+ * Dispatch incoming HTTP requests to the appropriate REST function.
  */
 
 package server

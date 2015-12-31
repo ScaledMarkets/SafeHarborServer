@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"net/url"
 	"io/ioutil"
+	"runtime/debug"	
 	
 	// Our packages:
 	"safeharbor/apitypes"
@@ -180,21 +181,23 @@ func nameConformsToDockerRules(name string) error {
 /*******************************************************************************
  * If the specified condition is not true, then thrown an exception with the message.
  */
-func assertThat(condition bool, msg string) {
+func assertThat(condition bool, msg string) bool {
 	if ! condition {
 		var s string = fmt.Sprintf("ERROR: %s", msg)
 		fmt.Println(s)
-		panic(errors.New(s))
+		debug.PrintStack()
 	}
+	return condition
 }
 
 /*******************************************************************************
  * 
  */
-func AssertErrIsNil(err error, msg string) {
-	if err == nil { return }
+func AssertErrIsNil(err error, msg string) bool {
+	if err == nil { return true }
 	fmt.Print(msg)
-	panic(err)
+	debug.PrintStack()
+	return false
 }
 
 /*******************************************************************************
