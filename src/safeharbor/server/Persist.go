@@ -102,6 +102,7 @@ type User interface {
 	Party
 	getUserId() string
 	setPassword(string) error
+	validatePassword(pswd string) bool
 	hasGroupWithId(string) bool
 	addGroupId(string) error
 	getGroupIds() []string

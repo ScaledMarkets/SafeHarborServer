@@ -977,6 +977,13 @@ func (user *InMemUser) setPassword(pswd string) error {
 	return nil
 }
 
+func (user *InMemUser) validatePassword(pswd string) bool {
+	var empty = []byte{}
+	var authService = user.Client.Server.authService
+	var prospectiveHash []byte = authService.computeHash(pswd).Sum(empty)
+	return authService.compareHashValues(prospectiveHash, user.PasswordHash)
+}
+
 func (client *InMemClient) getUser(id string) (User, error) {
 	var user User
 	var isType bool

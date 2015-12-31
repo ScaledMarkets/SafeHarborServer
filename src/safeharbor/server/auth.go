@@ -47,30 +47,12 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
 /*******************************************************************************
  * Compute a salted hash of the specified clear text password. The hash is suitable
  * for storage and later use for validation of input passwords, using the
- * companion function PasswordIsValid. Thus, the hash is required to be 
+ * companion function PasswordHashIsValid. Thus, the hash is required to be 
  * cryptographically secure. The 512-bit SHA-2 algorithm, aka "SHA-512",
  * is used.
  */
 func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
 	return authSvc.computeHash(pswd).Sum([]byte{})
-}
-
-/*******************************************************************************
- * 
- */
-func (authSvc *AuthService) PasswordIsValid(pswd string) bool {
-	fmt.Println("PasswordIsValid...")  // debug
-	var empty = []byte{}
-	var savedPswdHash = authSvc.computeHash(pswd).Sum(empty)
-	var prospectivePswdHash = authSvc.computeHash(pswd).Sum(empty)
-	fmt.Println("PasswordIsValid: savedPswdHash=" + string(savedPswdHash))  // debug
-	fmt.Println("PasswordIsValid: prospectivePswdHash=" + string(prospectivePswdHash))  // debug
-	if len(savedPswdHash) != len(prospectivePswdHash) { return false }
-	for i, _ := range savedPswdHash {
-		if savedPswdHash[i] != prospectivePswdHash[i] { return false }
-	}
-	fmt.Println("Password validated")
-	return true
 }
 
 /*******************************************************************************
@@ -271,6 +253,25 @@ func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error
 	return hash.Sum(empty), nil
 }
 
+/*******************************************************************************
+ * Compute a SHA-512 has of the specified string. Salt the hash so that the
+ * hash value cannot be forged or identified via a lookup table.
+ */
+func (authSvc *AuthService) computeHash(s string) hash.Hash {
+	
+	var hash hash.Hash = sha512.New()
+	var bytes []byte = []byte(s)
+	hash.Write(authSvc.secretSalt)
+	hash.Write(bytes)
+	return hash
+}
+
+func (authSvc *AuthService) compareHashValues(h1, h2 []byte) bool {
+	if len(h1) != len(h2) { return false }
+	for i, b := range h1 { if b != h2[i] { return false } }
+	return true
+}
+
 
 /***************************** Internal Functions ******************************/
 
@@ -379,17 +380,4 @@ func (authSvc *AuthService) createUniqueSessionId() string {
 	var saltedHashBytes []byte =
 		authSvc.computeHash(uniqueNonRandomValue).Sum(empty)
 	return uniqueNonRandomValue + ":" + fmt.Sprintf("%x", saltedHashBytes)
-}
-
-/*******************************************************************************
- * Compute a SHA-512 has of the specified string. Salt the hash so that the
- * hash value cannot be forged or identified via a lookup table.
- */
-func (authSvc *AuthService) computeHash(s string) hash.Hash {
-	
-	var hash hash.Hash = sha512.New()
-	var bytes []byte = []byte(s)
-	hash.Write(authSvc.secretSalt)
-	hash.Write(bytes)
-	return hash
 }

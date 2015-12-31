@@ -170,7 +170,7 @@ func authenticate(server *Server, sessionToken *apitypes.SessionToken, values ur
 	user.addLoginAttempt()
 	
 	// Verify password.
-	if ! server.authService.PasswordIsValid(creds.Password) {
+	if ! user.validatePassword(creds.Password) {
 		return apitypes.NewFailureDesc("Invalid password")
 	}
 	
@@ -333,7 +333,7 @@ func changePassword(server *Server, sessionToken *apitypes.SessionToken, values 
 	oldPswd, err = apitypes.GetRequiredHTTPParameterValue(values, "OldPassword")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	if ! server.authService.PasswordIsValid(oldPswd) {
+	if ! user.validatePassword(oldPswd) {
 		return apitypes.NewFailureDesc("Invalid password")
 	}
 	
