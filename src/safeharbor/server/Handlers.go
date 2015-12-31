@@ -2008,7 +2008,7 @@ func getFlagImage(server *Server, sessionToken *apitypes.SessionToken, values ur
 
 	var flagId string
 	var err error
-	flagId, err = apitypes.GetRequiredHTTPParameterValue(values, "Id")
+	flagId, err = apitypes.GetRequiredHTTPParameterValue(values, "FlagId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var flag Flag
