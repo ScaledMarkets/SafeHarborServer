@@ -2332,17 +2332,20 @@ func (scanConfig *InMemScanConfig) deleteAllParameterValues() error {
 	return scanConfig.writeBack()
 }
 
-func (scanConfig *InMemScanConfig) setFlagId(id string) error {
-	if scanConfig.FlagId == id { return nil } // nothing to do
-	var flag Flag
+func (scanConfig *InMemScanConfig) setFlagId(newFlagId string) error {
+	if scanConfig.FlagId == newFlagId { return nil } // nothing to do
+	var newFlag Flag
 	var err error
-	flag, err = scanConfig.Client.getFlag(id)
+	newFlag, err = scanConfig.Client.getFlag(newFlagId)
 	if err != nil { return err }
-	if scanConfig.FlagId != "" { // already set
-		flag.removeScanConfigRef(scanConfig.getId())
+	if scanConfig.FlagId != "" { // already set to a Flag - remove that one
+		var oldFlag Flag
+		oldFlag, err = scanConfig.Client.getFlag(scanConfig.FlagId)
+		if err != nil { return err }
+		oldFlag.removeScanConfigRef(scanConfig.getId())
 	}
-	scanConfig.FlagId = id
-	err = flag.addScanConfigRef(scanConfig.getId())  // adds non-redundantly
+	scanConfig.FlagId = newFlagId
+	err = newFlag.addScanConfigRef(scanConfig.getId())  // adds non-redundantly
 	if err != nil { return err }
 	return scanConfig.writeBack()
 }
