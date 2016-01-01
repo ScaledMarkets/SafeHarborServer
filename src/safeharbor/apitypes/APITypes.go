@@ -25,7 +25,7 @@ import (
 	"time"
 	"io"
 	"strings"
-	//"runtime/debug"
+	"runtime/debug"
 	
 	// My packages:
 	//"safeharbor/rest"
@@ -125,7 +125,9 @@ type FailureDesc struct {
 }
 
 func NewFailureDesc(reason string) *FailureDesc {
-	fmt.Println("Creating FailureDesc; reason=" + reason)
+	fmt.Println("Creating FailureDesc; reason=" + reason +
+		". Stack trace follows, but the error might be 'normal'")
+	debug.PrintStack()  // debug
 	return &FailureDesc{
 		Reason: reason,
 		HTTPCode: 500,

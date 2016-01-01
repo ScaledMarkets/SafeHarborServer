@@ -624,7 +624,7 @@ func (client *InMemClient) getResource(resourceId string) (Resource, error) {
 	var resource Resource
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(resourceId)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("Resource not found") }
 	resource, isType = obj.(Resource)
 	if ! isType { return nil, errors.New("Object with Id " + resourceId + " is not a Resource") }
 	return resource, nil
@@ -723,7 +723,7 @@ func (client *InMemClient) getParty(partyId string) (Party, error) {
 	var party Party
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(partyId)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("Party not found") }
 	party, isType = obj.(Party)
 	if ! isType { return nil, errors.New("Object with Id " + partyId + " is not a Party") }
 	return party, nil
@@ -838,7 +838,7 @@ func (client *InMemClient) getGroup(id string) (Group, error) {
 	var group Group
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("Group not found") }
 	group, isType = obj.(Group)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Group") }
 	return group, nil
@@ -896,8 +896,6 @@ func (group *InMemGroup) removeUser(user User) error {
 	for i, id := range group.UserObjIds {
 		if id == userId {
 			group.UserObjIds = append(group.UserObjIds[0:i], group.UserObjIds[i+1:]...)
-			var err error = group.Client.deleteObject(user)
-			if err != nil { return err }
 			group.writeBack()
 			return nil
 		}
@@ -905,8 +903,9 @@ func (group *InMemGroup) removeUser(user User) error {
 	return errors.New("Did not find user in this group")
 }
 
-func (group *InMemGroup) addUser(user User) {
+func (group *InMemGroup) addUser(user User) error {
 	group.UserObjIds = append(group.UserObjIds, user.getId())
+	return group.writeBack()
 }
 
 func (group *InMemGroup) asGroupDesc() *apitypes.GroupDesc {
@@ -989,7 +988,7 @@ func (client *InMemClient) getUser(id string) (User, error) {
 	var user User
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("User not found") }
 	user, isType = obj.(User)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a User") }
 	return user, nil
@@ -1199,7 +1198,7 @@ func (client *InMemClient) getACLEntry(id string) (ACLEntry, error) {
 	var aclEntry ACLEntry
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("ACLEntry not found") }
 	aclEntry, isType = obj.(ACLEntry)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return aclEntry, nil
@@ -1389,7 +1388,7 @@ func (client *InMemClient) getRealm(id string) (Realm, error) {
 	var realm Realm
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("Realm not found") }
 	realm, isType = obj.(Realm)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Realm") }
 	return realm, nil
@@ -1671,7 +1670,7 @@ func (client *InMemClient) getRepo(id string) (Repo, error) {
 	var repo Repo
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("Repo not found") }
 	repo, isType = obj.(Repo)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Repo") }
 	return repo, nil
@@ -1872,7 +1871,7 @@ func (client *InMemClient) getDockerfile(id string) (Dockerfile, error) {
 	var dockerfile Dockerfile
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("Dockerfile not found") }
 	dockerfile, isType = obj.(Dockerfile)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a Dockerfile") }
 	return dockerfile, nil
@@ -2009,7 +2008,7 @@ func (client *InMemClient) getDockerImage(id string) (DockerImage, error) {
 	var image DockerImage
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("DockerImage not found") }
 	image, isType = obj.(DockerImage)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a DockerImage") }
 	return image, nil
@@ -2097,7 +2096,7 @@ func (client *InMemClient) getParameterValue(id string) (ParameterValue, error) 
 	var pv ParameterValue
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("ParameterValue not found") }
 	pv, isType = obj.(ParameterValue)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a ParameterValue") }
 	return pv, nil
@@ -2203,7 +2202,7 @@ func (client *InMemClient) getScanConfig(id string) (ScanConfig, error) {
 	var scanConfig ScanConfig
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("ScanConfig not found") }
 	scanConfig, isType = obj.(ScanConfig)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return scanConfig, nil
@@ -2426,7 +2425,7 @@ func (client *InMemClient) getFlag(id string) (Flag, error) {
 	var flag Flag
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("Flag not found") }
 	flag, isType = obj.(Flag)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return flag, nil
@@ -2497,7 +2496,7 @@ func (client *InMemClient) getEvent(id string) (Event, error) {
 	var event Event
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("Event not found") }
 	event, isType = obj.(Event)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return event, nil
@@ -2593,7 +2592,7 @@ func (client *InMemClient) getScanEvent(id string) (ScanEvent, error) {
 	var scanEvent ScanEvent
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("Object not found") }
+	if obj == nil { return nil, errors.New("ScanEvent not found") }
 	scanEvent, isType = obj.(ScanEvent)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return scanEvent, nil

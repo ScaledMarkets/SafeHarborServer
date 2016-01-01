@@ -93,7 +93,7 @@ type Group interface {
 	getUserObjIds() []string
 	hasUserWithId(string) bool
 	addUserId(string) error
-	addUser(User)
+	addUser(User) error
 	removeUser(User) error
 	asGroupDesc() *apitypes.GroupDesc
 }
