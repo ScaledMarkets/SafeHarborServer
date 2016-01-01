@@ -2476,6 +2476,22 @@ func (flag *InMemFlag) addScanConfigRef(scanConfigId string) error {
 
 func (flag *InMemFlag) removeScanConfigRef(scanConfigId string) error {
 	flag.UsedByScanConfigIds = apitypes.RemoveFrom(scanConfigId, flag.UsedByScanConfigIds)
+	
+	
+	
+	// debug
+	if len(flag.usedByScanConfigIds()) > 0 {
+		fmt.Println("removeScanConfigRef: The flag is still referenced by these ScanConfigs:")
+		for _, scid := range flag.usedByScanConfigIds() {
+			var sc ScanConfig
+			var err error
+			sc, err = flag.Client.getScanConfig(scid)
+			if err != nil { return err }
+			fmt.Println("\t" + sc.getName() + " (" + scid + ")")
+		}
+	}
+	// debug
+	
 	return flag.writeBack()
 }
 
