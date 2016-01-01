@@ -9,7 +9,9 @@ import (
 	"net/url"
 	"mime/multipart"
 	"fmt"
+	"os"
 	"os/exec"
+	"io/ioutil"
 	"strings"
 	"reflect"
 	"time"
@@ -2016,6 +2018,11 @@ func getFlagImage(server *Server, sessionToken *apitypes.SessionToken, values ur
 		"getFlagImage"); failMsg != nil { return failMsg }
 
 	var path string = flag.getSuccessImagePath()
+	
+	// Copy to a temp file.
+	var tempfile *os.File
+	tempfile, err = ioutil.TempFile("", "temp")
+	os.Link(path, tempfile.Name())
 	return apitypes.NewFileResponse(200, path)
 }
 
