@@ -2023,7 +2023,7 @@ func getFlagImage(server *Server, sessionToken *apitypes.SessionToken, values ur
 	var tempfile *os.File
 	tempfile, err = ioutil.TempFile("", "temp")
 	os.Link(path, tempfile.Name())
-	return apitypes.NewFileResponse(200, path)
+	return apitypes.NewFileResponse(200, tempfile.Name())
 }
 
 /*******************************************************************************
