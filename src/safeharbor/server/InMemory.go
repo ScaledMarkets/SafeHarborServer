@@ -428,7 +428,7 @@ func (resource *InMemResource) addAccess(party Party, mask []bool) (ACLEntry, er
 	return aclEntry, nil
 }
 
-func (resource *InMemResource) removeAccess(party Party) error {
+func (resource *InMemResource) deleteAccess(party Party) error {
 	
 	var aclEntriesCopy []string = make([]string, len(resource.ACLEntryIds))
 	copy(aclEntriesCopy, resource.ACLEntryIds)
@@ -450,7 +450,7 @@ func (resource *InMemResource) removeAccess(party Party) error {
 			
 			// Remove from party's list.
 			fmt.Println(fmt.Sprintf("\tRemoving ACL entry %s from party Id list", entryId))
-			err = party.removeACLEntry(aclEntry)
+			err = party.deleteACLEntry(aclEntry)
 			if err != nil { return err }
 			
 			// Remove the ACL entry id from the resource's ACL entry list.
@@ -539,7 +539,7 @@ func (resource *InMemResource) printACLs(party Party) {
 	}
 }
 
-func (resource *InMemResource) removeAllAccess() error {
+func (resource *InMemResource) deleteAllAccess() error {
 	
 	var aclEntriesCopy []string
 	copy(aclEntriesCopy, resource.ACLEntryIds)
@@ -746,7 +746,7 @@ func (party *InMemParty) addACLEntry(entry ACLEntry) error {
 	return party.writeBack()
 }
 
-func (party *InMemParty) removeACLEntry(entry ACLEntry) error {
+func (party *InMemParty) deleteACLEntry(entry ACLEntry) error {
 	party.ACLEntryIds = apitypes.RemoveFrom(entry.getId(), party.ACLEntryIds)
 	var err error = party.Client.deleteObject(entry)
 	if err != nil { return err }
@@ -1100,7 +1100,7 @@ func (user *InMemUser) getEventIds() []string {
 	return user.EventIds
 }
 
-func (user *InMemUser) removeEvent(event Event) error {
+func (user *InMemUser) deleteEvent(event Event) error {
 	
 	// If a ScanEvent, then remove from ScanConfig and remove actual ParameterValues.
 	var scanEvent ScanEvent
@@ -1111,9 +1111,9 @@ func (user *InMemUser) removeEvent(event Event) error {
 		var err error
 		scanConfig, err = user.Client.getScanConfig(scanEvent.getScanConfigId())
 		if err != nil { return err }
-		err = scanConfig.removeScanEventId(scanEvent.getId())
+		err = scanConfig.deleteScanEventId(scanEvent.getId())
 		if err != nil { return err }
-		err = scanEvent.removeAllParameterValues()
+		err = scanEvent.deleteAllParameterValues()
 		if err != nil { return err }
 	}
 	
@@ -1309,7 +1309,7 @@ func (client *InMemClient) dbDeactivateRealm(realmId string) error {
 	if err != nil { return err }
 	
 	// Remove all ACL entries for the realm.
-	err = realm.removeAllAccess()
+	err = realm.deleteAllAccess()
 	if err != nil { return err }
 	
 	// Remove all ACL entries for each of the realm's repos, and each of their resources.
@@ -1318,19 +1318,19 @@ func (client *InMemClient) dbDeactivateRealm(realmId string) error {
 		repo, err = client.getRepo(repoId)
 		if err != nil { return err }
 		
-		err = repo.removeAllAccess()
+		err = repo.deleteAllAccess()
 		if err != nil { return err }
 		
-		err = client.removeAllAccess(repo.getDockerfileIds())
+		err = client.deleteAllAccess(repo.getDockerfileIds())
 		if err != nil { return err }
 
-		err = client.removeAllAccess(repo.getDockerImageIds())
+		err = client.deleteAllAccess(repo.getDockerImageIds())
 		if err != nil { return err }
 
-		err = client.removeAllAccess(repo.getScanConfigIds())
+		err = client.deleteAllAccess(repo.getScanConfigIds())
 		if err != nil { return err }
 
-		err = client.removeAllAccess(repo.getFlagIds())
+		err = client.deleteAllAccess(repo.getFlagIds())
 		if err != nil { return err }
 	}
 	
@@ -1353,13 +1353,13 @@ func (client *InMemClient) dbDeactivateRealm(realmId string) error {
 	return nil
 }
 
-func (client *InMemClient) removeAllAccess(resourceIds []string) error {
+func (client *InMemClient) deleteAllAccess(resourceIds []string) error {
 	for _, id := range resourceIds {
 		var resource Resource
 		var err error
 		resource, err = client.getResource(id)
 		if err != nil { return err }
-		err = resource.removeAllAccess()
+		err = resource.deleteAllAccess()
 		if err != nil { return err }
 	}
 	return nil
@@ -1597,7 +1597,7 @@ func (realm *InMemRealm) deleteGroup(group Group) error {
 		var party Party
 		party, err = realm.Client.getParty(entry.getPartyId())
 		if err != nil { return err }
-		err = resource.removeAccess(party)
+		err = resource.deleteAccess(party)
 		if err != nil { return err }
 	}
 	
@@ -1717,13 +1717,13 @@ func (repo *InMemRepo) addScanConfig(config ScanConfig) error {
 	return repo.writeBack()
 }
 
-func (repo *InMemRepo) removeScanConfig(config ScanConfig) error {
+func (repo *InMemRepo) deleteScanConfig(config ScanConfig) error {
 	if len(config.getScanEventIds()) > 0 { return errors.New(
 		"Cannot remove ScanConfig: it is referenced by ScanEvents; the associated " +
 		"dockerfile(s) would have to be removed first")
 	}
 	// Remove config's parameter values.
-	config.removeAllParameterValues()
+	config.deleteAllParameterValues()
 	
 	// Remove reference from the flag.
 	var flagId string = config.getFlagId()
@@ -1749,7 +1749,7 @@ func (repo *InMemRepo) removeScanConfig(config ScanConfig) error {
 		}
 		// debug
 	
-}
+	}
 
 	// Remove from repo.
 	repo.ScanConfigIds = apitypes.RemoveFrom(config.getId(), repo.ScanConfigIds)
@@ -1761,7 +1761,7 @@ func (repo *InMemRepo) removeScanConfig(config ScanConfig) error {
 	return repo.writeBack()
 }
 
-func (repo *InMemRepo) removeFlag(flag Flag) error {
+func (repo *InMemRepo) deleteFlag(flag Flag) error {
 	if len(flag.usedByScanConfigIds()) > 0 { return errors.New(
 		"Cannot remove Flag: it is referenced by one or more ScanConfigs")
 	}
@@ -1780,7 +1780,7 @@ func (repo *InMemRepo) removeFlag(flag Flag) error {
 	return repo.writeBack()
 }
 
-func (repo *InMemRepo) removeDockerImage(image DockerImage) error {
+func (repo *InMemRepo) deleteDockerImage(image DockerImage) error {
 	
 	// Remove events.
 	for _, eventId := range image.getScanEventIds() {
@@ -1791,12 +1791,12 @@ func (repo *InMemRepo) removeDockerImage(image DockerImage) error {
 		var user User
 		user, err = repo.Client.getUser(event.getUserObjId())
 		if err != nil { return err }
-		err = user.removeEvent(event)
+		err = user.deleteEvent(event)
 		if err != nil { return err }
 	}
 	
 	// Remove ACL entries.
-	var err error = image.removeAllAccess()
+	var err error = image.deleteAllAccess()
 	if err != nil { return err }
 	
 	// Remove from docker.
@@ -2294,7 +2294,7 @@ func (scanConfig *InMemScanConfig) setParameterValueDeferredUpdate(name, strValu
 	return paramValue, nil
 }
 
-func (scanConfig *InMemScanConfig) removeParameterValue(name string) error {
+func (scanConfig *InMemScanConfig) deleteParameterValue(name string) error {
 	for i, id := range scanConfig.ParameterValueIds {
 		var pv ParameterValue
 		var err error
@@ -2314,7 +2314,7 @@ func (scanConfig *InMemScanConfig) removeParameterValue(name string) error {
 	return errors.New("Did not find parameter named '" + name + "'")
 }
 
-func (scanConfig *InMemScanConfig) removeAllParameterValues() error {
+func (scanConfig *InMemScanConfig) deleteAllParameterValues() error {
 	for _, paramValueId := range scanConfig.getParameterValueIds() {
 		var err error
 		var paramValue ParameterValue
@@ -2354,7 +2354,7 @@ func (scanConfig *InMemScanConfig) getScanEventIds() []string {
 	return scanConfig.ScanEventIds
 }
 
-func (scanConfig *InMemScanConfig) removeScanEventId(eventId string) error {
+func (scanConfig *InMemScanConfig) deleteScanEventId(eventId string) error {
 	scanConfig.ScanEventIds = apitypes.RemoveFrom(eventId, scanConfig.ScanEventIds)
 	return scanConfig.writeBack()
 }
@@ -2629,7 +2629,7 @@ func (event *InMemScanEvent) getActualParameterValueIds() []string {
 	return event.ActualParameterValueIds
 }
 
-func (event *InMemScanEvent) removeAllParameterValues() error {
+func (event *InMemScanEvent) deleteAllParameterValues() error {
 	for _, paramId := range event.ActualParameterValueIds {
 		var param ParameterValue
 		var err error

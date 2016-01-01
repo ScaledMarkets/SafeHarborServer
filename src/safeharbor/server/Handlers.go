@@ -1467,7 +1467,7 @@ func remPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	if party == nil { return apitypes.NewFailureDesc("Unable to identify party with Id " + partyId) }
 	
 	// Get the current ACLEntry, if there is one.
-	err = resource.removeAccess(party)
+	err = resource.deleteAccess(party)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return apitypes.NewResult(200, "All permission removed")
@@ -2382,7 +2382,7 @@ func remScanConfig(server *Server, sessionToken *apitypes.SessionToken, values u
 	repo, err = server.dbClient.getRepo(scanConfig.getRepoId())
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		
-	err = repo.removeScanConfig(scanConfig)
+	err = repo.deleteScanConfig(scanConfig)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	return apitypes.NewResult(200, "Scan config removed")
 }
@@ -2450,7 +2450,7 @@ func remFlag(server *Server, sessionToken *apitypes.SessionToken, values url.Val
 	repo, err = server.dbClient.getRepo(flag.getRepoId())
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	err = repo.removeFlag(flag)
+	err = repo.deleteFlag(flag)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	return apitypes.NewResult(200, "Flag removed")
 }
@@ -2480,7 +2480,7 @@ func remDockerImage(server *Server, sessionToken *apitypes.SessionToken, values 
 	repo, err = server.dbClient.getRepo(image.getRepoId())
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	err = repo.removeDockerImage(image)
+	err = repo.deleteDockerImage(image)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	return apitypes.NewResult(200, "Docker image removed")
 }

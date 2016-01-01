@@ -83,7 +83,7 @@ type Party interface {
 	getCreationTime() time.Time
 	getACLEntryIds() []string
 	addACLEntry(ACLEntry) error
-	removeACLEntry(entry ACLEntry) error
+	deleteACLEntry(entry ACLEntry) error
 	getACLEntryForResourceId(string) (ACLEntry, error)
 }
 
@@ -110,7 +110,7 @@ type User interface {
 	getMostRecentLoginAttempts() []string // each in seconds, Unix time
 	addEventId(string)
 	getEventIds() []string
-	removeEvent(Event) error
+	deleteEvent(Event) error
 	asUserDesc() *apitypes.UserDesc
 }
 
@@ -149,8 +149,8 @@ type Resource interface {
 	isFlag() bool
 	setAccess(party Party, permissionMask []bool) (ACLEntry, error)
 	addAccess(party Party, permissionMask []bool) (ACLEntry, error)
-	removeAccess(Party) error
-	removeAllAccess() error
+	deleteAccess(Party) error
+	deleteAllAccess() error
 }
 
 type ResourceType int
@@ -200,10 +200,10 @@ type Repo interface {
 	addDockerfile(Dockerfile) error
 	addDockerImage(DockerImage) error
 	addScanConfig(ScanConfig) error
-	removeScanConfig(ScanConfig) error
+	deleteScanConfig(ScanConfig) error
 	addFlag(Flag) error
-	removeFlag(Flag) error
-	removeDockerImage(DockerImage) error
+	deleteFlag(Flag) error
+	deleteDockerImage(DockerImage) error
 	getScanConfigByName(string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
 }
@@ -258,13 +258,13 @@ type ScanConfig interface {
 	getParameterValueIds() []string
 	setParameterValue(string, string) (ParameterValue, error)
 	setParameterValueDeferredUpdate(string, string) (ParameterValue, error)
-	removeParameterValue(name string) error
-	removeAllParameterValues() error
+	deleteParameterValue(name string) error
+	deleteAllParameterValues() error
 	setFlagId(string) error
 	getFlagId() string
 	addScanEventId(id string)
 	getScanEventIds() []string
-	removeScanEventId(string) error
+	deleteScanEventId(string) error
 	asScanConfigDesc() *apitypes.ScanConfigDesc
 
 
@@ -294,7 +294,7 @@ type ScanEvent interface {
 	getDockerImageId() string
 	getScanConfigId() string
 	getActualParameterValueIds() []string
-	removeAllParameterValues() error
+	deleteAllParameterValues() error
 	asScanEventDesc() *apitypes.ScanEventDesc
 }
 
