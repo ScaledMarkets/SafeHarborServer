@@ -1762,8 +1762,14 @@ func (repo *InMemRepo) deleteScanConfig(config ScanConfig) error {
 }
 
 func (repo *InMemRepo) deleteFlag(flag Flag) error {
-	if len(flag.usedByScanConfigIds()) > 0 { return errors.New(
-		"Cannot remove Flag: it is referenced by one or more ScanConfigs")
+	if len(flag.usedByScanConfigIds()) > 0 {
+		var sc ScanConfig
+		var err error
+		sc, err = repo.Client.getScanConfig(flag.usedByScanConfigIds()[0])
+		if err != nil { return err }
+		return errors.New(
+			"Cannot remove Flag: it is referenced by one or more ScanConfigs, " +
+			"including " + sc.getName() + " (" + sc.getId() + ")")
 	}
 
 	// Remove the graphic file associated with the flag.
