@@ -179,7 +179,10 @@ func returnOkResponse(headers http.Header, writer http.ResponseWriter, result ap
 		// Write the file to the response writer. It is assumed that the file is
 		// a temp file.
 		f, err := os.Open(filePath)
-		defer os.Remove(filePath)
+		defer func() {
+			fmt.Println("Removing file " + filePath)
+			os.Remove(filePath)
+		}()
 		if err != nil {
 			io.WriteString(writer, err.Error())
 			return

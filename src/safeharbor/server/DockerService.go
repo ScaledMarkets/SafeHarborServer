@@ -53,7 +53,10 @@ func (docker *DockerService) BuildDockerfile(dockerfile Dockerfile, realm Realm,
 	tempDirPath, err = ioutil.TempDir("", "")
 	//....TO DO: Is the above a security problem? Do we need to use a private
 	// directory? I think so.
-	defer os.RemoveAll(tempDirPath)
+	defer func() {
+		fmt.Println("Removing all files at " + tempDirPath)
+		os.RemoveAll(tempDirPath)
+	}()
 	fmt.Println("Temp directory = ", tempDirPath)
 
 	// Copy dockerfile to that directory.

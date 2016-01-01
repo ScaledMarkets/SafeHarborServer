@@ -138,7 +138,10 @@ func (clairContext *ClairRestContextStub) ScanImage(imageName string) (*ScanResu
 	// Save image
 	fmt.Printf("Saving %s\n", imageName)
 	path, err := save(imageName)
-	defer os.RemoveAll(path)
+	defer func() {
+		fmt.Println("Removing all files at " + path)
+		os.RemoveAll(path)
+	}()
 	if err != nil { return nil, err }
 
 	// Retrieve history

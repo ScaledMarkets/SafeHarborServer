@@ -219,6 +219,7 @@ func (client *InMemClient) init() error {
 	
 	// Remove the file repository - this is an in-memory implementation so we
 	// want to start empty.
+	fmt.Println("Removing all files at " + client.Server.Config.FileRepoRootPath)
 	err = os.RemoveAll(client.Server.Config.FileRepoRootPath)
 	if err != nil { fmt.Println(err.Error()) }
 	
@@ -1773,6 +1774,7 @@ func (repo *InMemRepo) deleteFlag(flag Flag) error {
 	}
 
 	// Remove the graphic file associated with the flag.
+	fmt.Println("Removing file " + flag.getSuccessImagePath())
 	var err error = os.Remove(flag.getSuccessImagePath())
 	if err != nil { return err }
 	
@@ -1909,6 +1911,7 @@ func (dockerfile *InMemDockerfile) replaceDockerfileFile(filepath, desc string) 
 	dockerfile.CreationTime = time.Now()
 	
 	// Delete old file.
+	fmt.Println("Removing file " + oldFilePath)
 	return os.Remove(oldFilePath)
 }
 
@@ -2044,7 +2047,10 @@ func (image *InMemDockerImage) computeSignature() ([]byte, error) {
 	var tempFilePath string
 	tempFilePath, err = image.Client.Server.DockerService.SaveImage(image)
 	if err != nil { return nil, err }
-	defer os.RemoveAll(tempFilePath)
+	defer func() {
+		fmt.Println("Removing all files at " + tempFilePath)
+		os.RemoveAll(tempFilePath)
+	}()
 	return image.Client.Server.authService.ComputeFileSignature(tempFilePath)
 }
 
