@@ -1734,7 +1734,22 @@ func (repo *InMemRepo) removeScanConfig(config ScanConfig) error {
 		if err != nil { return err }
 		err = flag.removeScanConfigRef(config.getId())
 		if err != nil { return err }
-	}
+		
+		// debug
+		fmt.Println("Removed flag " + flag.getName() + " (" + flagId +
+			") from ScanConfig" + config.getName() + " (" + config.getId() + ")")
+		if len(flag.usedByScanConfigIds()) > 0 {
+			fmt.Println("The flag is still referenced by these ScanConfigs:")
+			for _, scid := range flag.usedByScanConfigIds() {
+				var sc ScanConfig
+				sc, err = repo.Client.getScanConfig(scid)
+				if err != nil { return err }
+				fmt.Println("\t" + sc.getName() + " (" + scid + ")")
+			}
+		}
+		// debug
+	
+}
 
 	// Remove from repo.
 	repo.ScanConfigIds = apitypes.RemoveFrom(config.getId(), repo.ScanConfigIds)

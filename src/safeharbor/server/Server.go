@@ -340,7 +340,7 @@ func (server *Server) getHttpHandler() http.Handler {
  */
 func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Request) {
 	
-	fmt.Println("------------incoming request------------")
+	fmt.Println("\n\n\n------------incoming request------------")
 	defer httpReq.Body.Close() // ensure that request body is always closed.
 
 	if server.Debug { printHeaders(httpReq) }
@@ -361,7 +361,7 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	
 	server.dispatch(sessionToken, writer, httpReq)
 	server.authService.addSessionIdToResponse(sessionToken, writer)
-	fmt.Println("---returning from request---")
+	fmt.Println("---returning from request---\n\n\n")
 }
 
 /*******************************************************************************
