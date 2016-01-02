@@ -150,6 +150,10 @@ func (authService *AuthService) addSessionIdToResponse(sessionToken *apitypes.Se
 func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask []bool,
 	resourceId string) (bool, error) {
 
+	fmt.Println("entered authorized...")  // debug
+	
+	
+	
 	/* Rules:
 	
 	A party can access a resource if the party,
@@ -173,9 +177,11 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 	if user == nil {
 		return false, errors.New("user object cannot be identified from user id " + userId)
 	}
+	fmt.Println("authorized:A")  // debug
 	
 	// Special case: Allow user all capabilities for their own user object.
-	if userId == resourceId { return true, nil }
+	if user.getId() == resourceId { return true, nil }
+	fmt.Println("authorized:B")  // debug
 
 	// Verify that at most one field of the actionMask is true.
 	var nTrue = 0
@@ -187,6 +193,7 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 			nTrue++
 		}
 	}
+	fmt.Println("authorized:C")  // debug
 	
 	// Check if the user or a group that the user belongs to has the permission
 	// that is specified by the actionMask.
@@ -194,14 +201,17 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 	var resource Resource
 	var err error
 	resource, err = server.dbClient.getResource(resourceId)
+	fmt.Println("authorized:D")  // debug
 	if err != nil { return false, err }
 	if resource == nil {
 		return false, errors.New("Resource with Id " + resourceId + " not found")
 	}
+	fmt.Println("authorized:E")  // debug
 	var groupIds []string = user.getGroupIds()
 	var groupIndex = -1
 	for { // the user, and then each group that the user belongs to...
 		// See if the party (user or group) has an ACL entry for the resource.
+		fmt.Println("authorized:F")  // debug
 		var partyCanAccessResourceDirectoy bool
 		partyCanAccessResourceDirectoy, err = server.partyHasAccess(party, actionMask, resource)
 		if partyCanAccessResourceDirectoy { return true, nil }
