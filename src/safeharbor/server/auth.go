@@ -199,32 +199,31 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 		return false, errors.New("Resource with Id " + resourceId + " not found")
 	}
 	var groupIds []string = user.getGroupIds()
-	var i = -1
-	for {
+	var groupIndex = -1
+	for { // the user, and then each group that the user belongs to...
+		// See if the party (user or group) has an ACL entry for the resource.
+		var partyCanAccessResourceDirectoy bool
+		partyCanAccessResourceDirectoy, err = server.partyHasAccess(party, actionMask, resource)
+		if partyCanAccessResourceDirectoy { return true, nil }
+		
+		// See if any of the party's parent resources have access.
 		var parentId string = resource.getParentId()
-		var parent Resource
 		if parentId != "" {
+			var parent Resource
 			parent, err = server.dbClient.getResource(parentId)
 			if err != nil { return false, err }
-		}
-		if server.partyHasAccess(party, actionMask, resource) ||
-			(
-				(parent != nil) && 
-				(
-					(parent.isRepo() && server.partyHasAccess(party, actionMask, parent)) ||
-					(parent.isRealm() && server.partyHasAccess(party, actionMask, parent)))) {
-			return true, nil
+			var parentHasAccess bool
+			parentHasAccess, err = server.partyHasAccess(party, actionMask, parent)
+			if parentHasAccess { return true, nil }
 		}
 		
-		i++
-		if i == len(groupIds) { return false, nil }
+		groupIndex++
+		if groupIndex == len(groupIds) { return false, nil }
 		var err error
-		party, err = server.dbClient.getParty(groupIds[i])  // check user's groups
+		party, err = server.dbClient.getParty(groupIds[groupIndex])  // check next group
 		if err != nil { return false, err }
-		if party == nil {
-			return false, errors.New("Internal error: Party with Id " + groupIds[i] + " not found")
-		}
 	}
+	return false, nil  // no access rights found
 }
 
 /*******************************************************************************
@@ -277,38 +276,38 @@ func (authSvc *AuthService) compareHashValues(h1, h2 []byte) bool {
 
 
 /*******************************************************************************
- * Return true if the party has all of the rights implied by the actionMask, for
+ * Return true if the party has the right implied by the actionMask, for
  * the specified Resource, based on the ACLEntries that the resource has. Do not
- * attempt to determine if the resource's owning Resource has applicable ACLEntries.
+ * attempt to determine if the resource''s owning Resource has applicable ACLEntries.
+ * At most one elemente of the actionMask may be true.
  */
-func (server *Server) partyHasAccess(party Party, actionMask []bool, resource Resource) bool {
+func (server *Server) partyHasAccess(party Party, actionMask []bool,
+	resource Resource) (bool, error) {
 	
-	var entries []string = party.getACLEntryIds()
-	for _, entryId := range entries {
-		
-		if entryId == resource.getId() {
-			var err error
-			var entry ACLEntry
-			entry, err = server.dbClient.getACLEntry(entryId)
-			if err != nil {
-				fmt.Println(err.Error())
-				return false
-			}
-			if entry == nil {
-				fmt.Println("Internal error: ACLEntry with Id " + entryId + " not found")
-				return false
-			}
-			var mask []bool = entry.getPermissionMask()
-			
-			for i, b := range mask {
-				if ! (actionMask[i] && b) {
-					return false
-				}
-			}
-			return true
+	// Discover which field of the action mask is set.
+	var action int = -1
+	for i, entry := range actionMask {
+		if entry {
+			if action == -1 { return false, errors.New("More than one field set in action mask") }
+			action = i
 		}
 	}
-	return false
+	if action == -1 { return false, nil }  // no action mask fields were set.
+	
+	var entries []string = party.getACLEntryIds()
+	for _, entryId := range entries {  // for each of the party's ACL entries...
+		
+		var entry ACLEntry
+		var err error
+		entry, err = server.dbClient.getACLEntry(entryId)
+		if err != nil { return false, err }
+		
+		if entry.getResourceId() == resource.getId() {  // if the entry references the resource,
+			var mask []bool = entry.getPermissionMask()
+			if mask[action] { return true, nil }  // party has access to the resource
+		}
+	}
+	return false, nil
 }
 
 /*******************************************************************************
