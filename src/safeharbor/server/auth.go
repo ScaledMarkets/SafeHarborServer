@@ -301,11 +301,11 @@ func (server *Server) partyHasAccess(party Party, actionMask []bool, resource Re
 			var mask []bool = entry.getPermissionMask()
 			
 			for i, b := range mask {
-				if actionMask[i] && b {
-					return true
+				if ! (actionMask[i] && b) {
+					return false
 				}
 			}
-			return false
+			return true
 		}
 	}
 	return false
