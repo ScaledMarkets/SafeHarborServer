@@ -302,7 +302,7 @@ func (server *Server) partyHasAccess(party Party, actionMask []bool,
 	var action int = -1
 	for i, entry := range actionMask {
 		if entry {
-			if action == -1 { return false, errors.New("More than one field set in action mask") }
+			if action != -1 { return false, errors.New("More than one field set in action mask") }
 			action = i
 		}
 	}
