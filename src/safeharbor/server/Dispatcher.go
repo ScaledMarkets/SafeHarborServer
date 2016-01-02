@@ -171,7 +171,9 @@ func returnOkResponse(headers http.Header, writer http.ResponseWriter, result ap
 	var jsonResponse string = result.AsJSON()
 	
 	if jsonResponse == "" {
-		var filePath string = result.SendFile()
+		var filePath string
+		var deleteAfter bool
+		filePath, deleteAfter = result.SendFile()
 		if filePath == "" {
 			io.WriteString(writer, "Internal error: No JSON response or file path in result")
 			return
@@ -179,10 +181,12 @@ func returnOkResponse(headers http.Header, writer http.ResponseWriter, result ap
 		// Write the file to the response writer. It is assumed that the file is
 		// a temp file.
 		f, err := os.Open(filePath)
-		defer func() {
-			fmt.Println("Removing file " + filePath)
-			os.Remove(filePath)
-		}()
+		if deleteAfter {
+			defer func() {
+				fmt.Println("Removing file " + filePath)
+				os.Remove(filePath)
+			}()
+		}
 		if err != nil {
 			io.WriteString(writer, err.Error())
 			return

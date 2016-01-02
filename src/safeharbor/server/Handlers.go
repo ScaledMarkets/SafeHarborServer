@@ -9,9 +9,7 @@ import (
 	"net/url"
 	"mime/multipart"
 	"fmt"
-	"os"
 	"os/exec"
-	"io/ioutil"
 	"strings"
 	"reflect"
 	"time"
@@ -1315,7 +1313,7 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 	tempFilePath, err = server.DockerService.SaveImage(dockerImage)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	return apitypes.NewFileResponse(200, tempFilePath)
+	return apitypes.NewFileResponse(200, tempFilePath, true)
 }
 
 /*******************************************************************************
@@ -2019,11 +2017,7 @@ func getFlagImage(server *Server, sessionToken *apitypes.SessionToken, values ur
 
 	var path string = flag.getSuccessImagePath()
 	
-	// Copy to a temp file.
-	var tempfile *os.File
-	tempfile, err = ioutil.TempFile("", "temp")
-	os.Link(path, tempfile.Name())
-	return apitypes.NewFileResponse(200, tempfile.Name())
+	return apitypes.NewFileResponse(200, path, false)
 }
 
 /*******************************************************************************

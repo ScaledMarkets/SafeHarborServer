@@ -61,15 +61,15 @@ type BaseType struct {
 
 type RespIntfTp interface {  // response interface type
 	AsJSON() string
-	SendFile() string
+	SendFile() (path string, deleteAfter bool)
 }
 
 func (b *BaseType) AsJSON() string {
 	return ""
 }
 
-func (b *BaseType) SendFile() string {
-	return ""
+func (b *BaseType) SendFile() (path string, deleteAfter bool) {
+	return "", false
 }
 
 var _ RespIntfTp = &BaseType{}
@@ -101,18 +101,20 @@ func (result *Result) AsJSON() string {
 type FileResponse struct {
 	BaseType
 	Status int  // HTTP status code (e.g., 200 is success)
-	TempFilePath string  // should be removed after content is retrieved
+	FilePath string  // should be removed after content is retrieved
+	DeleteAfter bool
 }
 
-func NewFileResponse(status int, tempFilePath string) *FileResponse {
+func NewFileResponse(status int, filePath string, deleteAfter bool) *FileResponse {
 	return &FileResponse{
 		Status: status,
-		TempFilePath: tempFilePath,
+		FilePath: filePath,
+		DeleteAfter: deleteAfter,
 	}
 }
 
-func (response *FileResponse) SendFile() string {
-	return response.TempFilePath
+func (response *FileResponse) SendFile() (string, bool) {
+	return response.FilePath, response.DeleteAfter
 }
 
 /*******************************************************************************
@@ -246,8 +248,8 @@ func (groupDescs GroupDescs) AsJSON() string {
 	return response
 }
 
-func (groupDescs GroupDescs) SendFile() string {
-	return ""
+func (groupDescs GroupDescs) SendFile() (string, bool) {
+	return "", false
 }
 
 /*******************************************************************************
@@ -348,8 +350,8 @@ func (userDescs UserDescs) AsJSON() string {
 	return response
 }
 
-func (userDescs UserDescs) SendFile() string {
-	return ""
+func (userDescs UserDescs) SendFile() (string, bool) {
+	return "", false
 }
 
 /*******************************************************************************
@@ -391,8 +393,8 @@ func (realmDescs RealmDescs) AsJSON() string {
 	return response
 }
 
-func (realmDescs RealmDescs) SendFile() string {
-	return ""
+func (realmDescs RealmDescs) SendFile() (string, bool) {
+	return "", false
 }
 
 /*******************************************************************************
@@ -485,8 +487,8 @@ func (repoDescs RepoDescs) AsJSON() string {
 	return response
 }
 
-func (repoDescs RepoDescs) SendFile() string {
-	return ""
+func (repoDescs RepoDescs) SendFile() (string, bool) {
+	return "", false
 }
 
 /*******************************************************************************
@@ -527,8 +529,8 @@ func (dockerfileDescs DockerfileDescs) AsJSON() string {
 	return response
 }
 
-func (dockerfileDescs DockerfileDescs) SendFile() string {
-	return ""
+func (dockerfileDescs DockerfileDescs) SendFile() (string, bool) {
+	return "", false
 }
 
 /*******************************************************************************
@@ -603,8 +605,8 @@ func (imageDescs DockerImageDescs) AsJSON() string {
 	return response
 }
 
-func (imageDescs DockerImageDescs) SendFile() string {
-	return ""
+func (imageDescs DockerImageDescs) SendFile() (string, bool) {
+	return "", false
 }
 
 /*******************************************************************************
@@ -734,8 +736,8 @@ func (scanProviderDescs ScanProviderDescs) AsJSON() string {
 	return response
 }
 
-func (providerDescs ScanProviderDescs) SendFile() string {
-	return ""
+func (providerDescs ScanProviderDescs) SendFile() (string, bool) {
+	return "", false
 }
 
 /*******************************************************************************
@@ -807,8 +809,8 @@ func (scanConfigDescs ScanConfigDescs) AsJSON() string {
 	return response
 }
 
-func (scanConfigDescs ScanConfigDescs) SendFile() string {
-	return ""
+func (scanConfigDescs ScanConfigDescs) SendFile() (string, bool) {
+	return "", false
 }
 
 /*******************************************************************************
@@ -858,8 +860,8 @@ func (flagDescs FlagDescs) AsJSON() string {
 	return response
 }
 
-func (flagDescs FlagDescs) SendFile() string {
-	return ""
+func (flagDescs FlagDescs) SendFile() (string, bool) {
+	return "", false
 }
 
 /*******************************************************************************
@@ -917,8 +919,8 @@ func (eventDescs EventDescs) AsJSON() string {
 	return response
 }
 
-func (eventDescs EventDescs) SendFile() string {
-	return ""
+func (eventDescs EventDescs) SendFile() (string, bool) {
+	return "", false
 }
 
 /*******************************************************************************
