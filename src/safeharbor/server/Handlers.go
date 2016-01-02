@@ -623,7 +623,7 @@ func getRealmDesc(server *Server, sessionToken *apitypes.SessionToken, values ur
 }
 
 /*******************************************************************************
- * Arguments: none
+ * Arguments: RealmInfo
  * Returns: apitypes.RealmDesc
  */
 func createRealm(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
@@ -832,8 +832,10 @@ func getRealmRepos(server *Server, sessionToken *apitypes.SessionToken, values u
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(values, "RealmId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
+	fmt.Println("getRealmRepos: A")
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, realmId,
 		"getRealmRepos"); failMsg != nil { return failMsg }
+	fmt.Println("getRealmRepos: B")
 	
 	var realm Realm
 	realm, err = server.dbClient.getRealm(realmId)
@@ -1527,7 +1529,8 @@ func getMyDesc(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
-
+	if sessionToken == nil { return apitypes.NewFailureDesc("User not authenticated") }
+	
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
 	fmt.Println("userid=", userId)
