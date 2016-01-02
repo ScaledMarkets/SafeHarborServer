@@ -270,6 +270,20 @@ func authorizeHandlerAction(server *Server, sessionToken *apitypes.SessionToken,
 	mask []bool, resourceId, attemptedAction string) *apitypes.FailureDesc {
 	
 	if server.Authorize {
+		
+		// debug
+		if sessionToken == nil { fmt.Println("sessionToken is nil") } else {
+			var rsc Resource
+			var err error
+			rsc, err = server.dbClient.getResource(resourceId)
+			if err != nil { fmt.Println(err.Error()); } else {
+				fmt.Println("Authorizing access by " + sessionToken.AuthenticatedUserid +
+					", to " + rsc.getName() + " (" + rsc.getId() + ")...")
+			}
+		}
+		// end debug
+		
+		
 		isAuthorized, err := authorized(server, sessionToken, mask, resourceId)
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		if ! isAuthorized {

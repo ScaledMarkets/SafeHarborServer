@@ -1313,6 +1313,15 @@ func (client *InMemClient) dbDeactivateRealm(realmId string) error {
 	err = realm.deleteAllAccess()
 	if err != nil { return err }
 	
+	
+	
+	// debug
+	fmt.Println("Removing access to realm " + realm.getName() + " (" + realmId + ")...")
+	// end debug
+	
+	
+	
+	
 	// Remove all ACL entries for each of the realm's repos, and each of their resources.
 	for _, repoId := range realm.getRepoIds() {
 		var repo Repo
