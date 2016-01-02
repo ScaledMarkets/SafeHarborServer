@@ -153,9 +153,8 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	// Detect whether an error occurred.
 	failureDesc, isType := result.(*apitypes.FailureDesc)
 	if isType {
-		http.Error(w, failureDesc.AsJSON(), failureDesc.HTTPCode)
 		fmt.Printf("Error:", failureDesc.Reason)
-		w.WriteHeader(failureDesc.HTTPCode)
+		http.Error(w, failureDesc.AsJSON(), failureDesc.HTTPCode)
 		return
 	}
 	
