@@ -1526,6 +1526,8 @@ func getPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 func getMyDesc(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
+	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
+
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
 	fmt.Println("userid=", userId)
