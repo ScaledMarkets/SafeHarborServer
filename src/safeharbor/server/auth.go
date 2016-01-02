@@ -295,12 +295,23 @@ func (server *Server) partyHasAccess(party Party, actionMask []bool,
 	if action == -1 { return false, nil }  // no action mask fields were set.
 	
 	var entries []string = party.getACLEntryIds()
+	fmt.Println(fmt.Sprintf("Party " + party.getName() + " (" + party.getId() + // debug
+		") has %d ACL entries", len(entries)))  // debug
 	for _, entryId := range entries {  // for each of the party's ACL entries...
 		
 		var entry ACLEntry
 		var err error
 		entry, err = server.dbClient.getACLEntry(entryId)
 		if err != nil { return false, err }
+		
+		// debug
+		var rsc Resource
+		rsc, err = server.dbClient.getResource(entry.getResourceId())
+		if err != nil { fmt.Println(err.Error()) }
+		fmt.Println(fmt.Sprintf("\tentry for resource %s (%s)", rsc.getName(), rsc.getId()))
+		// end debug
+		
+		
 		
 		if entry.getResourceId() == resource.getId() {  // if the entry references the resource,
 			var mask []bool = entry.getPermissionMask()
