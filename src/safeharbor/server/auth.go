@@ -214,6 +214,7 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 		fmt.Println("authorized:F")  // debug
 		var partyCanAccessResourceDirectoy bool
 		partyCanAccessResourceDirectoy, err = server.partyHasAccess(party, actionMask, resource)
+		fmt.Println("authorized:G")  // debug
 		if partyCanAccessResourceDirectoy { return true, nil }
 		
 		// See if any of the party's parent resources have access.
@@ -294,6 +295,7 @@ func (authSvc *AuthService) compareHashValues(h1, h2 []byte) bool {
 func (server *Server) partyHasAccess(party Party, actionMask []bool,
 	resource Resource) (bool, error) {
 	
+	fmt.Println("partyHasAccess:A")  // debug
 	// Discover which field of the action mask is set.
 	var action int = -1
 	for i, entry := range actionMask {
@@ -302,11 +304,13 @@ func (server *Server) partyHasAccess(party Party, actionMask []bool,
 			action = i
 		}
 	}
+	fmt.Println("partyHasAccess:B")  // debug
 	if action == -1 { return false, nil }  // no action mask fields were set.
 	
 	var entries []string = party.getACLEntryIds()
 	fmt.Println(fmt.Sprintf("Party " + party.getName() + " (" + party.getId() + // debug
 		") has %d ACL entries", len(entries)))  // debug
+	fmt.Println("partyHasAccess:C")  // debug
 	for _, entryId := range entries {  // for each of the party's ACL entries...
 		
 		var entry ACLEntry
