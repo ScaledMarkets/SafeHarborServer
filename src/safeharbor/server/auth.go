@@ -214,6 +214,7 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 		fmt.Println("authorized:F")  // debug
 		var partyCanAccessResourceDirectoy bool
 		partyCanAccessResourceDirectoy, err = server.partyHasAccess(party, actionMask, resource)
+		if err != nil { return false, err }
 		fmt.Println("authorized:G")  // debug
 		if partyCanAccessResourceDirectoy { return true, nil }
 		
@@ -225,6 +226,7 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 			if err != nil { return false, err }
 			var parentHasAccess bool
 			parentHasAccess, err = server.partyHasAccess(party, actionMask, parent)
+			if err != nil { return false, err }
 			if parentHasAccess { return true, nil }
 		}
 		
