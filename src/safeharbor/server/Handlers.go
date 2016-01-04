@@ -379,8 +379,8 @@ func createGroup(server *Server, sessionToken *apitypes.SessionToken, values url
 	if addMeStr == "true" { addMe = true }
 	fmt.Println(fmt.Sprintf("AddMe=%s", addMeStr))
 
-	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateInMask, realmId,
-		"createGroup"); failMsg != nil { return failMsg }
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateInMask,
+		realmId, "createGroup"); failMsg != nil { return failMsg }
 	
 	var group Group
 	group, err = server.dbClient.dbCreateGroup(realmId, groupName, groupDescription)
@@ -440,15 +440,16 @@ func getGroupUsers(server *Server, sessionToken *apitypes.SessionToken, values u
 	groupId, err = apitypes.GetRequiredHTTPParameterValue(values, "GroupId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, groupId,
-		"getGroupUsers"); failMsg != nil { return failMsg }
-	
 	var group Group
 	group, err = server.dbClient.getGroup(groupId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if group == nil { return apitypes.NewFailureDesc(fmt.Sprintf(
 		"No group with Id %s", groupId))
 	}
+
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask,
+		group.getRealmId(), "getGroupUsers"); failMsg != nil { return failMsg }
+	
 	var userObjIds []string = group.getUserObjIds()
 	var userDescs apitypes.UserDescs = make([]*apitypes.UserDesc, 0)
 	for _, id := range userObjIds {
@@ -483,9 +484,6 @@ func addGroupUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 	userObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, groupId,
-		"addGroupUser"); failMsg != nil { return failMsg }
-	
 	var group Group
 	group, err = server.dbClient.getGroup(groupId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -493,6 +491,9 @@ func addGroupUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 		"No group with Id %s", groupId))
 	}
 
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
+		group.getRealmId(), "addGroupUser"); failMsg != nil { return failMsg }
+	
 	err = group.addUserId(userObjId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
@@ -527,12 +528,12 @@ func remGroupUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 	userObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, groupId,
-		"remGroupUser"); failMsg != nil { return failMsg }
-	
 	var group Group
 	group, err = server.dbClient.getGroup(groupId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
+		group.getRealmId(), "remGroupUser"); failMsg != nil { return failMsg }
 	
 	var user User
 	user, err = server.dbClient.getUser(userObjId)
