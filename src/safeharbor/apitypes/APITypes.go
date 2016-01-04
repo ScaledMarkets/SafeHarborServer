@@ -1035,7 +1035,7 @@ func GetHTTPParameterValue(values url.Values, name string) (string, error) {
 	valuear, found := values[name]
 	if ! found { return "", nil }
 	if len(valuear) == 0 { return "", nil }
-	return sanitize(valuear[0])
+	return Sanitize(valuear[0])
 }
 
 /*******************************************************************************
@@ -1116,13 +1116,12 @@ func BoolToString(b bool) string {
  * a scripting attack if rendered in a response to a client. Simply limit characters
  * to letters, numbers, period, hyphen, and underscore.
  */
-func sanitize(value string) (string, error) {
+func Sanitize(value string) (string, error) {
 	//return value, nil
 	
 	var allowed string = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-@:/"
 	if len(strings.TrimLeft(value, allowed)) == 0 { return value, nil }
 	return "", errors.New("Value '" + value + "' may only have letters, numbers, and .-_@:/")
-	
 }
 
 /*******************************************************************************

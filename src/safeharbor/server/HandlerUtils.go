@@ -179,6 +179,18 @@ func nameConformsToDockerRules(name string) error {
 }
 
 /*******************************************************************************
+ * Verify that the file name is a valid simple file name (not including a
+ * directory path) and that it only contains characters that are a valid in a
+ * file name in SafeHarbor''s various file repositories (for dockerfiles, image
+ * files, etc.)
+ */
+func validateSimpleFileNameSyntax(name string) error {
+	_, err := apitypes.Sanitize(name)
+	if err != nil { return err }
+	return nil
+}
+
+/*******************************************************************************
  * If the specified condition is not true, then thrown an exception with the message.
  */
 func assertThat(condition bool, msg string) bool {
@@ -324,6 +336,10 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 	var header *multipart.FileHeader = headers[0]
 	var filename string = header.Filename	
 	fmt.Println("Filename:", filename)
+	
+	// Validate syntax of filename: must be a simple name - no slashes, and a valid file name
+	err = validateSimpleFileNameSyntax(filename)
+	if err != nil { return "", "", errors.New(err.Error()) }
 	
 	var file multipart.File
 	file, err = header.Open()
