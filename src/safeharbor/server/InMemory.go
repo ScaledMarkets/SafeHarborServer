@@ -77,13 +77,17 @@ type Persistence struct {
 }
 
 func NewPersistence() (*Persistence, error) {
-	var persist = &Persistence{
-		uniqueId: 100000005,
-		allRealmIds: make([]string, 0),
-		allObjects: make(map[string]PersistObj),
-		allUsers: make(map[string]User),
-	}
+	var persist = &Persistence{}
+	persist.reset()
 	return persist, nil
+}
+
+// Clear any in-memory database objects.
+func (persist *Persistence) reset() {
+	persist.uniqueId = 100000005
+	persist.allRealmIds = make([]string, 0)
+	persist.allObjects = make(map[string]PersistObj)
+	persist.allUsers = make(map[string]User)
 }
 
 // Load core database state. Database data is not cached, except for this core data.
@@ -214,6 +218,7 @@ func NewInMemClient(server *Server) (DBClient, error) {
 // state (i.e., to erase all objects).
 func (client *InMemClient) init() error {
 	
+	client.reset()
 	var err error = client.load()
 	if err != nil { return err }
 	
