@@ -147,13 +147,9 @@ func (authService *AuthService) addSessionIdToResponse(sessionToken *apitypes.Se
  * The set of ACLs owned by the resource are used to make the determination.
  * At most one field of the actionMask may be true.
  */
-func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask []bool,
-	resourceId string) (bool, error) {
+func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apitypes.SessionToken,
+	actionMask []bool, resourceId string) (bool, error) {
 
-	fmt.Println("entered authorized...")  // debug
-	
-	
-	
 	/* Rules:
 	
 	A party can access a resource if the party,
@@ -173,15 +169,13 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
 	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
+	var user User = dbClient.dbGetUserByUserId(userId)
 	if user == nil {
 		return false, errors.New("user object cannot be identified from user id " + userId)
 	}
-	fmt.Println("authorized:A")  // debug
 	
 	// Special case: Allow user all capabilities for their own user object.
 	if user.getId() == resourceId { return true, nil }
-	fmt.Println("authorized:B")  // debug
 
 	// Verify that at most one field of the actionMask is true.
 	var nTrue = 0
@@ -193,39 +187,35 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 			nTrue++
 		}
 	}
-	fmt.Println("authorized:C")  // debug
 	
 	// Check if the user or a group that the user belongs to has the permission
 	// that is specified by the actionMask.
 	var party Party = user  // start with the user.
 	var resource Resource
 	var err error
-	resource, err = server.dbClient.getResource(resourceId)
-	fmt.Println("authorized:D")  // debug
+	resource, err = dbClient.getResource(resourceId)
 	if err != nil { return false, err }
 	if resource == nil {
 		return false, errors.New("Resource with Id " + resourceId + " not found")
 	}
-	fmt.Println("authorized:E")  // debug
 	var groupIds []string = user.getGroupIds()
 	var groupIndex = -1
 	for { // the user, and then each group that the user belongs to...
 		// See if the party (user or group) has an ACL entry for the resource.
-		fmt.Println("authorized:F")  // debug
 		var partyCanAccessResourceDirectoy bool
-		partyCanAccessResourceDirectoy, err = server.partyHasAccess(party, actionMask, resource)
+		partyCanAccessResourceDirectoy, err =
+			authService.partyHasAccess(dbClient, party, actionMask, resource)
 		if err != nil { return false, err }
-		fmt.Println("authorized:G")  // debug
 		if partyCanAccessResourceDirectoy { return true, nil }
 		
 		// See if any of the party's parent resources have access.
 		var parentId string = resource.getParentId()
 		if parentId != "" {
 			var parent Resource
-			parent, err = server.dbClient.getResource(parentId)
+			parent, err = dbClient.getResource(parentId)
 			if err != nil { return false, err }
 			var parentHasAccess bool
-			parentHasAccess, err = server.partyHasAccess(party, actionMask, parent)
+			parentHasAccess, err = authService.partyHasAccess(dbClient, party, actionMask, parent)
 			if err != nil { return false, err }
 			if parentHasAccess { return true, nil }
 		}
@@ -233,7 +223,7 @@ func authorized(server *Server, sessionToken *apitypes.SessionToken, actionMask 
 		groupIndex++
 		if groupIndex == len(groupIds) { return false, nil }
 		var err error
-		party, err = server.dbClient.getParty(groupIds[groupIndex])  // check next group
+		party, err = dbClient.getParty(groupIds[groupIndex])  // check next group
 		if err != nil { return false, err }
 	}
 	return false, nil  // no access rights found
@@ -294,10 +284,9 @@ func (authSvc *AuthService) compareHashValues(h1, h2 []byte) bool {
  * attempt to determine if the resource''s owning Resource has applicable ACLEntries.
  * At most one elemente of the actionMask may be true.
  */
-func (server *Server) partyHasAccess(party Party, actionMask []bool,
-	resource Resource) (bool, error) {
+func (authSvc *AuthService) partyHasAccess(dbClient DBClient, party Party,
+	actionMask []bool, resource Resource) (bool, error) {
 	
-	fmt.Println("partyHasAccess:A")  // debug
 	// Discover which field of the action mask is set.
 	var action int = -1
 	for i, entry := range actionMask {
@@ -306,28 +295,15 @@ func (server *Server) partyHasAccess(party Party, actionMask []bool,
 			action = i
 		}
 	}
-	fmt.Println("partyHasAccess:B")  // debug
 	if action == -1 { return false, nil }  // no action mask fields were set.
 	
 	var entries []string = party.getACLEntryIds()
-	fmt.Println(fmt.Sprintf("Party " + party.getName() + " (" + party.getId() + // debug
-		") has %d ACL entries", len(entries)))  // debug
-	fmt.Println("partyHasAccess:C")  // debug
 	for _, entryId := range entries {  // for each of the party's ACL entries...
 		
 		var entry ACLEntry
 		var err error
-		entry, err = server.dbClient.getACLEntry(entryId)
+		entry, err = dbClient.getACLEntry(entryId)
 		if err != nil { return false, err }
-		
-		// debug
-		var rsc Resource
-		rsc, err = server.dbClient.getResource(entry.getResourceId())
-		if err != nil { fmt.Println(err.Error()) }
-		fmt.Println(fmt.Sprintf("\tentry for resource %s (%s)", rsc.getName(), rsc.getId()))
-		// end debug
-		
-		
 		
 		if entry.getResourceId() == resource.getId() {  // if the entry references the resource,
 			var mask []bool = entry.getPermissionMask()

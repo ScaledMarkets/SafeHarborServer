@@ -1313,15 +1313,6 @@ func (client *InMemClient) dbDeactivateRealm(realmId string) error {
 	err = realm.deleteAllAccess()
 	if err != nil { return err }
 	
-	
-	
-	// debug
-	fmt.Println("Removing access to realm " + realm.getName() + " (" + realmId + ")...")
-	// end debug
-	
-	
-	
-	
 	// Remove all ACL entries for each of the realm's repos, and each of their resources.
 	for _, repoId := range realm.getRepoIds() {
 		var repo Repo
@@ -1744,21 +1735,6 @@ func (repo *InMemRepo) deleteScanConfig(config ScanConfig) error {
 		if err != nil { return err }
 		err = flag.removeScanConfigRef(config.getId())
 		if err != nil { return err }
-		
-		// debug
-		fmt.Println("Removed flag " + flag.getName() + " (" + flagId +
-			") from ScanConfig" + config.getName() + " (" + config.getId() + ")")
-		if len(flag.usedByScanConfigIds()) > 0 {
-			fmt.Println("The flag is still referenced by these ScanConfigs:")
-			for _, scid := range flag.usedByScanConfigIds() {
-				var sc ScanConfig
-				sc, err = repo.Client.getScanConfig(scid)
-				if err != nil { return err }
-				fmt.Println("\t" + sc.getName() + " (" + scid + ")")
-			}
-		}
-		// debug
-	
 	}
 
 	// Remove from repo.
@@ -2389,10 +2365,6 @@ func (resource *InMemScanConfig) isScanConfig() bool {
 
 func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 	
-	fmt.Println("asScanConfigDesc: FlagId=" + scanConfig.FlagId)  // debug
-	
-	
-	
 	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
 	for _, valueId := range scanConfig.ParameterValueIds {
 		var paramValue ParameterValue
@@ -2409,9 +2381,6 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 		paramValueDescs = append(paramValueDescs, paramValue.asParameterValueDesc())
 	}
 	
-	fmt.Println("asScanConfigDesc 2: FlagId=" + scanConfig.FlagId)  // debug
-	fmt.Println("asScanConfigDesc 2a: getFlagId()=" + scanConfig.getFlagId())  // debug
-
 	return apitypes.NewScanConfigDesc(scanConfig.Id, scanConfig.ProviderName,
 		scanConfig.SuccessExpression, scanConfig.FlagId, paramValueDescs)
 }
@@ -2494,21 +2463,6 @@ func (flag *InMemFlag) addScanConfigRef(scanConfigId string) error {
 
 func (flag *InMemFlag) removeScanConfigRef(scanConfigId string) error {
 	flag.UsedByScanConfigIds = apitypes.RemoveFrom(scanConfigId, flag.UsedByScanConfigIds)
-	
-	
-	
-	// debug
-	if len(flag.usedByScanConfigIds()) > 0 {
-		fmt.Println("removeScanConfigRef: The flag is still referenced by these ScanConfigs:")
-		for _, scid := range flag.usedByScanConfigIds() {
-			var sc ScanConfig
-			var err error
-			sc, err = flag.Client.getScanConfig(scid)
-			if err != nil { return err }
-			fmt.Println("\t" + sc.getName() + " (" + scid + ")")
-		}
-	}
-	// debug
 	
 	return flag.writeBack()
 }

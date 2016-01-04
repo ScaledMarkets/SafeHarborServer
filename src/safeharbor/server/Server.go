@@ -20,7 +20,7 @@ import (
 	//"errors"
 	//"strconv"
 	
-	// My packages:
+	// SafeHarbor packages:
 	//"rest"
 	"safeharbor/apitypes"
 	"safeharbor/providers"

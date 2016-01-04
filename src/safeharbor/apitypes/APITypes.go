@@ -27,7 +27,7 @@ import (
 	"strings"
 	"runtime/debug"
 	
-	// My packages:
+	// SafeHarbor packages:
 	//"safeharbor/rest"
 )
 
@@ -1185,6 +1185,14 @@ func EncodeStringForJSON(value string) string {
 	// Replace each occurrence of double-quote and backslash with backslash double-quote
 	// or backslash backslash, respectively.
 	
-	var encodedValue = strings.Replace(value, "\\", "\\\\", -1)
-	return strings.Replace(encodedValue, "\"", "\\\"", -1)
+	var encodedValue = value
+	encodedValue = strings.Replace(encodedValue, "\"", "\\\"", -1)
+	encodedValue = strings.Replace(encodedValue, "\\", "\\\\", -1)
+	encodedValue = strings.Replace(encodedValue, "/", "\\/", -1)
+	encodedValue = strings.Replace(encodedValue, "\b", "\\b", -1)
+	encodedValue = strings.Replace(encodedValue, "\f", "\\f", -1)
+	encodedValue = strings.Replace(encodedValue, "\n", "\\n", -1)
+	encodedValue = strings.Replace(encodedValue, "\r", "\\r", -1)
+	encodedValue = strings.Replace(encodedValue, "\t", "\\t", -1)
+	return encodedValue
 }

@@ -593,18 +593,6 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 		[]bool{ true, true, true, true, true } )
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	
-	// debug
-	// Verify that the new user can actually access the new realm.
-	var hasAccess bool
-	hasAccess, err = server.partyHasAccess(newUser, apitypes.ReadMask, newRealm)
-	if hasAccess {
-		fmt.Println("ERROR: party should have access but does not")
-	}
-	// end debug
-	
-	
-	
 	if sessionError != nil { return apitypes.NewFailureDesc(sessionError.Error()) }
 	return newUser.asUserDesc()
 }

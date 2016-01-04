@@ -46,7 +46,7 @@ import (
 	//"time"
 	"strconv"
 
-	// My packages:
+	// SafeHarbor packages:
 	"safeharbor/apitypes"
 	"safeharbor/rest"
 )
