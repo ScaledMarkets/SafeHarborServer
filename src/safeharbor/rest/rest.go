@@ -106,17 +106,22 @@ func (restContext *RestContext) SendFilePost(sessionId string, reqName string, n
 	// Add file
 	f, err := os.Open(path)
 	if err != nil { return nil, err }
-	fw, err := w.CreateFormFile("filename", path)
+	var fileInfo os.FileInfo
+	fileInfo, err = f.Stat()
+	if err != nil { return nil, err }
+	fw, err := w.CreateFormFile("filename", fileInfo.Name())
 	if err != nil { return nil, err }
 	_, err = io.Copy(fw, f)
 	if err != nil { return nil, err }
 	
 	// Add the other fields
-	for index, each := range names {
-		fw, err = w.CreateFormField(each)
-		if err != nil { return nil, err }
-		_, err = fw.Write([]byte(values[index]))
-		if err != nil { return nil, err }
+	if names != nil {
+		for index, each := range names {
+			fw, err = w.CreateFormField(each)
+			if err != nil { return nil, err }
+			_, err = fw.Write([]byte(values[index]))
+			if err != nil { return nil, err }
+		}
 	}
 	
 	// Don't forget to close the multipart writer.
