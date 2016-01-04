@@ -250,7 +250,13 @@ func (client *InMemClient) init() error {
 			os.Exit(1);
 		}
 		fmt.Println("User", testUser1.getName())
-		fmt.Println("created, id=", testUser1.getId())
+		fmt.Println("created user, obj id=" + testUser1.getId())
+		fmt.Println("Giving user admin access to the realm.")
+		_, err = testRealm.setAccess(testUser1, []bool{true, true, true, true, true})
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1);
+		}
 	}
 	
 	fmt.Println("Repository initialized")
