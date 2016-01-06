@@ -553,7 +553,7 @@ func (resource *InMemResource) printACLs(party Party) {
 
 func (resource *InMemResource) deleteAllAccess() error {
 	
-	var aclEntriesCopy []string
+	var aclEntriesCopy []string = make([]string, len(resource.ACLEntryIds))
 	copy(aclEntriesCopy, resource.ACLEntryIds)
 	for _, id := range aclEntriesCopy {
 		var aclEntry ACLEntry
