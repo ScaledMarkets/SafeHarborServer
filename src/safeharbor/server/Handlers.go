@@ -669,8 +669,22 @@ func deactivateRealm(server *Server, sessionToken *apitypes.SessionToken, values
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.DeleteMask, realmId,
 		"deactivateRealm"); failMsg != nil { return failMsg }
 	
+	
+	// debug
+	var realm Realm
+	realm, err = server.dbClient.getRealm(realmId)
+	fmt.Println("On entry to deactivateRealm, the realm's ACLS are:")
+	realm.(*InMemRealm).printACLs(server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid))
+	// end debug
+	
 	err = server.dbClient.dbDeactivateRealm(realmId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	// debug
+	fmt.Println("On return from deactivateRealm, the realm's ACLS are:")
+	realm.(*InMemRealm).printACLs(server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid))
+	// end debug
+	
 	
 	return apitypes.NewResult(200, "Realm deactivated")
 }
@@ -842,6 +856,12 @@ func getRealmRepos(server *Server, sessionToken *apitypes.SessionToken, values u
 	realm, err = server.dbClient.getRealm(realmId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if realm == nil { return apitypes.NewFailureDesc("Cound not find realm with Id " + realmId) }
+	
+	// debug
+	fmt.Println("On entry to getRealmRepos, the realm's ACLS are:")
+	realm.(*InMemRealm).printACLs(server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid))
+	// end debug
+	
 	
 	var repoIds []string = realm.getRepoIds()
 	
