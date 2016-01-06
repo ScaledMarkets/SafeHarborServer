@@ -566,7 +566,20 @@ func (resource *InMemResource) deleteAllAccess() error {
 		party, err = resource.Client.getParty(aclEntry.getPartyId())
 		if err != nil { return errors.New(err.Error()) }
 		var inMemParty = party.(*InMemParty)
+		
+		// debug
+		fmt.Println(fmt.Sprintf("Removing ACL entry %s from list; list has %d elements",
+			id, len(inMemParty.ACLEntryIds)))
+		// end debug
+		
+		
 		inMemParty.ACLEntryIds = apitypes.RemoveFrom(id, inMemParty.ACLEntryIds)
+		
+		// debug
+		fmt.Println(fmt.Sprintf("Removed ACL entry %s from list; list has %d elements",
+			id, len(inMemParty.ACLEntryIds)))
+		// end debug
+		
 		err = party.writeBack()
 		if err != nil { return err }
 		
