@@ -33,7 +33,7 @@ import (
 	//"io/ioutil"
 	//"crypto/sha512"
 	"time"
-	//"runtime/debug"	
+	"runtime/debug"	
 	
 	"safeharbor/apitypes"
 )
@@ -649,7 +649,12 @@ func (client *InMemClient) getResource(resourceId string) (Resource, error) {
 	var resource Resource
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(resourceId)
-	if obj == nil { return nil, errors.New("Resource not found") }
+	if obj == nil {
+		var err = errors.New("Resource with Id " + resourceId + " not found")
+		fmt.Println(err.Error())
+		debug.PrintStack()
+		return nil, err
+	}
 	resource, isType = obj.(Resource)
 	if ! isType { return nil, errors.New("Object with Id " + resourceId + " is not a Resource") }
 	return resource, nil
