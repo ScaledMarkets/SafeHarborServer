@@ -570,8 +570,9 @@ func (resource *InMemResource) deleteAllAccess() error {
 		party, err = resource.Client.getParty(aclEntry.getPartyId())
 		fmt.Println("deleteAllAccess:E") // debug
 		if err != nil { return errors.New(err.Error()) }
-		var inMemParty = party.(*InMemParty)
 		fmt.Println("deleteAllAccess:F") // debug
+		var inMemParty = party.(*InMemParty)
+		fmt.Println("deleteAllAccess:G") // debug
 		
 		// debug
 		fmt.Println(fmt.Sprintf("Removing ACL entry %s from list; list has %d elements",
