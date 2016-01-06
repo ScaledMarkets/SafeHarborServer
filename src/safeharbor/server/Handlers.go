@@ -668,23 +668,9 @@ func deactivateRealm(server *Server, sessionToken *apitypes.SessionToken, values
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.DeleteMask, realmId,
 		"deactivateRealm"); failMsg != nil { return failMsg }
-	
-	
-	// debug
-	fmt.Println("On entry to deactivateRealm, ACL entries are:")
-	var realm Realm
-	realm, err = server.dbClient.getRealm(realmId)
-	realm.(*InMemRealm).printACLs(server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid))
-	// end debug
 
 	err = server.dbClient.dbDeactivateRealm(realmId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	
-	
-	// debug
-	fmt.Println("On exit from deactivateRealm, ACL entries are:")
-	realm.(*InMemRealm).printACLs(server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid))
-	// end debug
 
 	return apitypes.NewResult(200, "Realm deactivated")
 }

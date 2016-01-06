@@ -555,38 +555,19 @@ func (resource *InMemResource) deleteAllAccess() error {
 	
 	var aclEntriesCopy []string = make([]string, len(resource.ACLEntryIds))
 	copy(aclEntriesCopy, resource.ACLEntryIds)
-	fmt.Println("deleteAllAccess:A") // debug
 	for _, id := range aclEntriesCopy {
-		fmt.Println("deleteAllAccess:B") // debug
 		var aclEntry ACLEntry
 		var err error
 		aclEntry, err = resource.Client.getACLEntry(id)
-		fmt.Println("deleteAllAccess:C") // debug
 		if err != nil { return err }
-		fmt.Println("deleteAllAccess:D") // debug
 		
 		// Remove from party's list.
 		var party Party
 		party, err = resource.Client.getParty(aclEntry.getPartyId())
-		fmt.Println("deleteAllAccess:E") // debug
 		if err != nil { return err }
-		
-		
-		
-		
-		// debug
-		fmt.Println(fmt.Sprintf("Removing ACL entry %s from list; list has %d elements",
-			id, len(party.getACLEntryIds())))
-		// end debug
-		
 		
 		err = party.deleteACLEntry(aclEntry)
 		if err != nil { return err }
-		
-		// debug
-		fmt.Println(fmt.Sprintf("Removed ACL entry %s from list; list has %d elements",
-			id, len(party.getACLEntryIds())))
-		// end debug
 		
 		err = party.writeBack()
 		if err != nil { return err }
@@ -2073,6 +2054,11 @@ func (image *InMemDockerImage) computeSignature() ([]byte, error) {
 		fmt.Println("Removing all files at " + tempFilePath)
 		os.RemoveAll(tempFilePath)
 	}()
+	var file *os.File
+	file, _ = os.Open(tempFilePath)
+	var fileInfo os.FileInfo
+	fileInfo, _ = file.Stat()
+	fmt.Println(fmt.Sprintf("Size of file %s is %d", tempFilePath, fileInfo.Size()))
 	return image.Client.Server.authService.ComputeFileSignature(tempFilePath)
 }
 
