@@ -555,17 +555,23 @@ func (resource *InMemResource) deleteAllAccess() error {
 	
 	var aclEntriesCopy []string = make([]string, len(resource.ACLEntryIds))
 	copy(aclEntriesCopy, resource.ACLEntryIds)
+	fmt.Println("deleteAllAccess:A") // debug
 	for _, id := range aclEntriesCopy {
+		fmt.Println("deleteAllAccess:B") // debug
 		var aclEntry ACLEntry
 		var err error
 		aclEntry, err = resource.Client.getACLEntry(id)
+		fmt.Println("deleteAllAccess:C") // debug
 		if err != nil { return err }
+		fmt.Println("deleteAllAccess:D") // debug
 		
 		// Remove from party's list.
 		var party Party
 		party, err = resource.Client.getParty(aclEntry.getPartyId())
+		fmt.Println("deleteAllAccess:E") // debug
 		if err != nil { return errors.New(err.Error()) }
 		var inMemParty = party.(*InMemParty)
+		fmt.Println("deleteAllAccess:F") // debug
 		
 		// debug
 		fmt.Println(fmt.Sprintf("Removing ACL entry %s from list; list has %d elements",
