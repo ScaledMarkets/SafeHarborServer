@@ -571,6 +571,7 @@ func (resource *InMemResource) deleteAllAccess() error {
 		fmt.Println("deleteAllAccess:E") // debug
 		if err != nil { return errors.New(err.Error()) }
 		fmt.Println("deleteAllAccess:F") // debug
+		fmt.Println("party is a " + reflect.TypeOf(party).String()) // debug
 		var inMemParty = party.(*InMemParty)
 		fmt.Println("deleteAllAccess:G") // debug
 		
