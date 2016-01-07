@@ -354,7 +354,6 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS?redirectlocale=en-US&redirectslug=HTTP_access_control#Access-Control-Allow-Credentials
 	writer.Header().Set("SafeHarbor-API-Version", "safeharbor/1.0")
 	// http://www.html5rocks.com/en/tutorials/cors/#toc-adding-cors-support-to-the-server
-	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	writer.Header().Set("Access-Control-Allow-Origin", "*")
 	writer.Header().Set("Access-Control-Allow-Credentials", "false")
 	//writer.Header().Set("Access-Control-Expose-Headers",

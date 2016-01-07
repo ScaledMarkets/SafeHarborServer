@@ -190,6 +190,9 @@ func returnOkResponse(headers http.Header, writer http.ResponseWriter, result ap
 			io.WriteString(writer, err.Error())
 			return
 		}
+		
+		writer.Header().Set("Content-Type", "application/octet-stream")
+		
 		_, err = io.Copy(writer, f)
 		
 		if err != nil {
@@ -199,6 +202,7 @@ func returnOkResponse(headers http.Header, writer http.ResponseWriter, result ap
 	} else {
 		fmt.Println("Response:")
 		fmt.Println(jsonResponse)
+		writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		writer.WriteHeader(http.StatusOK)
 		io.WriteString(writer, jsonResponse)
 	}
