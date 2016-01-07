@@ -240,13 +240,13 @@ func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error
 	var err error
 	file, err = os.Open(filepath)
 	if err != nil { return nil, err }
-	var buf = make([]byte, 100000)
+	var buf = make([]byte, 10000)
 	var hash hash.Hash = sha512.New()
 	for {
 		var numBytesRead int
 		numBytesRead, err = file.Read(buf)
 		if numBytesRead == 0 { break }
-		if numBytesRead < 100000 {
+		if numBytesRead < 10000 {
 			hash.Write(buf[0:numBytesRead])
 			break
 		}
