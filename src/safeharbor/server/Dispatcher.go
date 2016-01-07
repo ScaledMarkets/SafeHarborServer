@@ -197,7 +197,7 @@ func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.
 					var scratchFilePath = "temp/" + fileInfo.Name()
 					
 					var scratchFile *os.File
-					scratchFile, err = os.Open(scratchFilePath)
+					scratchFile, err = os.Create(scratchFilePath)
 					defer scratchFile.Close()
 					if err != nil { fmt.Println(err.Error()); return }
 					
