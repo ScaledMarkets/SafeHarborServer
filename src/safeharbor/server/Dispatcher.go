@@ -130,7 +130,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	var handler, found = dispatcher.handlers[reqName]
 	if ! found {
 		fmt.Printf("No method found, %s\n", reqName)
-		respondNoSuchMethod(headers, w, reqName)
+		dispatcher.respondNoSuchMethod(headers, w, reqName)
 		return
 	}
 	if handler == nil {
@@ -145,7 +145,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	fmt.Println("Calling handler")
 	if sessionToken == nil { fmt.Println("handleRequest: Session token is nil") }
 	if dispatcher.server.Debug {
-		printHTTPParameters(values)
+		dispatcher.printHTTPParameters(values)
 	}
 	var result apitypes.RespIntfTp = handler(dispatcher.server, sessionToken, values, files)
 	fmt.Println("Returning result:", result.AsJSON())
@@ -158,7 +158,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 		return
 	}
 	
-	returnOkResponse(headers, w, result)
+	dispatcher.returnOkResponse(headers, w, result)
 	fmt.Printf("Handled %s\n", reqName)
 }
 
@@ -166,7 +166,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
  * Generate a 200 HTTP response by converting the result into a
  * string consisting of name=value lines.
  */
-func returnOkResponse(headers http.Header, writer http.ResponseWriter, result apitypes.RespIntfTp) {
+func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.ResponseWriter, result apitypes.RespIntfTp) {
 	var jsonResponse string = result.AsJSON()
 	
 	if jsonResponse == "" {
@@ -181,10 +181,39 @@ func returnOkResponse(headers http.Header, writer http.ResponseWriter, result ap
 		// a temp file.
 		f, err := os.Open(filePath)
 		if deleteAfter {
-			defer func() {
-				fmt.Println("Removing file " + filePath)
-				os.Remove(filePath)
-			}()
+			if dispatcher.server.Debug {
+				// Copy file to a scratch area before deleting it.
+				defer func() {
+					var scratchFilePath = "temp"
+					err = os.MkdirAll("temp", os.ModePerm)
+					if err != nil { fmt.Println(err.Error()); return }
+					
+					var fileToCopy *os.File
+					fileToCopy, err = os.Open(filePath)
+					defer os.Remove(filePath)
+					if err != nil { fmt.Println(err.Error()); return }
+					
+					var scratchFile *os.File
+					scratchFile, err = os.Open(scratchFilePath)
+					defer scratchFile.Close()
+					if err != nil { fmt.Println(err.Error()); return }
+					
+					var buf = make([]byte, 10000)
+					for {
+						var numBytesRead int
+						numBytesRead, err = fileToCopy.Read(buf)
+						if (numBytesRead == 0) || (err != nil) { break }
+
+						_, err = scratchFile.Write(buf[0:numBytesRead])
+						if (err != nil) { fmt.Println(err.Error()); return }
+					}
+				}()
+			} else {
+				defer func() {
+					fmt.Println("Removing file " + filePath)
+					os.Remove(filePath)
+				}()
+			}
 		}
 		if err != nil {
 			io.WriteString(writer, err.Error())
@@ -211,7 +240,8 @@ func returnOkResponse(headers http.Header, writer http.ResponseWriter, result ap
 /*******************************************************************************
  * 
  */
-func respondNoSuchMethod(headers http.Header, writer http.ResponseWriter, methodName string) {
+func (dispatcher *Dispatcher) respondNoSuchMethod(headers http.Header,
+	writer http.ResponseWriter, methodName string) {
 	
 	writer.WriteHeader(404)
 	io.WriteString(writer, "No such method," + methodName)
@@ -220,7 +250,7 @@ func respondNoSuchMethod(headers http.Header, writer http.ResponseWriter, method
 /*******************************************************************************
  * 
  */
-func printHTTPParameters(values url.Values) {
+func (dispatcher *Dispatcher) printHTTPParameters(values url.Values) {
 	// Values is a map[string][]string
 	fmt.Println("HTTP parameters:")
 	for k, v := range values {
