@@ -242,9 +242,11 @@ func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error
 	if err != nil { return nil, err }
 	var buf = make([]byte, 10000)
 	var hash hash.Hash = sha512.New()
+	var totalBytesRead int = 0
 	for {
 		var numBytesRead int
 		numBytesRead, err = file.Read(buf)
+		totalBytesRead += numBytesRead
 		if numBytesRead == 0 { break }
 		if numBytesRead < 10000 {
 			hash.Write(buf[0:numBytesRead])
@@ -252,6 +254,8 @@ func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error
 		}
 		hash.Write(buf)
 	}
+	
+	fmt.Println("Total bytes read:", totalBytesRead)
 	
 	var empty = []byte{}
 	var sig = hash.Sum(empty)
