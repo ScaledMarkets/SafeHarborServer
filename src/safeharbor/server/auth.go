@@ -246,9 +246,11 @@ func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error
 		var numBytesRead int
 		numBytesRead, err = file.Read(buf)
 		if numBytesRead == 0 { break }
+		if numBytesRead < 100000 {
+			hash.Write(buf[0:numBytesRead])
+			break
+		}
 		hash.Write(buf)
-		if err != nil { break }
-		if numBytesRead < 100000 { break }
 	}
 	
 	var empty = []byte{}
