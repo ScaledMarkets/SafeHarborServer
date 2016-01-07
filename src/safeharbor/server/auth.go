@@ -254,7 +254,9 @@ func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error
 	var empty = []byte{}
 	var sig = hash.Sum(empty)
 	
-	fmt.Println("Signature:")
+	var fileInfo os.FileInfo
+	fileInfo, _ = file.Stat()
+	fmt.Println(fmt.Sprintf("Signature of file %s, size %d:", filepath, fileInfo.Size()))
 	for _, b := range sig {
 		fmt.Print(b, ", ")
 	}
