@@ -184,7 +184,6 @@ func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.
 			if dispatcher.server.Debug {
 				// Copy file to a scratch area before deleting it.
 				defer func() {
-					var scratchFilePath = "temp"
 					err = os.MkdirAll("temp", os.ModePerm)
 					if err != nil { fmt.Println(err.Error()); return }
 					
@@ -192,6 +191,10 @@ func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.
 					fileToCopy, err = os.Open(filePath)
 					defer os.Remove(filePath)
 					if err != nil { fmt.Println(err.Error()); return }
+					var fileInfo os.FileInfo
+					fileInfo, err = fileToCopy.Stat()
+					if err != nil { fmt.Println(err.Error()); return }
+					var scratchFilePath = "temp/" + fileInfo.Name()
 					
 					var scratchFile *os.File
 					scratchFile, err = os.Open(scratchFilePath)
