@@ -108,6 +108,7 @@ func NewDispatcher() *Dispatcher {
 		"getMyFlags": getMyFlags,
 		"getFlagDescByName": getFlagDescByName,
 		"remFlag": remFlag,
+		"remDockerImage": remDockerImage,
 	}
 	
 	var dispatcher *Dispatcher = &Dispatcher{
