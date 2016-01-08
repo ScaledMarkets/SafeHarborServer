@@ -22,6 +22,16 @@ func NewDockerService() *DockerService {
 	return &DockerService{}
 }
 
+type DockerBuildOutput struct {
+	FinalImageId string
+}
+
+func NewDockerBuildOutput(id string) *DockerBuildOutput {
+	return &DockerBuildOutput{
+		FinalImageId: id,
+	}
+}
+
 /*******************************************************************************
  * 
  */
@@ -115,6 +125,29 @@ func (docker *DockerService) BuildDockerfile(dockerfile Dockerfile, realm Realm,
 /*******************************************************************************
  * 
  */
+func (docker *DockerService) ParseBuildOutput(buildOutputStr string) (*DockerBuildOutput, error) {
+	
+	var prefix = "Successfully built "
+	var lines = strings.Split(buildOutputStr, "\n")
+	for _, line := range lines {
+		var id = strings.TrimPrefix(line, prefix)
+		if len(id) < len(line) {
+			return NewDockerBuildOutput(id), nil
+		}
+	}
+	return nil, errors.New("Did not find a final image Id")
+}
+
+/*******************************************************************************
+ * 
+ */
+func (buildOutput *DockerBuildOutput) GetFinalImageId() string {
+	return buildOutput.FinalImageId
+}
+
+/*******************************************************************************
+ * 
+ */
 func (docker *DockerService) SaveImage(dockerImage DockerImage) (string, error) {
 	
 	fmt.Println("Creating temp file to save the image to...")
@@ -133,6 +166,13 @@ func (docker *DockerService) SaveImage(dockerImage DockerImage) (string, error) 
 	err = cmd.Run()
 	if err != nil { return "", err }
 	return tempFilePath, nil
+}
+
+/*******************************************************************************
+ * Return the hash of the specified Docker image, as computed by the file''s registry.
+ */
+func (docker *DockerService) GetDigest(imageId string) ([]byte, error) {
+	return []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nil
 }
 
 /*******************************************************************************

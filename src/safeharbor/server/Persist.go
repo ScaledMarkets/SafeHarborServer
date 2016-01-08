@@ -39,7 +39,7 @@ type DBClient interface {
 	dbCreateRealm(*apitypes.RealmInfo, string) (Realm, error)
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
-	dbCreateDockerImage(string, string, string, string) (DockerImage, error)
+	dbCreateDockerImage(string, string, string, []byte, string) (DockerImage, error)
 	dbCreateScanConfig(name, desc, repoId, providerName string, paramValueIds []string, successExpr, flagId string) (ScanConfig, error)
 	dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error)
 	dbCreateScanEvent(string, string, string, string) (ScanEvent, error)
@@ -233,7 +233,7 @@ type DockerImage interface {
 	getMostRecentScanEventId() string
 	asDockerImageDesc() *apitypes.DockerImageDesc
 	getSignature() []byte
-	computeSignature() ([]byte, error)
+	//computeSignature() ([]byte, error)
 	getOutputFromBuild() string
 }
 

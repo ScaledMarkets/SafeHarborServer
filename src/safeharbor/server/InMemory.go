@@ -2007,7 +2007,7 @@ func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string,
 }
 
 func (client *InMemClient) dbCreateDockerImage(repoId, dockerImageTag, desc string,
-	outputFromBuild string) (DockerImage, error) {
+	signature []byte, outputFromBuild string) (DockerImage, error) {
 	
 	var repo Repo
 	var isType bool
@@ -2023,9 +2023,9 @@ func (client *InMemClient) dbCreateDockerImage(repoId, dockerImageTag, desc stri
 	fmt.Println("Created DockerImage")
 	err = repo.addDockerImage(newDockerImage)  // Add to repo's list.
 
-	var signature []byte
-	signature, err = newDockerImage.computeSignature()
-	if err != nil { return newDockerImage, err }
+	//var signature []byte
+	//signature, err = newDockerImage.computeSignature()
+	//if err != nil { return newDockerImage, err }
 	newDockerImage.Signature = signature
 	
 	return newDockerImage, err
@@ -2045,6 +2045,7 @@ func (image *InMemDockerImage) getSignature() []byte {
 	return image.Signature
 }
 
+/* ----- Not used anymore - we get the signature from the docker v2 registry -----
 func (image *InMemDockerImage) computeSignature() ([]byte, error) {
 	var err error
 	var tempFilePath string
@@ -2061,6 +2062,7 @@ func (image *InMemDockerImage) computeSignature() ([]byte, error) {
 	fmt.Println(fmt.Sprintf("Size of file %s is %d", tempFilePath, fileInfo.Size()))
 	return image.Client.Server.authService.ComputeFileSignature(tempFilePath)
 }
+*/
 
 func (image *InMemDockerImage) getOutputFromBuild() string {
 	return image.OutputFromBuild
