@@ -2145,10 +2145,12 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	
 
 	// Create a scan event.
-	var userObjId string = sessionToken.AuthenticatedUserid
+	var userId string = sessionToken.AuthenticatedUserid
+	var user User = server.dbClient.dbGetUserByUserId(userId)
+	if user == nil { return apitypes.NewFailureDesc("User with Id " + userId + " not found") }
 	var scanEvent ScanEvent
 	scanEvent, err = server.dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
-		userObjId, score)
+		user.getId(), score)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return scanEvent.asScanEventDesc()

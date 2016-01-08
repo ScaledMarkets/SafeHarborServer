@@ -1009,7 +1009,7 @@ func (client *InMemClient) getUser(id string) (User, error) {
 	var user User
 	var isType bool
 	var obj PersistObj = client.getPersistentObject(id)
-	if obj == nil { return nil, errors.New("User not found") }
+	if obj == nil { return nil, errors.New("User with Id " + id + " not found") }
 	user, isType = obj.(User)
 	if ! isType { return nil, errors.New("Object with Id " + id + " is not a User") }
 	return user, nil
