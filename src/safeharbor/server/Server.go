@@ -24,6 +24,7 @@ import (
 	//"rest"
 	"safeharbor/apitypes"
 	"safeharbor/providers"
+	"safeharbor/docker"
 )
 
 /*******************************************************************************
@@ -115,7 +116,7 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		Authorize: (! noauthor),
 		Config:  config,
 		certPool: certPool,
-		DockerService: NewDockerService(),
+		DockerService: docker.NewDockerService(),
 		dispatcher: dispatcher,
 		MaxLoginAttemptsToRetain: 5,
 	}

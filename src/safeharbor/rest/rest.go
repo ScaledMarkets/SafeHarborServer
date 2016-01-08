@@ -234,3 +234,25 @@ func (restContext *RestContext) Verify200Response(resp *http.Response) bool {
 	fmt.Println("Response code ", resp.StatusCode)
 	return is200
 }
+
+/*******************************************************************************
+ * 
+ * Utility to encode an arbitrary string value, which might contain quotes and other
+ * characters, so that it can be safely and securely transported as a JSON string value,
+ * delimited by double quotes. Ref. http://json.org/.
+ */
+func EncodeStringForJSON(value string) string {
+	// Replace each occurrence of double-quote and backslash with backslash double-quote
+	// or backslash backslash, respectively.
+	
+	var encodedValue = value
+	encodedValue = strings.Replace(encodedValue, "\"", "\\\"", -1)
+	encodedValue = strings.Replace(encodedValue, "\\", "\\\\", -1)
+	encodedValue = strings.Replace(encodedValue, "/", "\\/", -1)
+	encodedValue = strings.Replace(encodedValue, "\b", "\\b", -1)
+	encodedValue = strings.Replace(encodedValue, "\f", "\\f", -1)
+	encodedValue = strings.Replace(encodedValue, "\n", "\\n", -1)
+	encodedValue = strings.Replace(encodedValue, "\r", "\\r", -1)
+	encodedValue = strings.Replace(encodedValue, "\t", "\\t", -1)
+	return encodedValue
+}

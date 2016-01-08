@@ -1,8 +1,4 @@
-/*******************************************************************************
- * Abstract functions that we need from docker and docker registry.
- */
-
-package server
+package docker
 
 import (
 	"fmt"
@@ -12,24 +8,19 @@ import (
 	"strings"
 	"os/exec"
 	"errors"
+	
+	// SafeHarbor packages:
+	"rest"
 )
 
-
+/*******************************************************************************
+ * Provide abstract functions that we need from docker and docker registry.
+ */
 type DockerService struct {
 }
 
 func NewDockerService() *DockerService {
 	return &DockerService{}
-}
-
-type DockerBuildOutput struct {
-	FinalImageId string
-}
-
-func NewDockerBuildOutput(id string) *DockerBuildOutput {
-	return &DockerBuildOutput{
-		FinalImageId: id,
-	}
 }
 
 /*******************************************************************************
@@ -123,26 +114,188 @@ func (docker *DockerService) BuildDockerfile(dockerfile Dockerfile, realm Realm,
 }
 
 /*******************************************************************************
- * 
+ * Parse docker build output - i.e., parses the output string that is returned
+ * by BuildDockerfile.
+ * Partial results are returned, but with an error.
+ *
+ * Parse algorithm:
+	States:
+	1. Looking for next step:
+		When no more lines, done but incomplete.
+		When encounter "Step ",
+			Set step no.
+			Set command.
+			Read next line
+			If no more lines,
+				Then done but incomplete.
+				Else go to state 2.
+		When encounter "Successfully built"
+			Set final image id
+			Done and complete.
+		Otherwise read line (i.e., skip the line) and go to state 1.
+	2. Looking for step parts:
+		When encounter " ---> ",
+			Recognize and (if recognized) add part.
+			Read next line.
+			if no more lines,
+				Then done but incomplete.
+				Else go to state 2
+		Otherwise go to state 1
+
+ * Sample output:
+	Sending build context to Docker daemon  2.56 kB\rSending build context to Docker daemon  2.56 kB\r\r
+	Step 0 : FROM ubuntu:14.04
+	 ---> ca4d7b1b9a51
+	Step 1 : MAINTAINER Steve Alexander <steve@scaledmarkets.com>
+	 ---> Using cache
+	 ---> 3b6e27505fc5
+	Step 2 : ENV REFRESHED_AT 2015-07-13
+	 ---> Using cache
+	 ---> 5d6cdb654470
+	Step 3 : RUN apt-get -yqq update
+	 ---> Using cache
+	 ---> c403414c8254
+	Step 4 : RUN apt-get -yqq install apache2
+	 ---> Using cache
+	 ---> aa3109896080
+	Step 5 : VOLUME /var/www/html
+	 ---> Using cache
+	 ---> 138c71e28dc1
+	Step 6 : WORKDIR /var/www/html
+	 ---> Using cache
+	 ---> 8aa5cb29ae1d
+	Step 7 : ENV APACHE_RUN_USER www-data
+	 ---> Using cache
+	 ---> 7f721c24718d
+	Step 8 : ENV APACHE_RUN_GROUP www-data
+	 ---> Using cache
+	 ---> 05a094d0d47f
+	Step 9 : ENV APACHE_LOG_DIR /var/log/apache2
+	 ---> Using cache
+	 ---> 30424d879506
+	Step 10 : ENV APACHE_PID_FILE /var/run/apache2.pid
+	 ---> Using cache
+	 ---> d163597446d6
+	Step 11 : ENV APACHE_RUN_DIR /var/run/apache2
+	 ---> Using cache
+	 ---> 065c69b4a35c
+	Step 12 : ENV APACHE_LOCK_DIR /var/lock/apache2
+	 ---> Using cache
+	 ---> 937eb3fd1f42
+	Step 13 : RUN mkdir -p $APACHE_RUN_DIR $APACHE_LOCK_DIR $APACHE_LOG_DIR
+	 ---> Using cache
+	 ---> f0aebcae65d4
+	Step 14 : EXPOSE 80
+	 ---> Using cache
+	 ---> 5f139d64c08f
+	Step 15 : ENTRYPOINT /usr/sbin/apache2
+	 ---> Using cache
+	 ---> 13cf0b9469c1
+	Step 16 : CMD -D FOREGROUND
+	 ---> Using cache
+	 ---> 6a959754ab14
+	Successfully built 6a959754ab14
+	
+ * Another sample:
+	Sending build context to Docker daemon 20.99 kB
+	Sending build context to Docker daemon 
+	Step 0 : FROM docker.io/cesanta/docker_auth:latest
+	 ---> 3d31749deac5
+	Step 1 : RUN echo moo > oink
+	 ---> Using cache
+	 ---> 0b8dd7a477bb
+	Step 2 : FROM 41477bd9d7f9
+	 ---> 41477bd9d7f9
+	Step 3 : RUN echo blah > afile
+	 ---> Running in 3bac4e50b6f9
+	 ---> 03dcea1bc8a6
+	Removing intermediate container 3bac4e50b6f9
+	Successfully built 03dcea1bc8a6
  */
 func (docker *DockerService) ParseBuildOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 	
-	var prefix = "Successfully built "
+	var output *DockerBuildOutput = NewDockerBuildOutput(id)
+	
 	var lines = strings.Split(buildOutputStr, "\n")
-	for _, line := range lines {
-		var id = strings.TrimPrefix(line, prefix)
-		if len(id) < len(line) {
-			return NewDockerBuildOutput(id), nil
+	var state int = 1
+	var step DockerBuildStep
+	var int lineNo = 0
+	for {
+		
+		if lineNo >= len(lines) {
+			return output, errors.New("Incomplete")
+		}
+		
+		switch state {
+			
+		case 1: // Looking for next step
+			
+			if lineNo >= len(lines) {
+				output.ErrorMessage = "Incomplete"
+				return output, errors.New(output.ErrorMessage)
+			}
+			
+			var therest = strings.TrimPrefix(line, "Step ")
+			if len(therest) < len(line) {
+				// Syntax is: number space colon space command
+				var stepNo int
+				var cmd = string
+				fmt.Sscanf(therest, "%d", &stepNo)
+				
+				var separator = " : "
+				inv seppos = strings.Index(therest, separator)
+				if seppos != -1 { // found
+					cmd = therest[seppos + len(separator):] // portion from seppos on
+					step = output.addStep(stepNo, cmd)
+				}
+				
+				lineNo++
+				state = 2
+				continue
+			}
+			
+			var therest = strings.TrimPrefix(line, "Successfully built ")
+			if len(therest) < len(line) {
+				var id = therest
+				output.setFinalImageId(id)
+				return output, nil
+			}
+			
+			lineNo++
+			state = 1
+			continue
+			
+		case 2: // Looking for step parts
+			
+			if step == nil {
+				output.ErrorMessage = "Internal error: should not happen"
+				return output, errors.New(output.ErrorMessage)
+			}
+
+			var therest = strings.TrimPrefix(line, " ---> ")
+			if len(therest) < len(line) {
+				if strings.HasPrefix(therest, "Using cache") {
+					step.setUsedCache()
+				} else {
+					if strings.Contains(" ", therest) {
+						// Unrecognized line - skip it but stay in the current state.
+					} else {
+						step.setProducedImageId(therest)
+					}
+				}
+				lineNo++
+				continue
+			}
+			
+			state = 1
+			
+		default:
+			output.ErrorMessage = "Internal error: Unrecognized state"
+			return output, errors.New(output.ErrorMessage)
 		}
 	}
-	return nil, errors.New("Did not find a final image Id")
-}
-
-/*******************************************************************************
- * 
- */
-func (buildOutput *DockerBuildOutput) GetFinalImageId() string {
-	return buildOutput.FinalImageId
+	output.ErrorMessage = "Did not find a final image Id"
+	return output, errors.New(output.ErrorMessage)
 }
 
 /*******************************************************************************

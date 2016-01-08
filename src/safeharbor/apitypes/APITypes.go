@@ -29,6 +29,7 @@ import (
 	
 	// SafeHarbor packages:
 	//"safeharbor/rest"
+	"safeharbor/docker"
 )
 
 /*******************************************************************************
@@ -561,7 +562,7 @@ func NewImageDesc(objId, repoId, name, desc string, creationTime time.Time) *Ima
 type DockerImageDesc struct {
 	ImageDesc
 	Signature []byte
-	OutputFromBuild string
+	DockerBuildOutput *docker.DockerBuildOutput
 }
 
 func NewDockerImageDesc(objId, repoId, name, desc string, creationTime time.Time,
@@ -578,6 +579,11 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 }
 
 func (imageDesc *DockerImageDesc) AsJSON() string {
+	
+	var dockerBuildOutput *docker.DockerBuildOutput
+	var err error
+	dockerBuildOutput, err = dockerSvc.ParseBuildOutput(imageDesc.OutputFromBuild)
+	
 	var s = fmt.Sprintf("{\"ObjId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", " +
 		"\"Description\": \"%s\", \"CreationDate\": %s, " +
 		"\"Signature\": [",
@@ -587,8 +593,7 @@ func (imageDesc *DockerImageDesc) AsJSON() string {
 		if i > 0 { s = s + ", " }
 		s = s + fmt.Sprintf("%d", b)
 	}
-	s = s + fmt.Sprintf("], \"OutputFromBuild\": \"%s\"}",
-		EncodeStringForJSON(imageDesc.OutputFromBuild))
+	s = s + fmt.Sprintf("], \"DockerBuildOutput\": \"%s\"}", dockerBuildOutput.AsJSON())
 	return s
 }
 
@@ -985,7 +990,6 @@ func (eventDesc *DockerfileExecEventDesc) AsJSON() string {
 }
 
 
-
 /****************************** Utility Methods ********************************
  ******************************************************************************/
 
@@ -1171,26 +1175,4 @@ func RemoveAt(position int, originalList []string) []string {
 	} else {
 		return append(firstPart, originalList[position+1:]...)
 	}
-}
-
-/*******************************************************************************
- * 
- * Utility to encode an arbitrary string value, which might contain quotes and other
- * characters, so that it can be safely and securely transported as a JSON string value,
- * delimited by double quotes. Ref. http://json.org/.
- */
-func EncodeStringForJSON(value string) string {
-	// Replace each occurrence of double-quote and backslash with backslash double-quote
-	// or backslash backslash, respectively.
-	
-	var encodedValue = value
-	encodedValue = strings.Replace(encodedValue, "\"", "\\\"", -1)
-	encodedValue = strings.Replace(encodedValue, "\\", "\\\\", -1)
-	encodedValue = strings.Replace(encodedValue, "/", "\\/", -1)
-	encodedValue = strings.Replace(encodedValue, "\b", "\\b", -1)
-	encodedValue = strings.Replace(encodedValue, "\f", "\\f", -1)
-	encodedValue = strings.Replace(encodedValue, "\n", "\\n", -1)
-	encodedValue = strings.Replace(encodedValue, "\r", "\\r", -1)
-	encodedValue = strings.Replace(encodedValue, "\t", "\\t", -1)
-	return encodedValue
 }
