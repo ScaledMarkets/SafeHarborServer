@@ -958,6 +958,8 @@ func (client *InMemClient) NewInMemUser(userId string, name string,
 		EmailAddress: email,
 		PasswordHash: client.Server.authService.CreatePasswordHash(pswd),
 		GroupIds: make([]string, 0),
+		MostRecentLoginAttempts: make([]string, 0),
+		EventIds: make([]string, 0),
 	}
 	return newUser, client.addUser(newUser)
 }
