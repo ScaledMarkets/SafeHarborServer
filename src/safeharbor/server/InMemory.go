@@ -2583,39 +2583,52 @@ func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
 func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 	userObjId, score string) (ScanEvent, error) {
 	
+	fmt.Println("dbCreateScanEvent: A") // debug
+	
 	// Create actual ParameterValues for the Event, using the current ParameterValues
 	// that exist for the ScanConfig.
 	var scanConfig ScanConfig
 	var err error
 	scanConfig, err = client.getScanConfig(scanConfigId)
+	fmt.Println("dbCreateScanEvent: B") // debug
 	if err != nil { return nil, err }
 	var actParamValueIds []string = make([]string, 0)
 	for _, paramId := range scanConfig.getParameterValueIds() {
+		fmt.Println("dbCreateScanEvent: C") // debug
 		var param ParameterValue
 		param, err = client.getParameterValue(paramId)
+		fmt.Println("dbCreateScanEvent: D") // debug
 		if err != nil { return nil, err }
 		var name string = param.getName()
+		fmt.Println("dbCreateScanEvent: E") // debug
 		var value string = param.getStringValue()
 		//var pvId string = createUniqueDbObjectId()
 		var actParamValue *InMemParameterValue
 		actParamValue, err = client.NewInMemParameterValue(name, value, scanConfigId)
+		fmt.Println("dbCreateScanEvent: F") // debug
 		if err != nil { return nil, err }
 		actParamValueIds = append(actParamValueIds, actParamValue.getId())
+		fmt.Println("dbCreateScanEvent: G") // debug
 	}
 
 	//var id string = createUniqueDbObjectId()
 	var scanEvent *InMemScanEvent
+	fmt.Println("dbCreateScanEvent: H") // debug
 	scanEvent, err = client.NewInMemScanEvent(scanConfigId, imageId, userObjId,
 		scanConfig.getProviderName(), score, actParamValueIds)
+	fmt.Println("dbCreateScanEvent: I") // debug
 	if err != nil { return nil, err }
 	err = scanEvent.writeBack()
+	fmt.Println("dbCreateScanEvent: J") // debug
 	if err != nil { return nil, err }
 	
 	// Link to user.
 	var user User
 	user, err = client.getUser(userObjId)
+	fmt.Println("dbCreateScanEvent: K") // debug
 	if err != nil { return nil, err }
 	user.addEventId(scanEvent.getId())
+	fmt.Println("dbCreateScanEvent: L") // debug
 	
 	// Link to ScanConfig.
 	scanConfig.addScanEventId(scanEvent.getId())
