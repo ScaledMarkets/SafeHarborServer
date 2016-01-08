@@ -13,6 +13,7 @@ import (
 	"strings"
 	"reflect"
 	"time"
+	"runtime/debug"
 	
 	// Our packages:
 	"safeharbor/providers"
@@ -2143,6 +2144,11 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	
 	// TBD: Here we should use the scanConfig.SuccessExpression to compute the score.
 	
+	
+	// debug
+	var scanEventIdsBefore []string = dockerImage.getScanEventIds()
+	// end debug
+	
 
 	// Create a scan event.
 	var userId string = sessionToken.AuthenticatedUserid
@@ -2152,6 +2158,20 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	scanEvent, err = server.dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
 		user.getId(), score)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	
+	
+	// debug
+	var scanEventIdsAfter []string = dockerImage.getScanEventIds()
+	if len(scanEventIdsBefore) == len(scanEventIdsAfter) {
+		fmt.Println("Error - scan event not detected")
+		debug.PrintStack()
+	}
+	// end debug
+	
+
+	
+	
 	
 	return scanEvent.asScanEventDesc()
 }
