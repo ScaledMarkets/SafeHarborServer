@@ -36,6 +36,7 @@ import (
 	"runtime/debug"	
 	
 	"safeharbor/apitypes"
+	"safeharbor/docker"
 )
 
 const (
@@ -1813,7 +1814,10 @@ func (repo *InMemRepo) deleteDockerImage(image DockerImage) error {
 	if err != nil { return err }
 	
 	// Remove from docker.
-	err = repo.Client.Server.DockerService.RemoveDockerImage(image)
+	var imageFullName string
+	imageFullName, err = image.getFullName()
+	if err != nil { return err }
+	err = docker.RemoveDockerImage(imageFullName)
 	if err != nil { return err }
 	
 	// Remove from repo.
@@ -2054,7 +2058,9 @@ func (image *InMemDockerImage) getSignature() []byte {
 func (image *InMemDockerImage) computeSignature() ([]byte, error) {
 	var err error
 	var tempFilePath string
-	tempFilePath, err = image.Client.Server.DockerService.SaveImage(image)
+	var imageFullName
+	imageFullName, err = image.getFullName()
+	tempFilePath, err = docker.SaveImage(imageFullName)
 	if err != nil { return nil, err }
 	defer func() {
 		fmt.Println("Removing all files at " + tempFilePath)

@@ -2,15 +2,9 @@ package docker
 
 import (
 	"fmt"
-	"os"
-	"io"
-	"io/ioutil"
-	"strings"
-	"os/exec"
-	"errors"
 	
 	// SafeHarbor packages:
-	"rest"
+	"safeharbor/rest"
 )
 
 /*******************************************************************************
@@ -23,13 +17,10 @@ type DockerBuildStep struct {
 	ProducedDockerImageId string
 }
 
-func NewDockerBuildStep(number int, cmd string, usedCache bool,
-	producedImageId string) *DockerBuildStep {
+func NewDockerBuildStep(number int, cmd string) *DockerBuildStep {
 	return &DockerBuildStep{
 		StepNumber: number,
 		Command: cmd,
-		UsedCache: usedCache,
-		ProducedDockerImageId: producedImageId,
 	}
 }
 

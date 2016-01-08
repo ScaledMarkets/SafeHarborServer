@@ -18,6 +18,7 @@ import (
 	// Our packages:
 	"safeharbor/providers"
 	"safeharbor/apitypes"
+	"safeharbor/docker"
 )
 
 /*******************************************************************************
@@ -1314,7 +1315,10 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 		"downloadImage"); failMsg != nil { return failMsg }
 
 	var tempFilePath string
-	tempFilePath, err = server.DockerService.SaveImage(dockerImage)
+	var imageFullName string
+	imageFullName, err = dockerImage.getFullName()
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	tempFilePath, err = docker.SaveImage(imageFullName)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return apitypes.NewFileResponse(200, tempFilePath, true)

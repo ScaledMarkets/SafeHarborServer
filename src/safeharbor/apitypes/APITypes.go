@@ -562,7 +562,7 @@ func NewImageDesc(objId, repoId, name, desc string, creationTime time.Time) *Ima
 type DockerImageDesc struct {
 	ImageDesc
 	Signature []byte
-	DockerBuildOutput *docker.DockerBuildOutput
+	OutputFromBuild string
 }
 
 func NewDockerImageDesc(objId, repoId, name, desc string, creationTime time.Time,
@@ -581,8 +581,7 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 func (imageDesc *DockerImageDesc) AsJSON() string {
 	
 	var dockerBuildOutput *docker.DockerBuildOutput
-	var err error
-	dockerBuildOutput, err = dockerSvc.ParseBuildOutput(imageDesc.OutputFromBuild)
+	dockerBuildOutput, _ = docker.ParseBuildOutput(imageDesc.OutputFromBuild)
 	
 	var s = fmt.Sprintf("{\"ObjId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", " +
 		"\"Description\": \"%s\", \"CreationDate\": %s, " +

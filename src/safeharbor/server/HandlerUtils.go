@@ -11,7 +11,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"regexp"
 	"net/url"
 	"io/ioutil"
 	"runtime/debug"	
@@ -73,66 +72,18 @@ func printFileMap(m map[string][]*multipart.FileHeader) {
 }
 
 /*******************************************************************************
- * Verify that the specified image name is valid, for an image stored within
- * the SafeHarborServer repository. Local images must be of the form,
-     NAME[:TAG]
- */
-func localDockerImageNameIsValid(name string) bool {
-	var parts [] string = strings.Split(name, ":")
-	if len(parts) > 2 { return false }
-	
-	for _, part := range parts {
-		matched, err := regexp.MatchString("^[a-zA-Z0-9\\-_]*$", part)
-		if err != nil { panic(errors.New("Unexpected internal error")) }
-		if ! matched { return false }
-	}
-	
-	return true
-}
-
-/*******************************************************************************
- * Parse the output of a docker build command and return the ID of the image
- * that was created at the end. If none found, return "".
- */
-func parseImageIdFromDockerBuildOutput(outputStr string) string {
-	var lines []string = strings.Split(outputStr, "\n")
-	for i := len(lines)-1; i >= 0; i-- {
-		var parts = strings.Split(lines[i], " ")
-		if len(parts) != 3 { continue }
-		if parts[0] != "Successfully" { continue }
-		if parts[1] != "built" { continue }
-		return strings.Trim(parts[2], " \r")
-	}
-	return ""
-}
-
-/*******************************************************************************
  * Verify that the specified name conforms to the name rules for images that
  * users attempt to store. We also require that a name not contain periods,
  * because we use periods to separate images into SafeHarbore namespaces within
  * a realm. If rules are satisfied, return nil; otherwise, return an error.
  */
 func nameConformsToSafeHarborImageNameRules(name string) error {
-	var err error = nameConformsToDockerRules(name)
+	var err error = docker.NameConformsToDockerRules(name)
 	if err != nil { return err }
 	if strings.Contains(name, ".") { return errors.New(
 		"SafeHarbor does not allow periods in names: " + name)
 	}
 	return nil
-}
-
-/*******************************************************************************
- * Check that repository name component matches "[a-z0-9]+(?:[._-][a-z0-9]+)*".
- * I.e., first char is a-z or 0-9, and remaining chars (if any) are those or
- * a period, underscore, or dash. If rules are satisfied, return nil; otherwise,
- * return an error.
- */
-func nameConformsToDockerRules(name string) error {
-	var a = strings.TrimLeft(name, "abcdefghijklmnopqrstuvwxyz0123456789")
-	var b = strings.TrimRight(a, "abcdefghijklmnopqrstuvwxyz0123456789._-")
-	if len(b) == 0 { return nil }
-	return errors.New("Name '" + name + "' does not conform to docker name rules: " +
-		"[a-z0-9]+(?:[._-][a-z0-9]+)*  Offending fragment: '" + b + "'")
 }
 
 /*******************************************************************************
@@ -353,16 +304,19 @@ func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apityp
 	if imageName == "" { return nil, errors.New("No HTTP parameter found for ImageName") }
 	
 	var outputStr string
-	outputStr, err = server.DockerService.BuildDockerfile(dockerfile, realm, repo, imageName)
+	err = nameConformsToSafeHarborImageNameRules(imageName)
+	if err != nil { return nil, err }
+	outputStr, err = docker.BuildDockerfile(dockerfile.getExternalFilePath(),
+		dockerfile.getName(), realm.getName(), repo.getName(), imageName)
 	if err != nil { return nil, err }
 	
 	var dockerBuildOutput *docker.DockerBuildOutput
-	dockerBuildOutput, err = server.DockerService.ParseBuildOutput(outputStr)
+	dockerBuildOutput, err = docker.ParseBuildOutput(outputStr)
 	if err != nil { return nil, err }
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
 	
 	var digest []byte
-	digest, err = server.DockerService.GetDigest(dockerImageId)
+	digest, err = docker.GetDigest(dockerImageId)
 	if err != nil { return nil, err }
 	
 	// Add a record for the image to the database.

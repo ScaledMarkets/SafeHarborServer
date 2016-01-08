@@ -236,7 +236,6 @@ type DockerImage interface {
 	//computeSignature() ([]byte, error)
 	getOutputFromBuild() string
 	addScanEventId(id string)
-	asDockerImageDesc() *apitypes.DockerImageDesc
 }
 
 type ParameterValue interface {

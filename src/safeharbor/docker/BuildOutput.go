@@ -2,15 +2,6 @@ package docker
 
 import (
 	"fmt"
-	"os"
-	"io"
-	"io/ioutil"
-	"strings"
-	"os/exec"
-	"errors"
-	
-	// SafeHarbor packages:
-	"rest"
 )
 
 /*******************************************************************************
@@ -28,11 +19,10 @@ func NewDockerBuildOutput() *DockerBuildOutput {
 	}
 }
 
-func (buildOutput *DockerBuildOutput) addStep(number int, cmd string, usedCache bool,
-	producedImageId string) *DockerBuildStep {
+func (buildOutput *DockerBuildOutput) addStep(number int, cmd string) *DockerBuildStep {
 
 	var step = NewDockerBuildStep(number, cmd)
-	buildOutput.Steps = append(step, buildOutput.Steps)
+	buildOutput.Steps = append(buildOutput.Steps, step)
 	return step
 }
 

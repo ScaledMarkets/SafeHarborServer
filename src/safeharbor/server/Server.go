@@ -24,7 +24,6 @@ import (
 	//"rest"
 	"safeharbor/apitypes"
 	"safeharbor/providers"
-	"safeharbor/docker"
 )
 
 /*******************************************************************************
@@ -39,7 +38,6 @@ type Server struct {
 	certPool *x509.CertPool
 	authService *AuthService
 	ScanServices []providers.ScanService
-	DockerService *DockerService
 	dispatcher *Dispatcher
 	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
 	Authorize bool
@@ -116,7 +114,6 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		Authorize: (! noauthor),
 		Config:  config,
 		certPool: certPool,
-		DockerService: docker.NewDockerService(),
 		dispatcher: dispatcher,
 		MaxLoginAttemptsToRetain: 5,
 	}

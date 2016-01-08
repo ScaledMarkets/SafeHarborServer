@@ -1,3 +1,6 @@
+/*******************************************************************************
+ * Provide abstract functions that we need from docker and docker registry.
+ */
 package docker
 
 import (
@@ -8,26 +11,16 @@ import (
 	"strings"
 	"os/exec"
 	"errors"
+	"regexp"
 	
 	// SafeHarbor packages:
-	"rest"
 )
-
-/*******************************************************************************
- * Provide abstract functions that we need from docker and docker registry.
- */
-type DockerService struct {
-}
-
-func NewDockerService() *DockerService {
-	return &DockerService{}
-}
 
 /*******************************************************************************
  * 
  */
-func (docker *DockerService) BuildDockerfile(dockerfile Dockerfile, realm Realm, repo Repo,
-	imageName string) (string, error) {
+func BuildDockerfile(dockerfileExternalFilePath,
+	dockerfileName, realmName, repoName, imageName string) (string, error) {
 	
 	if ! localDockerImageNameIsValid(imageName) {
 		return "", errors.New(fmt.Sprintf("Image name '%s' is not valid - must be " +
@@ -46,7 +39,7 @@ func (docker *DockerService) BuildDockerfile(dockerfile Dockerfile, realm Realm,
 	}
 	
 	// Verify that the image name conforms to Docker's requirements.
-	err = nameConformsToSafeHarborImageNameRules(imageName)
+	err = NameConformsToDockerRules(imageName)
 	if err != nil { return "", err }
 	
 	// Create a temporary directory to serve as the build context.
@@ -62,9 +55,9 @@ func (docker *DockerService) BuildDockerfile(dockerfile Dockerfile, realm Realm,
 
 	// Copy dockerfile to that directory.
 	var in, out *os.File
-	in, err = os.Open(dockerfile.getExternalFilePath())
+	in, err = os.Open(dockerfileExternalFilePath)
 	if err != nil { return "", err }
-	var dockerfileCopyPath string = tempDirPath + "/" + dockerfile.getName()
+	var dockerfileCopyPath string = tempDirPath + "/" + dockerfileName
 	out, err = os.Create(dockerfileCopyPath)
 	if err != nil { return "", err }
 	_, err = io.Copy(out, in)
@@ -83,9 +76,9 @@ func (docker *DockerService) BuildDockerfile(dockerfile Dockerfile, realm Realm,
 	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
 	// Image id format: <hash>[:TAG]
 	
-	var imageFullName string = realm.getName() + "/" + repo.getName() + ":" + imageName
+	var imageFullName string = realmName + "/" + repoName + ":" + imageName
 	cmd = exec.Command("docker", "build", 
-		"--file", tempDirPath + "/" + dockerfile.getName(),
+		"--file", tempDirPath + "/" + dockerfileName,
 		"--tag", imageFullName, tempDirPath)
 	
 	// Execute the command in the temporary directory.
@@ -212,38 +205,35 @@ func (docker *DockerService) BuildDockerfile(dockerfile Dockerfile, realm Realm,
 	Removing intermediate container 3bac4e50b6f9
 	Successfully built 03dcea1bc8a6
  */
-func (docker *DockerService) ParseBuildOutput(buildOutputStr string) (*DockerBuildOutput, error) {
+func ParseBuildOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 	
-	var output *DockerBuildOutput = NewDockerBuildOutput(id)
+	var output *DockerBuildOutput = NewDockerBuildOutput()
 	
 	var lines = strings.Split(buildOutputStr, "\n")
 	var state int = 1
-	var step DockerBuildStep
-	var int lineNo = 0
+	var step *DockerBuildStep
+	var lineNo int = 0
 	for {
 		
 		if lineNo >= len(lines) {
 			return output, errors.New("Incomplete")
 		}
 		
+		var line string = lines[lineNo]
+			
 		switch state {
 			
 		case 1: // Looking for next step
-			
-			if lineNo >= len(lines) {
-				output.ErrorMessage = "Incomplete"
-				return output, errors.New(output.ErrorMessage)
-			}
 			
 			var therest = strings.TrimPrefix(line, "Step ")
 			if len(therest) < len(line) {
 				// Syntax is: number space colon space command
 				var stepNo int
-				var cmd = string
+				var cmd string
 				fmt.Sscanf(therest, "%d", &stepNo)
 				
 				var separator = " : "
-				inv seppos = strings.Index(therest, separator)
+				var seppos int = strings.Index(therest, separator)
 				if seppos != -1 { // found
 					cmd = therest[seppos + len(separator):] // portion from seppos on
 					step = output.addStep(stepNo, cmd)
@@ -254,7 +244,7 @@ func (docker *DockerService) ParseBuildOutput(buildOutputStr string) (*DockerBui
 				continue
 			}
 			
-			var therest = strings.TrimPrefix(line, "Successfully built ")
+			therest = strings.TrimPrefix(line, "Successfully built ")
 			if len(therest) < len(line) {
 				var id = therest
 				output.setFinalImageId(id)
@@ -301,7 +291,7 @@ func (docker *DockerService) ParseBuildOutput(buildOutputStr string) (*DockerBui
 /*******************************************************************************
  * 
  */
-func (docker *DockerService) SaveImage(dockerImage DockerImage) (string, error) {
+func SaveImage(imageFullName string) (string, error) {
 	
 	fmt.Println("Creating temp file to save the image to...")
 	var tempFile *os.File
@@ -311,9 +301,6 @@ func (docker *DockerService) SaveImage(dockerImage DockerImage) (string, error) 
 	if err != nil { return "", err }
 	var tempFilePath = tempFile.Name()
 	
-	var imageFullName string
-	imageFullName, err = dockerImage.getFullName()
-	if err != nil { return "", err }
 	var cmd *exec.Cmd = exec.Command("docker", "save", "-o", tempFilePath, imageFullName)
 	fmt.Println(fmt.Sprintf("Running docker save -o%s %s", tempFilePath, imageFullName))
 	err = cmd.Run()
@@ -324,19 +311,47 @@ func (docker *DockerService) SaveImage(dockerImage DockerImage) (string, error) 
 /*******************************************************************************
  * Return the hash of the specified Docker image, as computed by the file''s registry.
  */
-func (docker *DockerService) GetDigest(imageId string) ([]byte, error) {
+func GetDigest(imageId string) ([]byte, error) {
 	return []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nil
 }
 
 /*******************************************************************************
  * 
  */
-func (docker *DockerService) RemoveDockerImage(dockerImage DockerImage) error {
-	var imageFullName string
-	var err error
-	imageFullName, err = dockerImage.getFullName()
-	if err != nil { return err }
+func RemoveDockerImage(imageFullName string) error {
 	var cmd *exec.Cmd = exec.Command("docker", "rmi", imageFullName)
 	fmt.Println(fmt.Sprintf("Running docker rmi %s", imageFullName))
 	return cmd.Run()
+}
+
+/*******************************************************************************
+ * Check that repository name component matches "[a-z0-9]+(?:[._-][a-z0-9]+)*".
+ * I.e., first char is a-z or 0-9, and remaining chars (if any) are those or
+ * a period, underscore, or dash. If rules are satisfied, return nil; otherwise,
+ * return an error.
+ */
+func NameConformsToDockerRules(name string) error {
+	var a = strings.TrimLeft(name, "abcdefghijklmnopqrstuvwxyz0123456789")
+	var b = strings.TrimRight(a, "abcdefghijklmnopqrstuvwxyz0123456789._-")
+	if len(b) == 0 { return nil }
+	return errors.New("Name '" + name + "' does not conform to docker name rules: " +
+		"[a-z0-9]+(?:[._-][a-z0-9]+)*  Offending fragment: '" + b + "'")
+}
+
+/*******************************************************************************
+ * Verify that the specified image name is valid, for an image stored within
+ * the SafeHarborServer repository. Local images must be of the form,
+     NAME[:TAG]
+ */
+func localDockerImageNameIsValid(name string) bool {
+	var parts [] string = strings.Split(name, ":")
+	if len(parts) > 2 { return false }
+	
+	for _, part := range parts {
+		matched, err := regexp.MatchString("^[a-zA-Z0-9\\-_]*$", part)
+		if err != nil { panic(errors.New("Unexpected internal error")) }
+		if ! matched { return false }
+	}
+	
+	return true
 }
