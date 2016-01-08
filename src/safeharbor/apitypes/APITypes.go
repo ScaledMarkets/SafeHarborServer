@@ -950,13 +950,12 @@ type ScanEventDescs []*ScanEventDesc
 
 func (eventDesc *ScanEventDesc) AsJSON() string {
 	var s = fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
-		"\"ScanConfigId\": \"%s\", \"ProviderName\": \"%s\", \"Score\": \"%s\",",
+		"\"ScanConfigId\": \"%s\", \"ProviderName\": \"%s\", \"Score\": \"%s\"",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
 		eventDesc.ScanConfigId, eventDesc.ProviderName, eventDesc.Score)
 	
-	for i, valueDesc := range eventDesc.ParameterValueDescs {
-		if i > 0 { s = s + ", " }
-		s = s + valueDesc.AsJSON()
+	for _, valueDesc := range eventDesc.ParameterValueDescs {
+		s = s + ", " + valueDesc.AsJSON()
 	}
 	s = s + "}"
 	return s
