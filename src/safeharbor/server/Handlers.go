@@ -2149,6 +2149,7 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	var scanEvent ScanEvent
 	scanEvent, err = server.dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
 		userObjId, score)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return scanEvent.asScanEventDesc()
 }

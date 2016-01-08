@@ -2627,8 +2627,9 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 	user, err = client.getUser(userObjId)
 	fmt.Println("dbCreateScanEvent: K") // debug
 	if err != nil { return nil, err }
-	user.addEventId(scanEvent.getId())
 	fmt.Println("dbCreateScanEvent: L") // debug
+	user.addEventId(scanEvent.getId())
+	fmt.Println("dbCreateScanEvent: M") // debug
 	
 	// Link to ScanConfig.
 	scanConfig.addScanEventId(scanEvent.getId())
