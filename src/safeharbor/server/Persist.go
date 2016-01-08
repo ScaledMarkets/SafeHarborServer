@@ -235,6 +235,7 @@ type DockerImage interface {
 	getSignature() []byte
 	//computeSignature() ([]byte, error)
 	getOutputFromBuild() string
+	addScanEventId(id string)
 }
 
 type ParameterValue interface {

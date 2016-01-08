@@ -2090,6 +2090,11 @@ func (image *InMemDockerImage) getScanEventIds() []string {
 	return image.ScanEventIds
 }
 
+func (image *InMemDockerImage) addScanEventId(id string) {
+	image.ScanEventIds = append(image.ScanEventIds, id)
+	image.writeBack()
+}
+
 func (image *InMemDockerImage) getMostRecentScanEventId() string {
 	var numOfIds = len(image.ScanEventIds)
 	if numOfIds == 0 {
@@ -2633,6 +2638,12 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 	
 	// Link to ScanConfig.
 	scanConfig.addScanEventId(scanEvent.getId())
+	
+	// Link to image.
+	var image DockerImage
+	image, err = client.getDockerImage(imageId)
+	if err != nil { return nil, err }
+	image.addScanEventId(scanEvent.getId())
 
 	fmt.Println("Created ScanEvent")
 	return scanEvent, nil
