@@ -1816,6 +1816,9 @@ func (repo *InMemRepo) deleteDockerImage(image DockerImage) error {
 	err = repo.Client.Server.DockerService.RemoveDockerImage(image)
 	if err != nil { return err }
 	
+	// Remove from repo.
+	repo.DockerImageIds = apitypes.RemoveFrom(image.getId(), repo.DockerImageIds)
+	
 	// Remove from database.
 	err = repo.Client.deleteObject(image)
 	if err != nil { return err }
