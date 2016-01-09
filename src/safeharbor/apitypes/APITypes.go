@@ -592,7 +592,7 @@ func (imageDesc *DockerImageDesc) AsJSON() string {
 		if i > 0 { s = s + ", " }
 		s = s + fmt.Sprintf("%d", b)
 	}
-	s = s + fmt.Sprintf("], \"DockerBuildOutput\": \"%s\"}", dockerBuildOutput.AsJSON())
+	s = s + fmt.Sprintf("], \"DockerBuildOutput\": %s}", dockerBuildOutput.AsJSON())
 	return s
 }
 

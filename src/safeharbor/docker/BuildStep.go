@@ -34,8 +34,10 @@ func (step *DockerBuildStep) setProducedImageId(id string) {
 
 func (step *DockerBuildStep) AsJSON() string {
 	
+	var usedCache string
+	if step.UsedCache { usedCache = "true" } else { usedCache = "false" }
 	return fmt.Sprintf("{\"StepNumber\": %d, \"Command\": \"%s\", \"UsedCache\": %d, " +
 		"\"ProducedDockerImageId\": \"%s\"}", step.StepNumber,
-		rest.EncodeStringForJSON(step.Command), step.UsedCache)
+		rest.EncodeStringForJSON(step.Command), usedCache, step.ProducedDockerImageId)
 }
 
