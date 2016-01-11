@@ -1,11 +1,7 @@
 /*******************************************************************************
- * In-memory implementation of the methods defined in Persist.go.
+ * In-memory implementation of the methods defined in DBClient.go.
  *
  * These methods do not perform any authorization - that is done by the handlers.
- * 
- * The Persistence struct implements persistence. It is extended by the Client struct,
- * which implements the Client interface from Persist.go. Below that, the remaining
- * types (structs) implement the various persistent object types from Persist.go.
  * 
  * Each type has a New<type> function. The New function merely constructs an instance
  * of the type - it does not link the type in any relationships.
@@ -30,8 +26,6 @@ import (
 	"errors"
 	"reflect"
 	"os"
-	//"io/ioutil"
-	//"crypto/sha512"
 	"time"
 	"runtime/debug"	
 	
@@ -44,154 +38,7 @@ const (
 )
 
 /*******************************************************************************
- * Implements DataError.
- */
-type InMemDataError struct {
-	error
-}
-
-var _ DataError = &InMemDataError{}
-
-func NewInMemDataError(msg string) *InMemDataError {
-	return &InMemDataError{
-		error: errors.New(msg),
-	}
-}
-
-func (dataErr *InMemDataError) asFailureDesc() *apitypes.FailureDesc {
-	return apitypes.NewFailureDesc(dataErr.Error())
-}
-
-/*******************************************************************************
- * Contains all persistence functionality. Implementing these methods provides
- * persistence.
- *
- * Redis bindings for go: http://redis.io/clients#go
- * Chosen binding: https://github.com/alphazero/Go-Redis
- * Alternative binding: https://github.com/hoisie/redis
- */
-type Persistence struct {
-	uniqueId int64
-	allObjects map[string]PersistObj
-	allUsers map[string]User
-	allRealmIds []string
-}
-
-func NewPersistence() (*Persistence, error) {
-	var persist = &Persistence{}
-	persist.reset()
-	return persist, nil
-}
-
-// Clear any in-memory database objects.
-func (persist *Persistence) reset() {
-	persist.uniqueId = 100000005
-	persist.allRealmIds = make([]string, 0)
-	persist.allObjects = make(map[string]PersistObj)
-	persist.allUsers = make(map[string]User)
-}
-
-// Load core database state. Database data is not cached, except for this core data.
-// If the data is not present in the database, it should be created and written out.
-func (persist *Persistence) load() error {
-	var id int64
-	var err error
-	id, err = persist.readUniqueId()
-	if err != nil { return err }
-	if id != 0 {
-		persist.uniqueId = id
-	}
-	return nil
-}
-
-// Create a globally unique id, to be used to uniquely identify a new persistent
-// object. The creation of the id must be done atomically.
-func (persist *Persistence) createUniqueDbObjectId() (string, error) {
-	
-	var id int64 = atomic.AddInt64(&persist.uniqueId, 1)
-	var err error = persist.writeUniqueId()
-	if err != nil { return "", err }
-	persist.uniqueId = id
-	return fmt.Sprintf("%d", id), nil
-}
-
-// Return the persistent object that is identified by the specified unique id.
-// An object's Id is assigned to it by the function that creates the object.
-func (persist *Persistence) getPersistentObject(id string) PersistObj {
-	// TBD:
-	// Read JSON from the database, using the id as the key; then deserialize
-	// (unmarshall) the JSON into an object. The outermost JSON object will be
-	// a field name - that field name is the name of the go object type; reflection
-	// will be used to identify the go type, and set the fields in the type using
-	// values from the hashmap that is built by the unmarshalling.
-	return persist.allObjects[id]
-	
-	// Retrieve the object's value from redis.
-	// Parse the JSON, using a custom parser that builds the types that are
-	// defined in InMemory, using the New method of each type.
-	// For fields that are string arrays or boolean arrays, the make function
-	// is used to construct the required in-memory array.
-	// var constructor = client.MethodByName("New" + typeName)
-	// var obj = constructor(fieldValues...)
-	// return obj.(PersistObj)
-}
-
-func (persist *Persistence) writeBack(obj PersistObj) error {
-	// TBD:
-	// Serialize (marshall) the object to JSON, and store it in redis using the
-	// object's Id as the key. When the object is written out, it will be
-	// written as,
-	//    "<typename>": { <object fields> }
-	// so that getPersistentObject will later be able to make the JSON to the
-	// appropriate go type, using reflection.
-	return nil
-}
-
-func (persist *Persistence) waitForLockOnObject(obj PersistObj, timeoutSeconds int) error {
-	// TBD
-	// If the current thread already has a lock on the specified object, merely return.
-	return nil
-}
-
-func (persist *Persistence) releaseLock(obj PersistObj) {
-	// TBD
-}
-
-func (persist *Persistence) addObject(obj PersistObj) error {
-	persist.allObjects[obj.getId()] = obj
-	return persist.writeBack(obj)
-}
-
-func (persist *Persistence) deleteObject(obj PersistObj) error {
-	// TBD:
-	persist.allObjects[obj.getId()] = nil
-	return nil
-}
-
-func (persist *Persistence) readUniqueId() (int64, error) {
-	return persist.uniqueId, nil
-}
-
-func (persist *Persistence) writeUniqueId() error {
-	return nil
-}
-
-func (persist *Persistence) addRealm(newRealm Realm) error {
-	persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
-	return persist.addObject(newRealm)
-}
-
-func (persist *Persistence) dbGetAllRealmIds() []string {
-	return persist.allRealmIds
-}
-
-func (persist *Persistence) addUser(user User) error {
-	persist.allUsers[user.getUserId()] = user
-	return persist.addObject(user)
-}
-
-/*******************************************************************************
- * The Client type, and methods required by the Client interface in Persist.go.
+ * The Client type, and methods required by the Client interface in DBClient.go.
  */
 type InMemClient struct {
 	Persistence
@@ -203,7 +50,7 @@ func NewInMemClient(server *Server) (DBClient, error) {
 	// Create and return a new InMemClient.
 	var pers *Persistence
 	var err error
-	pers, err = NewPersistence()
+	pers, err = NewPersistence(server.InMemoryOnly)
 	if err != nil { return nil, err }
 	var client = &InMemClient{
 		Persistence: *pers,

@@ -23,6 +23,7 @@ func main() {
 	var port *int = flag.Int("port", 0, "The TCP port on which the SafeHarborServer should listen. If not set, then the value is taken from the conf.json file.")
 	var adapter *string = flag.String("adapter", "", "Network adapter to use (e.g., eth0)")
 	var secretSalt *string = flag.String("secretkey", "", "Secret value to make session hashes unpredictable.")
+	var inMemoryOnly *bool = flag.Bool("inmem", false, "Do not persist the data")
 	
 	flag.Parse()
 	
@@ -43,7 +44,7 @@ func main() {
 	
 	fmt.Println("Creating SafeHarbor server...")
 	var svr *server.Server = server.NewServer(*debug, *stubScanners, *noauthor,
-		*port, *adapter, *secretSalt)
+		*port, *adapter, *secretSalt, *inMemoryOnly)
 	if svr == nil { os.Exit(1) }
 
 	svr.Start()

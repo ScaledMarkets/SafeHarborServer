@@ -42,6 +42,7 @@ type Server struct {
 	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
 	Authorize bool
 	MaxLoginAttemptsToRetain int
+	InMemoryOnly bool
 	Debug bool
 }
 
@@ -53,7 +54,7 @@ const (
  * Create a Server structure. This includes reading in the auth server cert.
  */
 func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
-	adapter string, secretSalt string) *Server {
+	adapter string, secretSalt string, inMemOnly bool) *Server {
 	
 	// Read configuration. (Defined in a JSON file.)
 	fmt.Println("Reading configuration")
@@ -116,6 +117,7 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		certPool: certPool,
 		dispatcher: dispatcher,
 		MaxLoginAttemptsToRetain: 5,
+		InMemoryOnly: inMemOnly,
 	}
 	
 	// Ensure that the file repository exists.
