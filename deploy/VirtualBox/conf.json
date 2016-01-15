@@ -5,10 +5,14 @@
     "LOCAL_ROOT_CERT_PATH": "scaledmarkets.crt",
     "FILE_REPOSITORY_ROOT": "Repositories",
     
-    "ScanServices": {
-    	"clair": {
-    		"Host": "localhost",
-    		"Port": "6060"
-    	}
-    }
+	"REDIS_HOST": "localhost",
+	"REDIS_PORT": 6379,
+	"REDIS_PASSWORD": "ahdal8934k383898&*kdu&^",
+	
+	"ScanServices": {
+		"clair": {
+			"Host": "localhost",
+			"Port": "6060"
+		}
+	}
 }

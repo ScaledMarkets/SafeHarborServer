@@ -105,9 +105,8 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		return nil
 	}
 	
+	// Read all certificates.
 	var certPool *x509.CertPool = getCerts(config)
-	
-	var dispatcher = NewDispatcher()
 	
 	// Construct a Server with the configuration and cert pool.
 	var server *Server = &Server{
@@ -115,7 +114,7 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		Authorize: (! noauthor),
 		Config:  config,
 		certPool: certPool,
-		dispatcher: dispatcher,
+		dispatcher: NewDispatcher(),
 		MaxLoginAttemptsToRetain: 5,
 		InMemoryOnly: inMemOnly,
 	}
@@ -126,16 +125,22 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		return nil
 	}
 	
-	dispatcher.server = server
+	// Tell dispatcher how to find server.
+	server.dispatcher.server = server
 	
+	// Create authentication and authorization services.
 	server.authService = NewAuthService(config.service,
 		config.AuthServerName, config.AuthPort, certPool, secretSalt)
 	
-	server.dbClient, err = NewInMemClient(server)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1);
-	}
+	// Connect to database.
+	var redisClient redis.Client
+	var spec *redis.ConnectionSpec =
+		redis.DefaultSpec().Host(config.RedisHost).Port(config.RedisPort).Password(config.RedisPswd)
+	redisClient, err = redis.NewSynchClientWithSpec(spec);
+	if err != nil { AbortStartup(err.Error()) }
+	
+	server.dbClient, err = NewInMemClient(server, redisClient)
+	if err != nil { AbortStartup(err.Error()) }
 	
 	// To do: Make this a TLS listener.
 	// Instantiate an HTTP server with the SafeHarbor server as the handler.
@@ -147,10 +152,7 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 	// Instantiate a TCP socker listener.
 	fmt.Println("...Creating socket listener at", config.ipaddr, "port", config.port, "...")
 	server.tcpListener, err = newTCPListener(config.ipaddr, config.port)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1);
-	}
+	if err != nil { AbortStartup(err.Error()) }
 	
 	// Verify that the docker service is running, and start it if not.
 	// sudo service docker start
@@ -166,30 +168,18 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 	
 	// Install scanning services.
 	var obj interface{} = config.ScanServices["clair"]
-	if obj == nil {
-		fmt.Println("Cound not find configuration for the clair scanning service")
-		fmt.Println("Type of clair config is", reflect.TypeOf(config.ScanServices["clair"]))
-		fmt.Println(config.ScanServices["clair"])
-		os.Exit(1);
-	}
+	if obj == nil { AbortStartup("Cound not find configuration for the clair scanning service") }
 	var clairConfig map[string]interface{}
 	var isType bool
 	clairConfig, isType = obj.(map[string]interface{})
-	if ! isType {
-		fmt.Println("Configuration of clair services is ill-formed:")
-		fmt.Println(obj)
-		os.Exit(1);
-	}
+	if ! isType { AbortStartup("Configuration of clair services is ill-formed:") }
 	var scanSvc providers.ScanService
 	if stubScanners {
 		scanSvc, err = providers.CreateClairServiceStub(clairConfig) // for testing only
 	} else {
 		scanSvc, err = providers.CreateClairService(clairConfig) // for testing only
 	}
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1);
-	}
+	if err != nil { AbortStartup(err.Error()) }
 	server.ScanServices = []providers.ScanService{
 		scanSvc,
 	}
@@ -198,11 +188,11 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 }
 
 /*******************************************************************************
- * Warn the administrator that a user has attempted to log in more than
- * MaxLoginAttemptsToRetain times.
+ * 
  */
-func (server *Server) LoginAlert(userId string) {
-	fmt.Println("*****Possible brute for attack for user Id " + userId)
+func AbortStartup(msg string) {
+	fmt.Println("Aborting startup:", msg)
+	os.Exit(1);
 }
 
 /*******************************************************************************
@@ -215,10 +205,7 @@ func (server *Server) Start() {
 	// to reply to them. See https://golang.org/pkg/net/http/#Server.Serve
 	defer server.tcpListener.Close()
 	fmt.Println("...Starting service...")
-	if err := server.httpServer.Serve(server.tcpListener); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
+	if err := server.httpServer.Serve(server.tcpListener); err != nil { AbortStartup(err.Error()) }
 }
 
 /*******************************************************************************
@@ -255,6 +242,14 @@ func (server *Server) WaitUntilNoRequestsInProgress(maxSeconds int) bool {
  */
 func (server *Server) ResumeAcceptingNewRequests() {
 	// ....
+}
+
+/*******************************************************************************
+ * Warn the administrator that a user has attempted to log in more than
+ * MaxLoginAttemptsToRetain times.
+ */
+func (server *Server) LoginAlert(userId string) {
+	fmt.Println("*****Possible brute for attack for user Id " + userId)
 }
 
 /*******************************************************************************

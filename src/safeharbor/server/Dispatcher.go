@@ -70,7 +70,7 @@ func NewDispatcher() *Dispatcher {
 		"createRepo": createRepo,
 		"deleteRepo": deleteRepo,
 		"getDockerfiles": getDockerfiles,
-		"getImages": getImages,
+		"getDockerImages": getDockerImages,
 		"addDockerfile": addDockerfile,
 		"replaceDockerfile": replaceDockerfile,
 		"execDockerfile": execDockerfile,

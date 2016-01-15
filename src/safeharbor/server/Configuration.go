@@ -26,6 +26,7 @@ type Configuration struct {
 	port int
 	RedisHost string
 	RedisPort int
+	RedisPswd string
 	LocalAuthCertPath string
 	LocalRootCertPath string // may be null
 	AuthServerName string
@@ -78,6 +79,18 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	config.FileRepoRootPath, exists = entries["FILE_REPOSITORY_ROOT"].(string)
 	if ! exists { config.FileRepoRootPath = "Repository" }
 	config.FileRepoRootPath = strings.TrimRight(config.FileRepoRootPath, "/ ")
+	
+	config.RedisHost, exists = entries["REDIS_HOST"].(string)
+	if ! exists { return nil, fmt.Errorf("Did not find REDIS_HOST in configuration") }
+	
+	var redisPortStr string
+	redisPortStr, exists = entries["REDIS_PORT"].(string)
+	if ! exists { return nil, fmt.Errorf("Did not find REDIS_PORT in configuration") }
+	config.RedisPort, err = strconv.Atoi(redisPortStr)
+	if err != nil { return nil, fmt.Errorf("REDIS_PORT value in configuration is not an integer") }
+	
+	config.RedisPswd, exists = entries["REDIS_PASSWORD"].(string)
+	if ! exists { return nil, fmt.Errorf("Did not find REDIS_PASSWORD in configuration") }
 	
 	//config.service, exists = entries["SERVICE"]
 	//if ! exists { return nil, fmt.Errorf("Did not find SERVICE in configuration") }

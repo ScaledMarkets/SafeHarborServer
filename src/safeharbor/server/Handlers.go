@@ -80,7 +80,11 @@ func clearAll(server *Server, sessionToken *apitypes.SessionToken, values url.Va
 	// Remove all of the docker images that were created by SafeHarborServer.
 	fmt.Println("Removing docker images that were created by SafeHarbor:")
 	var dbClient DBClient = server.dbClient
-	for _, realmId := range dbClient.dbGetAllRealmIds() {
+	var realmIds []string
+	var err error
+	realmIds, err = dbClient.dbGetAllRealmIds()
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	for _, realmId := range realmIds {
 		var realm Realm
 		var err error
 		realm, err = dbClient.getRealm(realmId)
@@ -114,12 +118,14 @@ func clearAll(server *Server, sessionToken *apitypes.SessionToken, values url.Va
 		}
 	}
 	
+	// Clear all session state.
+	server.authService.clearAllSessions()
+	
 	// Remove and re-create the repository directory.
 	fmt.Println("Initializing database...")
 	server.dbClient.init()
-	
-	// Clear all session state.
-	server.authService.clearAllSessions()
+	err = server.dbClient.resetPersistentState()
+	if err != nil { return apitypes.NewResult(500, err.Error()) }
 	
 	return apitypes.NewResult(200, "Persistent state reset")
 }
@@ -873,7 +879,10 @@ func getAllRealms(server *Server, sessionToken *apitypes.SessionToken, values ur
 	
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
 
-	var realmIds []string = server.dbClient.dbGetAllRealmIds()
+	var realmIds []string
+	var err error
+	realmIds, err = server.dbClient.dbGetAllRealmIds()
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var result apitypes.RealmDescs = make([]*apitypes.RealmDesc, 0)
 	for _, realmId := range realmIds {
@@ -999,7 +1008,7 @@ func getDockerfiles(server *Server, sessionToken *apitypes.SessionToken, values 
  * Arguments: RepoId
  * Returns: []*apitypes.DockerImageDesc
  */
-func getImages(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
+func getDockerImages(server *Server, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	if _, failMsg := authenticateSession(server, sessionToken, values); failMsg != nil { return failMsg }
@@ -1010,7 +1019,7 @@ func getImages(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, repoId,
-		"getImages"); failMsg != nil { return failMsg }
+		"getDockerImages"); failMsg != nil { return failMsg }
 	
 	var repo Repo
 	repo, err = server.dbClient.getRepo(repoId)
