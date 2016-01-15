@@ -236,10 +236,10 @@ func (restContext *RestContext) Verify200Response(resp *http.Response) bool {
 }
 
 /*******************************************************************************
- * 
  * Utility to encode an arbitrary string value, which might contain quotes and other
  * characters, so that it can be safely and securely transported as a JSON string value,
  * delimited by double quotes. Ref. http://json.org/.
+ * To do: ....Deal with unicode sequences.
  */
 func EncodeStringForJSON(value string) string {
 	// Replace each occurrence of double-quote and backslash with backslash double-quote
@@ -255,4 +255,20 @@ func EncodeStringForJSON(value string) string {
 	encodedValue = strings.Replace(encodedValue, "\r", "\\r", -1)
 	encodedValue = strings.Replace(encodedValue, "\t", "\\t", -1)
 	return encodedValue
+}
+
+/*******************************************************************************
+ * Reverse the encoding that is performed by EncodeStringForJSON.
+ */
+func DecodeStringFromJSON(encodedValue string) string {
+	var decodedValue = encodedValue
+	decodedValue = strings.Replace(decodedValue, "\\t", "\t", -1)
+	decodedValue = strings.Replace(decodedValue, "\\r", "\r", -1)
+	decodedValue = strings.Replace(decodedValue, "\\n", "\n", -1)
+	decodedValue = strings.Replace(decodedValue, "\\f", "\f", -1)
+	decodedValue = strings.Replace(decodedValue, "\\b", "\b", -1)
+	decodedValue = strings.Replace(decodedValue, "\\/", "/", -1)
+	decodedValue = strings.Replace(decodedValue, "\\\\", "\\", -1)
+	decodedValue = strings.Replace(decodedValue, "\\\"", "\"", -1)
+	return decodedValue
 }

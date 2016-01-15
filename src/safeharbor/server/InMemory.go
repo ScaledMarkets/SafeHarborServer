@@ -1245,7 +1245,17 @@ func (entry *InMemACLEntry) asPermissionDesc() *apitypes.PermissionDesc {
 }
 
 func (entry *InMemACLEntry) asJSON() string {
-	....
+	var json = "\"ACLEntry\": {"
+	json = json + entry.persistObjFieldsAsJSON()
+	json = json + fmt.Sprintf(
+		", \"ResourceId\": \"%s\", \"PartyId\": \"%s\", \"PermissionMask\": [",
+		entry.ResourceId, entry.PartyId)
+	for i, b := range entry.PermissionMask {
+		if i != 0 { json = json + ", " }
+		json = json + apitypes.BoolToString(b)
+	}
+	json = json + "]}
+	return json
 }
 
 /*******************************************************************************
@@ -1660,7 +1670,27 @@ func (realm *InMemRealm) deleteGroup(group Group) error {
 func (realm *InMemRealm) isRealm() bool { return true }
 
 func (realm *InMemRealm) asJSON() string {
-	....
+	
+	var json = "\"Realm\": {"
+	json = json + realm.resourceFieldsAsJSON()
+	json = json + fmt.Sprintf(
+		", \"AdminUserId\": \"%s\", \"OrgFullName\": \"%s\", \"UserObjIds\": [",
+		realm.AdminUserId, realm.OrgFullName)
+	for i, id := range realm.UserObjIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + "], \"GroupIds\": ["
+	for i, id := range realm.GroupIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + "], \"RepoIds\": ["
+	for i, id := range realm.RepoIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + fmt.Sprintf("], \"FileDirectory\": \"%s\"}", realm.FileDirectory)
 }
 
 /*******************************************************************************
@@ -1896,7 +1926,31 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 }
 
 func (repo *InMemRepo) asJSON() string {
-	....
+	
+	var json = "\"Repo\": {"
+	json = json + repo.resourceFieldsAsJSON()
+	json = json + ", \"DockerFieldIds\": ["
+	for i, id := range repo.DockerfileIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + "], \"DockerImageIds\": ["
+	for i, id := range repo.DockerImageIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + "], \"ScanConfigIds\": ["
+	for i, id := range repo.ScanConfigIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + "], \"FlagIds\": ["
+	for i, id := range repo.FlagIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + fmt.Sprintf("], \"FileDirectory\": \"%s\"}", repo.FileDirectory)
+	return json
 }
 
 /*******************************************************************************
@@ -2010,7 +2064,17 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() *apitypes.DockerfileDesc {
 func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
 
 func (dockerfile *InMemDockerfile) asJSON() string {
-	....
+	
+	var json = "\"Dockerfile\": {"
+	json = json + repo.resourceFieldsAsJSON()
+	json = json + fmt.Sprintf(
+		", \"FilePath\": \"%s\", \"DockerfileExecEventIds\": [", dockerfile.FilePath)
+	for i, id := range dockerfile.DockerfileExecEventIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + "]}"
+	return json
 }
 
 /*******************************************************************************
@@ -2049,6 +2113,10 @@ func (image *InMemImage) getRepo() (Repo, error) {
 	repo, isType = obj.(Repo)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
 	return repo, nil
+}
+
+func (image *InMemImage) imageFieldsAsJSON() string {
+	return resourceFieldsAsJSON()
 }
 
 func (image *InMemImage) asJSON() string {
@@ -2192,7 +2260,21 @@ func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
 func (image *InMemDockerImage) isDockerImage() bool { return true }
 
 func (image *InMemDockerImage) asJSON() string {
-	....
+	
+	var json = "\"DockerImage\": {" + image.imageFieldsAsJSON()
+	json = json + ", \"ScanEventIds\": ["
+	for i, id := range image.ScanEventIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + "], \"Signature\": ["
+	for i, b := range image.Signature {
+		if i != 0 { json = json + ", " }
+		json = json + fmt.Sprintf("%d", b)
+	}
+	json = json + fmt.Sprintf("], \"OutputFromBuild\": \"%s\"}",
+		rest.EncodeStringForJSON(image.OutputFromBuild))
+	return json
 }
 
 /*******************************************************************************
@@ -2260,7 +2342,12 @@ func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.Paramete
 }
 
 func (paramValue *InMemParameterValue) asJSON() string {
-	....
+	
+	var json = "\"ParameterValue\": {" + paramValue.persistObjFieldsAsJSON()
+	json = json + fmt.Sprintf(
+		"\"Name\": \"%s\", \"StringValue\": \"%s\", \"ConfigId\": \"%s\"}",
+		paramValue.Name, paramValue.StringValue, paramValue.ConfigId)
+	return json
 }
 
 /*******************************************************************************
@@ -2512,7 +2599,22 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 }
 
 func (scanConfig *InMemScanConfig) asJSON() string {
-	....
+	
+	var json = "\"ScanConfig\": {" + scanConfig.resourceFieldsAsJSON()
+	json = json + fmt.Sprintf(
+		"\"SuccessExpression\": \"%s\", \"ProviderName\": \"%s\", \"ParameterValueIds\": [",
+		scanConfig.SuccessExpression, scanConfig.ProviderName)
+	for i, id := range scanConfig.ParameterValueIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + fmt.Sprintf("], \"FlagId\": \"%s\", \"ScanEventIds\": [", scanConfig.FlagId)
+	for i, id := range scanConfig.ScanEventIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + "]}"
+	return json
 }
 
 /*******************************************************************************
@@ -2614,7 +2716,16 @@ func (flag *InMemFlag) asFlagDesc() *apitypes.FlagDesc {
 }
 
 func (flag *InMemFlag) asJSON() string {
-	....
+	
+	var json = "\"Flag\": {" + flag.resourceFieldsAsJSON()
+	json = json + fmt.Sprintf("\"SuccessImagePath\": \"%s\", \"UsedByScanConfigIds\": [",
+		flag.SuccessImagePath)
+	for i, id := range flag.UsedByScanConfigIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + "]}"
+	return json
 }
 
 /*******************************************************************************
@@ -2661,6 +2772,13 @@ func (event *InMemEvent) getUserObjId() string {
 
 func (event *InMemEvent) asEventDesc() *apitypes.EventDescBase {
 	return apitypes.NewEventDesc(event.Id, event.When, event.UserObjId)
+}
+
+func (event *InMemEvent) eventFieldsAsJSON() string {
+	var json = event.persistObjFieldsAsJSON()
+	json = json + fmt.Sprintf(", \"When\": time \"%s\", \"UserObjId\": \"%s\"",
+		apitypes.FormatTimeAsJavascriptDate(event.When), event.UserObjId)
+	return json
 }
 
 func (event *InMemEvent) asJSON() string {
@@ -2825,7 +2943,18 @@ func (event *InMemScanEvent) asEventDesc() apitypes.EventDesc {
 }
 
 func (event *InMemScanEvent) asJSON() string {
-	....
+
+	var json = "\"ScanEvent\": {" + event.eventFieldsAsJSON()
+	json = json + fmt.Sprintf(
+		", \"ScanConfigId\": \"%s\", \"DockerImageId\": \"%s\", " +
+		"\"ProviderName\": \"%s\", \"ActualParameterValueIds\": [",
+		event.ScanConfigId, evenet.DockerImageId, event.ProviderName)
+	for i, id := range event.ActualParameterValueIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	json = json + fmt.Sprintf("], \"Score\": \"%s\"}", event.Score)
+	return json
 }
 
 /*******************************************************************************
@@ -2846,6 +2975,12 @@ func (client *InMemClient) NewInMemImageCreationEvent(userObjId,
 		InMemEvent: *event,
 		ImageId: imageId,
 	}, nil
+}
+
+func (event *InMemImageCreationEvent) imageCreationEventFieldsAsJSON() string {
+	var json = event.eventFieldsAsJSON()
+	json = json + fmt.Sprintf(", \"ImageId\": \"%s\"", event.ImageId)
+	return json
 }
 
 func (event *InMemImageCreationEvent) asJSON() string {
@@ -2918,5 +3053,10 @@ func (event *InMemDockerfileExecEvent) asEventDesc() apitypes.EventDesc {
 }
 
 func (event *InMemDockerfileExecEvent) asJSON() string {
-	....
+	
+	var json = "\"DockerfileExecEvent\": {" + event.imageCreationEventFieldsAsJSON()
+	json = json + fmt.Sprintf(
+		", \"DockerfileId\": \"%s\", \"DockerfileExternalObjId\": \"%s\"}",
+		event.DockerfileId, event.DockerfileExternalObjId)
+	return json
 }
