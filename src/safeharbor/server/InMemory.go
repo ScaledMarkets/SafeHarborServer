@@ -22,15 +22,17 @@ package server
 
 import (
 	"fmt"
-	"sync/atomic"
 	"errors"
 	"reflect"
 	"os"
 	"time"
 	"runtime/debug"	
 	
+	"redis"
+	
 	"safeharbor/apitypes"
 	"safeharbor/docker"
+	"safeharbor/rest"
 )
 
 const (
@@ -110,13 +112,15 @@ func (client *InMemClient) resetPersistentState() error {
 	
 	// Remove the file repository.
 	fmt.Println("Removing all files at " + client.Server.Config.FileRepoRootPath)
+	var err error
 	err = os.RemoveAll(client.Server.Config.FileRepoRootPath)
-	if err != nil { fmt.Println(err.Error()) }
+	if err != nil { return err }
 	
 	// Recreate the file repository, but empty.
 	os.Mkdir(client.Server.Config.FileRepoRootPath, 0770)
 
 	fmt.Println("Repository initialized")
+	return nil
 }
 
 func (client *InMemClient) dbGetUserByUserId(userId string) User {
@@ -199,7 +203,7 @@ func (persObj *InMemPersistObj) writeBack() error {
 }
 
 func (persObj *InMemPersistObj) persistObjFieldsAsJSON() string {
-	return fmt.Sprintf("\"Id\": \"%s\"", acl.Id)
+	return fmt.Sprintf("\"Id\": \"%s\"", persObj.Id)
 }
 
 func (persObj *InMemPersistObj) asJSON() string {
@@ -248,7 +252,7 @@ func (acl *InMemACL) aclFieldsAsJSON() string {
 }
 
 func (acl *InMemACL) asJSON() string {
-	return fmt.Sprintf("\"InMemACL\": {" + aclFieldsAsJSON() + "}"
+	return fmt.Sprintf("\"InMemACL\": {" + acl.aclFieldsAsJSON() + "}")
 }
 
 /*******************************************************************************
@@ -689,7 +693,7 @@ func (party *InMemParty) getACLEntryForResourceId(resourceId string) (ACLEntry, 
 }
 
 func (party *InMemParty) partyFieldsAsJSON() string {
-	var json = resource.persistObjFieldsAsJSON()
+	var json = party.persistObjFieldsAsJSON()
 	json = json + fmt.Sprintf(", \"IsActive\": %s, \"Name\": \"%s\", " +
 		"\"CreationTime\": %s, \"RealmId\": \"%s\", \"ACLEntryIds\": [",
 		apitypes.BoolToString(party.IsActive),
@@ -1123,12 +1127,12 @@ func (user *InMemUser) asJSON() string {
 		if i == 0 { json = json + ", " }
 		json = json + "\"" + a + "\""
 	}
-	json = json + "], \"EventIds\": [
+	json = json + "], \"EventIds\": ["
 	for i, id := range user.EventIds {
 		if i == 0 { json = json + ", " }
 		json = json + "\"" + id + "\""
 	}
-	json = json + "]}
+	json = json + "]}"
 	return json
 }
 
@@ -1254,7 +1258,7 @@ func (entry *InMemACLEntry) asJSON() string {
 		if i != 0 { json = json + ", " }
 		json = json + apitypes.BoolToString(b)
 	}
-	json = json + "]}
+	json = json + "]}"
 	return json
 }
 
@@ -1460,7 +1464,7 @@ func (realm *InMemRealm) removeUserId(userObjId string) (User, error) {
 	var err error
 	obj, err = realm.Client.getPersistentObject(userObjId)
 	if err != nil { return nil, err }
-	if obj == nil { return errors.New("User with obj Id " + userObjId + " not found") }
+	if obj == nil { return nil, errors.New("User with obj Id " + userObjId + " not found") }
 	var isType bool
 	user, isType = obj.(User)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
@@ -1691,6 +1695,7 @@ func (realm *InMemRealm) asJSON() string {
 		json = json + "\"" + id + "\""
 	}
 	json = json + fmt.Sprintf("], \"FileDirectory\": \"%s\"}", realm.FileDirectory)
+	return json
 }
 
 /*******************************************************************************
@@ -2035,9 +2040,10 @@ func (dockerfile *InMemDockerfile) getRepoId() string {
 func (dockerfile *InMemDockerfile) getRepo() (Repo, error) {
 	var repo Repo
 	var obj PersistObj
+	var err error
 	obj, err = dockerfile.Client.getPersistentObject(dockerfile.getRepoId())
 	if err != nil { return nil, err }
-	if obj == nil { return errors.New("Could not find obj with Id " + dockerfile.getRepoId()) }
+	if obj == nil { return nil, errors.New("Could not find obj with Id " + dockerfile.getRepoId()) }
 	var isType bool
 	repo, isType = obj.(Repo)
 	if ! isType { return nil, errors.New("Internal error: object is an unexpected type") }
@@ -2066,7 +2072,7 @@ func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
 func (dockerfile *InMemDockerfile) asJSON() string {
 	
 	var json = "\"Dockerfile\": {"
-	json = json + repo.resourceFieldsAsJSON()
+	json = json + dockerfile.resourceFieldsAsJSON()
 	json = json + fmt.Sprintf(
 		", \"FilePath\": \"%s\", \"DockerfileExecEventIds\": [", dockerfile.FilePath)
 	for i, id := range dockerfile.DockerfileExecEventIds {
@@ -2116,7 +2122,7 @@ func (image *InMemImage) getRepo() (Repo, error) {
 }
 
 func (image *InMemImage) imageFieldsAsJSON() string {
-	return resourceFieldsAsJSON()
+	return image.resourceFieldsAsJSON()
 }
 
 func (image *InMemImage) asJSON() string {
@@ -2948,7 +2954,7 @@ func (event *InMemScanEvent) asJSON() string {
 	json = json + fmt.Sprintf(
 		", \"ScanConfigId\": \"%s\", \"DockerImageId\": \"%s\", " +
 		"\"ProviderName\": \"%s\", \"ActualParameterValueIds\": [",
-		event.ScanConfigId, evenet.DockerImageId, event.ProviderName)
+		event.ScanConfigId, event.DockerImageId, event.ProviderName)
 	for i, id := range event.ActualParameterValueIds {
 		if i != 0 { json = json + ", " }
 		json = json + "\"" + id + "\""
