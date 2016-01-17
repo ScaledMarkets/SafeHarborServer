@@ -92,7 +92,7 @@ func (persist *Persistence) load() error {
 	fmt.Println("Loading core database state...")
 	var id int64
 	var err error
-	id, err = persist.readUniqueId()
+	id, err = persist.readUniqueId()  // returns 0 if database is "virgin"
 	if err != nil { return err }
 	if id != 0 {
 		persist.uniqueId = id
@@ -131,8 +131,10 @@ func (persist *Persistence) readUniqueId() (int64, error) {
 		var err error
 		bytes, err = persist.RedisClient.Get("UniqueId")
 		if err != nil { return 0, err }
+		var str = string(bytes)
+		if str == "" { return 0, nil }
 		var id int64
-		id, err = strconv.ParseInt(string(bytes), 10, 64)
+		id, err = strconv.ParseInt(str, 10, 64)
 		if err != nil { return 0, err }
 		return id, nil
 	}
