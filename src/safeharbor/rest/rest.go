@@ -35,6 +35,12 @@ func CreateRestContext(hostname string, port int, sessionIdSetter func(*http.Req
 	}
 }
 
+func (restContext *RestContext) Print() {
+	fmt.Println("RestContext:")
+	fmt.Println(fmt.Sprintf("\thostname: %s", restContext.hostname))
+	fmt.Println(fmt.Sprintf("\tport: %d", restContext.port))
+}
+
 func (restContext *RestContext) GetHostname() string { return restContext.hostname }
 
 func (restContext *RestContext) GetPort() int { return restContext.port }
@@ -70,7 +76,7 @@ func (restContext *RestContext) sendReq(sessionId string, reqMethod string,
 
 	// Send REST POST request to server.
 	var urlstr string = fmt.Sprintf(
-		"http://%s:%s/%s",
+		"http://%s:%d/%s",
 		restContext.hostname, restContext.port, reqName)
 	
 	var data url.Values = url.Values{}
