@@ -199,7 +199,7 @@ func (persObj *InMemPersistObj) releaseLock() {
 }
 
 func (persObj *InMemPersistObj) writeBack() error {
-	return persObj.Client.writeBack(PersistObj(persObj))
+	panic("Call to method that should be abstract")
 }
 
 func (persObj *InMemPersistObj) persistObjFieldsAsJSON() string {
@@ -863,6 +863,10 @@ func (group *InMemGroup) asGroupDesc() *apitypes.GroupDesc {
 		group.Id, group.RealmId, group.Name, group.Description, group.CreationTime)
 }
 
+func (group *InMemGroup) writeBack() error {
+	return group.Client.writeBack(group)
+}
+
 func (group *InMemGroup) asJSON() string {
 	var json = "\"Group\": {"
 	json = json + group.partyFieldsAsJSON()
@@ -1111,6 +1115,10 @@ func (user *InMemUser) asUserDesc() *apitypes.UserDesc {
 	return apitypes.NewUserDesc(user.Id, user.UserId, user.Name, user.RealmId, adminRealmIds)
 }
 
+func (user *InMemUser) writeBack() error {
+	return user.Client.writeBack(user)
+}
+
 func (user *InMemUser) asJSON() string {
 	
 	var json = "\"User\": {"
@@ -1250,6 +1258,10 @@ func (entry *InMemACLEntry) setPermissionMask(mask []bool) error {
 func (entry *InMemACLEntry) asPermissionDesc() *apitypes.PermissionDesc {
 	
 	return apitypes.NewPermissionDesc(entry.getId(), entry.ResourceId, entry.PartyId, entry.getPermissionMask())
+}
+
+func (entry *InMemACLEntry) writeBack() error {
+	return entry.Client.writeBack(entry)
 }
 
 func (entry *InMemACLEntry) asJSON() string {
@@ -1677,6 +1689,10 @@ func (realm *InMemRealm) deleteGroup(group Group) error {
 
 func (realm *InMemRealm) isRealm() bool { return true }
 
+func (realm *InMemRealm) writeBack() error {
+	return realm.Client.writeBack(realm)
+}
+
 func (realm *InMemRealm) asJSON() string {
 	
 	var json = "\"Realm\": {"
@@ -1934,6 +1950,10 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 		repo.CreationTime, repo.getDockerfileIds())
 }
 
+func (repo *InMemRepo) writeBack() error {
+	return repo.Client.writeBack(repo)
+}
+
 func (repo *InMemRepo) asJSON() string {
 	
 	var json = "\"Repo\": {"
@@ -2072,6 +2092,10 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() *apitypes.DockerfileDesc {
 }
 
 func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
+
+func (dockerfile *InMemDockerfile) writeBack() error {
+	return dockerfile.Client.writeBack(dockerfile)
+}
 
 func (dockerfile *InMemDockerfile) asJSON() string {
 	
@@ -2269,6 +2293,10 @@ func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
 
 func (image *InMemDockerImage) isDockerImage() bool { return true }
 
+func (image *InMemDockerImage) writeBack() error {
+	return image.Client.writeBack(image)
+}
+
 func (image *InMemDockerImage) asJSON() string {
 	
 	var json = "\"DockerImage\": {" + image.imageFieldsAsJSON()
@@ -2349,6 +2377,10 @@ func (paramValue *InMemParameterValue) getConfigId() string {
 func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.ParameterValueDesc {
 	return apitypes.NewParameterValueDesc(paramValue.Name, //paramValue.TypeName,
 		paramValue.StringValue)
+}
+
+func (paramValue *InMemParameterValue) writeBack() error {
+	return paramValue.Client.writeBack(paramValue)
 }
 
 func (paramValue *InMemParameterValue) asJSON() string {
@@ -2608,6 +2640,10 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 		scanConfig.SuccessExpression, scanConfig.FlagId, paramValueDescs)
 }
 
+func (scanConfig *InMemScanConfig) writeBack() error {
+	return scanConfig.Client.writeBack(scanConfig)
+}
+
 func (scanConfig *InMemScanConfig) asJSON() string {
 	
 	var json = "\"ScanConfig\": {" + scanConfig.resourceFieldsAsJSON()
@@ -2723,6 +2759,10 @@ func (resource *InMemFlag) isFlag() bool {
 func (flag *InMemFlag) asFlagDesc() *apitypes.FlagDesc {
 	return apitypes.NewFlagDesc(flag.getId(), flag.getRepoId(), flag.getName(),
 		flag.getSuccessImageURL())
+}
+
+func (flag *InMemFlag) writeBack() error {
+	return flag.Client.writeBack(flag)
 }
 
 func (flag *InMemFlag) asJSON() string {
@@ -2952,6 +2992,10 @@ func (event *InMemScanEvent) asEventDesc() apitypes.EventDesc {
 	return event.asScanEventDesc()
 }
 
+func (event *InMemScanEvent) writeBack() error {
+	return event.Client.writeBack(event)
+}
+
 func (event *InMemScanEvent) asJSON() string {
 
 	var json = "\"ScanEvent\": {" + event.eventFieldsAsJSON()
@@ -3060,6 +3104,10 @@ func (event *InMemDockerfileExecEvent) asDockerfileExecEventDesc() *apitypes.Doc
 
 func (event *InMemDockerfileExecEvent) asEventDesc() apitypes.EventDesc {
 	return event.asDockerfileExecEventDesc()
+}
+
+func (event *InMemDockerfileExecEvent) writeBack() error {
+	return event.Client.writeBack(event)
 }
 
 func (event *InMemDockerfileExecEvent) asJSON() string {
