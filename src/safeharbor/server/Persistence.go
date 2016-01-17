@@ -15,7 +15,7 @@ import (
 	//"reflect"
 	//"os"
 	//"time"
-	//"runtime/debug"	
+	"runtime/debug"	
 	
 	"redis"
 	
@@ -249,8 +249,12 @@ func (persist *Persistence) addObject(obj PersistObj) error {
 		var err error
 		exists, err = persist.RedisClient.Exists("obj/" + obj.getId())
 		if err != nil { return err }
-		if exists { return errors.New(
-			"Object with Id " + obj.getId() + " already exists") }
+		if exists {
+			err = errors.New("Object with Id " + obj.getId() + " already exists")
+			fmt.Println(err.Error())
+			debug.PrintStack()
+			return err
+		}
 	}
 	return persist.writeBack(obj)
 }
