@@ -16,6 +16,7 @@ import (
 	"os"
 	"strings"
 	"crypto/x509"
+	"runtime/debug"
 	//"errors"
 	//"strconv"
 	
@@ -196,6 +197,7 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
  */
 func AbortStartup(msg string) {
 	fmt.Println("Aborting startup:", msg)
+	debug.PrintStack()
 	os.Exit(1);
 }
 
