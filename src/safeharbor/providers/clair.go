@@ -111,7 +111,7 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 	
 	return &ClairRestContext{
 		RestContext: *rest.CreateRestContext(
-			clairSvc.Host, fmt.Sprintf("%d", clairSvc.Port), setClairSessionId),
+			clairSvc.Host, clairSvc.Port, setClairSessionId),
 		MinimumVulnerabilityPriority: minPriority,
 		ClairService: clairSvc,
 		sessionId: "",
