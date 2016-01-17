@@ -133,7 +133,7 @@ func NewFailureDesc(reason string) *FailureDesc {
 	debug.PrintStack()  // debug
 	return &FailureDesc{
 		Reason: reason,
-		HTTPCode: 500,
+		HTTPCode: 500,  // see https://golang.org/pkg/net/http/#pkg-constants
 	}
 }
 

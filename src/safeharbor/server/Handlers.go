@@ -1,6 +1,12 @@
 /*******************************************************************************
  * All of the REST handlers are contained here. These functions are called by
  * the handleRequest method in Dispatcher.go.
+ * Error codes used are (see https://golang.org/pkg/net/http/#pkg-constants),
+	StatusBadRequest (400) - Bad request.
+	StatusUnauthorized (401) - User is not authenticated, and must be to perform the requested action.
+	StatusForbidden (403) - User is authenticated, but is not authorized to perform the action.
+	StatusConflict (409) - Contention among multiple users for update to the same data.
+	StatusInternalServerError (500) - An unexpected internal server error.
  */
 
 package server
@@ -45,7 +51,8 @@ func clearAll(server *Server, sessionToken *apitypes.SessionToken, values url.Va
 	fmt.Println("clearAll")
 	
 	if ! server.Debug {
-		return apitypes.NewFailureDesc("Not in debug mode - returning from clearAll")
+		return apitypes.NewFailureDesc(
+			"Not in debug mode - returning from clearAll")
 	}
 	
 	// Kill all docker containers:

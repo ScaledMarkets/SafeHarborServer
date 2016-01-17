@@ -133,13 +133,16 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 	server.authService = NewAuthService(config.service,
 		config.AuthServerName, config.AuthPort, certPool, secretSalt)
 	
-	// Connect to database.
-	var redisClient redis.Client
-	var spec *redis.ConnectionSpec =
-		redis.DefaultSpec().Host(config.RedisHost).Port(config.RedisPort).Password(config.RedisPswd)
-	redisClient, err = redis.NewSynchClientWithSpec(spec);
-	if err != nil { AbortStartup(err.Error()) }
-	
+	// Connect to object database (redis).
+	var redisClient redis.Client = nil
+	if ! server.InMemoryOnly {
+		if config.RedisHost == "" { config.RedisHost = config.ipaddr }  // default to same host
+		if config.RedisPort == 0 { config.RedisPort = 6379 }  // default for redis
+		var spec *redis.ConnectionSpec =
+			redis.DefaultSpec().Host(config.RedisHost).Port(config.RedisPort).Password(config.RedisPswd)
+		redisClient, err = redis.NewSynchClientWithSpec(spec);
+		if err != nil { AbortStartup(err.Error()) }
+	}
 	server.dbClient, err = NewInMemClient(server, redisClient)
 	if err != nil { AbortStartup(err.Error()) }
 	
