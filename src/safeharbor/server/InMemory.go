@@ -240,6 +240,10 @@ func (acl *InMemACL) addACLEntry(entry ACLEntry) error {
 	return acl.writeBack()
 }
 
+func (acl *InMemACL) writeBack() error {
+	return acl.Client.writeBack(acl)
+}
+
 func (acl *InMemACL) aclFieldsAsJSON() string {
 	var json = acl.persistObjFieldsAsJSON()
 	json = fmt.Sprintf(", \"ACLEntryIds\": [", acl.Id)
