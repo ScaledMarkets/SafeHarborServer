@@ -199,7 +199,7 @@ func (persObj *InMemPersistObj) releaseLock() {
 }
 
 func (persObj *InMemPersistObj) writeBack() error {
-	return persObj.Client.writeBack(persObj)
+	return persObj.Client.writeBack(PersistObj(persObj))
 }
 
 func (persObj *InMemPersistObj) persistObjFieldsAsJSON() string {
