@@ -254,6 +254,9 @@ func (persist *Persistence) addObject(obj PersistObj) error {
 			fmt.Println(err.Error())
 			debug.PrintStack()
 			return err
+		} else {
+			fmt.Println("Adding object")
+			debug.PrintStack()
 		}
 	}
 	return persist.writeBack(obj)
