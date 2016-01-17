@@ -227,7 +227,7 @@ func (client *InMemClient) NewInMemACL() (*InMemACL, error) {
 		InMemPersistObj: *pers,
 		ACLEntryIds: make([]string, 0),
 	}
-	err = acl.writeBack()
+	err = ACL(acl).writeBack()
 	return acl, err
 }
 
