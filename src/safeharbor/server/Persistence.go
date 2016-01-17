@@ -89,6 +89,7 @@ func (persist *Persistence) resetInMemory() {
  * If the data is not present in the database, it should be created and written out.
  */
 func (persist *Persistence) load() error {
+	fmt.Println("Loading core database state...")
 	var id int64
 	var err error
 	id, err = persist.readUniqueId()
@@ -96,6 +97,7 @@ func (persist *Persistence) load() error {
 	if id != 0 {
 		persist.uniqueId = id
 	}
+	fmt.Println("...completing loading database state.")
 	return nil
 }
 

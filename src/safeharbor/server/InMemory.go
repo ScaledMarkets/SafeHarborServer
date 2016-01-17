@@ -70,7 +70,7 @@ func (client *InMemClient) init() error {
 	
 	client.resetInMemory()
 	var err error = client.load()
-	if err != nil { return err }
+	if err != nil { return errors.New("Unable to load database state: " + err.Error()) }
 	
 	// For testing only:
 	if client.Server.Debug {
