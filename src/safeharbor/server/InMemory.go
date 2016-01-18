@@ -165,7 +165,7 @@ func (client *InMemClient) printDatabase() {
  * name of the object type and the object, or an error. The target is the
  * object that has the NewXYZ method for constructing the object.
  */
-func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
+func GetObject(target interface{}, json string) (string, interface{}, error) {
 	
 	var typeName string
 	var remainder string
@@ -174,7 +174,7 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 	if err != nil { return typeName, nil, err }
 	
 	var methodName = "reconstitute" + typeName
-	var method = reflect.ValueOf(client).MethodByName(methodName)
+	var method = reflect.ValueOf(target).MethodByName(methodName)
 	if err != nil { return typeName, nil, err }
 	if ! method.IsValid() { return typeName, nil, errors.New(
 		"Method " + methodName + " is unknown") }

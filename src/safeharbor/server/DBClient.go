@@ -34,8 +34,6 @@ type DataError interface {
 
 type DBClient interface {
 	
-	GetObject(json string) (string, interface{}, error)
-	
 	dbGetUserByUserId(string) User
 	dbCreateGroup(string, string, string) (Group, error)
 	dbCreateUser(string, string, string, string, string) (User, error)
