@@ -29,7 +29,7 @@ func GetObject(target interface{}, json string) (string, interface{}, error) {
 	typeName, remainder, err = retrieveTypeName(json)
 	if err != nil { return typeName, nil, err }
 	
-	var methodName = "New" + typeName
+	var methodName = "reconstitute" + typeName
 	var method = reflect.ValueOf(target).MethodByName(methodName)
 	if err != nil { return typeName, nil, err }
 	if ! method.IsValid() { return typeName, nil, errors.New(

@@ -65,6 +65,24 @@ type DBClient interface {
 	getRealmsAdministeredByUser(string) ([]string, error)  // those realms for which user can edit the realm
 	init() error
 	resetPersistentState() error
+	
+	//reconstitutePersistObj(string) (PersistObj, error)
+	//reconstituteACL(string, []string) (ACL, error)
+	/*
+	reconstituteGroup() (Group, error)
+	reconstituteUser() (User, error)
+	reconstituteACLEntry() (ACLEntry, error)
+	reconstituteRealm() (Realm, error)
+	reconstituteRepo() (Repo, error)
+	reconstituteDockerfile() (Dockerfile, error)
+	reconstituteDockerImage() (DockerImage, error)
+	reconstitutePerameterValue() (PerameterValue, error)
+	reconstituteScanConfig() (ScanConfig, error)
+	reconstituteFlag() (Flag, error)
+	reconstituteScanEvent() (ScanEvent, error)
+	reconstituteDockerfileExecEvent() (DockerfileExecEvent, error)
+	*/
+	
 	printDatabase()
 }
 

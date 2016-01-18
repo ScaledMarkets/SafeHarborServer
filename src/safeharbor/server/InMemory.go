@@ -164,8 +164,8 @@ func (client *InMemClient) printDatabase() {
  * Base type that is included in each data type as an anonymous field.
  */
 type InMemPersistObj struct {  // abstract
-	Id string
 	Client *InMemClient
+	Id string
 }
 
 var _ PersistObj = &InMemPersistObj{}
@@ -177,8 +177,8 @@ func (client *InMemClient) NewInMemPersistObj() (*InMemPersistObj, error) {
 	id, err = client.createUniqueDbObjectId()
 	if err != nil { return nil, err }
 	var obj *InMemPersistObj = &InMemPersistObj{
-		Id: id,
 		Client: client,
+		Id: id,
 	}
 	return obj, nil
 }
@@ -209,6 +209,13 @@ func (persObj *InMemPersistObj) persistObjFieldsAsJSON() string {
 
 func (persObj *InMemPersistObj) asJSON() string {
 	panic("Call to method that should be abstract")
+}
+
+func (client *InMemClient) reconstitutePersistObj(id string) (*InMemPersistObj, error) {
+	return &InMemPersistObj{
+		Client: client,
+		Id: id,
+	}, nil
 }
 
 /*******************************************************************************
@@ -258,6 +265,18 @@ func (acl *InMemACL) aclFieldsAsJSON() string {
 
 func (acl *InMemACL) asJSON() string {
 	return fmt.Sprintf("\"InMemACL\": {" + acl.aclFieldsAsJSON() + "}")
+}
+
+func (client *InMemClient) reconstituteACL(id string, aclEntryIds []string) (*InMemACL, error) {
+	var persistObj *InMemPersistObj
+	var err error
+	persistObj, err = client.reconstitutePersistObj(id)
+	if err != nil { return nil, err }
+	var acl = &InMemACL{
+		InMemPersistObj: *persistObj,
+		ACLEntryIds: aclEntryIds,
+	}
+	return acl, nil
 }
 
 /*******************************************************************************
@@ -594,6 +613,23 @@ func (resource *InMemResource) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
+func (client *InMemClient) reconstituteResource(id string, aclEntryIds []string,
+	name, desc, parentId string, creationTime time.Time) (*InMemResource, error) {
+
+	var acl *InMemACL
+	var err error
+	acl, err = client.reconstituteACL(id, aclEntryIds)
+	if err != nil { return nil, err }
+	var resource = &InMemResource{
+		InMemACL: *acl,
+		Name: name,
+		Description: desc,
+		ParentId: parentId,
+		CreationTime: creationTime,
+	}
+	return resource, nil
+}
+
 /*******************************************************************************
  * 
  */
@@ -715,6 +751,24 @@ func (party *InMemParty) partyFieldsAsJSON() string {
 
 func (party *InMemParty) asJSON() string {
 	panic("Call to method that should be abstract")
+}
+
+func (client *InMemClient) reconstituteParty(id string, isActive bool,
+	name string, creationTime time.Time, realmId string, aclEntryIds []string) (*InMemParty, error) {
+	
+	var persObj *InMemPersistObj
+	var err error
+	persObj, err = client.reconstitutePersistObj(id)
+	if err != nil { return nil, err }
+	
+	return &InMemParty{
+		InMemPersistObj: *persObj,
+		IsActive: isActive,
+		Name: name,
+		CreationTime: creationTime,
+		RealmId: realmId,
+		ACLEntryIds: aclEntryIds,
+	}, nil
 }
 
 /*******************************************************************************
@@ -879,6 +933,22 @@ func (group *InMemGroup) asJSON() string {
 	}
 	json = json + "}"
 	return json
+}
+
+func (client *InMemClient) reconstituteGroup(id string, isActive bool,
+		name string, creationTime time.Time, realmId string, aclEntryIds []string,
+		desc string, userObjIds []string) (Group, error) {
+	
+	var party *InMemParty
+	var err error
+	party, err = client.reconstituteParty(id, isActive, name, creationTime, realmId, aclEntryIds)
+	if err != nil { return nil, err }
+
+	return &InMemGroup{
+		InMemParty: *party,
+		Description: desc,
+		UserObjIds: userObjIds,
+	}, nil
 }
 
 /*******************************************************************************
@@ -1149,6 +1219,27 @@ func (user *InMemUser) asJSON() string {
 	return json
 }
 
+func (client *InMemClient) reconstituteUser(id string, isActive bool,
+		name string, creationTime time.Time, realmId string, aclEntryIds []string,
+		userId, emailAddr string, pswdHash []byte, groupIds []string,
+		loginAttmpts []string, eventIds []string) (User, error) {
+	
+	var party *InMemParty
+	var err error
+	party, err = client.reconstituteParty(id, isActive, name, creationTime, realmId, aclEntryIds)
+	if err != nil { return nil, err }
+
+	return &InMemUser{
+		InMemParty: *party,
+		UserId: userId,
+		EmailAddress: emailAddr,
+		PasswordHash: pswdHash,
+		GroupIds: groupIds,
+		MostRecentLoginAttempts: loginAttmpts,
+		EventIds: eventIds,
+	}, nil
+}
+
 /*******************************************************************************
  * 
  */
@@ -1277,6 +1368,22 @@ func (entry *InMemACLEntry) asJSON() string {
 	}
 	json = json + "]}"
 	return json
+}
+
+func (client *InMemClient) reconstituteACLEntry(id, resourceId, partyId string,
+	permMask []bool) (ACLEntry, error) {
+
+	var persistObj *InMemPersistObj
+	var err error
+	persistObj, err = client.reconstitutePersistObj(id)
+	if err != nil { return nil, err }
+
+	return &InMemACLEntry{
+		InMemPersistObj: *persistObj,
+		ResourceId: resourceId,
+		PartyId: partyId,
+		PermissionMask: permMask,
+	}, nil
 }
 
 /*******************************************************************************
@@ -1719,6 +1826,28 @@ func (realm *InMemRealm) asJSON() string {
 	return json
 }
 
+func (client *InMemClient) reconstituteRealm(id string, aclEntryIds []string,
+	name, desc, parentId string, creationTime time.Time,
+	adminUserId string, orgFullName string,
+	userObjIds, groupIds, repoIds []string, fileDir string) (Realm, error) {
+
+	var resource *InMemResource
+	var err error
+	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+		creationTime)
+	if err != nil { return nil, err }
+	
+	return &InMemRealm{
+		InMemResource: *resource,
+		AdminUserId: adminUserId,
+		OrgFullName: orgFullName,
+		UserObjIds: userObjIds,
+		GroupIds: groupIds,
+		RepoIds: repoIds,
+		FileDirectory: fileDir,
+	}, nil
+}
+
 /*******************************************************************************
  * 
  */
@@ -1983,6 +2112,26 @@ func (repo *InMemRepo) asJSON() string {
 	return json
 }
 
+func (client *InMemClient) reconstituteRepo(id string, aclEntryIds []string,
+	name, desc, parentId string, creationTime time.Time,
+	dockerfileIds, imageIds, configIds, flagIds []string, fileDir string) (Repo, error) {
+
+	var resource *InMemResource
+	var err error
+	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+		creationTime)
+	if err != nil { return nil, err }
+	
+	return &InMemRepo{
+		InMemResource: *resource,
+		DockerfileIds: dockerfileIds,
+		DockerImageIds: imageIds,
+		ScanConfigIds: configIds,
+		FlagIds: flagIds,
+		FileDirectory: fileDir,
+	}, nil
+}
+
 /*******************************************************************************
  * 
  */
@@ -2112,6 +2261,23 @@ func (dockerfile *InMemDockerfile) asJSON() string {
 	return json
 }
 
+func (client *InMemClient) reconstituteDockerfile(id string, aclEntryIds []string,
+	name, desc, parentId string, creationTime time.Time,
+	filePath string, eventIds []string) (Dockerfile, error) {
+
+	var resource *InMemResource
+	var err error
+	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+		creationTime)
+	if err != nil { return nil, err }
+
+	return &InMemDockerfile{
+		InMemResource: *resource,
+		FilePath: filePath,
+		DockerfileExecEventIds: eventIds,
+	}, nil
+}
+
 /*******************************************************************************
  * 
  */
@@ -2156,6 +2322,20 @@ func (image *InMemImage) imageFieldsAsJSON() string {
 
 func (image *InMemImage) asJSON() string {
 	panic("Call to method that should be abstract")
+}
+
+func (client *InMemClient) reconstituteImage(id string, aclEntryIds []string,
+	name, desc, parentId string, creationTime time.Time) (*InMemImage, error) {
+
+	var resource *InMemResource
+	var err error
+	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+		creationTime)
+	if err != nil { return nil, err }
+
+	return &InMemImage{
+		InMemResource: *resource,
+	}, nil
 }
 
 /*******************************************************************************
@@ -2316,6 +2496,24 @@ func (image *InMemDockerImage) asJSON() string {
 	return json
 }
 
+func (client *InMemClient) reconstituteDockerImage(id string, aclEntryIds []string,
+	name, desc, parentId string, creationTime time.Time,
+	eventIds []string, sig []byte, outFromBld string) (DockerImage, error) {
+
+	var image *InMemImage
+	var err error
+	image, err = client.reconstituteImage(id, aclEntryIds, name, desc, parentId,
+		creationTime)
+	if err != nil { return nil, err }
+	
+	return &InMemDockerImage{
+		InMemImage: *image,
+		ScanEventIds: eventIds,
+		Signature: sig,
+		OutputFromBuild: outFromBld,
+	}, nil
+}
+
 /*******************************************************************************
  * 
  */
@@ -2391,6 +2589,22 @@ func (paramValue *InMemParameterValue) asJSON() string {
 		"\"Name\": \"%s\", \"StringValue\": \"%s\", \"ConfigId\": \"%s\"}",
 		paramValue.Name, paramValue.StringValue, paramValue.ConfigId)
 	return json
+}
+
+func (client *InMemClient) reconstituteParameterValue(id string,
+	name, strval, configId string) (ParameterValue, error) {
+
+	var persistObj *InMemPersistObj
+	var err error
+	persistObj, err = client.reconstitutePersistObj(id)
+	if err != nil { return nil, err }
+	
+	return &InMemParameterValue{
+		InMemPersistObj: *persistObj,
+		Name: name,
+		StringValue: strval,
+		ConfigId: configId,
+	}, nil
 }
 
 /*******************************************************************************
@@ -2664,6 +2878,27 @@ func (scanConfig *InMemScanConfig) asJSON() string {
 	return json
 }
 
+func (client *InMemClient) reconstituteScanConfig(id string, aclEntryIds []string,
+	name, desc, parentId string, creationTime time.Time,
+	successExpr string, providerName string, paramValueIds []string,
+	flagId string, scanEventIds []string) (ScanConfig, error) {
+
+	var resource *InMemResource
+	var err error
+	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+		creationTime)
+	if err != nil { return nil, err }
+
+	return &InMemScanConfig{
+		InMemResource: *resource,
+		SuccessExpression: successExpr,
+		ProviderName: providerName,
+		ParameterValueIds: paramValueIds,
+		FlagId: flagId,
+		ScanEventIds: scanEventIds,
+	}, nil
+}
+
 /*******************************************************************************
  * 
  */
@@ -2779,6 +3014,23 @@ func (flag *InMemFlag) asJSON() string {
 	return json
 }
 
+func (client *InMemClient) reconstituteFlag(id string, aclEntryIds []string,
+	name, desc, parentId string, creationTime time.Time,
+	successImagePath string, usedByScanConfigIds []string) (Flag, error) {
+
+	var resource *InMemResource
+	var err error
+	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+		creationTime)
+	if err != nil { return nil, err }
+
+	return &InMemFlag{
+		InMemResource: *resource,
+		SuccessImagePath: successImagePath,
+		UsedByScanConfigIds: usedByScanConfigIds,
+	}, nil
+}
+
 /*******************************************************************************
  * 
  */
@@ -2834,6 +3086,21 @@ func (event *InMemEvent) eventFieldsAsJSON() string {
 
 func (event *InMemEvent) asJSON() string {
 	panic("Call to method that should be abstract")
+}
+
+func (client *InMemClient) reconstituteEvent(id string, when time.Time,
+	userObjId string) (*InMemEvent, error) {
+
+	var persistObj *InMemPersistObj
+	var err error
+	persistObj, err = client.reconstitutePersistObj(id)
+	if err != nil { return nil, err }
+	
+	return &InMemEvent{
+		InMemPersistObj: *persistObj,
+		When: when,
+		UserObjId: userObjId,
+	}, nil
 }
 
 /*******************************************************************************
@@ -3012,6 +3279,25 @@ func (event *InMemScanEvent) asJSON() string {
 	return json
 }
 
+func (client *InMemClient) reconstituteScanEvent(id string, when time.Time,
+	userObjId string, scanConfigId, dockerImageId, providerName string,
+	actParamValueIds []string, score string) (ScanEvent, error) {
+
+	var event *InMemEvent
+	var err error
+	event, err = client.reconstituteEvent(id, when, userObjId)
+	if err != nil { return nil, err }
+	
+	return &InMemScanEvent{
+		InMemEvent: *event,
+		ScanConfigId: scanConfigId,
+		DockerImageId: dockerImageId,
+		ProviderName: providerName,
+		ActualParameterValueIds: actParamValueIds,
+		Score: score,
+	}, nil
+}
+
 /*******************************************************************************
  * 
  */
@@ -3040,6 +3326,20 @@ func (event *InMemImageCreationEvent) imageCreationEventFieldsAsJSON() string {
 
 func (event *InMemImageCreationEvent) asJSON() string {
 	panic("Call to method that should be abstract")
+}
+
+func (client *InMemClient) reconstituteImageCreationEvent(id string, when time.Time,
+	userObjId string, imageId string) (*InMemImageCreationEvent, error) {
+	
+	var event *InMemEvent
+	var err error
+	event, err = client.reconstituteEvent(id, when, userObjId)
+	if err != nil { return nil, err }
+	
+	return &InMemImageCreationEvent{
+		InMemEvent: *event,
+		ImageId: imageId,
+	}, nil
 }
 
 /*******************************************************************************
@@ -3118,4 +3418,19 @@ func (event *InMemDockerfileExecEvent) asJSON() string {
 		", \"DockerfileId\": \"%s\", \"DockerfileExternalObjId\": \"%s\"}",
 		event.DockerfileId, event.DockerfileExternalObjId)
 	return json
+}
+
+func (client *InMemClient) reconstituteDockerfileExecEvent(id string, when time.Time,
+	userObjId, imageId, dockerfileId, extObjId string) (DockerfileExecEvent, error) {
+
+	var imgCrEvent *InMemImageCreationEvent
+	var err error
+	imgCrEvent, err = client.reconstituteImageCreationEvent(id, when, userObjId, imageId)
+	if err != nil { return nil, err }
+	
+	return &InMemDockerfileExecEvent{
+		InMemImageCreationEvent: *imgCrEvent,
+		DockerfileId: dockerfileId,
+		DockerfileExternalObjId: extObjId,
+	}, nil
 }
