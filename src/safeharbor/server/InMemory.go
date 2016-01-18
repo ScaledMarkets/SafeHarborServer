@@ -168,6 +168,13 @@ func (client *InMemClient) printDatabase() {
 func GetObject(target interface{}, json string) (string, interface{}, error) {
 	
 	fmt.Println("target is a " + reflect.TypeOf(target).String())
+	//var client *InMemClient
+	var isType bool
+	_, isType = target.(*InMemClient)
+	if ! isType {
+		fmt.Println("Shit")
+		return "", nil, errors.New("Not a *InMemClient")
+	}
 	
 	var typeName string
 	var remainder string
