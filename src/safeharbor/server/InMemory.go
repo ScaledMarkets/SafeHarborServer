@@ -173,7 +173,7 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 	typeName, remainder, err = retrieveTypeName(json)
 	if err != nil { return typeName, nil, err }
 	
-	var methodName = "reconstitute" + typeName
+	var methodName = "Reconstitute" + typeName
 	var method = reflect.ValueOf(client).MethodByName(methodName)
 	if err != nil { return typeName, nil, err }
 	if ! method.IsValid() { return typeName, nil, errors.New(
@@ -277,7 +277,7 @@ func (persObj *InMemPersistObj) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
-func (client *InMemClient) reconstitutePersistObj(id string) (*InMemPersistObj, error) {
+func (client *InMemClient) ReconstitutePersistObj(id string) (*InMemPersistObj, error) {
 	return &InMemPersistObj{
 		Client: client,
 		Id: id,
@@ -333,10 +333,10 @@ func (acl *InMemACL) asJSON() string {
 	return fmt.Sprintf("\"InMemACL\": {" + acl.aclFieldsAsJSON() + "}")
 }
 
-func (client *InMemClient) reconstituteACL(id string, aclEntryIds []string) (*InMemACL, error) {
+func (client *InMemClient) ReconstituteACL(id string, aclEntryIds []string) (*InMemACL, error) {
 	var persistObj *InMemPersistObj
 	var err error
-	persistObj, err = client.reconstitutePersistObj(id)
+	persistObj, err = client.ReconstitutePersistObj(id)
 	if err != nil { return nil, err }
 	var acl = &InMemACL{
 		InMemPersistObj: *persistObj,
@@ -679,12 +679,12 @@ func (resource *InMemResource) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
-func (client *InMemClient) reconstituteResource(id string, aclEntryIds []string,
+func (client *InMemClient) ReconstituteResource(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time) (*InMemResource, error) {
 
 	var acl *InMemACL
 	var err error
-	acl, err = client.reconstituteACL(id, aclEntryIds)
+	acl, err = client.ReconstituteACL(id, aclEntryIds)
 	if err != nil { return nil, err }
 	var resource = &InMemResource{
 		InMemACL: *acl,
@@ -819,12 +819,12 @@ func (party *InMemParty) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
-func (client *InMemClient) reconstituteParty(id string, isActive bool,
+func (client *InMemClient) ReconstituteParty(id string, isActive bool,
 	name string, creationTime time.Time, realmId string, aclEntryIds []string) (*InMemParty, error) {
 	
 	var persObj *InMemPersistObj
 	var err error
-	persObj, err = client.reconstitutePersistObj(id)
+	persObj, err = client.ReconstitutePersistObj(id)
 	if err != nil { return nil, err }
 	
 	return &InMemParty{
@@ -1001,13 +1001,13 @@ func (group *InMemGroup) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteGroup(id string, isActive bool,
+func (client *InMemClient) ReconstituteGroup(id string, isActive bool,
 		name string, creationTime time.Time, realmId string, aclEntryIds []string,
 		desc string, userObjIds []string) (Group, error) {
 	
 	var party *InMemParty
 	var err error
-	party, err = client.reconstituteParty(id, isActive, name, creationTime, realmId, aclEntryIds)
+	party, err = client.ReconstituteParty(id, isActive, name, creationTime, realmId, aclEntryIds)
 	if err != nil { return nil, err }
 
 	return &InMemGroup{
@@ -1285,14 +1285,14 @@ func (user *InMemUser) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteUser(id string, isActive bool,
+func (client *InMemClient) ReconstituteUser(id string, isActive bool,
 		name string, creationTime time.Time, realmId string, aclEntryIds []string,
 		userId, emailAddr string, pswdHash []byte, groupIds []string,
 		loginAttmpts []string, eventIds []string) (User, error) {
 	
 	var party *InMemParty
 	var err error
-	party, err = client.reconstituteParty(id, isActive, name, creationTime, realmId, aclEntryIds)
+	party, err = client.ReconstituteParty(id, isActive, name, creationTime, realmId, aclEntryIds)
 	if err != nil { return nil, err }
 
 	return &InMemUser{
@@ -1436,12 +1436,12 @@ func (entry *InMemACLEntry) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteACLEntry(id, resourceId, partyId string,
+func (client *InMemClient) ReconstituteACLEntry(id, resourceId, partyId string,
 	permMask []bool) (ACLEntry, error) {
 
 	var persistObj *InMemPersistObj
 	var err error
-	persistObj, err = client.reconstitutePersistObj(id)
+	persistObj, err = client.ReconstitutePersistObj(id)
 	if err != nil { return nil, err }
 
 	return &InMemACLEntry{
@@ -1892,14 +1892,14 @@ func (realm *InMemRealm) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteRealm(id string, aclEntryIds []string,
+func (client *InMemClient) ReconstituteRealm(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
 	adminUserId string, orgFullName string,
 	userObjIds, groupIds, repoIds []string, fileDir string) (Realm, error) {
 
 	var resource *InMemResource
 	var err error
-	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+	resource, err = client.ReconstituteResource(id, aclEntryIds, name, desc, parentId,
 		creationTime)
 	if err != nil { return nil, err }
 	
@@ -2178,13 +2178,13 @@ func (repo *InMemRepo) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteRepo(id string, aclEntryIds []string,
+func (client *InMemClient) ReconstituteRepo(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
 	dockerfileIds, imageIds, configIds, flagIds []string, fileDir string) (Repo, error) {
 
 	var resource *InMemResource
 	var err error
-	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+	resource, err = client.ReconstituteResource(id, aclEntryIds, name, desc, parentId,
 		creationTime)
 	if err != nil { return nil, err }
 	
@@ -2327,13 +2327,13 @@ func (dockerfile *InMemDockerfile) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteDockerfile(id string, aclEntryIds []string,
+func (client *InMemClient) ReconstituteDockerfile(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
 	filePath string, eventIds []string) (Dockerfile, error) {
 
 	var resource *InMemResource
 	var err error
-	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+	resource, err = client.ReconstituteResource(id, aclEntryIds, name, desc, parentId,
 		creationTime)
 	if err != nil { return nil, err }
 
@@ -2390,12 +2390,12 @@ func (image *InMemImage) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
-func (client *InMemClient) reconstituteImage(id string, aclEntryIds []string,
+func (client *InMemClient) ReconstituteImage(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time) (*InMemImage, error) {
 
 	var resource *InMemResource
 	var err error
-	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+	resource, err = client.ReconstituteResource(id, aclEntryIds, name, desc, parentId,
 		creationTime)
 	if err != nil { return nil, err }
 
@@ -2562,13 +2562,13 @@ func (image *InMemDockerImage) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteDockerImage(id string, aclEntryIds []string,
+func (client *InMemClient) ReconstituteDockerImage(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
 	eventIds []string, sig []byte, outFromBld string) (DockerImage, error) {
 
 	var image *InMemImage
 	var err error
-	image, err = client.reconstituteImage(id, aclEntryIds, name, desc, parentId,
+	image, err = client.ReconstituteImage(id, aclEntryIds, name, desc, parentId,
 		creationTime)
 	if err != nil { return nil, err }
 	
@@ -2657,12 +2657,12 @@ func (paramValue *InMemParameterValue) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteParameterValue(id string,
+func (client *InMemClient) ReconstituteParameterValue(id string,
 	name, strval, configId string) (ParameterValue, error) {
 
 	var persistObj *InMemPersistObj
 	var err error
-	persistObj, err = client.reconstitutePersistObj(id)
+	persistObj, err = client.ReconstitutePersistObj(id)
 	if err != nil { return nil, err }
 	
 	return &InMemParameterValue{
@@ -2944,14 +2944,14 @@ func (scanConfig *InMemScanConfig) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteScanConfig(id string, aclEntryIds []string,
+func (client *InMemClient) ReconstituteScanConfig(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
 	successExpr string, providerName string, paramValueIds []string,
 	flagId string, scanEventIds []string) (ScanConfig, error) {
 
 	var resource *InMemResource
 	var err error
-	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+	resource, err = client.ReconstituteResource(id, aclEntryIds, name, desc, parentId,
 		creationTime)
 	if err != nil { return nil, err }
 
@@ -3080,13 +3080,13 @@ func (flag *InMemFlag) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteFlag(id string, aclEntryIds []string,
+func (client *InMemClient) ReconstituteFlag(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
 	successImagePath string, usedByScanConfigIds []string) (Flag, error) {
 
 	var resource *InMemResource
 	var err error
-	resource, err = client.reconstituteResource(id, aclEntryIds, name, desc, parentId,
+	resource, err = client.ReconstituteResource(id, aclEntryIds, name, desc, parentId,
 		creationTime)
 	if err != nil { return nil, err }
 
@@ -3154,12 +3154,12 @@ func (event *InMemEvent) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
-func (client *InMemClient) reconstituteEvent(id string, when time.Time,
+func (client *InMemClient) ReconstituteEvent(id string, when time.Time,
 	userObjId string) (*InMemEvent, error) {
 
 	var persistObj *InMemPersistObj
 	var err error
-	persistObj, err = client.reconstitutePersistObj(id)
+	persistObj, err = client.ReconstitutePersistObj(id)
 	if err != nil { return nil, err }
 	
 	return &InMemEvent{
@@ -3345,13 +3345,13 @@ func (event *InMemScanEvent) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteScanEvent(id string, when time.Time,
+func (client *InMemClient) ReconstituteScanEvent(id string, when time.Time,
 	userObjId string, scanConfigId, dockerImageId, providerName string,
 	actParamValueIds []string, score string) (ScanEvent, error) {
 
 	var event *InMemEvent
 	var err error
-	event, err = client.reconstituteEvent(id, when, userObjId)
+	event, err = client.ReconstituteEvent(id, when, userObjId)
 	if err != nil { return nil, err }
 	
 	return &InMemScanEvent{
@@ -3394,12 +3394,12 @@ func (event *InMemImageCreationEvent) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
-func (client *InMemClient) reconstituteImageCreationEvent(id string, when time.Time,
+func (client *InMemClient) ReconstituteImageCreationEvent(id string, when time.Time,
 	userObjId string, imageId string) (*InMemImageCreationEvent, error) {
 	
 	var event *InMemEvent
 	var err error
-	event, err = client.reconstituteEvent(id, when, userObjId)
+	event, err = client.ReconstituteEvent(id, when, userObjId)
 	if err != nil { return nil, err }
 	
 	return &InMemImageCreationEvent{
@@ -3486,12 +3486,12 @@ func (event *InMemDockerfileExecEvent) asJSON() string {
 	return json
 }
 
-func (client *InMemClient) reconstituteDockerfileExecEvent(id string, when time.Time,
+func (client *InMemClient) ReconstituteDockerfileExecEvent(id string, when time.Time,
 	userObjId, imageId, dockerfileId, extObjId string) (DockerfileExecEvent, error) {
 
 	var imgCrEvent *InMemImageCreationEvent
 	var err error
-	imgCrEvent, err = client.reconstituteImageCreationEvent(id, when, userObjId, imageId)
+	imgCrEvent, err = client.ReconstituteImageCreationEvent(id, when, userObjId, imageId)
 	if err != nil { return nil, err }
 	
 	return &InMemDockerfileExecEvent{
