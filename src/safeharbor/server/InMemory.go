@@ -171,6 +171,9 @@ type InMemPersistObj struct {  // abstract
 var _ PersistObj = &InMemPersistObj{}
 
 func (client *InMemClient) NewInMemPersistObj() (*InMemPersistObj, error) {
+	
+	fmt.Println("Creating persistent object")
+	
 	var id string
 	var err error
 	id, err = client.createUniqueDbObjectId()
