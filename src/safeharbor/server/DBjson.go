@@ -18,38 +18,6 @@ import (
 )
 
 /*******************************************************************************
- * Construct an object as defined by the specified JSON string. Returns the
- * name of the object type and the object, or an error. The target is the
- * object that has the NewXYZ method for constructing the object.
- */
-func GetObject(target interface{}, json string) (string, interface{}, error) {
-	var typeName string
-	var remainder string
-	var err error
-	typeName, remainder, err = retrieveTypeName(json)
-	if err != nil { return typeName, nil, err }
-	
-	var methodName = "reconstitute" + typeName
-	var method = reflect.ValueOf(target).MethodByName(methodName)
-	if err != nil { return typeName, nil, err }
-	if ! method.IsValid() { return typeName, nil, errors.New(
-		"Method " + methodName + " is unknown") }
-	
-	var argAr []reflect.Value
-	argAr, err = parseJSON(remainder)
-	if err != nil { return typeName, nil, err }
-	fmt.Println("argAr has " + fmt.Sprintf("%d", len(argAr)) + " elements")
-
-	for i, arg := range argAr {
-		if ! arg.IsValid() { fmt.Println(fmt.Sprintf("arg %d is a zero value", i)) }
-	}
-	
-	var retValues []reflect.Value = method.Call(argAr)
-	var retValue0 interface{} = retValues[0].Interface()
-	return typeName, retValue0, nil
-}
-
-/*******************************************************************************
  * Retrieve the type name that precedes the JSON string. It is in the format,
  *	"type-name" : <json-string>
  * or, as BNF,

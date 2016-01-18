@@ -164,7 +164,7 @@ func (persist *Persistence) getPersistentObject(id string) (PersistObj, error) {
 		if err != nil { return nil, err }
 		
 		var obj interface{}
-		_, obj, err = GetObject(persist, string(bytes))
+		_, obj, err = persist.GetObject(string(bytes))
 		if err != nil { return nil, err }
 		
 		var persistObj PersistObj
@@ -325,4 +325,8 @@ func (persist *Persistence) addUser(user User) error {
 		if ! added { return errors.New("Unable to add user " + user.getName()) }
 		return nil
 	}
+}
+
+func (persist *Persistence) GetObject(json string) (string, interface{}, error) {
+	panic("Calling abostract method")
 }
