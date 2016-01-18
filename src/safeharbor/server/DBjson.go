@@ -362,7 +362,7 @@ func parseJSON_string_value(json string, pos *int) (reflect.Value, error) {
 		if p == -1 {  // no more double quotes in the json
 			break
 		} else {  // found a double quote - now see if it is escaped
-			var decodedStr = rest.DecodeStringFromJSON(json[0:p+1])
+			var decodedStr = rest.DecodeStringFromJSON(json[startPos:startPos+p+1])
 			var p2 = strings.Index(decodedStr, "\"")
 			if p2 == -1 {  // the double quote was escaped - skip past it
 				startPos += (p+1)
@@ -373,7 +373,7 @@ func parseJSON_string_value(json string, pos *int) (reflect.Value, error) {
 			}
 		}
 	}
-		
+	
 	if posOfNextDblQuote == -1 { return value, parseJSON_syntaxError(json, pos,
 		"While looking for a string value") }
 	
