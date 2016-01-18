@@ -83,7 +83,7 @@ func retrieveTypeName(json string) (typeName string, remainder string, err error
 	field_name		::= <char_seq>
 	value			::= array_value | simple_value
 	comma_field		::= ','  field  [ comma_field ]
-	array_value		::= '['  value  [ comma_value ]  ']'
+	array_value		::= '['  [ value  [ comma_value ] ]  ']'
 	comma_value		::= ','  value  [ comma_value ]
 	simple_value	::= number | string_value | bool_value | time_value
 	string_value	::= '"' (no spaces assumed) <char_seq> (no spaces assumed) '"'
@@ -237,6 +237,14 @@ func parseJSON_array_value(json string, pos *int) (reflect.Value, error) {
 	if token != "[" {
 		parseJSON_pushTokenBack(token, pos)
 		return value, nil
+	}
+	
+	token = parseJSON_findNextToken(json, pos)
+	if token == "]" { // no elements in array
+		value = reflect.ValueOf(make([]interface{}, 0))
+		return value, nil
+	} else {
+		parseJSON_pushTokenBack(token, pos)
 	}
 	
 	var err error
