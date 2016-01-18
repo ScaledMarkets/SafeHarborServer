@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"errors"
 	"strconv"
-	//"reflect"
+	"reflect"
 	//"os"
 	//"time"
 	//"runtime/debug"	
@@ -164,7 +164,8 @@ func (persist *Persistence) getPersistentObject(id string) (PersistObj, error) {
 		if err != nil { return nil, err }
 		
 		var obj interface{}
-		_, obj, err = persist.GetObject(string(bytes))
+		var damedThing *Persistence = reflect.ValueOf(persist).Interface().(*Persistence)
+		_, obj, err = damedThing.GetObject(string(bytes))
 		if err != nil { return nil, err }
 		
 		var persistObj PersistObj
@@ -328,5 +329,5 @@ func (persist *Persistence) addUser(user User) error {
 }
 
 func (persist *Persistence) GetObject(json string) (string, interface{}, error) {
-	panic("Calling abostract method")
+	panic("Calling abstract method")
 }
