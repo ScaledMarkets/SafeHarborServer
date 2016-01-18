@@ -165,16 +165,7 @@ func (client *InMemClient) printDatabase() {
  * name of the object type and the object, or an error. The target is the
  * object that has the NewXYZ method for constructing the object.
  */
-func GetObject(target interface{}, json string) (string, interface{}, error) {
-	
-	fmt.Println("target is a " + reflect.TypeOf(target).String())
-	//var client *InMemClient
-	var isType bool
-	_, isType = target.(*InMemClient)
-	if ! isType {
-		fmt.Println("Shit")
-		return "", nil, errors.New("Not a *InMemClient")
-	}
+func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 	
 	var typeName string
 	var remainder string
@@ -183,7 +174,7 @@ func GetObject(target interface{}, json string) (string, interface{}, error) {
 	if err != nil { return typeName, nil, err }
 	
 	var methodName = "reconstitute" + typeName
-	var method = reflect.ValueOf(target).MethodByName(methodName)
+	var method = reflect.ValueOf(client).MethodByName(methodName)
 	if err != nil { return typeName, nil, err }
 	if ! method.IsValid() { return typeName, nil, errors.New(
 		"Method " + methodName + " is unknown") }
@@ -200,6 +191,39 @@ func GetObject(target interface{}, json string) (string, interface{}, error) {
 	var retValues []reflect.Value = method.Call(argAr)
 	var retValue0 interface{} = retValues[0].Interface()
 	return typeName, retValue0, nil
+}
+
+/*******************************************************************************
+ * Return the persistent object that is identified by the specified unique id.
+ * An object''s Id is assigned to it by the function that creates the object.
+ */
+func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
+
+	if client.InMemoryOnly {
+		return client.allObjects[id], nil
+	} else {
+		// Read JSON from the database, using the id as the key; then deserialize
+		// (unmarshall) the JSON into an object. The outermost JSON object will be
+		// a field name - that field name is the name of the go object type; reflection
+		// will be used to identify the go type, and set the fields in the type using
+		// values from the hashmap that is built by the unmarshalling.
+		
+		var bytes []byte
+		var err error
+		bytes, err = client.RedisClient.Get("obj/" + id)
+		if err != nil { return nil, err }
+		
+		var obj interface{}
+		_, obj, err = client.GetObject(string(bytes))
+		if err != nil { return nil, err }
+		
+		var persistObj PersistObj
+		var isType bool
+		persistObj, isType = obj.(PersistObj)
+		if ! isType { return nil, errors.New("Object is not a PersistObj") }
+		
+		return persistObj, nil
+	}
 }
 
 /*******************************************************************************

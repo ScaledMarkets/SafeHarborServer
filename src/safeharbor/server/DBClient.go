@@ -48,7 +48,7 @@ type DBClient interface {
 	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
 	dbDeactivateRealm(realmId string) error
 	dbGetAllRealmIds() ([]string, error)
-	getPersistentObject(id string) (PersistObj, error)
+	//getPersistentObject(id string) (PersistObj, error)
 	getResource(string) (Resource, error)
 	getParty(string) (Party, error)
 	getGroup(string) (Group, error)

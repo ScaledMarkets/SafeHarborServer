@@ -144,39 +144,6 @@ func (persist *Persistence) readUniqueId() (int64, error) {
 }
 
 /*******************************************************************************
- * Return the persistent object that is identified by the specified unique id.
- * An object''s Id is assigned to it by the function that creates the object.
- */
-func (persist *Persistence) getPersistentObject(id string) (PersistObj, error) {
-
-	if persist.InMemoryOnly {
-		return persist.allObjects[id], nil
-	} else {
-		// Read JSON from the database, using the id as the key; then deserialize
-		// (unmarshall) the JSON into an object. The outermost JSON object will be
-		// a field name - that field name is the name of the go object type; reflection
-		// will be used to identify the go type, and set the fields in the type using
-		// values from the hashmap that is built by the unmarshalling.
-		
-		var bytes []byte
-		var err error
-		bytes, err = persist.RedisClient.Get("obj/" + id)
-		if err != nil { return nil, err }
-		
-		var obj interface{}
-		_, obj, err = GetObject(persist, string(bytes))
-		if err != nil { return nil, err }
-		
-		var persistObj PersistObj
-		var isType bool
-		persistObj, isType = obj.(PersistObj)
-		if ! isType { return nil, errors.New("Object is not a PersistObj") }
-		
-		return persistObj, nil
-	}
-}
-
-/*******************************************************************************
  * Flush an object''s state to the database.
  */
 func (persist *Persistence) writeBack(obj PersistObj) error {
