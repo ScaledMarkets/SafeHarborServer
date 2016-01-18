@@ -80,13 +80,13 @@ func retrieveTypeName(json string) (typeName string, remainder string, err error
  * BNF of JSON syntax:
 	obj_value		::= '{'  field  [ comma_field ]  '}'
 	field			::=	'"' (no spaces) field_name (no spaces) '"'  ':'  value
-	field_name		::= <char_seq>
+	field_name		::= <char>+
 	value			::= array_value | simple_value
 	comma_field		::= ','  field  [ comma_field ]
 	array_value		::= '['  [ value  [ comma_value ] ]  ']'
 	comma_value		::= ','  value  [ comma_value ]
 	simple_value	::= number | string_value | bool_value | time_value
-	string_value	::= '"' (no spaces assumed) <char_seq> (no spaces assumed) '"'
+	string_value	::= '"' <char>* '"'
 	bool_value		::= 'true' | 'false'
 	time_value		::= 'time' '"' <char_seq in time format> '"'
  */
@@ -406,12 +406,19 @@ func parseJSON_time_value(json string, pos *int) (reflect.Value, error) {
 		return value, nil
 	}
 	
-	var posOfNextDblQuote = strings.Index(json[*pos:], "\"")
-	if posOfNextDblQuote == -1 { return value, parseJSON_syntaxError(json, pos,
+	var posOfFirstDblQuote = strings.Index(json[*pos:], "\"")  // relative to *pos
+	if posOfFirstDblQuote == -1 { return value, parseJSON_syntaxError(json, pos,
 		"While looking for a time value") }
 	
-	var startPos = *pos
-	var strval = json[startPos: *pos]
+	posOfFirstDblQuote += *pos
+	
+	var posOfSecondDblQuote = strings.Index(json[posOfFirstDblQuote+1:], "\"")
+	if posOfSecondDblQuote == -1 { return value, parseJSON_syntaxError(json, pos,
+		"While looking for a time value") }
+	
+	posOfSecondDblQuote += (posOfFirstDblQuote+1)
+	
+	var strval = json[posOfFirstDblQuote: posOfSecondDblQuote+1]
 	
 	var t time.Time
 	var err error
@@ -420,7 +427,7 @@ func parseJSON_time_value(json string, pos *int) (reflect.Value, error) {
 		"While looking for a time value") }
 	value = reflect.ValueOf(t)
 
-	*pos = posOfNextDblQuote+1
+	*pos = posOfSecondDblQuote+1
 	return value, nil
 }
 
