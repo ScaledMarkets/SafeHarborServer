@@ -38,6 +38,10 @@ func GetObject(target interface{}, json string) (string, interface{}, error) {
 	if err != nil { return typeName, nil, err }
 	fmt.Println("argAr has " + fmt.Sprintf("%d", len(argAr)) + " elements")
 
+	for i, arg := range argAr {
+		if ! arg.IsValid() { fmt.Println(fmt.Sprintf("arg %d is a zero value", i)) }
+	}
+	
 	var retValues []reflect.Value = method.Call(argAr)
 	var retValue0 interface{} = retValues[0].Interface()
 	return typeName, retValue0, nil
