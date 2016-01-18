@@ -186,7 +186,7 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 
 	for i, arg := range argAr {
 		if ! arg.IsValid() { fmt.Println(fmt.Sprintf("arg %d is a zero value", i)) }
-		fmt.Println(fmt.Sprintf("\tArg %d is a %s", i, reflect.TypeOf(arg).String()))
+		fmt.Println(fmt.Sprintf("\tArg %d is a %s", i, arg.Type().String()))
 	}
 	
 	var retValues []reflect.Value = method.Call(argAr)
