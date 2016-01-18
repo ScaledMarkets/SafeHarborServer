@@ -15,7 +15,7 @@ import (
 	//"reflect"
 	//"os"
 	//"time"
-	"runtime/debug"	
+	//"runtime/debug"	
 	
 	"redis"
 	
@@ -245,25 +245,6 @@ func (persist *Persistence) addObject(obj PersistObj) error {
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = obj
 	} else {
-		var exists bool
-		var err error
-		exists, err = persist.RedisClient.Exists("obj/" + obj.getId())
-		if err != nil { return err }
-		if exists {
-			err = errors.New("Object with Id " + obj.getId() + " already exists")
-			fmt.Println(err.Error())
-			var bytes []byte
-			var err2 error
-			bytes, err2 = persist.RedisClient.Get("obj/" + obj.getId())
-			if err2 != nil { fmt.Println(err2.Error()) } else {
-				fmt.Println("Its json is: " + string(bytes))
-			}
-			debug.PrintStack()
-			return err
-		} else {
-			fmt.Println("Adding object")
-			debug.PrintStack()
-		}
 	}
 	return persist.writeBack(obj)
 }
