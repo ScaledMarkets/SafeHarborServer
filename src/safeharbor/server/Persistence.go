@@ -252,6 +252,12 @@ func (persist *Persistence) addObject(obj PersistObj) error {
 		if exists {
 			err = errors.New("Object with Id " + obj.getId() + " already exists")
 			fmt.Println(err.Error())
+			var bytes []byte
+			var err2 error
+			bytes, err2 = persist.RedisClient.Get("obj/" + obj.getId())
+			if err2 != nil { fmt.Println(err2.Error()) } else {
+				fmt.Println("Its json is: " + string(bytes))
+			}
 			debug.PrintStack()
 			return err
 		} else {
