@@ -130,7 +130,7 @@ func parseJSON_obj_value(json string, pos *int) ([]reflect.Value, error) {
 	}
 	
 	token = parseJSON_findNextToken(json, pos)
-	if token != "}" { return values, parseJSON_tokenError(token, pos,
+	if token != "}" { return values, parseJSON_tokenError(token, json, pos,
 		"while looking for object terminator") }
 	
 	return values, nil
@@ -152,21 +152,21 @@ func parseJSON_field(json string, pos *int) (string, reflect.Value, error) {
 	var err error
 	fieldName, err = parseJSON_field_name(json, pos)
 	if err != nil { return "", value, err }
-	if fieldName == "" { return "", value, parseJSON_syntaxError(pos,
+	if fieldName == "" { return "", value, parseJSON_syntaxError(json, pos,
 		"Did not find field name") }
 	
 	token = parseJSON_findNextToken(json, pos)
 	if token != "\"" { return fieldName, value, parseJSON_tokenError(
-		token, pos, "while looking for \" following a field name") }
+		token, json, pos, "while looking for \" following a field name") }
 	
 	token = parseJSON_findNextToken(json, pos)
 	if token != ":" { return fieldName, value, parseJSON_tokenError(
-		token, pos, "while looking for colon following a field name") }
+		token, json, pos, "while looking for colon following a field name") }
 	
 	value, err = parseJSON_value(json, pos)
 	if err != nil { return fieldName, value, err }
 	if ! value.IsValid() { return fieldName, value, parseJSON_tokenError(
-		token, pos, "while looking for object field value") }
+		token, json, pos, "while looking for object field value") }
 	
 	return fieldName, value, nil
 }
@@ -260,7 +260,7 @@ func parseJSON_array_value(json string, pos *int) (reflect.Value, error) {
 	}
 	
 	token = parseJSON_findNextToken(json, pos)
-	if token != "]" { return slice, parseJSON_tokenError(token, pos,
+	if token != "]" { return slice, parseJSON_tokenError(token, json, pos,
 		"while looking for array value") }
 	
 	return slice, nil
@@ -286,7 +286,7 @@ func parseJSON_simple_value(json string, pos *int) (reflect.Value, error ) {
 	if err != nil { return value, err }
 	if value.IsValid() { return value, nil }
 	
-	return value, parseJSON_syntaxError(pos, "While looking for simple value")
+	return value, parseJSON_syntaxError(json, pos, "While looking for simple value")
 }
 
 func parseJSON_comma_value(json string, pos *int,
@@ -366,7 +366,7 @@ func parseJSON_string_value(json string, pos *int) (reflect.Value, error) {
 		}
 	}
 		
-	if posOfNextDblQuote == -1 { return value, parseJSON_syntaxError(pos,
+	if posOfNextDblQuote == -1 { return value, parseJSON_syntaxError(json, pos,
 		"While looking for a string value") }
 	
 	*pos = posOfNextDblQuote
@@ -399,7 +399,7 @@ func parseJSON_time_value(json string, pos *int) (reflect.Value, error) {
 	}
 	
 	var posOfNextDblQuote = strings.Index(json[*pos:], "\"")
-	if posOfNextDblQuote == -1 { return value, parseJSON_syntaxError(pos,
+	if posOfNextDblQuote == -1 { return value, parseJSON_syntaxError(json, pos,
 		"While looking for a time value") }
 	
 	var startPos = *pos
@@ -408,7 +408,7 @@ func parseJSON_time_value(json string, pos *int) (reflect.Value, error) {
 	var t time.Time
 	var err error
 	err = t.UnmarshalJSON([]byte(strval)) // scan the time value from strval
-	if err != nil { return value, parseJSON_syntaxError(pos,
+	if err != nil { return value, parseJSON_syntaxError(json, pos,
 		"While looking for a time value") }
 	value = reflect.ValueOf(t)
 
@@ -456,17 +456,18 @@ func parseJSON_pushTokenBack(token string, pos *int) {
 	*pos = *pos - len(token)
 }
 
-func parseJSON_syntaxError(pos *int, msg string) error {
-	var err = errors.New(fmt.Sprintf("%s: at char no. %d", msg, (*pos + 1)))
+func parseJSON_syntaxError(json string, pos *int, msg string) error {
+	var err = errors.New(fmt.Sprintf("%s: at char no. %d, json=%s",
+		msg, (*pos + 1), json))
 	fmt.Println(err.Error())
 	debug.PrintStack()
 	return err
 }
 
-func parseJSON_tokenError(token string, pos *int, msg string) error {
+func parseJSON_tokenError(token string, json string, pos *int, msg string) error {
 	parseJSON_pushTokenBack(token, pos)
-	var err = errors.New(fmt.Sprintf("Syntax error at char no. %d: %s %s",
-		(*pos + 1), token, msg))
+	var err = errors.New(fmt.Sprintf("Syntax error at char no. %d: %s %s, json=%s",
+		(*pos + 1), token, msg, json))
 	fmt.Println(err.Error())
 	debug.PrintStack()
 	return err
