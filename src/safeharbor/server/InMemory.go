@@ -246,7 +246,7 @@ func (acl *InMemACL) writeBack() error {
 
 func (acl *InMemACL) aclFieldsAsJSON() string {
 	var json = acl.persistObjFieldsAsJSON()
-	json = fmt.Sprintf(", \"ACLEntryIds\": [", acl.Id)
+	json = json + ", \"ACLEntryIds\": ["
 	for i, entryId := range acl.ACLEntryIds {
 		if i != 0 { json = json + ", " }
 		json = json + fmt.Sprintf("\"%s\"", entryId)
