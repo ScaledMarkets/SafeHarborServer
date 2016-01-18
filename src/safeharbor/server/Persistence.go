@@ -94,7 +94,10 @@ func (persist *Persistence) load() error {
 	var err error
 	id, err = persist.readUniqueId()  // returns 0 if database is "virgin"
 	if err != nil { return err }
-	if id != 0 {
+	if id == 0 {
+		err = persist.RedisClient.Set("UniqueId", []byte(fmt.Sprintf("%d", persist.uniqueId)))
+		if err != nil { return err }
+	} else {
 		persist.uniqueId = id
 	}
 	fmt.Println("...completing loading database state.")
