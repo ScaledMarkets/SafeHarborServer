@@ -202,8 +202,8 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 		// Check that arg types match.
 		if ! actArg.Type().AssignableTo(methodType.In(i)) {
 			return typeName, nil, errors.New("Type of actual arg, " +
-				actArg.Type().Name() + ", is not assignable to the required type, " +
-				methodType.In(i).Name())
+				actArg.Type().String() + ", is not assignable to the required type, " +
+				methodType.In(i).String())
 		}
 		
 		// Problem: Empty JSON lists were created as []interface{}. However, if the
