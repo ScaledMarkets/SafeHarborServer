@@ -209,12 +209,15 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 				// Replace actArg with a zero length array of the formal type.
 				var replacementArrayValue = reflect.New(methodType.In(i))
 				actArgAr[i] = replacementArrayValue
-				fmt.Println("Replaced arg with one of type " +
+				fmt.Println("\tReplaced arg with one of type " +
 					reflect.TypeOf(replacementArrayValue).String())
 			} else {
-				fmt.Println(fmt.Sprintf("no replacement - array has length %d",
+				fmt.Println(fmt.Sprintf("\tNo replacement - array has length %d",
 					actArg.Type().Len()))
 			}
+		} else {
+			fmt.Println(fmt.Sprintf("\targ is not an array - is a %d",
+				actArg.Type().Kind()))
 		}
 		
 		// Check that arg types match.
