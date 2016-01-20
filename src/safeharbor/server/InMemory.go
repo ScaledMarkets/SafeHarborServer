@@ -224,7 +224,7 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 		// Check that arg types match.
 		if ! actArgAr[i].Type().AssignableTo(methodType.In(i)) {
 			return typeName, nil, errors.New("Type of actual arg, " +
-				actArg.Type().String() + ", is not assignable to the required type, " +
+				actArgAr[i].Type().String() + ", is not assignable to the required type, " +
 				methodType.In(i).String())
 		}
 	}
