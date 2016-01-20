@@ -204,7 +204,8 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 		// via method.Call(args) will fail. Therefore, if an actual arg is an empty
 		// list, we need to replace it with an actual that is a list of the
 		// type required by the formal arg.
-		if actArg.Type().Kind() == reflect.Array {
+		var argKind = actArg.Type().Kind()
+		if (argKind == reflect.Array) || (argKind == reflect.Slice) {
 			if actArg.Type().Len() == 0 {
 				// Replace actArg with a zero length array of the formal type.
 				var replacementArrayValue = reflect.New(methodType.In(i))
@@ -216,7 +217,7 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 					actArg.Type().Len()))
 			}
 		} else {
-			fmt.Println(fmt.Sprintf("\targ is not an array - is a %d",
+			fmt.Println(fmt.Sprintf("\targ is not an array or slice - is a %d",
 				actArg.Type().Kind()))
 		}
 		
