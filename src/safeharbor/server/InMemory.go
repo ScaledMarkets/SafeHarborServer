@@ -199,13 +199,6 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 		if ! actArg.IsValid() { fmt.Println(fmt.Sprintf("arg %d is a zero value", i)) }
 		fmt.Println(fmt.Sprintf("\tArg %d is a %s", i, actArg.Type().String()))
 		
-		// Check that arg types match.
-		if ! actArg.Type().AssignableTo(methodType.In(i)) {
-			return typeName, nil, errors.New("Type of actual arg, " +
-				actArg.Type().String() + ", is not assignable to the required type, " +
-				methodType.In(i).String())
-		}
-		
 		// Problem: Empty JSON lists were created as []interface{}. However, if the
 		// formal arg type is more specialized, e.g., []string, then the call
 		// via method.Call(args) will fail. Therefore, if an actual arg is an empty
@@ -217,6 +210,13 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 				var replacementArrayValue = reflect.New(methodType.In(i))
 				actArgAr[i] = replacementArrayValue
 			}
+		}
+		
+		// Check that arg types match.
+		if ! actArgAr[i].Type().AssignableTo(methodType.In(i)) {
+			return typeName, nil, errors.New("Type of actual arg, " +
+				actArg.Type().String() + ", is not assignable to the required type, " +
+				methodType.In(i).String())
 		}
 	}
 	
