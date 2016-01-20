@@ -179,17 +179,48 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 	if ! method.IsValid() { return typeName, nil, errors.New(
 		"Method " + methodName + " is unknown") }
 	
-	var argAr []reflect.Value
-	argAr, err = parseJSON(remainder)
+	var actArgAr []reflect.Value
+	actArgAr, err = parseJSON(remainder)
 	if err != nil { return typeName, nil, err }
-	fmt.Println("argAr has " + fmt.Sprintf("%d", len(argAr)) + " elements")
+	fmt.Println("actArgAr has " + fmt.Sprintf("%d", len(actArgAr)) + " elements")
 
-	for i, arg := range argAr {
-		if ! arg.IsValid() { fmt.Println(fmt.Sprintf("arg %d is a zero value", i)) }
-		fmt.Println(fmt.Sprintf("\tArg %d is a %s", i, arg.Type().String()))
+	var methodType reflect.Type = method.Type()
+	var noOfFormalArgs int = methodType.NumIn()
+	if noOfFormalArgs != len(actArgAr) {
+		return typeName, nil, errors.New(fmt.Sprintf(
+			"Number of actual args (%d) does not match number of formal args (%d)",
+			len(actArgAr), noOfFormalArgs))
 	}
 	
-	var retValues []reflect.Value = method.Call(argAr)
+	// Check that argument types of the actuals match the types of the formals.
+	var actArgArCopy = make([]reflect.Value, len(actArgAr))
+	copy(actArgArCopy, actArgAr) // make shallow copy of actArgAr
+	for i, actArg := range actArgArCopy {
+		if ! actArg.IsValid() { fmt.Println(fmt.Sprintf("arg %d is a zero value", i)) }
+		fmt.Println(fmt.Sprintf("\tArg %d is a %s", i, actArg.Type().String()))
+		
+		// Check that arg types match.
+		if ! actArg.Type().AssignableTo(methodType.In(i)) {
+			return typeName, nil, errors.New("Type of actual arg, " +
+				actArg.Type().Name() + ", is not assignable to the required type, " +
+				methodType.In(i).Name())
+		}
+		
+		// Problem: Empty JSON lists were created as []interface{}. However, if the
+		// formal arg type is more specialized, e.g., []string, then the call
+		// via method.Call(args) will fail. Therefore, if an actual arg is an empty
+		// list, we need to replace it with an actual that is a list of the
+		// type required by the formal arg.
+		if actArg.Type().Kind() == reflect.Array {
+			if actArg.Type().Len() == 0 {
+				// Replace actArg with a zero length array of the formal type.
+				var replacementArrayValue = reflect.New(methodType.In(i))
+				actArgAr[i] = replacementArrayValue
+			}
+		}
+	}
+	
+	var retValues []reflect.Value = method.Call(actArgAr)
 	var retValue0 interface{} = retValues[0].Interface()
 	return typeName, retValue0, nil
 }
