@@ -206,7 +206,7 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 		// type required by the formal arg.
 		var argKind = actArg.Type().Kind()
 		if (argKind == reflect.Array) || (argKind == reflect.Slice) {
-			if actArg.Type().Len() == 0 {
+			if actArg.Len() == 0 {
 				// Replace actArg with a zero length array of the formal type.
 				var replacementArrayValue = reflect.New(methodType.In(i))
 				actArgAr[i] = replacementArrayValue
@@ -214,7 +214,7 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 					reflect.TypeOf(replacementArrayValue).String())
 			} else {
 				fmt.Println(fmt.Sprintf("\tNo replacement - array has length %d",
-					actArg.Type().Len()))
+					actArg.Len()))
 			}
 		} else {
 			fmt.Println(fmt.Sprintf("\targ is not an array or slice - is a %d",
