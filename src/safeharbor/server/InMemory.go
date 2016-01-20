@@ -196,7 +196,8 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 	var actArgArCopy = make([]reflect.Value, len(actArgAr))
 	copy(actArgArCopy, actArgAr) // make shallow copy of actArgAr
 	for i, actArg := range actArgArCopy {
-		if ! actArg.IsValid() { fmt.Println(fmt.Sprintf("arg %d is a zero value", i)) }
+		fmt.Println(fmt.Sprintf("For arg %d", i))
+		if ! actArg.IsValid() { fmt.Println(fmt.Sprintf("\targ %d is a zero value", i)) }
 		fmt.Println(fmt.Sprintf("\tArg %d is a %s", i, actArg.Type().String()))
 		
 		// Problem: Empty JSON lists were created as []interface{}. However, if the
