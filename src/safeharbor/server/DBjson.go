@@ -268,7 +268,8 @@ func parseJSON_simple_value(json string, pos *int) (reflect.Value, error ) {
 	if err != nil { return value, err }
 	if value.IsValid() { return value, nil }
 	
-	return value, parseJSON_syntaxError(json, pos, "While looking for simple value")
+	return value, parseJSON_syntaxError(json, pos,
+		"Invalid value, '" + value.String() + ", while looking for simple value")
 }
 
 func parseJSON_comma_value(json string, pos *int,
