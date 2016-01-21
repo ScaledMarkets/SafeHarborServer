@@ -215,7 +215,7 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 				replacementArrayValue.Type().String())
 			
 			if actArg.Len() > 0 {
-				actArgAr[i] = reflect.MakeSlice(methodType.In(i).Elem(), actArg.Len(), actArg.Len())
+				actArgAr[i] = reflect.MakeSlice(methodType.In(i), actArg.Len(), actArg.Len())
 			}
 			actArg = actArgAr[i]
 			//reflect.Copy(
