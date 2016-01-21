@@ -311,7 +311,7 @@ func (persObj *InMemPersistObj) releaseLock() {
 }
 
 func (persObj *InMemPersistObj) writeBack() error {
-	panic("Call to method that should be abstract")
+	return persObj.Client.writeBack(persObj)
 }
 
 func (persObj *InMemPersistObj) persistObjFieldsAsJSON() string {
