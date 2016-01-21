@@ -204,16 +204,23 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 		// formal arg type is more specialized, e.g., []string, then the call
 		// via method.Call(args) will fail. Therefore, if an actual arg is an empty
 		// list, we need to replace it with an actual that is a list of the
-		// type required by the formal arg.
+		// type required by the formal arg. Also, some types, e.g., []int, must
+		// be converted to the required formal type, e.g., []uint8.
 		var argKind = actArg.Type().Kind()
 		if (argKind == reflect.Array) || (argKind == reflect.Slice) {
-			if actArg.Len() == 0 {
-				// Replace actArg with a zero length array of the formal type.
-				var replacementArrayValue = reflect.Indirect(reflect.New(methodType.In(i)))
-				actArgAr[i] = replacementArrayValue
-				actArg = actArgAr[i]
-				fmt.Println("\tReplaced arg with one of type " +
-					replacementArrayValue.Type().String())
+			// Replace actArg with an array of the formal type.
+			var replacementArrayValue = reflect.Indirect(reflect.New(methodType.In(i)))
+			actArgAr[i] = replacementArrayValue
+			fmt.Println("\tReplaced arg with one of type " +
+				replacementArrayValue.Type().String())
+			
+			if actArg.Len() > 0 {
+				actArgAr[i] = reflect.MakeSlice(methodType.In(i).Elem(), actArg.Len(), actArg.Len())
+			}
+			actArg = actArgAr[i]
+			//reflect.Copy(
+			for j := 0; j < actArg.Len(); j++ {
+				actArg.Index(j).Set(actArg.Index(j).Convert(methodType.In(i).Elem()))
 			}
 		}
 		
