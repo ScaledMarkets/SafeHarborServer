@@ -222,7 +222,8 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 		if methodType.In(i) == reflect.TypeOf(t) {  // need to parse into a time
 			if actArg.Kind() != reflect.String {
 				return typeName, nil, errors.New(fmt.Sprintf(
-					"Argument #%d was expected to be a time", (i+1)))
+					"Argument #%d was expected to be a time-formatted string, but it is a %s",
+					(i+1), actArg.Kind().String()))
 			}
 			
 			var bytes []byte = actArg.Bytes()
