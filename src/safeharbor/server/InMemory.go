@@ -840,7 +840,7 @@ func (party *InMemParty) getACLEntryForResourceId(resourceId string) (ACLEntry, 
 func (party *InMemParty) partyFieldsAsJSON() string {
 	var json = party.persistObjFieldsAsJSON()
 	json = json + fmt.Sprintf(", \"IsActive\": %s, \"Name\": \"%s\", " +
-		"\"CreationTime\": %s, \"RealmId\": \"%s\", \"ACLEntryIds\": [",
+		"\"CreationTime\": time %s, \"RealmId\": \"%s\", \"ACLEntryIds\": [",
 		apitypes.BoolToString(party.IsActive),
 		party.Name,
 		apitypes.FormatTimeAsJavascriptDate(party.CreationTime),
