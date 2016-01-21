@@ -1306,22 +1306,22 @@ func (user *InMemUser) asJSON() string {
 	json = json + fmt.Sprintf(", \"UserId\": \"%s\", \"EmailAddress\": \"%s\", " +
 		"\"PasswordHash\": [", user.UserId, user.EmailAddress)
 	for i, b := range user.PasswordHash {
-		if i == 0 { json = json + ", " }
+		if i != 0 { json = json + ", " }
 		json = json + fmt.Sprintf("%d", b)
 	}
 	json = json + "], \"GroupIds\": ["
 	for i, id := range user.GroupIds {
-		if i == 0 { json = json + ", " }
+		if i != 0 { json = json + ", " }
 		json = json + "\"" + id + "\""
 	}
 	json = json + "], \"MostRecentLoginAttempts\": ["
 	for i, a := range user.MostRecentLoginAttempts {
-		if i == 0 { json = json + ", " }
+		if i != 0 { json = json + ", " }
 		json = json + "\"" + a + "\""
 	}
 	json = json + "], \"EventIds\": ["
 	for i, id := range user.EventIds {
-		if i == 0 { json = json + ", " }
+		if i != 0 { json = json + ", " }
 		json = json + "\"" + id + "\""
 	}
 	json = json + "]}"
