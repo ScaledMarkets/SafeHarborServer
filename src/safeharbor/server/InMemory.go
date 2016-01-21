@@ -213,7 +213,6 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 				actArgAr[i] = replacementArrayValue
 				fmt.Println("\tReplaced arg with one of type " +
 					replacementArrayValue.Type().String())
-					//reflect.TypeOf(reflect.Indirect(replacementArrayValue)).String())
 			} else {
 				fmt.Println(fmt.Sprintf("\tNo replacement - array has length %d",
 					actArg.Len()))
@@ -225,9 +224,10 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 		
 		// Check that arg types match.
 		if ! actArgAr[i].Type().AssignableTo(methodType.In(i)) {
-			return typeName, nil, errors.New("Type of actual arg, " +
-				actArgAr[i].Type().String() + ", is not assignable to the required type, " +
-				methodType.In(i).String())
+			return typeName, nil, errors.New(fmt.Sprintf(
+				"For argument #%d, type of actual arg, %s, " +
+				"is not assignable to the required type, %s",
+				(i+1), actArgAr[i].Type().String(), methodType.In(i).String()))
 		}
 	}
 	
