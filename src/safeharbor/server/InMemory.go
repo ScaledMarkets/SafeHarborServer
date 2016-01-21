@@ -217,23 +217,6 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 			}
 		}
 		
-		// Parse time value, if applicable.
-		var t time.Time
-		if methodType.In(i) == reflect.TypeOf(t) {  // need to parse into a time
-			if actArg.Kind() != reflect.String {
-				return typeName, nil, errors.New(fmt.Sprintf(
-					"Argument #%d was expected to be a time-formatted string, " +
-					"but it is a %s of type %s",
-					(i+1), actArg.Kind().String(), actArg.Type().String()))
-			}
-			
-			var bytes []byte = actArg.Bytes()
-			err = t.UnmarshalJSON(bytes)
-			if err != nil { return typeName, nil, err }
-			actArgAr[i] = reflect.ValueOf(t)
-			actArg = actArgAr[i]
-		}
-		
 		// Check that arg types match.
 		if ! actArg.Type().AssignableTo(methodType.In(i)) {
 			return typeName, nil, errors.New(fmt.Sprintf(
