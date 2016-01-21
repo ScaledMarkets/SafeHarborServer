@@ -211,23 +211,33 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 				// Replace actArg with a zero length array of the formal type.
 				var replacementArrayValue = reflect.Indirect(reflect.New(methodType.In(i)))
 				actArgAr[i] = replacementArrayValue
+				actArg = actArgAr[i]
 				fmt.Println("\tReplaced arg with one of type " +
 					replacementArrayValue.Type().String())
-			} else {
-				fmt.Println(fmt.Sprintf("\tNo replacement - array has length %d",
-					actArg.Len()))
 			}
-		} else {
-			fmt.Println(fmt.Sprintf("\targ is not an array or slice - is a %d",
-				actArg.Type().Kind()))
+		}
+		
+		// Parse time value, if applicable.
+		var t time.Time
+		if methodType.In(i) == reflect.TypeOf(t) {  // need to parse into a time
+			if actArg.Kind() != reflect.String {
+				return typeName, nil, errors.New(fmt.Sprintf(
+					"Argument #%d was expected to be a time", (i+1)))
+			}
+			
+			var bytes []byte = actArg.Bytes()
+			err = t.UnmarshalJSON(bytes)
+			if err != nil { return typeName, nil, err }
+			actArgAr[i] = reflect.ValueOf(t)
+			actArg = actArgAr[i]
 		}
 		
 		// Check that arg types match.
-		if ! actArgAr[i].Type().AssignableTo(methodType.In(i)) {
+		if ! actArg.Type().AssignableTo(methodType.In(i)) {
 			return typeName, nil, errors.New(fmt.Sprintf(
 				"For argument #%d, type of actual arg, %s, " +
 				"is not assignable to the required type, %s",
-				(i+1), actArgAr[i].Type().String(), methodType.In(i).String()))
+				(i+1), actArg.Type().String(), methodType.In(i).String()))
 		}
 	}
 	
