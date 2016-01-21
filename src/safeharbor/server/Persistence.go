@@ -146,7 +146,7 @@ func (persist *Persistence) readUniqueId() (int64, error) {
 /*******************************************************************************
  * Flush an object''s state to the database.
  */
-func (persist *Persistence) writeBack(obj PersistObj) error {
+func (persist *Persistence) writeBack(objId string, json string) error {
 	if persist.InMemoryOnly {
 	} else {
 		// Serialize (marshall) the object to JSON, and store it in redis using the
@@ -155,8 +155,7 @@ func (persist *Persistence) writeBack(obj PersistObj) error {
 		//    "<typename>": { <object fields> }
 		// so that getPersistentObject will later be able to make the JSON to the
 		// appropriate go type, using reflection.
-		var json string = obj.asJSON()
-		var err = persist.RedisClient.Set("obj/" + obj.getId(), []byte(json))
+		var err = persist.RedisClient.Set("obj/" + objId, []byte(json))
 		if err != nil { return err }
 	}
 	return nil
@@ -211,12 +210,12 @@ func (persist *Persistence) releaseLock(obj PersistObj) {
 /*******************************************************************************
  * Insert a new object into the database - making the object persistent.
  */
-func (persist *Persistence) addObject(obj PersistObj) error {
+func (persist *Persistence) addObject(obj PersistObj, id, json string) error {
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = obj
 	} else {
 	}
-	return persist.writeBack(obj)
+	return persist.writeBack(id, json)
 }
 
 /*******************************************************************************
@@ -244,9 +243,9 @@ func (persist *Persistence) deleteObject(obj PersistObj) error {
 func (persist *Persistence) addRealm(newRealm Realm) error {
 	if persist.InMemoryOnly {
 		persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
-		return persist.addObject(newRealm)
+		return persist.addObject(newRealm, newRealm.getId(), newRealm.asJSON())
 	} else {
-		var err = persist.addObject(newRealm)
+		var err = persist.addObject(newRealm, newRealm.getId(), newRealm.asJSON())
 		if err != nil { return err }
 		var added bool
 		added, err = persist.RedisClient.Sadd("realms", []byte(newRealm.getId()))
@@ -282,9 +281,9 @@ func (persist *Persistence) dbGetAllRealmIds() ([]string, error) {
 func (persist *Persistence) addUser(user User) error {
 	if persist.InMemoryOnly {
 		persist.allUsers[user.getUserId()] = user
-		return persist.addObject(user)
+		return persist.addObject(user, user.getId(), user.asJSON())
 	} else {
-		var err = persist.addObject(user)
+		var err = persist.addObject(user, user.getId(), user.asJSON())
 		if err != nil { return err }
 		var added bool
 		added, err = persist.RedisClient.Sadd("users", []byte(user.getId()))
