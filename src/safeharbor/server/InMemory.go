@@ -332,7 +332,12 @@ func (client *InMemClient) ReconstitutePersistObj(id string) (*InMemPersistObj, 
 
 func (client *InMemClient) writeBack(obj PersistObj) error {
 	fmt.Println(fmt.Sprintf("client.writeBack: Object is a %s", reflect.TypeOf(obj).String()))
-	return obj.writeBack()
+	switch obj.(type) {
+		case *InMemParty:
+			return obj.(*InMemParty).writeBack()
+		default:
+			return obj.writeBack()
+	}
 }
 
 func (client *InMemClient) asJSON(obj PersistObj) string {
