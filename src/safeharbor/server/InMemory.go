@@ -311,6 +311,7 @@ func (persObj *InMemPersistObj) releaseLock() {
 }
 
 func (persObj *InMemPersistObj) writeBack() error {
+	fmt.Println(fmt.Sprintf("persObj.writeBack: Object is a %s", reflect.TypeOf(persObj).String()))
 	return persObj.Client.writeObj(persObj.Id, persObj.asJSON())
 }
 
@@ -330,7 +331,7 @@ func (client *InMemClient) ReconstitutePersistObj(id string) (*InMemPersistObj, 
 }
 
 func (client *InMemClient) writeBack(obj PersistObj) error {
-	fmt.Println(fmt.Sprintf("Object is a %s", reflect.TypeOf(obj).String()))
+	fmt.Println(fmt.Sprintf("client.writeBack: Object is a %s", reflect.TypeOf(obj).String()))
 	return obj.writeBack()
 }
 
