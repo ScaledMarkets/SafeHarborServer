@@ -311,6 +311,7 @@ func (persObj *InMemPersistObj) releaseLock() {
 }
 
 func (persObj *InMemPersistObj) writeBack() error {
+	fmt.Println(fmt.Sprintf("Object is a %s", reflect.TypeOf(persObj).String()))
 	return persObj.Client.writeObj(persObj.Id, persObj.asJSON())
 }
 
@@ -465,11 +466,7 @@ func (resource *InMemResource) deleteAccess(party Party) error {
 	
 	var aclEntriesCopy []string = make([]string, len(resource.ACLEntryIds))
 	copy(aclEntriesCopy, resource.ACLEntryIds)
-	fmt.Println(fmt.Sprintf("Copied %d ids", len(resource.ACLEntryIds)))
-	fmt.Println(fmt.Sprintf("aclEntriesCopy has %d + elements", len(aclEntriesCopy)))
-	fmt.Println("For each entry,")
 	for index, entryId := range aclEntriesCopy {
-		fmt.Println("\tentry entryId=" + entryId)
 		var aclEntry ACLEntry
 		var err error
 		aclEntry, err = resource.Client.getACLEntry(entryId)
@@ -800,8 +797,9 @@ func (client *InMemClient) NewInMemParty(name string, realmId string) (*InMemPar
 	}, nil
 }
 
-func (party *InMemParty) setActive(b bool) {
+func (party *InMemParty) setActive(b bool) error {
 	party.IsActive = b
+	return party.Client.writeBack(party)
 }
 
 func (party *InMemParty) isActive() bool {

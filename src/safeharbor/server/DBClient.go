@@ -48,7 +48,6 @@ type DBClient interface {
 	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
 	dbDeactivateRealm(realmId string) error
 	dbGetAllRealmIds() ([]string, error)
-	//getPersistentObject(id string) (PersistObj, error)
 	getResource(string) (Resource, error)
 	getParty(string) (Party, error)
 	getGroup(string) (Group, error)
@@ -94,7 +93,7 @@ type PersistObj interface {  // abstract
 /* A Party is a User or a Group. Parties act on Resources. */
 type Party interface {  // abstract
 	PersistObj
-	setActive(bool)
+	setActive(bool) error
 	isActive() bool
 	getRealmId() string
 	getRealm() (Realm, error)
