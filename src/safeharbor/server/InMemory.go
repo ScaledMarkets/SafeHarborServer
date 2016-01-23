@@ -335,7 +335,8 @@ func (client *InMemClient) writeBack(obj PersistObj) error {
 	switch obj.(type) {
 		case *InMemParty:
 			fmt.Println("Calling InMemParty.writeBack")
-			return obj.(*InMemParty).writeBack()
+			var p *InMemParty = obj.(*InMemParty)
+			return p.writeBack()
 		default:
 			fmt.Println("Calling persistobj.writeBack")
 			return obj.writeBack()
