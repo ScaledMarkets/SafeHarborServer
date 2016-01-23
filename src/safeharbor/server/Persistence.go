@@ -146,7 +146,7 @@ func (persist *Persistence) readUniqueId() (int64, error) {
 /*******************************************************************************
  * Flush an object''s state to the database.
  */
-func (persist *Persistence) writeBack(objId string, json string) error {
+func (persist *Persistence) writeObj(objId string, json string) error {
 	if persist.InMemoryOnly {
 	} else {
 		// Serialize (marshall) the object to JSON, and store it in redis using the
@@ -215,7 +215,7 @@ func (persist *Persistence) addObject(obj PersistObj, id, json string) error {
 		persist.allObjects[obj.getId()] = obj
 	} else {
 	}
-	return persist.writeBack(id, json)
+	return persist.writeObj(id, json)
 }
 
 /*******************************************************************************

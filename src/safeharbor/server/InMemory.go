@@ -311,7 +311,7 @@ func (persObj *InMemPersistObj) releaseLock() {
 }
 
 func (persObj *InMemPersistObj) writeBack() error {
-	return persObj.Client.writeBack(persObj.Id, persObj.asJSON())
+	return persObj.Client.writeObj(persObj.Id, persObj.asJSON())
 }
 
 func (persObj *InMemPersistObj) persistObjFieldsAsJSON() string {
@@ -327,6 +327,14 @@ func (client *InMemClient) ReconstitutePersistObj(id string) (*InMemPersistObj, 
 		Client: client,
 		Id: id,
 	}, nil
+}
+
+func (client *InMemClient) writeBack(obj PersistObj) error {
+	return obj.writeBack()
+}
+
+func (client *InMemClient) asJSON(obj PersistObj) string {
+	return obj.asJSON()
 }
 
 /*******************************************************************************
@@ -346,7 +354,7 @@ func (client *InMemClient) NewInMemACL() (*InMemACL, error) {
 		InMemPersistObj: *pers,
 		ACLEntryIds: make([]string, 0),
 	}
-	err = ACL(acl).writeBack()
+	err = client.writeBack(ACL(acl))
 	return acl, err
 }
 
@@ -356,11 +364,11 @@ func (acl *InMemACL) getACLEntryIds() []string {
 
 func (acl *InMemACL) addACLEntry(entry ACLEntry) error {
 	acl.ACLEntryIds = append(acl.ACLEntryIds, entry.getId())
-	return acl.writeBack()
+	return acl.Client.writeBack(acl)
 }
 
 func (acl *InMemACL) writeBack() error {
-	return acl.Client.writeBack(acl.Id, acl.asJSON())
+	return acl.Client.writeObj(acl.Id, acl.asJSON())
 }
 
 func (acl *InMemACL) aclFieldsAsJSON() string {
@@ -447,7 +455,7 @@ func (resource *InMemResource) addAccess(party Party, mask []bool) (ACLEntry, er
 		for index, _ := range curmask {
 			curmask[index] = curmask[index] || mask[index]
 		}
-		if err = aclEntry.writeBack(); err != nil { return nil, err }
+		if err = resource.Client.writeBack(aclEntry); err != nil { return nil, err }
 	}
 
 	return aclEntry, nil
@@ -488,7 +496,7 @@ func (resource *InMemResource) deleteAccess(party Party) error {
 		}
 	}
 	
-	return resource.writeBack()
+	return resource.Client.writeBack(resource)
 }
 
 func (resource *InMemResource) printACLs(party Party) {
@@ -582,7 +590,7 @@ func (resource *InMemResource) deleteAllAccess() error {
 		err = party.deleteACLEntry(aclEntry)
 		if err != nil { return err }
 		
-		err = party.writeBack()
+		err = resource.Client.writeBack(party)
 		if err != nil { return err }
 		
 		err = resource.Client.deleteObject(aclEntry)
@@ -592,7 +600,7 @@ func (resource *InMemResource) deleteAllAccess() error {
 	// Remove all ACL entry ids from the resource's ACL entry list.
 	resource.ACLEntryIds = resource.ACLEntryIds[0:0]
 	
-	return resource.writeBack()
+	return resource.Client.writeBack(resource)
 }
 
 func (resource *InMemResource) getName() string {
@@ -601,7 +609,7 @@ func (resource *InMemResource) getName() string {
 
 func (resource *InMemResource) setName(name string) error {
 	resource.setNameDeferredUpdate(name)
-	return resource.writeBack()
+	return resource.Client.writeBack(resource)
 }
 
 func (resource *InMemResource) setNameDeferredUpdate(name string) {
@@ -618,7 +626,7 @@ func (resource *InMemResource) getDescription() string {
 
 func (resource *InMemResource) setDescription(desc string) error {
 	resource.setDescriptionDeferredUpdate(desc)
-	return resource.writeBack()
+	return resource.Client.writeBack(resource)
 }
 
 func (resource *InMemResource) setDescriptionDeferredUpdate(desc string) {
@@ -741,6 +749,30 @@ func (client *InMemClient) ReconstituteResource(id string, aclEntryIds []string,
 	return resource, nil
 }
 
+func (client *InMemClient) isRealm(res Resource) bool {
+	return res.isRealm()
+}
+
+func (client *InMemClient) isRepo(res Resource) bool {
+	return res.isRepo()
+}
+
+func (client *InMemClient) isDockerfile(res Resource) bool {
+	return res.isDockerfile()
+}
+
+func (client *InMemClient) isDockerImage(res Resource) bool {
+	return res.isDockerImage()
+}
+
+func (client *InMemClient) isScanConfig(res Resource) bool {
+	return res.isScanConfig()
+}
+
+func (client *InMemClient) isFlag(res Resource) bool {
+	return res.isFlag()
+}
+
 /*******************************************************************************
  * 
  */
@@ -811,14 +843,14 @@ func (party *InMemParty) getACLEntryIds() []string {
 
 func (party *InMemParty) addACLEntry(entry ACLEntry) error {
 	party.ACLEntryIds = append(party.ACLEntryIds, entry.getId())
-	return party.writeBack()
+	return party.Client.writeBack(party)
 }
 
 func (party *InMemParty) deleteACLEntry(entry ACLEntry) error {
 	party.ACLEntryIds = apitypes.RemoveFrom(entry.getId(), party.ACLEntryIds)
 	var err error = party.Client.deleteObject(entry)
 	if err != nil { return err }
-	return party.writeBack()
+	return party.Client.writeBack(party)
 }
 
 func (party *InMemParty) getACLEntryForResourceId(resourceId string) (ACLEntry, error) {
@@ -934,7 +966,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	err = realm.addGroup(newGroup)
 	if err != nil { return nil, err }
 	
-	err = realm.writeBack()
+	err = client.writeBack(realm)
 	if err != nil { return nil, err }
 	
 	fmt.Println("Created Group")
@@ -997,10 +1029,10 @@ func (group *InMemGroup) addUserId(userObjId string) error {
 	err = user.addGroupId(group.getId())
 	if err != nil { return err }
 	
-	err = user.writeBack()
+	err = group.Client.writeBack(user)
 	if err != nil { return err }
 	
-	err = group.writeBack()
+	err = group.Client.writeBack(group)
 	
 	return err
 }
@@ -1012,7 +1044,7 @@ func (group *InMemGroup) removeUser(user User) error {
 	for i, id := range group.UserObjIds {
 		if id == userId {
 			group.UserObjIds = append(group.UserObjIds[0:i], group.UserObjIds[i+1:]...)
-			group.writeBack()
+			group.Client.writeBack(group)
 			return nil
 		}
 	}
@@ -1021,7 +1053,7 @@ func (group *InMemGroup) removeUser(user User) error {
 
 func (group *InMemGroup) addUser(user User) error {
 	group.UserObjIds = append(group.UserObjIds, user.getId())
-	return group.writeBack()
+	return group.Client.writeBack(group)
 }
 
 func (group *InMemGroup) asGroupDesc() *apitypes.GroupDesc {
@@ -1030,7 +1062,7 @@ func (group *InMemGroup) asGroupDesc() *apitypes.GroupDesc {
 }
 
 func (group *InMemGroup) writeBack() error {
-	return group.Client.writeBack(group.Id, group.asJSON())
+	return group.Client.writeObj(group.Id, group.asJSON())
 }
 
 func (group *InMemGroup) asJSON() string {
@@ -1115,7 +1147,7 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	// Add to parent realm's list.
 	realm.addUser(newUser)
 	
-	err = realm.writeBack()
+	err = client.writeBack(realm)
 	if err != nil { return nil, err }
 
 	fmt.Println("Created user")
@@ -1124,7 +1156,7 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 
 func (user *InMemUser) setPassword(pswd string) error {
 	user.PasswordHash = user.Client.Server.authService.CreatePasswordHash(pswd)
-	user.writeBack()
+	user.Client.writeBack(user)
 	return nil
 }
 
@@ -1255,7 +1287,7 @@ func (user *InMemUser) getMostRecentLoginAttempts() []string {
 
 func (user *InMemUser) addEventId(id string) {
 	user.EventIds = append(user.EventIds, id)
-	user.writeBack()
+	user.Client.writeBack(user)
 }
 
 func (user *InMemUser) getEventIds() []string {
@@ -1283,7 +1315,7 @@ func (user *InMemUser) deleteEvent(event Event) error {
 	
 	var err error = user.Client.deleteObject(event)
 	if err != nil { return err }
-	return user.writeBack()
+	return user.Client.writeBack(user)
 }
 
 func (user *InMemUser) asUserDesc() *apitypes.UserDesc {
@@ -1298,7 +1330,7 @@ func (user *InMemUser) asUserDesc() *apitypes.UserDesc {
 }
 
 func (user *InMemUser) writeBack() error {
-	return user.Client.writeBack(user.Id, user.asJSON())
+	return user.Client.writeObj(user.Id, user.asJSON())
 }
 
 func (user *InMemUser) asJSON() string {
@@ -1453,7 +1485,7 @@ func (entry *InMemACLEntry) getPermissionMask() []bool {
 
 func (entry *InMemACLEntry) setPermissionMask(mask []bool) error {
 	entry.PermissionMask = mask
-	var err error = entry.writeBack()
+	var err error = entry.Client.writeBack(entry)
 	if err != nil { return err }
 	return nil
 }
@@ -1464,7 +1496,7 @@ func (entry *InMemACLEntry) asPermissionDesc() *apitypes.PermissionDesc {
 }
 
 func (entry *InMemACLEntry) writeBack() error {
-	return entry.Client.writeBack(entry.Id, entry.asJSON())
+	return entry.Client.writeObj(entry.Id, entry.asJSON())
 }
 
 func (entry *InMemACLEntry) asJSON() string {
@@ -1549,7 +1581,7 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	realmFileDir, err = client.assignRealmFileDir(newRealm.getId())
 	if err != nil { return nil, err }
 	newRealm.FileDirectory = realmFileDir
-	err = newRealm.writeBack()
+	err = newRealm.Client.writeBack(newRealm)
 	if err != nil { return nil, err }
 	
 	fmt.Println("Created realm")
@@ -1688,7 +1720,7 @@ func (realm *InMemRealm) addUserId(userObjId string) error {
 	realm.UserObjIds = append(realm.UserObjIds, userObjId)
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = realm.getId()
-	err = realm.writeBack()
+	err = realm.Client.writeBack(realm)
 	return err
 }
 
@@ -1710,7 +1742,7 @@ func (realm *InMemRealm) removeUserId(userObjId string) (User, error) {
 	realm.UserObjIds = apitypes.RemoveFrom(userObjId, realm.UserObjIds)
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = ""
-	err = realm.writeBack()
+	err = realm.Client.writeBack(realm)
 	return user, err
 }
 
@@ -1722,7 +1754,7 @@ func (realm *InMemRealm) deleteUserId(userObjId string) error {
 	if err != nil { return err }
 	err = realm.Client.deleteObject(user)
 	if err != nil { return err }
-	err = realm.writeBack()
+	err = realm.Client.writeBack(realm)
 	return err
 }
 
@@ -1735,17 +1767,17 @@ func (realm *InMemRealm) addUser(user User) error {
 	realm.UserObjIds = append(realm.UserObjIds, user.getId())
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = realm.getId()
-	return realm.writeBack()
+	return realm.Client.writeBack(realm)
 }
 
 func (realm *InMemRealm) addGroup(group Group) error {
 	realm.GroupIds = append(realm.GroupIds, group.getId())
-	return realm.writeBack()
+	return realm.Client.writeBack(realm)
 }
 
 func (realm *InMemRealm) addRepo(repo Repo) error {
 	realm.RepoIds = append(realm.RepoIds, repo.getId())
-	return realm.writeBack()
+	return realm.Client.writeBack(realm)
 }
 
 func (realm *InMemRealm) asRealmDesc() *apitypes.RealmDesc {
@@ -1903,13 +1935,13 @@ func (realm *InMemRealm) deleteGroup(group Group) error {
 	// Remove the group from its realm.
 	realm.GroupIds = apitypes.RemoveFrom(group.getId(), realm.GroupIds)
 	
-	return realm.writeBack()
+	return realm.Client.writeBack(realm)
 }
 
 func (realm *InMemRealm) isRealm() bool { return true }
 
 func (realm *InMemRealm) writeBack() error {
-	return realm.Client.writeBack(realm.Id, realm.asJSON())
+	return realm.Client.writeObj(realm.Id, realm.asJSON())
 }
 
 func (realm *InMemRealm) asJSON() string {
@@ -2005,7 +2037,7 @@ func (client *InMemClient) dbCreateRepo(realmId, name, desc string) (Repo, error
 	repoFileDir, err = client.assignRepoFileDir(realmId, newRepo.getId())
 	if err != nil { return nil, err }
 	newRepo.FileDirectory = repoFileDir
-	err = newRepo.writeBack()
+	err = client.writeBack(newRepo)
 	if err != nil { return nil, err }
 	fmt.Println("Created repo")
 	err = realm.addRepo(newRepo)  // Add it to the realm.
@@ -2062,17 +2094,17 @@ func (repo *InMemRepo) getFlagIds() []string {
 
 func (repo *InMemRepo) addDockerfile(dockerfile Dockerfile) error {
 	repo.DockerfileIds = append(repo.DockerfileIds, dockerfile.getId())
-	return repo.writeBack()
+	return repo.Client.writeBack(repo)
 }
 
 func (repo *InMemRepo) addDockerImage(image DockerImage) error {
 	repo.DockerImageIds = append(repo.DockerImageIds, image.getId())
-	return repo.writeBack()
+	return repo.Client.writeBack(repo)
 }
 
 func (repo *InMemRepo) addScanConfig(config ScanConfig) error {
 	repo.ScanConfigIds = append(repo.ScanConfigIds, config.getId())
-	return repo.writeBack()
+	return repo.Client.writeBack(repo)
 }
 
 func (repo *InMemRepo) deleteScanConfig(config ScanConfig) error {
@@ -2101,7 +2133,7 @@ func (repo *InMemRepo) deleteScanConfig(config ScanConfig) error {
 	var err error = repo.Client.deleteObject(config)
 	if err != nil { return err }
 	
-	return repo.writeBack()
+	return repo.Client.writeBack(repo)
 }
 
 func (repo *InMemRepo) deleteFlag(flag Flag) error {
@@ -2127,7 +2159,7 @@ func (repo *InMemRepo) deleteFlag(flag Flag) error {
 	err = repo.Client.deleteObject(flag)
 	if err != nil { return err }
 	
-	return repo.writeBack()
+	return repo.Client.writeBack(repo)
 }
 
 func (repo *InMemRepo) deleteDockerImage(image DockerImage) error {
@@ -2162,12 +2194,12 @@ func (repo *InMemRepo) deleteDockerImage(image DockerImage) error {
 	// Remove from database.
 	err = repo.Client.deleteObject(image)
 	if err != nil { return err }
-	return repo.writeBack()
+	return repo.Client.writeBack(repo)
 }
 
 func (repo *InMemRepo) addFlag(flag Flag) error {
 	repo.FlagIds = append(repo.FlagIds, flag.getId())
-	return repo.writeBack()
+	return repo.Client.writeBack(repo)
 }
 
 func (repo *InMemRepo) getScanConfigByName(name string) (ScanConfig, error) {
@@ -2192,7 +2224,7 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 }
 
 func (repo *InMemRepo) writeBack() error {
-	return repo.Client.writeBack(repo.Id, repo.asJSON())
+	return repo.Client.writeObj(repo.Id, repo.asJSON())
 }
 
 func (repo *InMemRepo) asJSON() string {
@@ -2341,7 +2373,7 @@ func (dockerfile *InMemDockerfile) getDockerfileExecEventIds() []string {
 
 func (dockerfile *InMemDockerfile) addEventId(eventId string) error {
 	dockerfile.DockerfileExecEventIds = append(dockerfile.DockerfileExecEventIds, eventId)
-	return dockerfile.writeBack()
+	return dockerfile.Client.writeBack(dockerfile)
 }
 
 func (dockerfile *InMemDockerfile) getExternalFilePath() string {
@@ -2355,7 +2387,7 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() *apitypes.DockerfileDesc {
 func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
 
 func (dockerfile *InMemDockerfile) writeBack() error {
-	return dockerfile.Client.writeBack(dockerfile.Id, dockerfile.asJSON())
+	return dockerfile.Client.writeObj(dockerfile.Id, dockerfile.asJSON())
 }
 
 func (dockerfile *InMemDockerfile) asJSON() string {
@@ -2566,7 +2598,7 @@ func (image *InMemDockerImage) getScanEventIds() []string {
 
 func (image *InMemDockerImage) addScanEventId(id string) {
 	image.ScanEventIds = append(image.ScanEventIds, id)
-	image.writeBack()
+	image.Client.writeBack(image)
 }
 
 func (image *InMemDockerImage) getMostRecentScanEventId() string {
@@ -2586,7 +2618,7 @@ func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
 func (image *InMemDockerImage) isDockerImage() bool { return true }
 
 func (image *InMemDockerImage) writeBack() error {
-	return image.Client.writeBack(image.Id, image.asJSON())
+	return image.Client.writeObj(image.Id, image.asJSON())
 }
 
 func (image *InMemDockerImage) asJSON() string {
@@ -2677,7 +2709,7 @@ func (paramValue *InMemParameterValue) getStringValue() string {
 
 func (paramValue *InMemParameterValue) setStringValue(value string) error {
 	paramValue.StringValue = value
-	return paramValue.writeBack()
+	return paramValue.Client.writeBack(paramValue)
 }
 
 func (paramValue *InMemParameterValue) getConfigId() string {
@@ -2690,7 +2722,7 @@ func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.Paramete
 }
 
 func (paramValue *InMemParameterValue) writeBack() error {
-	return paramValue.Client.writeBack(paramValue.Id, paramValue.asJSON())
+	return paramValue.Client.writeObj(paramValue.Id, paramValue.asJSON())
 }
 
 func (paramValue *InMemParameterValue) asJSON() string {
@@ -2778,7 +2810,7 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 		err = flag.addScanConfigRef(scanConfig.getId())
 		if err != nil { return nil, err }
 	}
-	err = scanConfig.writeBack()
+	err = scanConfig.Client.writeBack(scanConfig)
 	if err != nil { return nil, err }
 	
 	// Link to repo
@@ -2807,7 +2839,7 @@ func (scanConfig *InMemScanConfig) getSuccessExpr() string {
 
 func (scanConfig *InMemScanConfig) setSuccessExpression(expr string) error {
 	scanConfig.setSuccessExpressionDeferredUpdate(expr)
-	return scanConfig.writeBack()
+	return scanConfig.Client.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) setSuccessExpressionDeferredUpdate(expr string) {
@@ -2824,7 +2856,7 @@ func (scanConfig *InMemScanConfig) getProviderName() string {
 
 func (scanConfig *InMemScanConfig) setProviderName(name string) error {
 	scanConfig.setProviderNameDeferredUpdate(name)
-	return scanConfig.writeBack()
+	return scanConfig.Client.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) setProviderNameDeferredUpdate(name string) {
@@ -2840,9 +2872,9 @@ func (scanConfig *InMemScanConfig) setParameterValue(name, strValue string) (Par
 	var err error
 	paramValue, err = scanConfig.setParameterValueDeferredUpdate(name, strValue)
 	if err != nil { return paramValue, err }
-	err = paramValue.writeBack()
+	err = scanConfig.Client.writeBack(paramValue)
 	if err != nil { return paramValue, err }
-	return paramValue, scanConfig.writeBack()
+	return paramValue, scanConfig.Client.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) setParameterValueDeferredUpdate(name, strValue string) (ParameterValue, error) {
@@ -2886,7 +2918,7 @@ func (scanConfig *InMemScanConfig) deleteParameterValue(name string) error {
 			scanConfig.ParameterValueIds = apitypes.RemoveAt(i, scanConfig.ParameterValueIds)
 			err = scanConfig.Client.deleteObject(pv)
 			if err != nil { return err }
-			return scanConfig.writeBack()
+			return scanConfig.Client.writeBack(scanConfig)
 		}
 	}
 	return errors.New("Did not find parameter named '" + name + "'")
@@ -2901,7 +2933,7 @@ func (scanConfig *InMemScanConfig) deleteAllParameterValues() error {
 		scanConfig.Client.deleteObject(paramValue)
 	}
 	scanConfig.ParameterValueIds = make([]string, 0)
-	return scanConfig.writeBack()
+	return scanConfig.Client.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) setFlagId(newFlagId string) error {
@@ -2919,7 +2951,7 @@ func (scanConfig *InMemScanConfig) setFlagId(newFlagId string) error {
 	scanConfig.FlagId = newFlagId
 	err = newFlag.addScanConfigRef(scanConfig.getId())  // adds non-redundantly
 	if err != nil { return err }
-	return scanConfig.writeBack()
+	return scanConfig.Client.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) getFlagId() string {
@@ -2928,7 +2960,7 @@ func (scanConfig *InMemScanConfig) getFlagId() string {
 
 func (scanConfig *InMemScanConfig) addScanEventId(id string) {
 	scanConfig.ScanEventIds = append(scanConfig.ScanEventIds, id)
-	scanConfig.writeBack()
+	scanConfig.Client.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) getScanEventIds() []string {
@@ -2937,7 +2969,7 @@ func (scanConfig *InMemScanConfig) getScanEventIds() []string {
 
 func (scanConfig *InMemScanConfig) deleteScanEventId(eventId string) error {
 	scanConfig.ScanEventIds = apitypes.RemoveFrom(eventId, scanConfig.ScanEventIds)
-	return scanConfig.writeBack()
+	return scanConfig.Client.writeBack(scanConfig)
 }
 
 func (resource *InMemScanConfig) isScanConfig() bool {
@@ -2967,7 +2999,7 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 }
 
 func (scanConfig *InMemScanConfig) writeBack() error {
-	return scanConfig.Client.writeBack(scanConfig.Id, scanConfig.asJSON())
+	return scanConfig.Client.writeObj(scanConfig.Id, scanConfig.asJSON())
 }
 
 func (scanConfig *InMemScanConfig) asJSON() string {
@@ -3049,7 +3081,7 @@ func (client *InMemClient) dbCreateFlag(name, desc, repoId, successImagePath str
 	if err != nil { return nil, err }
 
 	// Make persistent.
-	err = flag.writeBack()
+	err = client.writeBack(flag)
 	
 	return flag, err
 }
@@ -3086,13 +3118,13 @@ func (flag *InMemFlag) getSuccessImageURL() string {
 func (flag *InMemFlag) addScanConfigRef(scanConfigId string) error {
 	fmt.Println("addScanConfigRef:A")
 	flag.UsedByScanConfigIds = apitypes.AddUniquely(scanConfigId, flag.UsedByScanConfigIds)
-	return flag.writeBack()
+	return flag.Client.writeBack(flag)
 }
 
 func (flag *InMemFlag) removeScanConfigRef(scanConfigId string) error {
 	flag.UsedByScanConfigIds = apitypes.RemoveFrom(scanConfigId, flag.UsedByScanConfigIds)
 	
-	return flag.writeBack()
+	return flag.Client.writeBack(flag)
 }
 
 func (flag *InMemFlag) usedByScanConfigIds() []string {
@@ -3109,7 +3141,7 @@ func (flag *InMemFlag) asFlagDesc() *apitypes.FlagDesc {
 }
 
 func (flag *InMemFlag) writeBack() error {
-	return flag.Client.writeBack(flag.Id, flag.asJSON())
+	return flag.Client.writeObj(flag.Id, flag.asJSON())
 }
 
 func (flag *InMemFlag) asJSON() string {
@@ -3214,6 +3246,10 @@ func (client *InMemClient) ReconstituteEvent(id string, when time.Time,
 	}, nil
 }
 
+func (client *InMemClient) asEventDesc(event Event) apitypes.EventDesc {
+	return event.asEventDesc()
+}
+
 /*******************************************************************************
  * 
  */
@@ -3282,7 +3318,7 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 		scanConfig.getProviderName(), score, actParamValueIds)
 	fmt.Println("dbCreateScanEvent: I") // debug
 	if err != nil { return nil, err }
-	err = scanEvent.writeBack()
+	err = client.writeBack(scanEvent)
 	fmt.Println("dbCreateScanEvent: J") // debug
 	if err != nil { return nil, err }
 	
@@ -3346,7 +3382,7 @@ func (event *InMemScanEvent) deleteAllParameterValues() error {
 		event.Client.deleteObject(param)
 	}
 	event.ActualParameterValueIds = make([]string, 0)
-	return event.writeBack()
+	return event.Client.writeBack(event)
 }
 
 func (event *InMemScanEvent) asScanEventDesc() *apitypes.ScanEventDesc {
@@ -3372,7 +3408,7 @@ func (event *InMemScanEvent) asEventDesc() apitypes.EventDesc {
 }
 
 func (event *InMemScanEvent) writeBack() error {
-	return event.Client.writeBack(event.Id, event.asJSON())
+	return event.Client.writeObj(event.Id, event.asJSON())
 }
 
 func (event *InMemScanEvent) asJSON() string {
@@ -3519,7 +3555,7 @@ func (event *InMemDockerfileExecEvent) asEventDesc() apitypes.EventDesc {
 }
 
 func (event *InMemDockerfileExecEvent) writeBack() error {
-	return event.Client.writeBack(event.Id, event.asJSON())
+	return event.Client.writeObj(event.Id, event.asJSON())
 }
 
 func (event *InMemDockerfileExecEvent) asJSON() string {

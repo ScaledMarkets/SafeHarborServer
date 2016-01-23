@@ -1972,7 +1972,7 @@ func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 		"Unable to identify a scan service named '" + providerName + "'")
 	}
 	
-	err = scanConfig.writeBack()
+	err = server.dbClient.writeBack(scanConfig)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	// Retrieve and set the provider parameters.

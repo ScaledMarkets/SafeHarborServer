@@ -66,28 +66,25 @@ type DBClient interface {
 	getRealmsAdministeredByUser(string) ([]string, error)  // those realms for which user can edit the realm
 	init() error
 	resetPersistentState() error
-	
-	//reconstitutePersistObj(string) (PersistObj, error)
-	//reconstituteACL(string, []string) (ACL, error)
-	/*
-	reconstituteGroup() (Group, error)
-	reconstituteUser() (User, error)
-	reconstituteACLEntry() (ACLEntry, error)
-	reconstituteRealm() (Realm, error)
-	reconstituteRepo() (Repo, error)
-	reconstituteDockerfile() (Dockerfile, error)
-	reconstituteDockerImage() (DockerImage, error)
-	reconstitutePerameterValue() (PerameterValue, error)
-	reconstituteScanConfig() (ScanConfig, error)
-	reconstituteFlag() (Flag, error)
-	reconstituteScanEvent() (ScanEvent, error)
-	reconstituteDockerfileExecEvent() (DockerfileExecEvent, error)
-	*/
-	
 	printDatabase()
+	
+	// From PersistObj
+	writeBack(PersistObj) error
+	asJSON(PersistObj) string
+	
+	// From Resource
+	isRealm(Resource) bool
+	isRepo(Resource) bool
+	isDockerfile(Resource) bool
+	isDockerImage(Resource) bool
+	isScanConfig(Resource) bool
+	isFlag(Resource) bool
+
+	// From Event
+	asEventDesc(Event) apitypes.EventDesc
 }
 
-type PersistObj interface {
+type PersistObj interface {  // abstract
 	getId() string
 	getDBClient() DBClient
 	writeBack() error
@@ -95,7 +92,7 @@ type PersistObj interface {
 }
 
 /* A Party is a User or a Group. Parties act on Resources. */
-type Party interface {
+type Party interface {  // abstract
 	PersistObj
 	setActive(bool)
 	isActive() bool
@@ -152,7 +149,7 @@ type ACL interface {
 }
 
 /* A Resource is something that a party can act upon. */
-type Resource interface {
+type Resource interface {  // abstract
 	ACL
 	getName() string
 	setName(string) error
@@ -241,7 +238,7 @@ type Dockerfile interface {
 	asDockerfileDesc() *apitypes.DockerfileDesc
 }
 
-type Image interface {
+type Image interface {  // abstract
 	Resource
 	getRepoId() string
 	getRepo() (Repo, error)
@@ -304,7 +301,7 @@ type Flag interface {
 	asFlagDesc() *apitypes.FlagDesc
 }
 
-type Event interface {
+type Event interface {  // abstract
 	PersistObj
 	getWhen() time.Time
 	getUserObjId() string
@@ -321,7 +318,7 @@ type ScanEvent interface {
 	asScanEventDesc() *apitypes.ScanEventDesc
 }
 
-type ImageCreationEvent interface {
+type ImageCreationEvent interface {  // abstract
 	Event
 }
 
