@@ -384,7 +384,7 @@ func (acl *InMemACL) aclFieldsAsJSON() string {
 }
 
 func (acl *InMemACL) asJSON() string {
-	return fmt.Sprintf("\"InMemACL\": {" + acl.aclFieldsAsJSON() + "}")
+	return fmt.Sprintf("\"ACL\": {" + acl.aclFieldsAsJSON() + "}")
 }
 
 func (client *InMemClient) ReconstituteACL(id string, aclEntryIds []string) (*InMemACL, error) {
