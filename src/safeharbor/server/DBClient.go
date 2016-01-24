@@ -104,15 +104,15 @@ type PersistObj interface {  // abstract
 /* A Party is a User or a Group. Parties act on Resources. */
 type Party interface {  // abstract
 	PersistObj
-	//setActive(bool) error
+	setActive(bool)
 	isActive() bool
 	getRealmId() string
 	getRealm() (Realm, error)
 	getName() string
 	getCreationTime() time.Time
 	getACLEntryIds() []string
-	//addACLEntry(ACLEntry) error
-	//deleteACLEntry(entry ACLEntry) error
+	addACLEntry(ACLEntry)
+	deleteACLEntry(entry ACLEntry) error
 	getACLEntryForResourceId(string) (ACLEntry, error)
 }
 
@@ -138,6 +138,9 @@ type Resource interface {  // abstract
 	//addAccess(party Party, permissionMask []bool) (ACLEntry, error)
 	//deleteAccess(Party) error
 	//deleteAllAccess() error
+	
+	removeACLEntryIdAt(index int)
+	clearAllACLEntryIds()
 }
 
 type ResourceType int

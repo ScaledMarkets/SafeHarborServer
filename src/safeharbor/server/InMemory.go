@@ -483,8 +483,7 @@ func (client *InMemClient) deleteAccess(resource Resource, party Party) error {
 			if err != nil { return err }
 			
 			// Remove the ACL entry id from the resource's ACL entry list.
-			var inMemRsc = resource.(*InMemResource)
-			inMemRsc.ACLEntryIds = apitypes.RemoveAt(index, inMemRsc.ACLEntryIds)
+			resource.removeACLEntryIdAt(index)
 			
 			// Remove from database.
 			err = client.deleteObject(aclEntry)
@@ -493,6 +492,10 @@ func (client *InMemClient) deleteAccess(resource Resource, party Party) error {
 	}
 	
 	return client.writeBack(resource)
+}
+
+func (resource *InMemResource) removeACLEntryIdAt(index int) {
+	resource.ACLEntryIds = apitypes.RemoveAt(index, resource.ACLEntryIds)
 }
 
 func (resource *InMemResource) printACLs(party Party) {
@@ -594,10 +597,13 @@ func (client *InMemClient) deleteAllAccessToResource(resource Resource) error {
 	}
 		
 	// Remove all ACL entry ids from the resource's ACL entry list.
-	var inMemRsc = resource.(*InMemResource)
-	inMemRsc.ACLEntryIds = inMemRsc.ACLEntryIds[0:0]
+	resource.clearAllACLEntryIds()
 	
 	return client.writeBack(resource)
+}
+
+func (resource *InMemResource) clearAllACLEntryIds() {
+	resource.ACLEntryIds = resource.ACLEntryIds[0:0]
 }
 
 func (resource *InMemResource) getName() string {
@@ -798,9 +804,12 @@ func (client *InMemClient) NewInMemParty(name string, realmId string) (*InMemPar
 }
 
 func (client *InMemClient) setActive(party Party, b bool) error {
-	var inMemParty = party.(*InMemParty)
-	inMemParty.IsActive = b
+	party.setActive(b)
 	return client.writeBack(party)
+}
+
+func (party *InMemParty) setActive(b bool) {
+	party.IsActive = b
 }
 
 func (party *InMemParty) isActive() bool {
@@ -841,17 +850,23 @@ func (party *InMemParty) getACLEntryIds() []string {
 }
 
 func (client *InMemClient) addACLEntry(party Party, entry ACLEntry) error {
-	var inMemParty = party.(*InMemParty)
-	inMemParty.ACLEntryIds = append(inMemParty.ACLEntryIds, entry.getId())
+	party.addACLEntry(entry)
 	return client.writeBack(party)
 }
 
+func (party *InMemParty) addACLEntry(entry ACLEntry) {
+	party.ACLEntryIds = append(party.ACLEntryIds, entry.getId())
+}
+
 func (client *InMemClient) deleteACLEntry(party Party, entry ACLEntry) error {
-	var inMemParty = party.(*InMemParty)
-	inMemParty.ACLEntryIds = apitypes.RemoveFrom(entry.getId(), inMemParty.ACLEntryIds)
-	var err error = client.deleteObject(entry)
-	if err != nil { return err }
+	party.deleteACLEntry(entry)
 	return client.writeBack(party)
+}
+
+func (party *InMemParty) deleteACLEntry(entry ACLEntry) error {
+	party.ACLEntryIds = apitypes.RemoveFrom(entry.getId(), party.ACLEntryIds)
+	var err error = party.Client.deleteObject(entry)
+	return err
 }
 
 func (party *InMemParty) getACLEntryForResourceId(resourceId string) (ACLEntry, error) {
