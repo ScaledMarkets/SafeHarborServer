@@ -289,7 +289,7 @@ func disableUser(server *Server, sessionToken *apitypes.SessionToken, values url
 		user.getRealmId(), "disableUser"); failMsg != nil { return failMsg }
 	
 	// Prevent the user from authenticating.
-	user.setActive(false)
+	server.dbClient.setActive(user, false)
 	
 	return apitypes.NewResult(200, "User with user Id '" + user.getUserId() + "' disabled")
 }
@@ -316,7 +316,7 @@ func reenableUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 	if user.isActive() { return apitypes.NewFailureDesc("User " + user.getUserId() + " is already active") }
 	
 	// Enable the user to authenticate.
-	user.setActive(true)
+	server.dbClient.setActive(user, true)
 	
 	return apitypes.NewResult(200, "User with user Id '" + user.getUserId() + "' reenabled")
 }
@@ -1391,7 +1391,7 @@ func setPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	
 	// Get the current ACLEntry, if there is one.
 	var aclEntry ACLEntry
-	aclEntry, err = resource.setAccess(party, mask)
+	aclEntry, err = dbClient.setAccess(resource, party, mask)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return aclEntry.asPermissionDesc()
@@ -1448,7 +1448,7 @@ func addPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	
 	// Get the current ACLEntry, if there is one.
 	var aclEntry ACLEntry
-	aclEntry, err = resource.addAccess(party, mask)
+	aclEntry, err = dbClient.addAccess(resource, party, mask)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return aclEntry.asPermissionDesc()
@@ -1491,7 +1491,7 @@ func remPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	if party == nil { return apitypes.NewFailureDesc("Unable to identify party with Id " + partyId) }
 	
 	// Get the current ACLEntry, if there is one.
-	err = resource.deleteAccess(party)
+	err = dbClient.deleteAccess(resource, party)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	return apitypes.NewResult(200, "All permission removed")

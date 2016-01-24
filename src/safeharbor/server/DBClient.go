@@ -71,7 +71,18 @@ type DBClient interface {
 	writeBack(PersistObj) error
 	asJSON(PersistObj) string
 	
+	// From Party
+	setActive(Party, bool) error
+	addACLEntry(Party, ACLEntry) error
+	deleteACLEntry(party Party, entry ACLEntry) error
+	
 	// From Resource
+	setName(Resource, string) error
+	setDescription(Resource, string) error
+	setAccess(resource Resource, party Party, permissionMask []bool) (ACLEntry, error)
+	addAccess(resource Resource, party Party, permissionMask []bool) (ACLEntry, error)
+	deleteAccess(Resource, Party) error
+	deleteAllAccessToResource(Resource) error
 	isRealm(Resource) bool
 	isRepo(Resource) bool
 	isDockerfile(Resource) bool
@@ -93,17 +104,52 @@ type PersistObj interface {  // abstract
 /* A Party is a User or a Group. Parties act on Resources. */
 type Party interface {  // abstract
 	PersistObj
-	setActive(bool) error
+	//setActive(bool) error
 	isActive() bool
 	getRealmId() string
 	getRealm() (Realm, error)
 	getName() string
 	getCreationTime() time.Time
 	getACLEntryIds() []string
-	addACLEntry(ACLEntry) error
-	deleteACLEntry(entry ACLEntry) error
+	//addACLEntry(ACLEntry) error
+	//deleteACLEntry(entry ACLEntry) error
 	getACLEntryForResourceId(string) (ACLEntry, error)
 }
+
+/* A Resource is something that a party can act upon. */
+type Resource interface {  // abstract
+	ACL
+	getName() string
+	//setName(string) error
+	setNameDeferredUpdate(string)
+	getCreationTime() time.Time
+	getDescription() string
+	//setDescription(string) error
+	setDescriptionDeferredUpdate(string)
+	getACLEntryForPartyId(string) (ACLEntry, error)
+	getParentId() string
+	isRealm() bool
+	isRepo() bool
+	isDockerfile() bool
+	isDockerImage() bool
+	isScanConfig() bool
+	isFlag() bool
+	//setAccess(party Party, permissionMask []bool) (ACLEntry, error)
+	//addAccess(party Party, permissionMask []bool) (ACLEntry, error)
+	//deleteAccess(Party) error
+	//deleteAllAccess() error
+}
+
+type ResourceType int
+
+const (
+	ARealm ResourceType = iota
+	ARepo
+	ADockerfile
+	ADockerImage
+	AScanConfig
+	AFlag
+)
 
 type Group interface {
 	Party
@@ -146,41 +192,6 @@ type ACL interface {
 	getACLEntryIds() []string
 	addACLEntry(ACLEntry) error
 }
-
-/* A Resource is something that a party can act upon. */
-type Resource interface {  // abstract
-	ACL
-	getName() string
-	setName(string) error
-	setNameDeferredUpdate(string)
-	getCreationTime() time.Time
-	getDescription() string
-	setDescription(string) error
-	setDescriptionDeferredUpdate(string)
-	getACLEntryForPartyId(string) (ACLEntry, error)
-	getParentId() string
-	isRealm() bool
-	isRepo() bool
-	isDockerfile() bool
-	isDockerImage() bool
-	isScanConfig() bool
-	isFlag() bool
-	setAccess(party Party, permissionMask []bool) (ACLEntry, error)
-	addAccess(party Party, permissionMask []bool) (ACLEntry, error)
-	deleteAccess(Party) error
-	deleteAllAccess() error
-}
-
-type ResourceType int
-
-const (
-	ARealm ResourceType = iota
-	ARepo
-	ADockerfile
-	ADockerImage
-	AScanConfig
-	AFlag
-)
 
 type Realm interface {
 	Resource
