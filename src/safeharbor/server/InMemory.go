@@ -1706,7 +1706,10 @@ func (client *InMemClient) getRealm(id string) (Realm, error) {
 	if err != nil { return nil, err }
 	if obj == nil { return nil, errors.New("Realm not found") }
 	realm, isType = obj.(Realm)
-	if ! isType { return nil, errors.New(
+	if ! isType {
+		fmt.Println("Not a realm")
+		debug.PrintStack()
+		return nil, errors.New(
 		"Object with Id " + id + " is not a Realm - it is a " + reflect.TypeOf(obj).String()) }
 	return realm, nil
 }
