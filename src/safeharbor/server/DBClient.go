@@ -73,8 +73,11 @@ type DBClient interface {
 	
 	// From Party
 	setActive(Party, bool) error
-	addACLEntry(Party, ACLEntry) error
-	deleteACLEntry(party Party, entry ACLEntry) error
+	addACLEntryForParty(Party, ACLEntry) error
+	deleteACLEntryForParty(party Party, entry ACLEntry) error
+	
+	// From ACL
+	addACLEntry(ACL, ACLEntry) error
 	
 	// From Resource
 	setName(Resource, string) error
@@ -111,9 +114,16 @@ type Party interface {  // abstract
 	getName() string
 	getCreationTime() time.Time
 	getACLEntryIds() []string
-	addACLEntry(ACLEntry)
+	addACLEntry(ACLEntry)  // does not write to db
 	deleteACLEntry(entry ACLEntry) error
 	getACLEntryForResourceId(string) (ACLEntry, error)
+}
+
+type ACL interface {  // abstract
+	PersistObj
+	addACLEntry(ACLEntry)  // does not write to db
+	getACLEntryIds() []string
+	setACLEntryIds([]string)  // does not write to db
 }
 
 /* A Resource is something that a party can act upon. */
@@ -139,8 +149,8 @@ type Resource interface {  // abstract
 	//deleteAccess(Party) error
 	//deleteAllAccess() error
 	
-	removeACLEntryIdAt(index int)
-	clearAllACLEntryIds()
+	removeACLEntryIdAt(index int)  // does not write to db
+	clearAllACLEntryIds()  // does not write to db
 }
 
 type ResourceType int
@@ -188,12 +198,6 @@ type ACLEntry interface {
 	getPermissionMask() []bool
 	setPermissionMask([]bool) error
 	asPermissionDesc() *apitypes.PermissionDesc
-}
-
-type ACL interface {
-	PersistObj
-	getACLEntryIds() []string
-	addACLEntry(ACLEntry) error
 }
 
 type Realm interface {

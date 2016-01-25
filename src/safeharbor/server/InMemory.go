@@ -341,7 +341,7 @@ func (client *InMemClient) asJSON(obj PersistObj) string {
 /*******************************************************************************
  * 
  */
-type InMemACL struct {
+type InMemACL struct {  // abstract
 	InMemPersistObj
 	ACLEntryIds []string
 }
@@ -355,17 +355,24 @@ func (client *InMemClient) NewInMemACL() (*InMemACL, error) {
 		InMemPersistObj: *pers,
 		ACLEntryIds: make([]string, 0),
 	}
-	err = client.writeBack(ACL(acl))
-	return acl, err
+	return acl, nil
 }
 
 func (acl *InMemACL) getACLEntryIds() []string {
 	return acl.ACLEntryIds
 }
 
-func (acl *InMemACL) addACLEntry(entry ACLEntry) error {
+func (acl *InMemACL) setACLEntryIds(ids []string) {
+	acl.ACLEntryIds = ids
+}
+
+func (client *InMemClient) addACLEntry(acl ACL, entry ACLEntry) error {
+	acl.addACLEntry(entry)
+	return client.writeBack(acl)
+}
+
+func (acl *InMemACL) addACLEntry(entry ACLEntry) {
 	acl.ACLEntryIds = append(acl.ACLEntryIds, entry.getId())
-	return acl.Client.writeBack(acl)
 }
 
 func (acl *InMemACL) writeBack() error {
@@ -384,7 +391,7 @@ func (acl *InMemACL) aclFieldsAsJSON() string {
 }
 
 func (acl *InMemACL) asJSON() string {
-	return fmt.Sprintf("\"ACL\": {" + acl.aclFieldsAsJSON() + "}")
+	panic("Call to method that should be abstract")
 }
 
 func (client *InMemClient) ReconstituteACL(id string, aclEntryIds []string) (*InMemACL, error) {
@@ -456,7 +463,9 @@ func (client *InMemClient) addAccess(resource Resource, party Party, mask []bool
 		for index, _ := range curmask {
 			curmask[index] = curmask[index] || mask[index]
 		}
-		if err = client.writeBack(aclEntry); err != nil { return nil, err }
+		err = aclEntry.setPermissionMask(curmask)
+		if err != nil { return nil, err }
+		//if err = client.writeBack(aclEntry); err != nil { return nil, err }
 	}
 
 	return aclEntry, nil
@@ -479,7 +488,7 @@ func (client *InMemClient) deleteAccess(resource Resource, party Party) error {
 			}
 			
 			// Remove from party's list.
-			err = client.deleteACLEntry(party, aclEntry)
+			err = client.deleteACLEntryForParty(party, aclEntry)
 			if err != nil { return err }
 			
 			// Remove the ACL entry id from the resource's ACL entry list.
@@ -586,7 +595,7 @@ func (client *InMemClient) deleteAllAccessToResource(resource Resource) error {
 		party, err = client.getParty(aclEntry.getPartyId())
 		if err != nil { return err }
 		
-		err = client.deleteACLEntry(party, aclEntry)
+		err = client.deleteACLEntryForParty(party, aclEntry)
 		if err != nil { return err }
 		
 		err = client.writeBack(party)
@@ -849,7 +858,7 @@ func (party *InMemParty) getACLEntryIds() []string {
 	return party.ACLEntryIds
 }
 
-func (client *InMemClient) addACLEntry(party Party, entry ACLEntry) error {
+func (client *InMemClient) addACLEntryForParty(party Party, entry ACLEntry) error {
 	party.addACLEntry(entry)
 	return client.writeBack(party)
 }
@@ -858,7 +867,7 @@ func (party *InMemParty) addACLEntry(entry ACLEntry) {
 	party.ACLEntryIds = append(party.ACLEntryIds, entry.getId())
 }
 
-func (client *InMemClient) deleteACLEntry(party Party, entry ACLEntry) error {
+func (client *InMemClient) deleteACLEntryForParty(party Party, entry ACLEntry) error {
 	party.deleteACLEntry(entry)
 	return client.writeBack(party)
 }
@@ -1451,9 +1460,9 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	var newACLEntry ACLEntry
 	newACLEntry, err = client.NewInMemACLEntry(resourceId, partyId, permissionMask)
 	if err != nil { return nil, err }
-	err = resource.addACLEntry(newACLEntry)  // Add to resource's ACL
+	err = client.addACLEntry(resource, newACLEntry)  // Add to resource's ACL
 	if err != nil { return nil, err }
-	err = client.addACLEntry(party, newACLEntry)  // Add to user or group's ACL
+	err = client.addACLEntryForParty(party, newACLEntry)  // Add to user or group's ACL
 	if err != nil { return nil, err }
 	fmt.Println("Added ACL entry for " + party.getName() + "(a " +
 		reflect.TypeOf(party).String() + "), to access " +
