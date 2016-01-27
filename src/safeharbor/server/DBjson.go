@@ -32,7 +32,9 @@ func retrieveTypeName(json string) (typeName string, remainder string, err error
 	var i = strings.Index(json, "\"")
 	var s2 = json[i+1:]
 	var j = strings.Index(s2, "\"")
-	if j == -1 { return "", "", errors.New(
+	if j == -1 {
+		debug.PrintStack()
+		return "", "", errors.New(
 		fmt.Sprintf("Ill-formatted json: no \" found after pos %d", i)) }
 	var s3 = s2[:j]
 	
