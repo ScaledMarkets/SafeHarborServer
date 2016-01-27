@@ -1174,7 +1174,8 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	if err != nil { return nil, err }
 	
 	// Add to parent realm's list.
-	realm.addUser(newUser)
+	err = realm.addUser(newUser)
+	if err != nil { return nil, err }
 	
 	err = client.writeBack(realm)
 	if err != nil { return nil, err }
@@ -1796,7 +1797,8 @@ func (realm *InMemRealm) getGroupIds() []string {
 }
 
 func (realm *InMemRealm) addUser(user User) error {
-	realm.Client.addUser(user)
+	var err = realm.Client.addUser(user)
+	if err != nil { return err }
 	realm.UserObjIds = append(realm.UserObjIds, user.getId())
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = realm.getId()

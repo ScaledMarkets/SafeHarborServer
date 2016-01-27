@@ -101,6 +101,7 @@ func (persist *Persistence) load() error {
 	} else {
 		persist.uniqueId = id
 	}
+	
 	fmt.Println("...completing loading database state.")
 	return nil
 }
