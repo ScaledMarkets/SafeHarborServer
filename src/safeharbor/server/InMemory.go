@@ -257,6 +257,8 @@ func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
 		var err error
 		bytes, err = client.RedisClient.Get("obj/" + id)
 		if err != nil { return nil, err }
+		if bytes == nil { return nil, nil }
+		if len(bytes) == 0 { return nil, nil }
 		
 		var obj interface{}
 		_, obj, err = client.GetObject(string(bytes))
