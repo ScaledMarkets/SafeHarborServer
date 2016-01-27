@@ -10,10 +10,11 @@ import (
 	"io/ioutil"
 	"strings"
 	"os/exec"
-	"errors"
+	//"errors"
 	"regexp"
 	
 	// SafeHarbor packages:
+	"safeharbor/util"
 )
 
 /*******************************************************************************
@@ -23,7 +24,7 @@ func BuildDockerfile(dockerfileExternalFilePath,
 	dockerfileName, realmName, repoName, imageName string) (string, error) {
 	
 	if ! localDockerImageNameIsValid(imageName) {
-		return "", errors.New(fmt.Sprintf("Image name '%s' is not valid - must be " +
+		return "", util.ConstructError(fmt.Sprintf("Image name '%s' is not valid - must be " +
 			"of format <name>[:<tag>]", imageName))
 	}
 	fmt.Println("Image name =", imageName)
@@ -35,7 +36,7 @@ func BuildDockerfile(dockerfileExternalFilePath,
 	output, err = cmd.CombinedOutput()
 	var outputStr string = string(output)
 	if ! strings.HasPrefix(outputStr, "Error") {
-		return "", errors.New("An image with name " + imageName + " already exists.")
+		return "", util.ConstructError("An image with name " + imageName + " already exists.")
 	}
 	
 	// Verify that the image name conforms to Docker's requirements.
@@ -100,7 +101,7 @@ func BuildDockerfile(dockerfileExternalFilePath,
 	if err != nil {
 		fmt.Println()
 		fmt.Println("Returning from buildDockerfile, with error")
-		return "", errors.New(err.Error() + ", " + outputStr)
+		return "", util.ConstructError(err.Error() + ", " + outputStr)
 	}
 	fmt.Println("Performed docker build command successfully.")
 	return outputStr, nil
@@ -216,7 +217,7 @@ func ParseBuildOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 	for {
 		
 		if lineNo >= len(lines) {
-			return output, errors.New("Incomplete")
+			return output, util.ConstructError("Incomplete")
 		}
 		
 		var line string = lines[lineNo]
@@ -259,7 +260,7 @@ func ParseBuildOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 			
 			if step == nil {
 				output.ErrorMessage = "Internal error: should not happen"
-				return output, errors.New(output.ErrorMessage)
+				return output, util.ConstructError(output.ErrorMessage)
 			}
 
 			var therest = strings.TrimPrefix(line, " ---> ")
@@ -281,11 +282,11 @@ func ParseBuildOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 			
 		default:
 			output.ErrorMessage = "Internal error: Unrecognized state"
-			return output, errors.New(output.ErrorMessage)
+			return output, util.ConstructError(output.ErrorMessage)
 		}
 	}
 	output.ErrorMessage = "Did not find a final image Id"
-	return output, errors.New(output.ErrorMessage)
+	return output, util.ConstructError(output.ErrorMessage)
 }
 
 /*******************************************************************************
@@ -334,7 +335,7 @@ func NameConformsToDockerRules(name string) error {
 	var a = strings.TrimLeft(name, "abcdefghijklmnopqrstuvwxyz0123456789")
 	var b = strings.TrimRight(a, "abcdefghijklmnopqrstuvwxyz0123456789._-")
 	if len(b) == 0 { return nil }
-	return errors.New("Name '" + name + "' does not conform to docker name rules: " +
+	return util.ConstructError("Name '" + name + "' does not conform to docker name rules: " +
 		"[a-z0-9]+(?:[._-][a-z0-9]+)*  Offending fragment: '" + b + "'")
 }
 
@@ -349,7 +350,7 @@ func localDockerImageNameIsValid(name string) bool {
 	
 	for _, part := range parts {
 		matched, err := regexp.MatchString("^[a-zA-Z0-9\\-_]*$", part)
-		if err != nil { panic(errors.New("Unexpected internal error")) }
+		if err != nil { panic(util.ConstructError("Unexpected internal error")) }
 		if ! matched { return false }
 	}
 	

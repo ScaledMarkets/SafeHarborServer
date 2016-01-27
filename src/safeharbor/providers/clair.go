@@ -29,7 +29,7 @@
 package providers
 
 import (
-	"errors"
+	//"errors"
 	"net/http"
 	"fmt"
 
@@ -49,6 +49,7 @@ import (
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
 	"safeharbor/rest"
+	"safeharbor/util"
 )
 
 type ClairService struct {
@@ -65,10 +66,10 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 	
 	host, isType = params["Host"].(string)
 	portStr, isType = params["Port"].(string)
-	if host == "" { return nil, errors.New("Parameter 'Host' not specified") }
-	if portStr == "" { return nil, errors.New("Parameter 'Port' not specified") }
-	if ! isType { return nil, errors.New("Parameter 'Host' is not a string") }
-	if ! isType { return nil, errors.New("Parameter 'Port' is not a string") }
+	if host == "" { return nil, util.ConstructError("Parameter 'Host' not specified") }
+	if portStr == "" { return nil, util.ConstructError("Parameter 'Port' not specified") }
+	if ! isType { return nil, util.ConstructError("Parameter 'Host' is not a string") }
+	if ! isType { return nil, util.ConstructError("Parameter 'Port' is not a string") }
 	
 	var port int
 	var err error
@@ -96,7 +97,7 @@ func (clairSvc *ClairService) GetParameterDescriptions() map[string]string {
 
 func (clairSvc *ClairService) GetParameterDescription(name string) (string, error) {
 	var desc string = clairSvc.Params[name]
-	if desc == "" { return "", errors.New("No parameter named '" + name + "'") }
+	if desc == "" { return "", util.ConstructError("No parameter named '" + name + "'") }
 	return desc, nil
 }
 
@@ -171,7 +172,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	fmt.Println("Getting image's history")
 	layerIDs, err := history(imageName)
 	if err != nil { return nil, err }
-	if len(layerIDs) == 0 { return nil, errors.New("Could not get image's history") }
+	if len(layerIDs) == 0 { return nil, util.ConstructError("Could not get image's history") }
 
 	// Analyze layers
 	fmt.Printf("Analyzing %d layers\n", len(layerIDs))
@@ -234,9 +235,9 @@ func (clairContext *ClairRestContext) GetVersions() (apiVersion string, engineVe
 	if err != nil { return "", "", err }
 	var isType bool
 	apiVersion, isType = responseMap["APIVersion"].(string)
-	if ! isType { return "", "", errors.New("Value returned for APIVersion is not a string") }
+	if ! isType { return "", "", util.ConstructError("Value returned for APIVersion is not a string") }
 	engineVersion, isType = responseMap["EngineVersion"].(string)
-	if ! isType { return "", "", errors.New("Value returned for EngineVersion is not a string") }
+	if ! isType { return "", "", util.ConstructError("Value returned for EngineVersion is not a string") }
 	return apiVersion, engineVersion, nil
 }
 
@@ -354,11 +355,11 @@ func save(imageName string) (string, error) {
 
 	err = extract.Start()
 	if err != nil {
-		return "", errors.New(stderr.String())
+		return "", util.ConstructError(stderr.String())
 	}
 	err = save.Run()
 	if err != nil {
-		return "", errors.New(stderr.String())
+		return "", util.ConstructError(stderr.String())
 	}
 	err = pipe.Close()
 	if err != nil {
@@ -366,7 +367,7 @@ func save(imageName string) (string, error) {
 	}
 	err = extract.Wait()
 	if err != nil {
-		return "", errors.New(stderr.String())
+		return "", util.ConstructError(stderr.String())
 	}
 
 	return path, nil
@@ -386,7 +387,7 @@ func history(imageName string) ([]string, error) {
 
 	err = cmd.Start()
 	if err != nil {
-		return []string{}, errors.New(stderr.String())
+		return []string{}, util.ConstructError(stderr.String())
 	}
 
 	var layers []string

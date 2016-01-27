@@ -21,7 +21,7 @@ import (
 	"net/url"
 	"net/http"
 	"fmt"
-	"errors"
+	//"errors"
 	"time"
 	"io"
 	"strings"
@@ -30,6 +30,7 @@ import (
 	// SafeHarbor packages:
 	//"safeharbor/rest"
 	"safeharbor/docker"
+	"safeharbor/util"
 )
 
 /*******************************************************************************
@@ -409,8 +410,8 @@ type RealmInfo struct {
 }
 
 func NewRealmInfo(realmName string, orgName string, desc string) (*RealmInfo, error) {
-	if realmName == "" { return nil, errors.New("realmName is empty") }
-	if orgName == "" { return nil, errors.New("orgName is empty") }
+	if realmName == "" { return nil, util.ConstructError("realmName is empty") }
+	if orgName == "" { return nil, util.ConstructError("orgName is empty") }
 	return &RealmInfo{
 		RealmName: realmName,
 		OrgFullName: orgName,
@@ -1048,7 +1049,7 @@ func GetRequiredHTTPParameterValue(values url.Values, name string) (string, erro
 	var err error
 	value, err = GetHTTPParameterValue(values, name)
 	if err != nil { return "", err }
-	if value == "" { return "", errors.New(fmt.Sprintf("POST field not found: %s", name)) }
+	if value == "" { return "", util.ConstructError(fmt.Sprintf("POST field not found: %s", name)) }
 	return value, nil
 }
 
@@ -1067,7 +1068,7 @@ func (mask *PermissionMask) ToStringArray() []string {
  * 
  */
 func ToBoolAr(mask []string) ([]bool, error) {
-	if len(mask) != 5 { return nil, errors.New("Length of mask != 5") }
+	if len(mask) != 5 { return nil, util.ConstructError("Length of mask != 5") }
 	var boolAr []bool = make([]bool, 5)
 	for i, val := range mask {
 		if val == "true" { boolAr[i] = true } else { boolAr[i] = false }
@@ -1123,7 +1124,7 @@ func Sanitize(value string) (string, error) {
 	
 	var allowed string = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-@:/"
 	if len(strings.TrimLeft(value, allowed)) == 0 { return value, nil }
-	return "", errors.New("Value '" + value + "' may only have letters, numbers, and .-_@:/")
+	return "", util.ConstructError("Value '" + value + "' may only have letters, numbers, and .-_@:/")
 }
 
 /*******************************************************************************

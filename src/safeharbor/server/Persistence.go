@@ -10,7 +10,7 @@ package server
 import (
 	"fmt"
 	"sync/atomic"
-	"errors"
+	//"errors"
 	"strconv"
 	//"reflect"
 	//"os"
@@ -21,6 +21,7 @@ import (
 	
 	"safeharbor/apitypes"
 	//"safeharbor/docker"
+	"safeharbor/util"
 )
 
 /*******************************************************************************
@@ -34,7 +35,7 @@ var _ DataError = &PersistDataError{}
 
 func NewPersistDataError(msg string) *PersistDataError {
 	return &PersistDataError{
-		error: errors.New(msg),
+		error: util.ConstructError(msg),
 	}
 }
 
@@ -231,7 +232,7 @@ func (persist *Persistence) deleteObject(obj PersistObj) error {
 		var err error
 		deleted, err = persist.RedisClient.Del("obj/" + obj.getId())
 		if err != nil { return err }
-		if ! deleted { return errors.New("Unable to delete object with Id " + obj.getId()) }
+		if ! deleted { return util.ConstructError("Unable to delete object with Id " + obj.getId()) }
 		return nil
 	}
 }
@@ -250,7 +251,7 @@ func (persist *Persistence) addRealm(newRealm Realm) error {
 		var added bool
 		added, err = persist.RedisClient.Sadd("realms", []byte(newRealm.getId()))
 		if err != nil { return err }
-		if ! added { return errors.New("Unable to add realm " + newRealm.getName()) }
+		if ! added { return util.ConstructError("Unable to add realm " + newRealm.getName()) }
 		return nil
 	}
 }
@@ -288,7 +289,7 @@ func (persist *Persistence) addUser(user User) error {
 		var added bool
 		added, err = persist.RedisClient.Sadd("users", []byte(user.getId()))
 		if err != nil { return err }
-		if ! added { return errors.New("Unable to add user " + user.getName()) }
+		if ! added { return util.ConstructError("Unable to add user " + user.getName()) }
 		return nil
 	}
 }

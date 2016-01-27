@@ -7,7 +7,7 @@ package server
 import (
 	"mime/multipart"
 	"fmt"
-	"errors"
+	//"errors"
 	"os"
 	"strconv"
 	"strings"
@@ -18,6 +18,7 @@ import (
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
 	"safeharbor/docker"
+	"safeharbor/util"
 )
 
 /*******************************************************************************
@@ -32,7 +33,7 @@ func createUniqueFilename(dir string, basename string) (string, error) {
 			return p, nil
 		}
 	}
-	return "", errors.New("Unable to create unique file name in directory " + dir)
+	return "", util.ConstructError("Unable to create unique file name in directory " + dir)
 }
 
 /*******************************************************************************
@@ -80,7 +81,7 @@ func printFileMap(m map[string][]*multipart.FileHeader) {
 func nameConformsToSafeHarborImageNameRules(name string) error {
 	var err error = docker.NameConformsToDockerRules(name)
 	if err != nil { return err }
-	if strings.Contains(name, ".") { return errors.New(
+	if strings.Contains(name, ".") { return util.ConstructError(
 		"SafeHarbor does not allow periods in names: " + name)
 	}
 	return nil
@@ -171,13 +172,13 @@ func getCurrentUser(server *Server, sessionToken *apitypes.SessionToken) (User, 
 	if sessionToken == nil { return nil, nil }
 	
 	if ! server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
-		return nil, errors.New("Session is not valid")
+		return nil, util.ConstructError("Session is not valid")
 	}
 	
 	var userId string = sessionToken.AuthenticatedUserid
 	var user User = server.dbClient.dbGetUserByUserId(userId)
 	if user == nil {
-		return nil, errors.New("user object cannot be identified from user id " + userId)
+		return nil, util.ConstructError("user object cannot be identified from user id " + userId)
 	}
 	
 	return user, nil
@@ -219,7 +220,7 @@ func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient,
 	var dockerfile Dockerfile
 	var err error
 	dockerfile, err = dbClient.dbCreateDockerfile(repo.getId(), name, desc, filepath)
-	if err != nil { return nil, errors.New(err.Error()) }
+	if err != nil { return nil, util.ConstructError(err.Error()) }
 	
 	// Create an ACL entry for the new file, to allow access by the current user.
 	fmt.Println("Adding ACL entry")
@@ -240,19 +241,19 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 	var err error
 	var headers []*multipart.FileHeader = files["filename"]
 	if len(headers) == 0 { return "", "", nil }
-	if len(headers) > 1 { return "", "", errors.New("Too many files posted") }
+	if len(headers) > 1 { return "", "", util.ConstructError("Too many files posted") }
 	var header *multipart.FileHeader = headers[0]
 	var filename string = header.Filename	
 	fmt.Println("Filename:", filename)
 	
 	// Validate syntax of filename: must be a simple name - no slashes, and a valid file name
 	err = validateSimpleFileNameSyntax(filename)
-	if err != nil { return "", "", errors.New(err.Error()) }
+	if err != nil { return "", "", util.ConstructError(err.Error()) }
 	
 	var file multipart.File
 	file, err = header.Open()
-	if err != nil { return "", "", errors.New(err.Error()) }
-	if file == nil { return "", "", errors.New("Internal Error") }	
+	if err != nil { return "", "", util.ConstructError(err.Error()) }
+	if file == nil { return "", "", util.ConstructError("Internal Error") }	
 	
 	// Create a filename for the new file.
 	var filepath = repo.getFileDirectory() + "/" + filename
@@ -260,12 +261,12 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 		filepath, err = createUniqueFilename(repo.getFileDirectory(), filename)
 		if err != nil {
 			fmt.Println(err.Error())
-			return "", "", errors.New(err.Error())
+			return "", "", util.ConstructError(err.Error())
 		}
 	}
 	if fileExists(filepath) {
 		fmt.Println("********Internal error: file exists but it should not:" + filepath)
-		return "", "", errors.New("********Internal error: file exists but it should not:" + filepath)
+		return "", "", util.ConstructError("********Internal error: file exists but it should not:" + filepath)
 	}
 	
 	// Save the file data to a permanent file.
@@ -274,7 +275,7 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
 	if err != nil {
 		fmt.Println(err.Error())
-		return "", "", errors.New("While writing dockerfile, " + err.Error())
+		return "", "", util.ConstructError("While writing dockerfile, " + err.Error())
 	}
 	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
 	return filename, filepath, nil
@@ -301,7 +302,7 @@ func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apityp
 	var imageName string
 	imageName, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageName")
 	if err != nil { return nil, err }
-	if imageName == "" { return nil, errors.New("No HTTP parameter found for ImageName") }
+	if imageName == "" { return nil, util.ConstructError("No HTTP parameter found for ImageName") }
 	
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
@@ -366,7 +367,7 @@ func getLeafResources(dbClient DBClient, user User,
 			case DockerImage: if leafType == ADockerImage { leaves[v.getId()] = v }
 			case ScanConfig: if leafType == AScanConfig { leaves[v.getId()] = v }
 			case Flag: if leafType == AFlag { leaves[v.getId()] = v }
-			default: return nil, errors.New("Internal error: unexpected repository object type")
+			default: return nil, util.ConstructError("Internal error: unexpected repository object type")
 		}
 	}
 	// Create composite list of repos that the user has access to, either directly
@@ -380,7 +381,7 @@ func getLeafResources(dbClient DBClient, user User,
 			var err error
 			r, err = dbClient.getRepo(repoId)
 			if err != nil { return nil, err }
-			if r == nil { return nil, errors.New("No repo found for Id " + repoId) }
+			if r == nil { return nil, util.ConstructError("No repo found for Id " + repoId) }
 			repos[repoId] = r
 		}
 	}
@@ -391,7 +392,7 @@ func getLeafResources(dbClient DBClient, user User,
 			case ADockerImage: err = mapRepoDockerImageIds(dbClient, repo, leaves)
 			case AScanConfig: err = mapRepoScanConfigIds(dbClient, repo, leaves)
 			case AFlag: err = mapRepoFlagIds(dbClient, repo, leaves)
-			default: return nil, errors.New("Internal error: unexpected repository object type")
+			default: return nil, util.ConstructError("Internal error: unexpected repository object type")
 		}
 		if err != nil { return nil, err }
 	}
@@ -406,7 +407,7 @@ func mapRepoDockerfileIds(dbClient DBClient, repo Repo, leaves map[string]Resour
 		var err error
 		d, err = dbClient.getDockerfile(dockerfileId)
 		if err != nil { return err }
-		if d == nil { return errors.New("Internal Error: No dockerfile found for Id " + dockerfileId) }
+		if d == nil { return util.ConstructError("Internal Error: No dockerfile found for Id " + dockerfileId) }
 		leaves[dockerfileId] = d
 	}
 	return nil
@@ -419,7 +420,7 @@ func mapRepoDockerImageIds(dbClient DBClient, repo Repo, leaves map[string]Resou
 		var err error
 		d, err = dbClient.getDockerImage(id)
 		if err != nil { return err }
-		if d == nil { return errors.New("Internal Error: No docker image found for Id " + id) }
+		if d == nil { return util.ConstructError("Internal Error: No docker image found for Id " + id) }
 		leaves[id] = d
 	}
 	return nil
@@ -432,7 +433,7 @@ func mapRepoScanConfigIds(dbClient DBClient, repo Repo, leaves map[string]Resour
 		var err error
 		d, err = dbClient.getScanConfig(id)
 		if err != nil { return err }
-		if d == nil { return errors.New("Internal Error: No scan config found for Id " + id) }
+		if d == nil { return util.ConstructError("Internal Error: No scan config found for Id " + id) }
 		leaves[id] = d
 	}
 	return nil
@@ -445,7 +446,7 @@ func mapRepoFlagIds(dbClient DBClient, repo Repo, leaves map[string]Resource) er
 		var err error
 		d, err = dbClient.getFlag(id)
 		if err != nil { return err }
-		if d == nil { return errors.New("Internal Error: No flag found for Id " + id) }
+		if d == nil { return util.ConstructError("Internal Error: No flag found for Id " + id) }
 		leaves[id] = d
 	}
 	return nil

@@ -10,11 +10,12 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"errors"
+	//"errors"
 	"time"
 	"runtime/debug"
 	
 	"safeharbor/rest"
+	"safeharbor/util"
 )
 
 /*******************************************************************************
@@ -35,12 +36,12 @@ func retrieveTypeName(json string) (typeName string, remainder string, err error
 	if j == -1 {
 		debug.PrintStack()
 		fmt.Println("json=" + json)
-		return "", "", errors.New(
+		return "", "", util.ConstructError(
 		fmt.Sprintf("Ill-formatted json: no \" found after pos %d", i)) }
 	var s3 = s2[:j]
 	
 	var k = strings.Index(s2[j:], ":")
-	if k == -1 { return "", "", errors.New(
+	if k == -1 { return "", "", util.ConstructError(
 		fmt.Sprintf("Ill-formatted json: no : found after position %d", j)) }
 	
 	return s3, s2[j+k+1:], nil
@@ -179,7 +180,7 @@ func parseJSON_field_name(json string, pos *int) (string, error) {
 
 	// Find trailing double-quote.
 	var dblQuotePos = strings.Index(json[*pos:], "\"")
-	if dblQuotePos == -1 { return "", errors.New(
+	if dblQuotePos == -1 { return "", util.ConstructError(
 		fmt.Sprintf("Terminating double quote not found for field name, after pos %d", *pos)) }
 	
 	// ....to do: recognize escapes, etc.
@@ -450,7 +451,7 @@ func parseJSON_pushTokenBack(token string, pos *int) {
 }
 
 func parseJSON_syntaxError(json string, pos *int, msg string) error {
-	var err = errors.New(fmt.Sprintf("%s: at char no. %d, json=%s",
+	var err = util.ConstructError(fmt.Sprintf("%s: at char no. %d, json=%s",
 		msg, (*pos + 1), json))
 	fmt.Println(err.Error())
 	debug.PrintStack()
@@ -459,7 +460,7 @@ func parseJSON_syntaxError(json string, pos *int, msg string) error {
 
 func parseJSON_tokenError(token string, json string, pos *int, msg string) error {
 	parseJSON_pushTokenBack(token, pos)
-	var err = errors.New(fmt.Sprintf("Syntax error at char no. %d: %s %s, json=%s",
+	var err = util.ConstructError(fmt.Sprintf("Syntax error at char no. %d: %s %s, json=%s",
 		(*pos + 1), token, msg, json))
 	fmt.Println(err.Error())
 	debug.PrintStack()
