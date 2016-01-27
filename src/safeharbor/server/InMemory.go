@@ -311,8 +311,9 @@ func (persObj *InMemPersistObj) releaseLock() {
 }
 
 func (persObj *InMemPersistObj) writeBack() error {
-	fmt.Println(fmt.Sprintf("persObj.writeBack: Object is a %s", reflect.TypeOf(persObj).String()))
-	return persObj.Client.writeObj(persObj.Id, persObj.asJSON())
+	panic("Abstract method should not be called")
+	//fmt.Println(fmt.Sprintf("persObj.writeBack: Object is a %s", reflect.TypeOf(persObj).String()))
+	//return persObj.Client.writeObj(persObj.Id, persObj.asJSON())
 }
 
 func (persObj *InMemPersistObj) persistObjFieldsAsJSON() string {
@@ -376,7 +377,7 @@ func (acl *InMemACL) addACLEntry(entry ACLEntry) {
 }
 
 func (acl *InMemACL) writeBack() error {
-	return acl.Client.writeObj(acl.Id, acl.asJSON())
+	panic("Abstract method should not be called")
 }
 
 func (acl *InMemACL) aclFieldsAsJSON() string {
