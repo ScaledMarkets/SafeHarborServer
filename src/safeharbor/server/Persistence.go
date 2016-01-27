@@ -290,7 +290,8 @@ func (persist *Persistence) addUser(user User) error {
 		var added bool
 		added, err = persist.RedisClient.Sadd("users", []byte(user.getId()))
 		if err != nil { return err }
-		if ! added { return util.ConstructError("Unable to add user " + user.getName()) }
+		if ! added { return util.ConstructError(
+			"Unable to add user " + user.getName() + "; " + err.Error()) }
 		return nil
 	}
 }
