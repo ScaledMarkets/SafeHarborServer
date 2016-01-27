@@ -453,7 +453,7 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 	if server.Debug && (values != nil) {
 		var stringToLog string
 		stringToLog, err = apitypes.GetHTTPParameterValue(values, "Log")
-		if err == nil {
+		if stringToLog != "" {
 			fmt.Println("Log:", stringToLog)
 		}
 	}
