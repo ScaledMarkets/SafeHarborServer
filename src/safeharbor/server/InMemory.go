@@ -22,7 +22,7 @@ package server
 
 import (
 	"fmt"
-	"errors"
+	//"errors"
 	"reflect"
 	"os"
 	"time"
@@ -1462,6 +1462,15 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	if err != nil { return nil, err }
 	err = client.addACLEntry(resource, newACLEntry)  // Add to resource's ACL
 	if err != nil { return nil, err }
+	
+	// debug
+	fmt.Println("Before adding ACLEntry...")
+	for _, eid := range party.getACLEntryIds() {
+		fmt.Print("\tentry id: '" + eid + "', ")
+	}
+	fmt.Println()
+	// end debug
+	
 	err = client.addACLEntryForParty(party, newACLEntry)  // Add to user or group's ACL
 	if err != nil { return nil, err }
 	fmt.Println("Added ACL entry with Id " + newACLEntry.getId() + " for " + party.getName() + "(a " +
@@ -1470,10 +1479,11 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	
 	
 	// debug
-	var a ACLEntry
-	a, err = client.getACLEntry(newACLEntry.getId())
-	if err != nil { return nil, err }
-	if a == nil { return nil, errors.New("Cound not find ACLEntry that was just created!") }
+	fmt.Println("...after adding ACLEntry...")
+	for _, eid := range party.getACLEntryIds() {
+		fmt.Print("\tentry id: '" + eid + "', ")
+	}
+	fmt.Println()
 	// end debug
 	
 	
