@@ -287,11 +287,26 @@ func (persist *Persistence) addUser(user User) error {
 	} else {
 		var err = persist.addObject(user, user.getId(), user.asJSON())
 		if err != nil { return err }
+		
+		
+		// debug
+		
+		// Check if the user already exists in the set.
+		var isMem bool
+		isMem, err = persist.RedisClient.Sismember("users", []byte(user.getId()))
+		if isMem {
+			fmt.Println("User " + user.getName() + " is already a member of the set of users")
+		} else {
+			fmt.Println("User " + user.getName() + " is NOT a member of the set of users")
+		}
+		
+		// end debug
+		
+		
 		var added bool
 		added, err = persist.RedisClient.Sadd("users", []byte(user.getId()))
 		if err != nil { return err }
-		if ! added { return util.ConstructError(
-			"Unable to add user " + user.getName() + "; " + err.Error()) }
+		if ! added { return util.ConstructError("Unable to add user " + user.getName()) }
 		return nil
 	}
 }
