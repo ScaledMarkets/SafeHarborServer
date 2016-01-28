@@ -452,7 +452,7 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 	// easier to find portions of server output that pertain to a given test.
 	if server.Debug && (values != nil) {
 		var stringToLog string
-		stringToLog, err = apitypes.GetHTTPParameterValue(values, "Log")
+		stringToLog, err = apitypes.GetHTTPParameterValue(false, values, "Log")
 		if stringToLog != "" {
 			fmt.Println("Log:", stringToLog)
 		}

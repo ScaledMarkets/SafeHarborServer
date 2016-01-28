@@ -300,7 +300,7 @@ func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apityp
 	if err != nil { return nil, err }
 
 	var imageName string
-	imageName, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageName")
+	imageName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageName")
 	if err != nil { return nil, err }
 	if imageName == "" { return nil, util.ConstructError("No HTTP parameter found for ImageName") }
 	

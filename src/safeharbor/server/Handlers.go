@@ -279,7 +279,7 @@ func disableUser(server *Server, sessionToken *apitypes.SessionToken, values url
 
 	var userObjId string
 	var err error
-	userObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserObjId")
+	userObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var user User
@@ -304,7 +304,7 @@ func reenableUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 
 	var userObjId string
 	var err error
-	userObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserObjId")
+	userObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var user User
@@ -333,7 +333,7 @@ func changePassword(server *Server, sessionToken *apitypes.SessionToken, values 
 
 	var userId string
 	var err error
-	userId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserId")
+	userId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	// Check that the userId is for the user who is currently logged in.
@@ -346,7 +346,7 @@ func changePassword(server *Server, sessionToken *apitypes.SessionToken, values 
 	if user == nil { return apitypes.NewFailureDesc("User unidentified") }
 	
 	var oldPswd string
-	oldPswd, err = apitypes.GetRequiredHTTPParameterValue(values, "OldPassword")
+	oldPswd, err = apitypes.GetRequiredHTTPParameterValue(true, values, "OldPassword")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if ! user.validatePassword(oldPswd) {
@@ -354,7 +354,7 @@ func changePassword(server *Server, sessionToken *apitypes.SessionToken, values 
 	}
 	
 	var newPswd string
-	newPswd, err = apitypes.GetRequiredHTTPParameterValue(values, "NewPassword")
+	newPswd, err = apitypes.GetRequiredHTTPParameterValue(true, values, "NewPassword")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask,
@@ -377,19 +377,19 @@ func createGroup(server *Server, sessionToken *apitypes.SessionToken, values url
 
 	var err error
 	var realmId string
-	realmId, err = apitypes.GetRequiredHTTPParameterValue(values, "RealmId")
+	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var groupName string
-	groupName, err = apitypes.GetRequiredHTTPParameterValue(values, "Name")
+	groupName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Name")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	var groupDescription string
-	groupDescription, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
+	groupDescription, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var addMeStr string
-	addMeStr, err = apitypes.GetHTTPParameterValue(values, "AddMe")
+	addMeStr, err = apitypes.GetHTTPParameterValue(true, values, "AddMe")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var addMe bool = false
 	if addMeStr == "true" { addMe = true }
@@ -423,7 +423,7 @@ func deleteGroup(server *Server, sessionToken *apitypes.SessionToken, values url
 
 	var groupId string
 	var err error
-	groupId, err = apitypes.GetRequiredHTTPParameterValue(values, "GroupId")
+	groupId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "GroupId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var group Group
@@ -453,7 +453,7 @@ func getGroupUsers(server *Server, sessionToken *apitypes.SessionToken, values u
 
 	var err error
 	var groupId string
-	groupId, err = apitypes.GetRequiredHTTPParameterValue(values, "GroupId")
+	groupId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "GroupId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var group Group
@@ -493,11 +493,11 @@ func addGroupUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 
 	var err error
 	var groupId string
-	groupId, err = apitypes.GetRequiredHTTPParameterValue(values, "GroupId")
+	groupId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "GroupId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var userObjId string
-	userObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserObjId")
+	userObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var group Group
@@ -537,11 +537,11 @@ func remGroupUser(server *Server, sessionToken *apitypes.SessionToken, values ur
 
 	var err error
 	var groupId string
-	groupId, err = apitypes.GetRequiredHTTPParameterValue(values, "GroupId")
+	groupId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "GroupId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var userObjId string
-	userObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserObjId")
+	userObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var group Group
@@ -625,7 +625,7 @@ func getRealmDesc(server *Server, sessionToken *apitypes.SessionToken, values ur
 	
 	var err error
 	var realmId string
-	realmId, err = apitypes.GetRequiredHTTPParameterValue(values, "RealmId")
+	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, realmId,
@@ -679,7 +679,7 @@ func deactivateRealm(server *Server, sessionToken *apitypes.SessionToken, values
 
 	var realmId string
 	var err error
-	realmId, err = apitypes.GetRequiredHTTPParameterValue(values, "RealmId")
+	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.DeleteMask, realmId,
@@ -703,9 +703,9 @@ func moveUserToRealm(server *Server, sessionToken *apitypes.SessionToken, values
 	var err error
 	var realmId string
 	var userObjId string
-	realmId, err = apitypes.GetRequiredHTTPParameterValue(values, "RealmId")
+	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	userObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserObjId")
+	userObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, realmId,
@@ -747,7 +747,7 @@ func getUserDesc(server *Server, sessionToken *apitypes.SessionToken, values url
 
 	var err error
 	var userId string
-	userId, err = apitypes.GetRequiredHTTPParameterValue(values, "UserId")
+	userId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var user User
@@ -776,7 +776,7 @@ func getRealmUsers(server *Server, sessionToken *apitypes.SessionToken, values u
 
 	var realmId string
 	var err error
-	realmId, err = apitypes.GetRequiredHTTPParameterValue(values, "RealmId")
+	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, realmId,
@@ -811,7 +811,7 @@ func getRealmGroups(server *Server, sessionToken *apitypes.SessionToken, values 
 	var groupDescs apitypes.GroupDescs = make([]*apitypes.GroupDesc, 0)
 	var realmId string
 	var err error
-	realmId, err = apitypes.GetRequiredHTTPParameterValue(values, "RealmId")
+	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, realmId,
@@ -846,7 +846,7 @@ func getRealmRepos(server *Server, sessionToken *apitypes.SessionToken, values u
 
 	var err error
 	var realmId string
-	realmId, err = apitypes.GetRequiredHTTPParameterValue(values, "RealmId")
+	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	fmt.Println("getRealmRepos: A")
@@ -921,15 +921,15 @@ func createRepo(server *Server, sessionToken *apitypes.SessionToken, values url.
 	fmt.Println("Creating repo...")
 	var err error
 	var realmId string
-	realmId, err = apitypes.GetRequiredHTTPParameterValue(values, "RealmId")
+	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	var repoName string
-	repoName, err = apitypes.GetRequiredHTTPParameterValue(values, "Name")
+	repoName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Name")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	var repoDesc string
-	repoDesc, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
+	repoDesc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateInMask, realmId,
@@ -982,7 +982,7 @@ func getDockerfiles(server *Server, sessionToken *apitypes.SessionToken, values 
 
 	var err error
 	var repoId string
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, repoId,
@@ -1023,7 +1023,7 @@ func getDockerImages(server *Server, sessionToken *apitypes.SessionToken, values
 
 	var err error
 	var repoId string
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, repoId,
@@ -1067,11 +1067,11 @@ func addDockerfile(server *Server, sessionToken *apitypes.SessionToken, values u
 	// Identify the repo.
 	var repoId string
 	var err error
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	var desc string
-	desc, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
+	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.CreateInMask, repoId,
@@ -1109,7 +1109,7 @@ func getGroupDesc(server *Server, sessionToken *apitypes.SessionToken, values ur
 	// Identify the group.
 	var groupId string
 	var err error
-	groupId, err = apitypes.GetRequiredHTTPParameterValue(values, "GroupId")
+	groupId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "GroupId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var group Group
@@ -1130,7 +1130,7 @@ func getRepoDesc(server *Server, sessionToken *apitypes.SessionToken, values url
 	// Identify the repo.
 	var repoId string
 	var err error
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var repo Repo
@@ -1151,7 +1151,7 @@ func getDockerImageDesc(server *Server, sessionToken *apitypes.SessionToken, val
 	// Identify the repo.
 	var imageId string
 	var err error
-	imageId, err = apitypes.GetRequiredHTTPParameterValue(values, "DockerImageId")
+	imageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerImageId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var image DockerImage
@@ -1172,7 +1172,7 @@ func getDockerfileDesc(server *Server, sessionToken *apitypes.SessionToken, valu
 	// Identify the dockerfile.
 	var dockerfileId string
 	var err error
-	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(values, "DockerfileId")
+	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerfileId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var dockerfile Dockerfile
@@ -1193,9 +1193,9 @@ func replaceDockerfile(server *Server, sessionToken *apitypes.SessionToken, valu
 	var dockerfileId string
 	var desc string
 	var err error
-	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(values, "DockerfileId")
+	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerfileId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	desc, err = apitypes.GetHTTPParameterValue(values, "Description")
+	desc, err = apitypes.GetHTTPParameterValue(true, values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var dockerfile Dockerfile
@@ -1232,7 +1232,7 @@ func execDockerfile(server *Server, sessionToken *apitypes.SessionToken, values 
 	// Identify the Dockerfile.
 	var err error
 	var dockerfileId string
-	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(values, "DockerfileId")
+	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerfileId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if dockerfileId == "" { return apitypes.NewFailureDesc("No HTTP parameter found for DockerfileId") }
 	
@@ -1267,7 +1267,7 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	
 	var repoId string
 	var err error
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, repoId,
@@ -1280,7 +1280,7 @@ func addAndExecDockerfile(server *Server, sessionToken *apitypes.SessionToken, v
 	if repo == nil { return apitypes.NewFailureDesc("Repo does not exist") }
 	
 	var desc string
-	desc, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
+	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	var name string
@@ -1312,7 +1312,7 @@ func downloadImage(server *Server, sessionToken *apitypes.SessionToken, values u
 
 	var imageObjId string
 	var err error
-	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageObjId")
+	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var dbClient DBClient = server.dbClient
@@ -1353,21 +1353,21 @@ func setPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	// Get the mask that we will use to overwrite the current mask.
 	var partyId string
 	var err error
-	partyId, err = apitypes.GetRequiredHTTPParameterValue(values, "PartyId")
+	partyId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "PartyId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var resourceId string
-	resourceId, err = apitypes.GetRequiredHTTPParameterValue(values, "ResourceId")
+	resourceId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ResourceId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var smask []string = make([]string, 5)
-	smask[0], err = apitypes.GetRequiredHTTPParameterValue(values, "CanCreateIn")
+	smask[0], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanCreateIn")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[1], err = apitypes.GetRequiredHTTPParameterValue(values, "CanRead")
+	smask[1], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanRead")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[2], err = apitypes.GetRequiredHTTPParameterValue(values, "CanWrite")
+	smask[2], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanWrite")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[3], err = apitypes.GetRequiredHTTPParameterValue(values, "CanExecute")
+	smask[3], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanExecute")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[4], err = apitypes.GetRequiredHTTPParameterValue(values, "CanDelete")
+	smask[4], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanDelete")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var mask []bool
@@ -1410,21 +1410,21 @@ func addPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	// Get the mask that we will be adding to the current mask.
 	var partyId string
 	var err error
-	partyId, err = apitypes.GetRequiredHTTPParameterValue(values, "PartyId")
+	partyId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "PartyId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var resourceId string
 	var smask []string = make([]string, 5)
-	resourceId, err = apitypes.GetRequiredHTTPParameterValue(values, "ResourceId")
+	resourceId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ResourceId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[0], err = apitypes.GetRequiredHTTPParameterValue(values, "CanCreateIn")
+	smask[0], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanCreateIn")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[1], err = apitypes.GetRequiredHTTPParameterValue(values, "CanRead")
+	smask[1], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanRead")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[2], err = apitypes.GetRequiredHTTPParameterValue(values, "CanWrite")
+	smask[2], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanWrite")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[3], err = apitypes.GetRequiredHTTPParameterValue(values, "CanExecute")
+	smask[3], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanExecute")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	smask[4], err = apitypes.GetRequiredHTTPParameterValue(values, "CanDelete")
+	smask[4], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanDelete")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var mask []bool
@@ -1467,11 +1467,11 @@ func remPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 	// Get the mask that we will be subracting from the current mask.
 	var partyId string
 	var err error
-	partyId, err = apitypes.GetRequiredHTTPParameterValue(values, "PartyId")
+	partyId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "PartyId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var resourceId string
-	resourceId, err = apitypes.GetRequiredHTTPParameterValue(values, "ResourceId")
+	resourceId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ResourceId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, resourceId,
@@ -1509,10 +1509,10 @@ func getPermission(server *Server, sessionToken *apitypes.SessionToken, values u
 
 	var partyId string
 	var err error
-	partyId, err = apitypes.GetRequiredHTTPParameterValue(values, "PartyId")
+	partyId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "PartyId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var resourceId string
-	resourceId, err = apitypes.GetRequiredHTTPParameterValue(values, "ResourceId")
+	resourceId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ResourceId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask, resourceId,
@@ -1837,7 +1837,7 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	
 	var err error
 	var providerName string
-	providerName, err = apitypes.GetRequiredHTTPParameterValue(values, "ProviderName")
+	providerName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ProviderName")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var scanService providers.ScanService
@@ -1847,22 +1847,22 @@ func defineScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	}
 	
 	var name string
-	name, err = apitypes.GetRequiredHTTPParameterValue(values, "Name")
+	name, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Name")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var desc string
-	desc, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
+	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var repoId string
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.WriteMask, repoId,
 		"defineScanConfig"); failMsg != nil { return failMsg }
 	
 	var successExpr string = ""
-	successExpr, err = apitypes.GetHTTPParameterValue(values, "SuccessExpression")
+	successExpr, err = apitypes.GetHTTPParameterValue(true, values, "SuccessExpression")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var scanConfig ScanConfig
@@ -1937,7 +1937,7 @@ func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 	var err error
 
 	var scanConfigId string
-	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(values, "ScanConfigId")
+	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var scanConfig ScanConfig
@@ -1948,22 +1948,22 @@ func updateScanConfig(server *Server, sessionToken *apitypes.SessionToken, value
 		scanConfig.getRepoId(), "defineScanConfig"); failMsg != nil { return failMsg }
 	
 	var name string
-	name, err = apitypes.GetHTTPParameterValue(values, "Name")
+	name, err = apitypes.GetHTTPParameterValue(true, values, "Name")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if name != "" { scanConfig.setNameDeferredUpdate(name) }
 	
 	var desc string
-	desc, err = apitypes.GetHTTPParameterValue(values, "Description")
+	desc, err = apitypes.GetHTTPParameterValue(true, values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if desc != "" { scanConfig.setDescriptionDeferredUpdate(desc) }
 	
 	var providerName string
-	providerName, err = apitypes.GetHTTPParameterValue(values, "ProviderName")
+	providerName, err = apitypes.GetHTTPParameterValue(true, values, "ProviderName")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if providerName != "" { scanConfig.setProviderNameDeferredUpdate(providerName) }
 	
 	var successExpr string = ""
-	successExpr, err = apitypes.GetHTTPParameterValue(values, "SuccessExpression")
+	successExpr, err = apitypes.GetHTTPParameterValue(true, values, "SuccessExpression")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if successExpr != "" { scanConfig.setSuccessExpressionDeferredUpdate(successExpr) }
 	
@@ -2033,7 +2033,7 @@ func getFlagImage(server *Server, sessionToken *apitypes.SessionToken, values ur
 
 	var flagId string
 	var err error
-	flagId, err = apitypes.GetRequiredHTTPParameterValue(values, "FlagId")
+	flagId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "FlagId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var flag Flag
@@ -2059,15 +2059,15 @@ func defineFlag(server *Server, sessionToken *apitypes.SessionToken, values url.
 	
 	var repoId string
 	var err error
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var name string
-	name, err = apitypes.GetRequiredHTTPParameterValue(values, "Name")
+	name, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Name")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var desc string
-	desc, err = apitypes.GetRequiredHTTPParameterValue(values, "Description")
+	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var repo Repo
@@ -2100,9 +2100,9 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 
 	var scanConfigId, imageObjId string
 	var err error
-	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(values, "ScanConfigId")
+	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageObjId")
+	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	fmt.Println(scanConfigId)
 	
@@ -2208,7 +2208,7 @@ func getDockerImageStatus(server *Server, sessionToken *apitypes.SessionToken, v
 
 	var imageObjId string
 	var err error
-	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageObjId")
+	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var image DockerImage
@@ -2241,7 +2241,7 @@ func getScanConfigDesc(server *Server, sessionToken *apitypes.SessionToken, valu
 
 	var scanConfigId string
 	var err error
-	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(values, "ScanConfigId")
+	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var scanConfig ScanConfig
@@ -2265,7 +2265,7 @@ func getFlagDesc(server *Server, sessionToken *apitypes.SessionToken, values url
 
 	var flagId string
 	var err error
-	flagId, err = apitypes.GetRequiredHTTPParameterValue(values, "FlagId")
+	flagId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "FlagId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var flag Flag
@@ -2315,7 +2315,7 @@ func getDockerImageEvents(server *Server, sessionToken *apitypes.SessionToken, v
 
 	var imageObjId string
 	var err error
-	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageObjId")
+	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask,
@@ -2348,7 +2348,7 @@ func getDockerfileEvents(server *Server, sessionToken *apitypes.SessionToken, va
 
 	var dockerfileId string
 	var err error
-	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(values, "DockerfileId")
+	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerfileId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask,
@@ -2381,11 +2381,11 @@ func getScanConfigDescByName(server *Server, sessionToken *apitypes.SessionToken
 
 	var err error
 	var repoId string
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var configName string
-	configName, err = apitypes.GetRequiredHTTPParameterValue(values, "ScanConfigName")
+	configName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigName")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask,
@@ -2419,7 +2419,7 @@ func remScanConfig(server *Server, sessionToken *apitypes.SessionToken, values u
 
 	var err error
 	var scanConfigId string
-	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(values, "ScanConfigId")
+	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.DeleteMask,
@@ -2449,11 +2449,11 @@ func getFlagDescByName(server *Server, sessionToken *apitypes.SessionToken, valu
 
 	var err error
 	var repoId string
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(values, "RepoId")
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var flagName string
-	flagName, err = apitypes.GetRequiredHTTPParameterValue(values, "FlagName")
+	flagName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "FlagName")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.ReadMask,
@@ -2487,7 +2487,7 @@ func remFlag(server *Server, sessionToken *apitypes.SessionToken, values url.Val
 
 	var err error
 	var flagId string
-	flagId, err = apitypes.GetRequiredHTTPParameterValue(values, "FlagId")
+	flagId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "FlagId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.DeleteMask,
@@ -2517,7 +2517,7 @@ func remDockerImage(server *Server, sessionToken *apitypes.SessionToken, values 
 
 	var err error
 	var imageId string
-	imageId, err = apitypes.GetRequiredHTTPParameterValue(values, "ImageId")
+	imageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(server, sessionToken, apitypes.DeleteMask,

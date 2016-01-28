@@ -161,11 +161,11 @@ func NewCredentials(uid string, pwd string) *Credentials {
 func GetCredentials(values url.Values) (*Credentials, error) {
 	var err error
 	var userid string
-	userid, err = GetRequiredHTTPParameterValue(values, "UserId")
+	userid, err = GetRequiredHTTPParameterValue(true, values, "UserId")
 	if err != nil { return nil, err }
 	
 	var pswd string
-	pswd, err = GetRequiredHTTPParameterValue(values, "Password")
+	pswd, err = GetRequiredHTTPParameterValue(true, values, "Password")
 	if err != nil { return nil, err }
 	
 	return NewCredentials(userid, pswd), nil
@@ -279,23 +279,23 @@ func NewUserInfo(userid, name, email, pswd, realmId string) *UserInfo {
 func GetUserInfo(values url.Values) (*UserInfo, error) {
 	var err error
 	var userid string
-	userid, err = GetRequiredHTTPParameterValue(values, "UserId")
+	userid, err = GetRequiredHTTPParameterValue(true, values, "UserId")
 	if err != nil { return nil, err }
 	
 	var name string
-	name, err = GetRequiredHTTPParameterValue(values, "UserName")
+	name, err = GetRequiredHTTPParameterValue(true, values, "UserName")
 	if err != nil { return nil, err }
 	
 	var email string
-	email, err = GetRequiredHTTPParameterValue(values, "EmailAddress")
+	email, err = GetRequiredHTTPParameterValue(true, values, "EmailAddress")
 	if err != nil { return nil, err }
 	
 	var pswd string
-	pswd, err = GetRequiredHTTPParameterValue(values, "Password")
+	pswd, err = GetRequiredHTTPParameterValue(true, values, "Password")
 	if err != nil { return nil, err }
 	
 	var realmId string
-	realmId, err = GetHTTPParameterValue(values, "RealmId") // optional
+	realmId, err = GetHTTPParameterValue(true, values, "RealmId") // optional
 	if err != nil { return nil, err }
 	
 	return NewUserInfo(userid, name, email, pswd, realmId), nil
@@ -422,11 +422,11 @@ func NewRealmInfo(realmName string, orgName string, desc string) (*RealmInfo, er
 func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 	var err error
 	var name, orgFullName, desc string
-	name, err = GetRequiredHTTPParameterValue(values, "RealmName")
+	name, err = GetRequiredHTTPParameterValue(true, values, "RealmName")
 	if err != nil { return nil, err }
-	orgFullName, err = GetRequiredHTTPParameterValue(values, "OrgFullName")
+	orgFullName, err = GetRequiredHTTPParameterValue(true, values, "OrgFullName")
 	if err != nil { return nil, err }
-	desc, err = GetHTTPParameterValue(values, "Description")
+	desc, err = GetHTTPParameterValue(true, values, "Description")
 	if err != nil { return nil, err }
 	return NewRealmInfo(name, orgFullName, desc)
 }
@@ -1034,20 +1034,20 @@ func FormatTimeAsJavascriptDate(curTime time.Time) string {
 /*******************************************************************************
  * 
  */
-func GetHTTPParameterValue(values url.Values, name string) (string, error) {
+func GetHTTPParameterValue(sanitize bool, values url.Values, name string) (string, error) {
 	valuear, found := values[name]
 	if ! found { return "", nil }
 	if len(valuear) == 0 { return "", nil }
-	return Sanitize(valuear[0])
+	if sanitize { return Sanitize(valuear[0]) } else { return valuear[0] }
 }
 
 /*******************************************************************************
  * 
  */
-func GetRequiredHTTPParameterValue(values url.Values, name string) (string, error) {
+func GetRequiredHTTPParameterValue(sanitize bool, values url.Values, name string) (string, error) {
 	var value string
 	var err error
-	value, err = GetHTTPParameterValue(values, name)
+	value, err = GetHTTPParameterValue(sanitize, values, name)
 	if err != nil { return "", err }
 	if value == "" { return "", util.ConstructError(fmt.Sprintf("POST field not found: %s", name)) }
 	return value, nil
