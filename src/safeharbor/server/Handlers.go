@@ -600,7 +600,7 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 	
 	
 	// debug
-	fmt.Println("Before creating realm...")
+	fmt.Println("Handler: Before creating realm...............")
 	for _, eid := range newUser.getACLEntryIds() {
 		fmt.Print("\tentry id: '" + eid + "', ")
 	}
@@ -625,7 +625,7 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 	
 	
 	// debug
-	fmt.Println("Before giving the new user access to the new realm...")
+	fmt.Println("Handler: Before giving the new user access to the new realm...............")
 	for _, eid := range newUser.getACLEntryIds() {
 		fmt.Print("\tentry id: '" + eid + "', ")
 	}
@@ -643,7 +643,7 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 	
 	
 	// debug
-	fmt.Println("After giving the new user access to the new realm...")
+	fmt.Println("Handler: After giving the new user access to the new realm...............")
 	for _, eid := range newUser.getACLEntryIds() {
 		fmt.Print("\tentry id: '" + eid + "', ")
 	}

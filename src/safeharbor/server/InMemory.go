@@ -1475,7 +1475,7 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	if err != nil { return nil, err }
 	
 	// debug
-	fmt.Println("Before adding ACLEntry...")
+	fmt.Println("\tdbCreateACLEntry: Before adding ACLEntry...")
 	for _, eid := range party.getACLEntryIds() {
 		fmt.Print("\tentry id: '" + eid + "', ")
 	}
@@ -1484,13 +1484,13 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	
 	err = client.addACLEntryForParty(party, newACLEntry)  // Add to user or group's ACL
 	if err != nil { return nil, err }
-	fmt.Println("Added ACL entry with Id " + newACLEntry.getId() + " for " + party.getName() + "(a " +
+	fmt.Println("\tdbCreateACLEntry: Added ACL entry with Id " + newACLEntry.getId() + " for " + party.getName() + "(a " +
 		reflect.TypeOf(party).String() + "), to access " +
 		resource.getName() + " (a " + reflect.TypeOf(resource).String() + ")")
 	
 	
 	// debug
-	fmt.Println("...after adding ACLEntry...")
+	fmt.Println("\tdbCreateACLEntry: ...after adding ACLEntry...")
 	for _, eid := range party.getACLEntryIds() {
 		fmt.Print("\tentry id: '" + eid + "', ")
 	}
