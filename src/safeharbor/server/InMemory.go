@@ -197,9 +197,7 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 	var actArgArCopy = make([]reflect.Value, len(actArgAr))
 	copy(actArgArCopy, actArgAr) // make shallow copy of actArgAr
 	for i, actArg := range actArgArCopy {
-		fmt.Println(fmt.Sprintf("For arg %d", i))
 		if ! actArg.IsValid() { fmt.Println(fmt.Sprintf("\targ %d is a zero value", i)) }
-		fmt.Println(fmt.Sprintf("\tArg %d is a %s", i, actArg.Type().String()))
 		
 		// Problem: Empty JSON lists were created as []interface{}. However, if the
 		// formal arg type is more specialized, e.g., []string, then the call
@@ -212,8 +210,6 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 			// Replace actArg with an array of the formal type.
 			var replacementArrayValue = reflect.Indirect(reflect.New(methodType.In(i)))
 			actArgAr[i] = replacementArrayValue
-			fmt.Println("\tReplaced arg with one of type " +
-				replacementArrayValue.Type().String())
 			
 			if actArg.Len() > 0 {
 				actArgAr[i] = reflect.MakeSlice(methodType.In(i), actArg.Len(), actArg.Len())
