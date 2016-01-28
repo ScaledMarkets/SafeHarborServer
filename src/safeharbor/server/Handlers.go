@@ -595,6 +595,22 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, newRealm.getId())
 	if err != nil { return apitypes.NewFailureDesc("Unable to create user: " + err.Error()) }
 
+	
+	
+	
+	
+	// debug
+	fmt.Println("Before creating realm...")
+	for _, eid := range newUser.getACLEntryIds() {
+		fmt.Print("\tentry id: '" + eid + "', ")
+	}
+	fmt.Println()
+	// end debug
+	
+	
+	
+	
+	
 	// Add ACL entry to enable the current user (if any) to access what he/she just created.
 	var curUser User
 	var sessionError error
@@ -605,10 +621,36 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	}
 
+	
+	
+	
+	// debug
+	fmt.Println("Before giving the new user access to the new realm...")
+	for _, eid := range newUser.getACLEntryIds() {
+		fmt.Print("\tentry id: '" + eid + "', ")
+	}
+	fmt.Println()
+	// end debug
+	
+	
+	
 	// Add ACL entry to enable the new user to access what was just created.
 	_, err = server.dbClient.dbCreateACLEntry(newRealm.getId(), newUser.getId(),
 		[]bool{ true, true, true, true, true } )
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	
+	
+	
+	// debug
+	fmt.Println("After giving the new user access to the new realm...")
+	for _, eid := range newUser.getACLEntryIds() {
+		fmt.Print("\tentry id: '" + eid + "', ")
+	}
+	fmt.Println()
+	// end debug
+	
+	
 	
 	if sessionError != nil { return apitypes.NewFailureDesc(sessionError.Error()) }
 	return newUser.asUserDesc()
