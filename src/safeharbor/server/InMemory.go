@@ -371,6 +371,7 @@ func (client *InMemClient) addACLEntry(acl ACL, entry ACLEntry) error {
 }
 
 func (acl *InMemACL) addACLEntry(entry ACLEntry) {
+	if entry.getId() == "" { panic("ACL entry Id is empty string!") }  // debug
 	acl.ACLEntryIds = append(acl.ACLEntryIds, entry.getId())
 }
 
@@ -863,6 +864,7 @@ func (client *InMemClient) addACLEntryForParty(party Party, entry ACLEntry) erro
 }
 
 func (party *InMemParty) addACLEntry(entry ACLEntry) {
+	if entry.getId() == "" { panic("ACL entry Id is empty string!") }  // debug
 	party.ACLEntryIds = append(party.ACLEntryIds, entry.getId())
 }
 
