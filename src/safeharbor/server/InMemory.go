@@ -1464,7 +1464,7 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	if err != nil { return nil, err }
 	err = client.addACLEntryForParty(party, newACLEntry)  // Add to user or group's ACL
 	if err != nil { return nil, err }
-	fmt.Println("Added ACL entry for " + party.getName() + "(a " +
+	fmt.Println("Added ACL entry with Id " + newACLEntry.getId() + " for " + party.getName() + "(a " +
 		reflect.TypeOf(party).String() + "), to access " +
 		resource.getName() + " (a " + reflect.TypeOf(resource).String() + ")")
 	
@@ -1488,7 +1488,7 @@ func (client *InMemClient) getACLEntry(id string) (ACLEntry, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, util.ConstructError("ACLEntry not found") }
+	if obj == nil { return nil, util.ConstructError("ACLEntry with Id " + id + " not found") }
 	aclEntry, isType = obj.(ACLEntry)
 	if ! isType { return nil, util.ConstructError("Internal error: object is an unexpected type") }
 	return aclEntry, nil
