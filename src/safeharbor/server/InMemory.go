@@ -22,7 +22,7 @@ package server
 
 import (
 	"fmt"
-	//"errors"
+	"errors"
 	"reflect"
 	"os"
 	"time"
@@ -1467,6 +1467,17 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	fmt.Println("Added ACL entry for " + party.getName() + "(a " +
 		reflect.TypeOf(party).String() + "), to access " +
 		resource.getName() + " (a " + reflect.TypeOf(resource).String() + ")")
+	
+	
+	// debug
+	var a ACLEntry
+	a, err = client.getACLEntry(newACLEntry.getId())
+	if err != nil { return nil, err }
+	if a == nil { return nil, errors.New("Cound not find ACLEntry that was just created!") }
+	// end debug
+	
+	
+	
 	return newACLEntry, nil
 }
 
