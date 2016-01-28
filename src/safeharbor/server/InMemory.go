@@ -183,7 +183,6 @@ func (client *InMemClient) GetObject(json string) (string, interface{}, error) {
 	var actArgAr []reflect.Value
 	actArgAr, err = parseJSON(remainder)
 	if err != nil { return typeName, nil, err }
-	fmt.Println("actArgAr has " + fmt.Sprintf("%d", len(actArgAr)) + " elements")
 
 	var methodType reflect.Type = method.Type()
 	var noOfFormalArgs int = methodType.NumIn()
@@ -1582,6 +1581,10 @@ func (client *InMemClient) NewInMemRealm(realmInfo *apitypes.RealmInfo, adminUse
 		RepoIds: make([]string, 0),
 		FileDirectory: "",
 	}
+	
+	fmt.Println("Creating realm " + realmInfo.RealmName)  // debug
+	
+	
 	
 	return newRealm, client.addRealm(newRealm)
 }
