@@ -1797,8 +1797,8 @@ func (realm *InMemRealm) getGroupIds() []string {
 }
 
 func (realm *InMemRealm) addUser(user User) error {
-	var err = realm.Client.addUser(user)
-	if err != nil { return err }
+	//var err = realm.Client.addUser(user)
+	//if err != nil { return err }
 	realm.UserObjIds = append(realm.UserObjIds, user.getId())
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = realm.getId()

@@ -295,7 +295,7 @@ func (persist *Persistence) addUser(user User) error {
 		var isMem bool
 		isMem, err = persist.RedisClient.Sismember("users", []byte(user.getId()))
 		if isMem {
-			return util.ConstructError("User " + user.getName() + " is already a member of the set of users")
+			return util.ConstructError("User '" + user.getName() + "' is already a member of the set of users")
 		} else {
 			fmt.Println("User " + user.getName() + " is NOT a member of the set of users")
 			debug.PrintStack()
