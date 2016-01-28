@@ -259,6 +259,6 @@ func (dispatcher *Dispatcher) printHTTPParameters(values url.Values) {
 	// Values is a map[string][]string
 	fmt.Println("HTTP parameters:")
 	for k, v := range values {
-		fmt.Println(k + ": '" + v[0] + "'")
+		if k != "Log" { fmt.Println(k + ": '" + v[0] + "'") }
 	}
 }

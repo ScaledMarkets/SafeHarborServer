@@ -584,7 +584,7 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 	var newRealmInfo *apitypes.RealmInfo
 	newRealmInfo, err = apitypes.GetRealmInfo(values)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("Creating realm ", newRealmInfo.RealmName)
+	fmt.Println("Creating realm", newRealmInfo.RealmName)
 	var newRealm Realm
 	newRealm, err = server.dbClient.dbCreateRealm(newRealmInfo, newUserId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -654,7 +654,7 @@ func createRealm(server *Server, sessionToken *apitypes.SessionToken, values url
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var user User = server.dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	fmt.Println("Creating realm ", realmInfo.RealmName)
+	fmt.Println("Creating realm", realmInfo.RealmName)
 	var realm Realm
 	realm, err = server.dbClient.dbCreateRealm(realmInfo, user.getId())
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }

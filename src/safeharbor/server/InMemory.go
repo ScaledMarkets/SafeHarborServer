@@ -1582,7 +1582,7 @@ func (client *InMemClient) NewInMemRealm(realmInfo *apitypes.RealmInfo, adminUse
 		FileDirectory: "",
 	}
 	
-	fmt.Println("Creating realm " + realmInfo.RealmName)  // debug
+	fmt.Println("NewInMemRealm: Creating realm " + realmInfo.RealmName)  // debug
 	
 	
 	
