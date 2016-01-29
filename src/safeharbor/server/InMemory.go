@@ -1492,7 +1492,7 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	// debug
 	fmt.Println("\tdbCreateACLEntry: ...after adding ACLEntry...")
 	for _, eid := range party.getACLEntryIds() {
-		fmt.Print("\tentry id: '" + eid + "', ")
+		fmt.Print("\t\tentry id: '" + eid + "', ")
 	}
 	fmt.Println()
 	// end debug
