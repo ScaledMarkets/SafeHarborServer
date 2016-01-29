@@ -114,8 +114,8 @@ func TryJsonDeserSimple(testContext *testing.T) {
 
 	var retValue0 interface{}
 	var err error
-	retValue0, err = GetObject(client, jsonString)
-	AssertErrIsNil(testContext, err, "on return from GetObject")
+	retValue0, err = ReconstituteObject(client, jsonString)
+	AssertErrIsNil(testContext, err, "on return from ReconstituteObject")
 	
 	var abc2 ABC
 	var isType bool
@@ -143,8 +143,8 @@ func TryJsonDeserNestedType(testContext *testing.T) {
 
 	var retValue0 interface{}
 	var err error
-	retValue0, err = GetObject(client, jsonString)
-	AssertErrIsNil(testContext, err, "on return from GetObject")
+	retValue0, err = ReconstituteObject(client, jsonString)
+	AssertErrIsNil(testContext, err, "on return from ReconstituteObject")
 	
 	var def2 DEF
 	var isType bool

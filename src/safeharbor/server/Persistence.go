@@ -212,12 +212,20 @@ func (persist *Persistence) releaseLock(obj PersistObj) {
 /*******************************************************************************
  * Insert a new object into the database - making the object persistent.
  */
-func (persist *Persistence) addObject(obj PersistObj, id, json string) error {
+func (persist *Persistence) addObject(obj PersistObj, json string) error {
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = obj
 	} else {
+		// Update cache.
+		curObj PersistObj = group.Client.allObjects[id]
+		if curObj == nil {
+			persist.allObjects[obj.getId()] = obj
+		} else {
+			*curObj = *obj  // update the value in the cache
+		}
+		return persist.writeObj(obj.getId(), json)
 	}
-	return persist.writeObj(id, json)
+	return nil
 }
 
 /*******************************************************************************
@@ -245,9 +253,9 @@ func (persist *Persistence) deleteObject(obj PersistObj) error {
 func (persist *Persistence) addRealm(newRealm Realm) error {
 	if persist.InMemoryOnly {
 		persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
-		return persist.addObject(newRealm, newRealm.getId(), newRealm.asJSON())
+		return persist.addObject(newRealm, newRealm.asJSON())
 	} else {
-		var err = persist.addObject(newRealm, newRealm.getId(), newRealm.asJSON())
+		var err = persist.addObject(newRealm, newRealm.asJSON())
 		if err != nil { return err }
 		var added bool
 		added, err = persist.RedisClient.Sadd("realms", []byte(newRealm.getId()))
@@ -283,9 +291,9 @@ func (persist *Persistence) dbGetAllRealmIds() ([]string, error) {
 func (persist *Persistence) addUser(user User) error {
 	if persist.InMemoryOnly {
 		persist.allUsers[user.getUserId()] = user
-		return persist.addObject(user, user.getId(), user.asJSON())
+		return persist.addObject(user, user.asJSON())
 	} else {
-		var err = persist.addObject(user, user.getId(), user.asJSON())
+		var err = persist.addObject(user, user.asJSON())
 		if err != nil { return err }
 		
 		// Check if the user already exists in the set.
