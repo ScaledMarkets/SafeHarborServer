@@ -650,7 +650,7 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 	fmt.Println()
 	
 	newUser, err = server.dbClient.getUser(newUser.getId());
-	if err == nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	fmt.Println("Handler: After refreshing user...............")
 	for _, eid := range newUser.getACLEntryIds() {
 		fmt.Print("\tentry id: '" + eid + "', ")
