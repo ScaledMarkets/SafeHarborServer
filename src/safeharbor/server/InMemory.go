@@ -245,7 +245,7 @@ func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
 	} else {
 		
 		// First see if we have it in memory.
-		if client.allObjects[id] != nil { return client.allObjects[id] }
+		if client.allObjects[id] != nil { return client.allObjects[id], nil }
 		
 		// Read JSON from the database, using the id as the key; then deserialize
 		// (unmarshall) the JSON into an object. The outermost JSON object will be
@@ -317,8 +317,6 @@ func (persObj *InMemPersistObj) releaseLock() {
 
 func (persObj *InMemPersistObj) writeBack() error {
 	panic("Abstract method should not be called")
-	//fmt.Println(fmt.Sprintf("persObj.writeBack: Object is a %s", reflect.TypeOf(persObj).String()))
-	//return persObj.Client.writeObj(persObj.Id, persObj.asJSON())
 }
 
 func (persObj *InMemPersistObj) persistObjFieldsAsJSON() string {
@@ -1105,7 +1103,7 @@ func (group *InMemGroup) asGroupDesc() *apitypes.GroupDesc {
 
 func (group *InMemGroup) writeBack() error {
 		
-	return group.Client.writeObj(group.Id, group.asJSON())
+	return group.Client.addObject(group, group.asJSON())
 }
 
 func (group *InMemGroup) asJSON() string {
@@ -1374,7 +1372,7 @@ func (user *InMemUser) asUserDesc() *apitypes.UserDesc {
 }
 
 func (user *InMemUser) writeBack() error {
-	return user.Client.writeObj(user.Id, user.asJSON())
+	return user.Client.addObject(user, user.asJSON())
 }
 
 func (user *InMemUser) asJSON() string {
@@ -1561,7 +1559,7 @@ func (entry *InMemACLEntry) asPermissionDesc() *apitypes.PermissionDesc {
 }
 
 func (entry *InMemACLEntry) writeBack() error {
-	return entry.Client.writeObj(entry.Id, entry.asJSON())
+	return entry.Client.addObject(entry, entry.asJSON())
 }
 
 func (entry *InMemACLEntry) asJSON() string {
@@ -2013,7 +2011,7 @@ func (realm *InMemRealm) deleteGroup(group Group) error {
 func (realm *InMemRealm) isRealm() bool { return true }
 
 func (realm *InMemRealm) writeBack() error {
-	return realm.Client.writeObj(realm.Id, realm.asJSON())
+	return realm.Client.addObject(realm, realm.asJSON())
 }
 
 func (realm *InMemRealm) asJSON() string {
@@ -2296,7 +2294,7 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 }
 
 func (repo *InMemRepo) writeBack() error {
-	return repo.Client.writeObj(repo.Id, repo.asJSON())
+	return repo.Client.addObject(repo, repo.asJSON())
 }
 
 func (repo *InMemRepo) asJSON() string {
@@ -2459,7 +2457,7 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() *apitypes.DockerfileDesc {
 func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
 
 func (dockerfile *InMemDockerfile) writeBack() error {
-	return dockerfile.Client.writeObj(dockerfile.Id, dockerfile.asJSON())
+	return dockerfile.Client.addObject(dockerfile, dockerfile.asJSON())
 }
 
 func (dockerfile *InMemDockerfile) asJSON() string {
@@ -2690,7 +2688,7 @@ func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
 func (image *InMemDockerImage) isDockerImage() bool { return true }
 
 func (image *InMemDockerImage) writeBack() error {
-	return image.Client.writeObj(image.Id, image.asJSON())
+	return image.Client.addObject(image, image.asJSON())
 }
 
 func (image *InMemDockerImage) asJSON() string {
@@ -2794,7 +2792,7 @@ func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.Paramete
 }
 
 func (paramValue *InMemParameterValue) writeBack() error {
-	return paramValue.Client.writeObj(paramValue.Id, paramValue.asJSON())
+	return paramValue.Client.addObject(paramValue, paramValue.asJSON())
 }
 
 func (paramValue *InMemParameterValue) asJSON() string {
@@ -3071,7 +3069,7 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 }
 
 func (scanConfig *InMemScanConfig) writeBack() error {
-	return scanConfig.Client.writeObj(scanConfig.Id, scanConfig.asJSON())
+	return scanConfig.Client.addObject(scanConfig, scanConfig.asJSON())
 }
 
 func (scanConfig *InMemScanConfig) asJSON() string {
@@ -3213,7 +3211,7 @@ func (flag *InMemFlag) asFlagDesc() *apitypes.FlagDesc {
 }
 
 func (flag *InMemFlag) writeBack() error {
-	return flag.Client.writeObj(flag.Id, flag.asJSON())
+	return flag.Client.addObject(flag, flag.asJSON())
 }
 
 func (flag *InMemFlag) asJSON() string {
@@ -3480,7 +3478,7 @@ func (event *InMemScanEvent) asEventDesc() apitypes.EventDesc {
 }
 
 func (event *InMemScanEvent) writeBack() error {
-	return event.Client.writeObj(event.Id, event.asJSON())
+	return event.Client.addObject(event, event.asJSON())
 }
 
 func (event *InMemScanEvent) asJSON() string {
@@ -3627,7 +3625,7 @@ func (event *InMemDockerfileExecEvent) asEventDesc() apitypes.EventDesc {
 }
 
 func (event *InMemDockerfileExecEvent) writeBack() error {
-	return event.Client.writeObj(event.Id, event.asJSON())
+	return event.Client.addObject(event, event.asJSON())
 }
 
 func (event *InMemDockerfileExecEvent) asJSON() string {

@@ -146,24 +146,6 @@ func (persist *Persistence) readUniqueId() (int64, error) {
 }
 
 /*******************************************************************************
- * Flush an object''s state to the database.
- */
-func (persist *Persistence) writeObj(objId string, json string) error {
-	if persist.InMemoryOnly {
-	} else {
-		// Serialize (marshall) the object to JSON, and store it in redis using the
-		// object's Id as the key. When the object is written out, it will be
-		// written as,
-		//    "<typename>": { <object fields> }
-		// so that getPersistentObject will later be able to make the JSON to the
-		// appropriate go type, using reflection.
-		var err = persist.RedisClient.Set("obj/" + objId, []byte(json))
-		if err != nil { return err }
-	}
-	return nil
-}
-
-/*******************************************************************************
  * Obtain a lock on the specified object, blocking until either the lock is
  * obtained, or until the timeout period elapses. If the latter occurs, return
  * an error. If the current thread already has a lock on the specified object,
@@ -217,13 +199,16 @@ func (persist *Persistence) addObject(obj PersistObj, json string) error {
 		persist.allObjects[obj.getId()] = obj
 	} else {
 		// Update cache.
-		curObj PersistObj = group.Client.allObjects[id]
-		if curObj == nil {
-			persist.allObjects[obj.getId()] = obj
-		} else {
-			*curObj = *obj  // update the value in the cache
-		}
-		return persist.writeObj(obj.getId(), json)
+		persist.allObjects[obj.getId()] = obj
+		
+		// Serialize (marshall) the object to JSON, and store it in redis using the
+		// object's Id as the key. When the object is written out, it will be
+		// written as,
+		//    "<typename>": { <object fields> }
+		// so that getPersistentObject will later be able to make the JSON to the
+		// appropriate go type, using reflection.
+		var err = persist.RedisClient.Set("obj/" + obj.getId(), []byte(json))
+		if err != nil { return err }
 	}
 	return nil
 }
