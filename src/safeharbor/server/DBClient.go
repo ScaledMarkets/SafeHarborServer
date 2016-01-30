@@ -24,6 +24,7 @@ import (
 	//"os"
 	
 	"safeharbor/apitypes"
+	"safeharbor/providers"
 )
 
 // Custom error type that indicates that data inconsistency was detected.
@@ -44,7 +45,7 @@ type DBClient interface {
 	dbCreateDockerImage(string, string, string, []byte, string) (DockerImage, error)
 	dbCreateScanConfig(name, desc, repoId, providerName string, paramValueIds []string, successExpr, flagId string) (ScanConfig, error)
 	dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error)
-	dbCreateScanEvent(string, string, string, string) (ScanEvent, error)
+	dbCreateScanEvent(string, string, string, string, *providers.ScanResult) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
 	dbDeactivateRealm(realmId string) error
 	dbGetAllRealmIds() ([]string, error)

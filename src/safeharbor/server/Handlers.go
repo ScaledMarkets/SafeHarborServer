@@ -19,7 +19,7 @@ import (
 	"strings"
 	"reflect"
 	"time"
-	"runtime/debug"
+	//"runtime/debug"
 	
 	// Our packages:
 	"safeharbor/providers"
@@ -594,22 +594,6 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 	var newUser User
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, newRealm.getId())
 	if err != nil { return apitypes.NewFailureDesc("Unable to create user: " + err.Error()) }
-
-	
-	
-	
-	
-	// debug
-	fmt.Println("Handler: Before creating realm...............")
-	for _, eid := range newUser.getACLEntryIds() {
-		fmt.Print("\tentry id: '" + eid + "', ")
-	}
-	fmt.Println()
-	// end debug
-	
-	
-	
-	
 	
 	// Add ACL entry to enable the current user (if any) to access what he/she just created.
 	var curUser User
@@ -620,45 +604,11 @@ func createRealmAnon(server *Server, sessionToken *apitypes.SessionToken, values
 			[]bool{ true, true, true, true, true } )
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	}
-
-	
-	
-	
-	// debug
-	fmt.Println("Handler: Before giving the new user access to the new realm...............")
-	for _, eid := range newUser.getACLEntryIds() {
-		fmt.Print("\tentry id: '" + eid + "', ")
-	}
-	fmt.Println()
-	// end debug
-	
-	
 	
 	// Add ACL entry to enable the new user to access what was just created.
 	_, err = server.dbClient.dbCreateACLEntry(newRealm.getId(), newUser.getId(),
 		[]bool{ true, true, true, true, true } )
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	
-	
-	
-	
-	// debug
-	fmt.Println("Handler: After giving the new user access to the new realm...............")
-	for _, eid := range newUser.getACLEntryIds() {
-		fmt.Print("\tentry id: '" + eid + "', ")
-	}
-	fmt.Println()
-	
-	newUser, err = server.dbClient.getUser(newUser.getId());
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("Handler: After refreshing user...............")
-	for _, eid := range newUser.getACLEntryIds() {
-		fmt.Print("\tentry id: '" + eid + "', ")
-	}
-	fmt.Println()
-	// end debug
-	
-	
 	
 	if sessionError != nil { return apitypes.NewFailureDesc(sessionError.Error()) }
 	return newUser.asUserDesc()
@@ -2186,10 +2136,8 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	}
 
 	// Identify the requested scan provider.
-	// For now, just hard-code each provider.
 	var scanProviderName = scanConfig.getProviderName()
 	//var paramValues []string = scanConfig.getParameterValueIds()
-	//var cmd *exec.Cmd
 	
 	var score string
 	
@@ -2207,6 +2155,8 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var result *providers.ScanResult
 	fmt.Println("Contacting scan service...")
+	
+	// Perform scan.
 	result, err = scanContext.ScanImage(imageName)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	fmt.Println("Scanner service completed")
@@ -2214,12 +2164,6 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	score = fmt.Sprintf("%d", len(result.Vulnerabilities))
 	
 	// TBD: Here we should use the scanConfig.SuccessExpression to compute the score.
-	
-	
-	// debug
-	var scanEventIdsBefore []string = dockerImage.getScanEventIds()
-	// end debug
-	
 
 	// Create a scan event.
 	var userId string = sessionToken.AuthenticatedUserid
@@ -2227,22 +2171,8 @@ func scanImage(server *Server, sessionToken *apitypes.SessionToken, values url.V
 	if user == nil { return apitypes.NewFailureDesc("User with Id " + userId + " not found") }
 	var scanEvent ScanEvent
 	scanEvent, err = server.dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
-		user.getId(), score)
+		user.getId(), score, result)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	
-	
-	
-	// debug
-	var scanEventIdsAfter []string = dockerImage.getScanEventIds()
-	if len(scanEventIdsBefore) == len(scanEventIdsAfter) {
-		fmt.Println("Error - scan event not detected")
-		debug.PrintStack()
-	}
-	// end debug
-	
-
-	
-	
 	
 	return scanEvent.asScanEventDesc()
 }
@@ -2271,7 +2201,7 @@ func getDockerImageStatus(server *Server, sessionToken *apitypes.SessionToken, v
 	// Get the most recent ScanEvent, if any.
 	var eventId string = image.getMostRecentScanEventId()
 	if eventId == "" {
-		return apitypes.NewScanEventDesc("", time.Now(), "", "", "", nil, "") // an empty ScanEventDesc
+		return apitypes.NewScanEventDesc("", time.Now(), "", "", "", nil, "", nil) // an empty ScanEventDesc
 	} else {
 		var event ScanEvent
 		event, err = server.dbClient.getScanEvent(eventId)

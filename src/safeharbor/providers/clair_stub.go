@@ -170,9 +170,15 @@ func (clairContext *ClairRestContextStub) ScanImage(imageName string) (*ScanResu
 		fmt.Printf("  - Link:        %s\n", vulnerability.Link)
 		fmt.Printf("  - Description: %s\n", vulnerability.Description)
 	}
+
+	var vulnDescs = make([]*apitypes.VulnerabilityDesc, len(vulnerabilities))
+	for i, vuln := range vulnerabilities {
+		vulnDescs[i] = apitypes.NewVulnerabilityDesc(
+			vuln.ID, vuln.Link, vuln.Priority, vuln.Description)
+	}
 	
 	return &ScanResult{
-		Vulnerabilities: vulnerabilities,
+		Vulnerabilities: vulnDescs,
 	}, nil
 }
 

@@ -20,13 +20,12 @@ type ScanContext interface {
 }
 
 type ScanResult struct {
-	Vulnerabilities []Vulnerability
+	Vulnerabilities []*apitypes.VulnerabilityDesc
 }
 
 type Vulnerability struct {
 	ID, Link, Priority, Description string
 }
-
 
 
 

@@ -34,6 +34,7 @@ import (
 	"safeharbor/docker"
 	"safeharbor/rest"
 	"safeharbor/util"
+	"safeharbor/providers"
 )
 
 const (
@@ -376,7 +377,6 @@ func (client *InMemClient) addACLEntry(acl ACL, entry ACLEntry) error {
 }
 
 func (acl *InMemACL) addACLEntry(entry ACLEntry) {
-	if entry.getId() == "" { panic("ACL entry Id is empty string!") }  // debug
 	acl.ACLEntryIds = append(acl.ACLEntryIds, entry.getId())
 }
 
@@ -869,17 +869,7 @@ func (client *InMemClient) addACLEntryForParty(party Party, entry ACLEntry) erro
 }
 
 func (party *InMemParty) addACLEntry(entry ACLEntry) {
-	if entry.getId() == "" { panic("ACL entry Id is empty string!") }  // debug
 	party.ACLEntryIds = append(party.ACLEntryIds, entry.getId())
-	
-	
-	// debug
-	for _, entryId := range party.getACLEntryIds() {
-		if entryId == "" { panic("An empty ACL entry Id") }
-	}
-	// end debug
-	
-	
 }
 
 func (client *InMemClient) deleteACLEntryForParty(party Party, entry ACLEntry) error {
@@ -1473,37 +1463,17 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	party, isType = obj.(Party)
 	if ! isType { return nil, util.ConstructError("Internal error: object is not a Party - it is a " +
 		reflect.TypeOf(obj).String()) }
-	//var aclEntryId = createUniqueDbObjectId()
 	var newACLEntry ACLEntry
 	newACLEntry, err = client.NewInMemACLEntry(resourceId, partyId, permissionMask)
 	if err != nil { return nil, err }
 	err = client.addACLEntry(resource, newACLEntry)  // Add to resource's ACL
 	if err != nil { return nil, err }
 	
-	// debug
-	fmt.Println("\tdbCreateACLEntry: Before adding ACLEntry...")
-	for _, eid := range party.getACLEntryIds() {
-		fmt.Print("\tentry id: '" + eid + "', ")
-	}
-	fmt.Println()
-	// end debug
-	
 	err = client.addACLEntryForParty(party, newACLEntry)  // Add to user or group's ACL
 	if err != nil { return nil, err }
 	fmt.Println("\tdbCreateACLEntry: Added ACL entry with Id " + newACLEntry.getId() + " for " + party.getName() + "(a " +
 		reflect.TypeOf(party).String() + "), to access " +
 		resource.getName() + " (a " + reflect.TypeOf(resource).String() + ")")
-	
-	
-	// debug
-	fmt.Println("\tdbCreateACLEntry: ...after adding ACLEntry...")
-	for _, eid := range party.getACLEntryIds() {
-		fmt.Print("\t\tentry id: '" + eid + "', ")
-	}
-	fmt.Println()
-	// end debug
-	
-	
 	
 	return newACLEntry, nil
 }
@@ -1619,11 +1589,6 @@ func (client *InMemClient) NewInMemRealm(realmInfo *apitypes.RealmInfo, adminUse
 		RepoIds: make([]string, 0),
 		FileDirectory: "",
 	}
-	
-	fmt.Println("NewInMemRealm: Creating realm " + realmInfo.RealmName)  // debug
-	
-	
-	
 	return newRealm, client.addRealm(newRealm)
 }
 
@@ -3330,10 +3295,12 @@ type InMemScanEvent struct {
 	ProviderName string
 	ActualParameterValueIds []string
 	Score string
+	Result providers.ScanResult
 }
 
 func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
-	providerName string, score string, actParamValueIds []string) (*InMemScanEvent, error) {
+	providerName string, score string, result *providers.ScanResult,
+	actParamValueIds []string) (*InMemScanEvent, error) {
 	
 	var event *InMemEvent
 	var err error
@@ -3346,60 +3313,45 @@ func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
 		ProviderName: providerName,
 		ActualParameterValueIds: actParamValueIds,
 		Score: score,
+		Result: *result,
 	}
 	return scanEvent, client.addObject(scanEvent)
 }
 
 func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
-	userObjId, score string) (ScanEvent, error) {
-	
-	fmt.Println("dbCreateScanEvent: A") // debug
+	userObjId, score string, result *providers.ScanResult) (ScanEvent, error) {
 	
 	// Create actual ParameterValues for the Event, using the current ParameterValues
 	// that exist for the ScanConfig.
 	var scanConfig ScanConfig
 	var err error
 	scanConfig, err = client.getScanConfig(scanConfigId)
-	fmt.Println("dbCreateScanEvent: B") // debug
 	if err != nil { return nil, err }
 	var actParamValueIds []string = make([]string, 0)
 	for _, paramId := range scanConfig.getParameterValueIds() {
-		fmt.Println("dbCreateScanEvent: C") // debug
 		var param ParameterValue
 		param, err = client.getParameterValue(paramId)
-		fmt.Println("dbCreateScanEvent: D") // debug
 		if err != nil { return nil, err }
 		var name string = param.getName()
-		fmt.Println("dbCreateScanEvent: E") // debug
 		var value string = param.getStringValue()
-		//var pvId string = createUniqueDbObjectId()
 		var actParamValue *InMemParameterValue
 		actParamValue, err = client.NewInMemParameterValue(name, value, scanConfigId)
-		fmt.Println("dbCreateScanEvent: F") // debug
 		if err != nil { return nil, err }
 		actParamValueIds = append(actParamValueIds, actParamValue.getId())
-		fmt.Println("dbCreateScanEvent: G") // debug
 	}
 
-	//var id string = createUniqueDbObjectId()
 	var scanEvent *InMemScanEvent
-	fmt.Println("dbCreateScanEvent: H") // debug
 	scanEvent, err = client.NewInMemScanEvent(scanConfigId, imageId, userObjId,
-		scanConfig.getProviderName(), score, actParamValueIds)
-	fmt.Println("dbCreateScanEvent: I") // debug
+		scanConfig.getProviderName(), score, result, actParamValueIds)
 	if err != nil { return nil, err }
 	err = client.writeBack(scanEvent)
-	fmt.Println("dbCreateScanEvent: J") // debug
 	if err != nil { return nil, err }
 	
 	// Link to user.
 	var user User
 	user, err = client.getUser(userObjId)
-	fmt.Println("dbCreateScanEvent: K") // debug
 	if err != nil { return nil, err }
-	fmt.Println("dbCreateScanEvent: L") // debug
 	user.addEventId(scanEvent.getId())
-	fmt.Println("dbCreateScanEvent: M") // debug
 	
 	// Link to ScanConfig.
 	scanConfig.addScanEventId(scanEvent.getId())
@@ -3470,7 +3422,7 @@ func (event *InMemScanEvent) asScanEventDesc() *apitypes.ScanEventDesc {
 	
 	return apitypes.NewScanEventDesc(event.Id, event.When, event.UserObjId,
 		event.ScanConfigId, event.ProviderName, paramValueDescs,
-		event.Score)
+		event.Score, event.Result.Vulnerabilities)
 }
 
 func (event *InMemScanEvent) asEventDesc() apitypes.EventDesc {

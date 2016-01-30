@@ -937,17 +937,20 @@ type ScanEventDesc struct {
 	ProviderName string
     ParameterValueDescs []*ParameterValueDesc
 	Score string
+	VulnerabilityDescs []*VulnerabilityDesc
 }
 
 func NewScanEventDesc(objId string, when time.Time, userObjId string,
 	scanConfigId, providerName string, paramValueDescs []*ParameterValueDesc,
-	score string) *ScanEventDesc {
+	score string, vulnDescs []*VulnerabilityDesc) *ScanEventDesc {
+
 	return &ScanEventDesc{
 		EventDescBase: *NewEventDesc(objId, when, userObjId),
 		ScanConfigId: scanConfigId,
 		ProviderName: providerName,
 		ParameterValueDescs: paramValueDescs,
 		Score: score,
+		VulnerabilityDescs: vulnDescs,
 	}
 }
 
@@ -955,15 +958,45 @@ type ScanEventDescs []*ScanEventDesc
 
 func (eventDesc *ScanEventDesc) AsJSON() string {
 	var s = fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
-		"\"ScanConfigId\": \"%s\", \"ProviderName\": \"%s\", \"Score\": \"%s\"",
+		"\"ScanConfigId\": \"%s\", \"ProviderName\": \"%s\", \"Score\": \"%s\", ",
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
 		eventDesc.ScanConfigId, eventDesc.ProviderName, eventDesc.Score)
 	
-	for _, valueDesc := range eventDesc.ParameterValueDescs {
-		s = s + ", " + valueDesc.AsJSON()
+	s = s + "\"Vulnerabilities\": ["
+	for i, vuln := range eventDesc.VulnerabilityDescs {
+		if i > 0 { s = s + ", " }
+		s = s + vuln.AsJSON()
 	}
-	s = s + "}"
+	
+	s = s + "], \"ParameterValues\": ["
+	for i, valueDesc := range eventDesc.ParameterValueDescs {
+		if i > 0 { s = s + ", " }
+		s = s + valueDesc.AsJSON()
+	}
+	s = s + "]}"
 	return s
+}
+
+/*******************************************************************************
+ * 
+ */
+type VulnerabilityDesc struct {
+	VCE_ID, Link, Priority, Description string
+}
+
+func NewVulnerabilityDesc(vCE_ID, link, priority, description string) *VulnerabilityDesc {
+	return &VulnerabilityDesc{
+		VCE_ID: vCE_ID,
+		Link: link,
+		Priority: priority,
+		Description: description,
+	}
+}
+
+func (vulnDesc *VulnerabilityDesc) AsJSON() string {
+	return fmt.Sprintf("{\"VCE_ID\": \"%s\", \"Link\": \"%s\", \"Priority\": \"%s\", " +
+		"\"Description\": \"%s\"}",
+		vulnDesc.VCE_ID, vulnDesc.Link, vulnDesc.Priority, vulnDesc.Description)
 }
 
 /*******************************************************************************
