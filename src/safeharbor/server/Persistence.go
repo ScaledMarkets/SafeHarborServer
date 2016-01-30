@@ -190,20 +190,12 @@ func (persist *Persistence) releaseLock(obj PersistObj) {
 /*******************************************************************************
  * Insert a new object into the database - making the object persistent.
  */
-func (persist *Persistence) addObject(obj PersistObj, json string) error {
+func (persist *Persistence) addObject(obj PersistObj) error {
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = obj
 	} else {
 		// Update cache.
 		persist.allObjects[obj.getId()] = obj
-		
-		
-		
-		fmt.Println("json=" + json)  // debug
-		fmt.Println()  // debug
-		fmt.Println("obj.asJSON=" + obj.asJSON()) // debug
-		
-		if json != obj.asJSON() { panic("json != obj.asJSON()") }
 		
 		// Serialize (marshall) the object to JSON, and store it in redis using the
 		// object's Id as the key. When the object is written out, it will be
@@ -211,7 +203,7 @@ func (persist *Persistence) addObject(obj PersistObj, json string) error {
 		//    "<typename>": { <object fields> }
 		// so that getPersistentObject will later be able to make the JSON to the
 		// appropriate go type, using reflection.
-		var err = persist.RedisClient.Set("obj/" + obj.getId(), []byte(json))
+		var err = persist.RedisClient.Set("obj/" + obj.getId(), []byte(obj.asJSON()))
 		if err != nil { return err }
 	}
 	return nil
@@ -243,9 +235,9 @@ func (persist *Persistence) deleteObject(obj PersistObj) error {
 func (persist *Persistence) addRealm(newRealm Realm) error {
 	if persist.InMemoryOnly {
 		persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
-		return persist.addObject(newRealm, newRealm.asJSON())
+		return persist.addObject(newRealm)
 	} else {
-		var err = persist.addObject(newRealm, newRealm.asJSON())
+		var err = persist.addObject(newRealm)
 		if err != nil { return err }
 		var added bool
 		added, err = persist.RedisClient.Sadd("realms", []byte(newRealm.getId()))
@@ -282,9 +274,9 @@ func (persist *Persistence) dbGetAllRealmIds() ([]string, error) {
 func (persist *Persistence) addUser(user User) error {
 	if persist.InMemoryOnly {
 		persist.allUsers[user.getUserId()] = user
-		return persist.addObject(user, user.asJSON())
+		return persist.addObject(user)
 	} else {
-		var err = persist.addObject(user, user.asJSON())
+		var err = persist.addObject(user)
 		if err != nil { return err }
 		
 		// Check if the user already exists in the set.
