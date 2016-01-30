@@ -76,13 +76,9 @@ func NewPersistence(inMemoryOnly bool, redisClient redis.Client) (*Persistence, 
  */
 func (persist *Persistence) resetInMemory() {
 	persist.uniqueId = 100000005
-	if persist.InMemoryOnly {
-		persist.allRealmIds = make([]string, 0)
-		persist.allObjects = make(map[string]PersistObj)
-		persist.allUsers = make(map[string]User)
-	} else {
-		//....
-	}
+	persist.allRealmIds = make([]string, 0)
+	persist.allObjects = make(map[string]PersistObj)
+	persist.allUsers = make(map[string]User)
 }
 
 /*******************************************************************************
@@ -227,6 +223,7 @@ func (persist *Persistence) deleteObject(obj PersistObj) error {
 		deleted, err = persist.RedisClient.Del("obj/" + obj.getId())
 		if err != nil { return err }
 		if ! deleted { return util.ConstructError("Unable to delete object with Id " + obj.getId()) }
+		persist.allObjects[obj.getId()] = nil
 		return nil
 	}
 }
@@ -246,6 +243,7 @@ func (persist *Persistence) addRealm(newRealm Realm) error {
 		added, err = persist.RedisClient.Sadd("realms", []byte(newRealm.getId()))
 		if err != nil { return err }
 		if ! added { return util.ConstructError("Unable to add realm " + newRealm.getName()) }
+		persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
 		return nil
 	}
 }
@@ -292,6 +290,7 @@ func (persist *Persistence) addUser(user User) error {
 		added, err = persist.RedisClient.Sadd("users", []byte(user.getId()))
 		if err != nil { return err }
 		if ! added { return util.ConstructError("Unable to add user " + user.getName()) }
+		persist.allUsers[user.getUserId()] = user
 		return nil
 	}
 }
