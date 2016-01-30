@@ -200,6 +200,8 @@ func (persist *Persistence) addObject(obj PersistObj, json string) error {
 		
 		
 		fmt.Println("json=" + json)  // debug
+		fmt.Println()  // debug
+		fmt.Println("obj.asJSON=" + obj.asJSON()) // debug
 		
 		
 		
