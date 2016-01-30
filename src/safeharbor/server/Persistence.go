@@ -203,7 +203,7 @@ func (persist *Persistence) addObject(obj PersistObj, json string) error {
 		fmt.Println()  // debug
 		fmt.Println("obj.asJSON=" + obj.asJSON()) // debug
 		
-		
+		if json != obj.asJSON() { panic("json != obj.asJSON()") }
 		
 		// Serialize (marshall) the object to JSON, and store it in redis using the
 		// object's Id as the key. When the object is written out, it will be
