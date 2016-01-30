@@ -197,6 +197,12 @@ func (persist *Persistence) addObject(obj PersistObj, json string) error {
 		// Update cache.
 		persist.allObjects[obj.getId()] = obj
 		
+		
+		
+		fmt.Println("json=" + json)  // debug
+		
+		
+		
 		// Serialize (marshall) the object to JSON, and store it in redis using the
 		// object's Id as the key. When the object is written out, it will be
 		// written as,
