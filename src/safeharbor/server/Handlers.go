@@ -130,10 +130,10 @@ func clearAll(server *Server, sessionToken *apitypes.SessionToken, values url.Va
 	server.authService.clearAllSessions()
 	
 	// Remove and re-create the repository directory.
-	fmt.Println("Initializing database...")
-	server.dbClient.init()
 	err = server.dbClient.resetPersistentState()
 	if err != nil { return apitypes.NewResult(500, err.Error()) }
+	fmt.Println("Initializing database...")
+	server.dbClient.init()
 	
 	return apitypes.NewResult(200, "Persistent state reset")
 }

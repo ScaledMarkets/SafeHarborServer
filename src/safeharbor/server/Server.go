@@ -17,10 +17,11 @@ import (
 	"strings"
 	"crypto/x509"
 	"runtime/debug"
+	"time"
 	//"errors"
 	//"strconv"
 	
-	"redis"
+	"goredis"
 	
 	// SafeHarbor packages:
 	//"rest"
@@ -136,13 +137,21 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		config.AuthServerName, config.AuthPort, certPool, secretSalt)
 	
 	// Connect to object database (redis).
-	var redisClient redis.Client = nil
+	var redisClient *goredis.Redis = nil
 	if ! server.InMemoryOnly {
 		if config.RedisHost == "" { config.RedisHost = config.ipaddr }  // default to same host
 		if config.RedisPort == 0 { config.RedisPort = 6379 }  // default for redis
-		var spec *redis.ConnectionSpec =
-			redis.DefaultSpec().Host(config.RedisHost).Port(config.RedisPort).Password(config.RedisPswd)
-		redisClient, err = redis.NewSynchClientWithSpec(spec);
+		
+		var network = "tcp"
+		var db = 1
+		var timeout = 5 * time.Second
+		var maxidle = 1
+		redisClient, err = goredis.Dial(&goredis.DialConfig{
+			network,
+			(config.RedisHost + ":" + fmt.Sprintf(
+				"%d", fmt.Sprintf("%d", config.RedisPort))),
+			db, config.RedisPswd, timeout, maxidle})
+		
 		if err != nil { AbortStartup(err.Error()) }
 	}
 	server.dbClient, err = NewInMemClient(server, redisClient)

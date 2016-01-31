@@ -962,7 +962,7 @@ func (eventDesc *ScanEventDesc) AsJSON() string {
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
 		eventDesc.ScanConfigId, eventDesc.ProviderName, eventDesc.Score)
 	
-	s = s + "\"Vulnerabilities\": ["
+	s = s + "\"VulnerabilityDescs\": ["
 	for i, vuln := range eventDesc.VulnerabilityDescs {
 		if i > 0 { s = s + ", " }
 		s = s + vuln.AsJSON()

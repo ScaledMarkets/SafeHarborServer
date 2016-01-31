@@ -12,12 +12,12 @@ import (
 	"sync/atomic"
 	//"errors"
 	"strconv"
-	//"reflect"
+	"reflect"
 	//"os"
 	//"time"
 	//"runtime/debug"	
 	
-	"redis"
+	"goredis"
 	
 	"safeharbor/apitypes"
 	//"safeharbor/docker"
@@ -48,19 +48,19 @@ func (dataErr *PersistDataError) asFailureDesc() *apitypes.FailureDesc {
  * persistence.
  *
  * Redis bindings for go: http://redis.io/clients#go
- * Chosen binding: https://github.com/alphazero/Go-Redis
- * Alternative binding: https://github.com/hoisie/redis
+ * Chosen binding: https://github.com/xuyu/goredis
+ * Prior binding: https://github.com/alphazero/Go-Redis
  */
 type Persistence struct {
 	InMemoryOnly bool
-	RedisClient redis.Client
+	RedisClient *goredis.Redis
 	uniqueId int64
 	allObjects map[string]PersistObj
 	allUsers map[string]User  // maps user id to user
 	allRealmIds []string
 }
 
-func NewPersistence(inMemoryOnly bool, redisClient redis.Client) (*Persistence, error) {
+func NewPersistence(inMemoryOnly bool, redisClient *goredis.Redis) (*Persistence, error) {
 	var persist = &Persistence{
 		InMemoryOnly: inMemoryOnly,
 		RedisClient: redisClient,
@@ -92,7 +92,8 @@ func (persist *Persistence) load() error {
 	id, err = persist.readUniqueId()  // returns 0 if database is "virgin"
 	if err != nil { return err }
 	if id == 0 {
-		err = persist.RedisClient.Set("UniqueId", []byte(fmt.Sprintf("%d", persist.uniqueId)))
+		err = persist.RedisClient.Set(
+			"UniqueId", fmt.Sprintf("%d", persist.uniqueId), 0, 0, false, false)
 		if err != nil { return err }
 	} else {
 		persist.uniqueId = id
@@ -188,7 +189,7 @@ func (persist *Persistence) releaseLock(obj PersistObj) {
 }
 
 /*******************************************************************************
- * Insert a new object into the database - making the object persistent.
+ * Write an object to the database - making the object persistent.
  */
 func (persist *Persistence) addObject(obj PersistObj) error {
 	if persist.InMemoryOnly {
@@ -201,9 +202,10 @@ func (persist *Persistence) addObject(obj PersistObj) error {
 		// object's Id as the key. When the object is written out, it will be
 		// written as,
 		//    "<typename>": { <object fields> }
-		// so that getPersistentObject will later be able to make the JSON to the
+		// so that getPersistentObject will later be able to map the JSON to the
 		// appropriate go type, using reflection.
-		var err = persist.RedisClient.Set("obj/" + obj.getId(), []byte(obj.asJSON()))
+		var err = persist.RedisClient.Set(
+			"obj/" + obj.getId(), obj.asJSON(), 0, 0, false, false)
 		if err != nil { return err }
 	}
 	return nil
@@ -218,13 +220,57 @@ func (persist *Persistence) deleteObject(obj PersistObj) error {
 		persist.allObjects[obj.getId()] = nil
 		return nil
 	} else {
-		var deleted bool
+		var numDeleted int64
 		var err error
-		deleted, err = persist.RedisClient.Del("obj/" + obj.getId())
+		numDeleted, err = persist.RedisClient.Del("obj/" + obj.getId())
 		if err != nil { return err }
-		if ! deleted { return util.ConstructError("Unable to delete object with Id " + obj.getId()) }
+		if numDeleted == 0 { return util.ConstructError("Unable to delete object with Id " + obj.getId()) }
 		persist.allObjects[obj.getId()] = nil
 		return nil
+	}
+}
+
+/*******************************************************************************
+ * Return the persistent object that is identified by the specified unique id.
+ * An object''s Id is assigned to it by the function that creates the object.
+ * The factory is the object that has the Reconstitute methods needed to
+ * construct the persistent object.
+ */
+func (persist *Persistence) getObject(factory interface{}, id string) (PersistObj, error) {
+
+	if persist.InMemoryOnly {
+		return persist.allObjects[id], nil
+	} else {
+		
+		// First see if we have it in memory.
+		if persist.allObjects[id] != nil { return persist.allObjects[id], nil }
+		
+		// Read JSON from the database, using the id as the key; then deserialize
+		// (unmarshall) the JSON into an object. The outermost JSON object will be
+		// a field name - that field name is the name of the go object type; reflection
+		// will be used to identify the go type, and set the fields in the type using
+		// values from the hashmap that is built by the unmarshalling.
+		
+		var bytes []byte
+		var err error
+		bytes, err = persist.RedisClient.Get("obj/" + id)
+		if err != nil { return nil, err }
+		if bytes == nil { return nil, nil }
+		if len(bytes) == 0 { return nil, nil }
+		
+		var obj interface{}
+		_, obj, err = ReconstituteObject(factory, string(bytes))
+		if err != nil { return nil, err }
+		
+		var persistObj PersistObj
+		var isType bool
+		persistObj, isType = obj.(PersistObj)
+		if ! isType { return nil, util.ConstructError("Object is not a PersistObj") }
+		
+		// Add to in-memory cache.
+		persist.allObjects[id] = persistObj;
+		
+		return persistObj, nil
 	}
 }
 
@@ -239,10 +285,10 @@ func (persist *Persistence) addRealm(newRealm Realm) error {
 	} else {
 		var err = persist.addObject(newRealm)
 		if err != nil { return err }
-		var added bool
-		added, err = persist.RedisClient.Sadd("realms", []byte(newRealm.getId()))
+		var numAdded int64
+		numAdded, err = persist.RedisClient.SAdd("realms", newRealm.getId())
 		if err != nil { return err }
-		if ! added { return util.ConstructError("Unable to add realm " + newRealm.getName()) }
+		if numAdded == 0 { return util.ConstructError("Unable to add realm " + newRealm.getName()) }
 		persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
 		return nil
 	}
@@ -255,15 +301,11 @@ func (persist *Persistence) dbGetAllRealmIds() ([]string, error) {
 	if persist.InMemoryOnly {
 		return persist.allRealmIds, nil
 	} else {
-		var byteArAr [][]byte
+		var members []string
 		var err error
-		byteArAr, err = persist.RedisClient.Smembers("realms")
+		members, err = persist.RedisClient.SMembers("realms")
 		if err != nil { return nil, err }
-		var results []string = make([]string, 0)
-		for _, byteAr := range byteArAr {
-			results = append(results, string(byteAr))
-		}
-		return results, nil
+		return members, nil
 	}
 }
 
@@ -281,16 +323,89 @@ func (persist *Persistence) addUser(user User) error {
 		
 		// Check if the user already exists in the set.
 		var isMem bool
-		isMem, err = persist.RedisClient.Sismember("users", []byte(user.getId()))
+		isMem, err = persist.RedisClient.SIsMember("users", user.getId())
 		if isMem {
 			return util.ConstructError("User '" + user.getName() + "' is already a member of the set of users")
 		}
 		
-		var added bool
-		added, err = persist.RedisClient.Sadd("users", []byte(user.getId()))
+		var numAdded int64
+		numAdded, err = persist.RedisClient.SAdd("users", user.getId())
 		if err != nil { return err }
-		if ! added { return util.ConstructError("Unable to add user " + user.getName()) }
+		if numAdded == 0 { return util.ConstructError("Unable to add user " + user.getName()) }
 		persist.allUsers[user.getUserId()] = user
 		return nil
 	}
+}
+
+/*******************************************************************************
+ * Construct an object as defined by the specified JSON string. Returns the
+ * name of the object type and the object, or an error. The factory has
+ * a ReconstituteXYZ method for constructing the object.
+ */
+func ReconstituteObject(factory interface{}, json string) (string, interface{}, error) {
+	
+	var typeName string
+	var remainder string
+	var err error
+	typeName, remainder, err = retrieveTypeName(json)
+	if err != nil { return typeName, nil, err }
+	
+	var methodName = "Reconstitute" + typeName
+	var method = reflect.ValueOf(factory).MethodByName(methodName)
+	if err != nil { return typeName, nil, err }
+	if ! method.IsValid() { return typeName, nil, util.ConstructError(
+		"Method " + methodName + " is unknown") }
+	
+	var actArgAr []reflect.Value
+	actArgAr, err = parseJSON(remainder)
+	if err != nil { return typeName, nil, err }
+
+	var methodType reflect.Type = method.Type()
+	var noOfFormalArgs int = methodType.NumIn()
+	if noOfFormalArgs != len(actArgAr) {
+		return typeName, nil, util.ConstructError(fmt.Sprintf(
+			"Number of actual args (%d) does not match number of formal args (%d)",
+			len(actArgAr), noOfFormalArgs))
+	}
+	
+	// Check that argument types of the actuals match the types of the formals.
+	var actArgArCopy = make([]reflect.Value, len(actArgAr))
+	copy(actArgArCopy, actArgAr) // make shallow copy of actArgAr
+	for i, actArg := range actArgArCopy {
+		if ! actArg.IsValid() { fmt.Println(fmt.Sprintf("\targ %d is a zero value", i)) }
+		
+		// Problem: Empty JSON lists were created as []interface{}. However, if the
+		// formal arg type is more specialized, e.g., []string, then the call
+		// via method.Call(args) will fail. Therefore, if an actual arg is an empty
+		// list, we need to replace it with an actual that is a list of the
+		// type required by the formal arg. Also, some types, e.g., []int, must
+		// be converted to the required formal type, e.g., []uint8.
+		var argKind = actArg.Type().Kind()
+		if (argKind == reflect.Array) || (argKind == reflect.Slice) {
+			// Replace actArg with an array of the formal type.
+			var replacementArrayValue = reflect.Indirect(reflect.New(methodType.In(i)))
+			actArgAr[i] = replacementArrayValue
+			
+			if actArg.Len() > 0 {
+				actArgAr[i] = reflect.MakeSlice(methodType.In(i), actArg.Len(), actArg.Len())
+			}
+			actArg = actArgAr[i]
+			//reflect.Copy(
+			for j := 0; j < actArg.Len(); j++ {
+				actArg.Index(j).Set(actArg.Index(j).Convert(methodType.In(i).Elem()))
+			}
+		}
+		
+		// Check that arg types match.
+		if ! actArg.Type().AssignableTo(methodType.In(i)) {
+			return typeName, nil, util.ConstructError(fmt.Sprintf(
+				"For argument #%d, type of actual arg, %s, " +
+				"is not assignable to the required type, %s. JSON=%s",
+				(i+1), actArg.Type().String(), methodType.In(i).String(), json))
+		}
+	}
+	
+	var retValues []reflect.Value = method.Call(actArgAr)
+	var retValue0 interface{} = retValues[0].Interface()
+	return typeName, retValue0, nil
 }

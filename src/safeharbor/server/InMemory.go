@@ -28,7 +28,7 @@ import (
 	"time"
 	"runtime/debug"	
 	
-	"redis"
+	"goredis"
 	
 	"safeharbor/apitypes"
 	"safeharbor/docker"
@@ -49,7 +49,7 @@ type InMemClient struct {
 	Server *Server
 }
 
-func NewInMemClient(server *Server, redisClient redis.Client) (DBClient, error) {
+func NewInMemClient(server *Server, redisClient *goredis.Redis) (DBClient, error) {
 	
 	// Create and return a new InMemClient.
 	var pers *Persistence
@@ -163,118 +163,12 @@ func (client *InMemClient) printDatabase() {
 }
 
 /*******************************************************************************
- * Construct an object as defined by the specified JSON string. Returns the
- * name of the object type and the object, or an error. The target is the
- * object that has the NewXYZ method for constructing the object.
- */
-func (client *InMemClient) ReconstituteObject(json string) (string, interface{}, error) {
-	
-	var typeName string
-	var remainder string
-	var err error
-	typeName, remainder, err = retrieveTypeName(json)
-	if err != nil { return typeName, nil, err }
-	
-	var methodName = "Reconstitute" + typeName
-	var method = reflect.ValueOf(client).MethodByName(methodName)
-	if err != nil { return typeName, nil, err }
-	if ! method.IsValid() { return typeName, nil, util.ConstructError(
-		"Method " + methodName + " is unknown") }
-	
-	var actArgAr []reflect.Value
-	actArgAr, err = parseJSON(remainder)
-	if err != nil { return typeName, nil, err }
-
-	var methodType reflect.Type = method.Type()
-	var noOfFormalArgs int = methodType.NumIn()
-	if noOfFormalArgs != len(actArgAr) {
-		return typeName, nil, util.ConstructError(fmt.Sprintf(
-			"Number of actual args (%d) does not match number of formal args (%d)",
-			len(actArgAr), noOfFormalArgs))
-	}
-	
-	// Check that argument types of the actuals match the types of the formals.
-	var actArgArCopy = make([]reflect.Value, len(actArgAr))
-	copy(actArgArCopy, actArgAr) // make shallow copy of actArgAr
-	for i, actArg := range actArgArCopy {
-		if ! actArg.IsValid() { fmt.Println(fmt.Sprintf("\targ %d is a zero value", i)) }
-		
-		// Problem: Empty JSON lists were created as []interface{}. However, if the
-		// formal arg type is more specialized, e.g., []string, then the call
-		// via method.Call(args) will fail. Therefore, if an actual arg is an empty
-		// list, we need to replace it with an actual that is a list of the
-		// type required by the formal arg. Also, some types, e.g., []int, must
-		// be converted to the required formal type, e.g., []uint8.
-		var argKind = actArg.Type().Kind()
-		if (argKind == reflect.Array) || (argKind == reflect.Slice) {
-			// Replace actArg with an array of the formal type.
-			var replacementArrayValue = reflect.Indirect(reflect.New(methodType.In(i)))
-			actArgAr[i] = replacementArrayValue
-			
-			if actArg.Len() > 0 {
-				actArgAr[i] = reflect.MakeSlice(methodType.In(i), actArg.Len(), actArg.Len())
-			}
-			actArg = actArgAr[i]
-			//reflect.Copy(
-			for j := 0; j < actArg.Len(); j++ {
-				actArg.Index(j).Set(actArg.Index(j).Convert(methodType.In(i).Elem()))
-			}
-		}
-		
-		// Check that arg types match.
-		if ! actArg.Type().AssignableTo(methodType.In(i)) {
-			return typeName, nil, util.ConstructError(fmt.Sprintf(
-				"For argument #%d, type of actual arg, %s, " +
-				"is not assignable to the required type, %s. JSON=%s",
-				(i+1), actArg.Type().String(), methodType.In(i).String(), json))
-		}
-	}
-	
-	var retValues []reflect.Value = method.Call(actArgAr)
-	var retValue0 interface{} = retValues[0].Interface()
-	return typeName, retValue0, nil
-}
-
-/*******************************************************************************
  * Return the persistent object that is identified by the specified unique id.
  * An object''s Id is assigned to it by the function that creates the object.
  */
 func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
 
-	if client.InMemoryOnly {
-		return client.allObjects[id], nil
-	} else {
-		
-		// First see if we have it in memory.
-		if client.allObjects[id] != nil { return client.allObjects[id], nil }
-		
-		// Read JSON from the database, using the id as the key; then deserialize
-		// (unmarshall) the JSON into an object. The outermost JSON object will be
-		// a field name - that field name is the name of the go object type; reflection
-		// will be used to identify the go type, and set the fields in the type using
-		// values from the hashmap that is built by the unmarshalling.
-		
-		var bytes []byte
-		var err error
-		bytes, err = client.RedisClient.Get("obj/" + id)
-		if err != nil { return nil, err }
-		if bytes == nil { return nil, nil }
-		if len(bytes) == 0 { return nil, nil }
-		
-		var obj interface{}
-		_, obj, err = client.ReconstituteObject(string(bytes))
-		if err != nil { return nil, err }
-		
-		var persistObj PersistObj
-		var isType bool
-		persistObj, isType = obj.(PersistObj)
-		if ! isType { return nil, util.ConstructError("Object is not a PersistObj") }
-		
-		// Add to in-memory cache.
-		client.allObjects[id] = persistObj;
-		
-		return persistObj, nil
-	}
+	return client.getObject(client, id)
 }
 
 /*******************************************************************************
