@@ -148,8 +148,7 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		var maxidle = 1
 		redisClient, err = goredis.Dial(&goredis.DialConfig{
 			network,
-			(config.RedisHost + ":" + fmt.Sprintf(
-				"%d", fmt.Sprintf("%d", config.RedisPort))),
+			(config.RedisHost + ":" + fmt.Sprintf("%d", config.RedisPort)),
 			db, config.RedisPswd, timeout, maxidle})
 		
 		if err != nil { AbortStartup(err.Error()) }
