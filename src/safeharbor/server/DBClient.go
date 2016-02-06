@@ -1,7 +1,6 @@
 /*******************************************************************************
- * This file defines the methods that a persistence implementation should have for
- * creating the object types defined in the Access Control Model and Docker Image
- * Workflow Model - see
+ * These interfaces define the persistent object model for SafeHarbor, as also
+ * defined in the Access Control Model and Docker Image Workflow Model - see
  * https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
  * The implementations should perform complete actions - i.e., maintain referential
  * integrity and satisfy all constraints and relationships.
@@ -35,7 +34,20 @@ type DataError interface {
 
 type DBClient interface {
 	
-	dbGetUserByUserId(string) User
+	getPersistence() *Persistence
+	getServer() *Server
+	commit() error
+	abort() error
+	
+	addObject(obj PersistObj) error
+	deleteObject(obj PersistObj) error
+	getPersistentObject(id string) (PersistObj, error)
+	
+	addRealm(newRealm Realm) error
+	dbGetAllRealmIds() ([]string, error)
+	addUser(user User) error
+
+	dbGetUserByUserId(string) (User, error)
 	dbCreateGroup(string, string, string) (Group, error)
 	dbCreateUser(string, string, string, string, string) (User, error)
 	dbCreateACLEntry(resourceId string, partyId string, permissionMask []bool) (ACLEntry, error)
@@ -43,12 +55,12 @@ type DBClient interface {
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string, string, []byte, string) (DockerImage, error)
+	dbCreateParameterValue(name, value, configId string) (ParameterValue, error)
 	dbCreateScanConfig(name, desc, repoId, providerName string, paramValueIds []string, successExpr, flagId string) (ScanConfig, error)
 	dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error)
 	dbCreateScanEvent(string, string, string, string, *providers.ScanResult) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
 	dbDeactivateRealm(realmId string) error
-	dbGetAllRealmIds() ([]string, error)
 	getResource(string) (Resource, error)
 	getParty(string) (Party, error)
 	getGroup(string) (Group, error)
@@ -64,9 +76,6 @@ type DBClient interface {
 	getEvent(string) (Event, error)
 	getScanEvent(string) (ScanEvent, error)
 	getRealmsAdministeredByUser(string) ([]string, error)  // those realms for which user can edit the realm
-	init() error
-	resetPersistentState() error
-	printDatabase()
 	
 	// From PersistObj
 	writeBack(PersistObj) error
@@ -100,8 +109,8 @@ type DBClient interface {
 
 type PersistObj interface {  // abstract
 	getId() string
-	getDBClient() DBClient
-	writeBack() error
+	getPersistence() *Persistence
+	writeBack(DBClient) error
 	asJSON() string
 }
 
@@ -111,13 +120,13 @@ type Party interface {  // abstract
 	setActive(bool)
 	isActive() bool
 	getRealmId() string
-	getRealm() (Realm, error)
+	getRealm(DBClient) (Realm, error)
 	getName() string
 	getCreationTime() time.Time
 	getACLEntryIds() []string
 	addACLEntry(ACLEntry)  // does not write to db
-	deleteACLEntry(entry ACLEntry) error
-	getACLEntryForResourceId(string) (ACLEntry, error)
+	deleteACLEntry(dbClient DBClient, entry ACLEntry) error
+	getACLEntryForResourceId(DBClient, string) (ACLEntry, error)
 }
 
 type ACL interface {  // abstract
@@ -137,7 +146,7 @@ type Resource interface {  // abstract
 	getDescription() string
 	//setDescription(string) error
 	setDescriptionDeferredUpdate(string)
-	getACLEntryForPartyId(string) (ACLEntry, error)
+	getACLEntryForPartyId(DBClient, string) (ACLEntry, error)
 	getParentId() string
 	isRealm() bool
 	isRepo() bool
@@ -169,35 +178,36 @@ type Group interface {
 	Party
 	getDescription() string
 	getUserObjIds() []string
-	hasUserWithId(string) bool
-	addUserId(string) error
-	addUser(User) error
-	removeUser(User) error
+	hasUserWithId(DBClient, string) bool
+	addUserId(DBClient, string) error
+	addUser(DBClient, User) error
+	removeUser(DBClient, User) error
 	asGroupDesc() *apitypes.GroupDesc
 }
 
 type User interface {
 	Party
 	getUserId() string
-	setPassword(string) error
-	validatePassword(pswd string) bool
-	hasGroupWithId(string) bool
-	addGroupId(string) error
+	setPassword(DBClient, string) error
+	validatePassword(dbClient DBClient, pswd string) bool
+	hasGroupWithId(DBClient, string) bool
+	addGroupId(DBClient, string) error
 	getGroupIds() []string
-	addLoginAttempt()
+	addLoginAttempt(DBClient)
 	getMostRecentLoginAttempts() []string // each in seconds, Unix time
-	addEventId(string)
+	addEventId(DBClient, string)
 	getEventIds() []string
-	deleteEvent(Event) error
-	asUserDesc() *apitypes.UserDesc
+	deleteEvent(DBClient, Event) error
+	asUserDesc(DBClient) *apitypes.UserDesc
 }
 
 type ACLEntry interface {
 	PersistObj
 	getResourceId() string
 	getPartyId() string
+	getParty(DBClient) (Party, error)
 	getPermissionMask() []bool
-	setPermissionMask([]bool) error
+	setPermissionMask(DBClient, []bool) error
 	asPermissionDesc() *apitypes.PermissionDesc
 }
 
@@ -205,23 +215,23 @@ type Realm interface {
 	Resource
 	getAdminUserId() string
 	getFileDirectory() string
-	hasUserWithId(string) bool
-	hasGroupWithId(string) bool
-	hasRepoWithId(string) bool
-	getUserByName(string) (User, error)
-	getGroupByName(string) (Group, error)
-	getRepoByName(string) (Repo, error)
+	hasUserWithId(DBClient, string) bool
+	hasGroupWithId(DBClient, string) bool
+	hasRepoWithId(DBClient, string) bool
+	getUserByName(DBClient, string) (User, error)
+	getGroupByName(DBClient, string) (Group, error)
+	getRepoByName(DBClient, string) (Repo, error)
 	getUserObjIds() []string
 	getRepoIds() []string
-	addUserId(string) error
-	removeUserId(string) (User, error)
-	deleteUserId(string) error
-	getUserByUserId(string) (User, error)
+	addUserId(DBClient, string) error
+	removeUserId(DBClient, string) (User, error)
+	deleteUserId(DBClient, string) error
+	getUserByUserId(DBClient, string) (User, error)
 	getGroupIds() []string
-	addGroup(Group) error
-	addUser(User) error
-	addRepo(Repo) error
-	deleteGroup(Group) error
+	addGroup(DBClient, Group) error
+	addUser(DBClient, User) error
+	addRepo(DBClient, Repo) error
+	deleteGroup(DBClient, Group) error
 	asRealmDesc() *apitypes.RealmDesc
 }
 
@@ -229,19 +239,19 @@ type Repo interface {
 	Resource
 	getFileDirectory() string
 	getRealmId() string
-	getRealm() (Realm, error)
+	getRealm(DBClient) (Realm, error)
 	getDockerfileIds() []string
 	getDockerImageIds() []string
 	getScanConfigIds() []string
 	getFlagIds() []string
-	addDockerfile(Dockerfile) error
-	addDockerImage(DockerImage) error
-	addScanConfig(ScanConfig) error
-	deleteScanConfig(ScanConfig) error
-	addFlag(Flag) error
-	deleteFlag(Flag) error
-	deleteDockerImage(DockerImage) error
-	getScanConfigByName(string) (ScanConfig, error)
+	addDockerfile(DBClient, Dockerfile) error
+	addDockerImage(DBClient, DockerImage) error
+	addScanConfig(DBClient, ScanConfig) error
+	deleteScanConfig(DBClient, ScanConfig) error
+	addFlag(DBClient, Flag) error
+	deleteFlag(DBClient, Flag) error
+	deleteDockerImage(DBClient, DockerImage) error
+	getScanConfigByName(DBClient, string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
 }
 
@@ -249,9 +259,9 @@ type Dockerfile interface {
 	Resource
 	getExternalFilePath() string
 	getRepoId() string
-	getRepo() (Repo, error)
+	getRepo(DBClient) (Repo, error)
 	getDockerfileExecEventIds() []string
-	addEventId(string) error
+	addEventId(DBClient, string) error
 	replaceDockerfileFile(filepath, desc string) error
 	asDockerfileDesc() *apitypes.DockerfileDesc
 }
@@ -259,27 +269,27 @@ type Dockerfile interface {
 type Image interface {  // abstract
 	Resource
 	getRepoId() string
-	getRepo() (Repo, error)
+	getRepo(DBClient) (Repo, error)
 }
 
 type DockerImage interface {
 	Image
 	getDockerImageTag() string  // Return same as getName().
-	getFullName() (string, error)  // Return the fully qualified docker image path.
+	getFullName(DBClient) (string, error)  // Return the fully qualified docker image path.
 	getScanEventIds() []string // ordered from oldest to newest
 	getMostRecentScanEventId() string
 	asDockerImageDesc() *apitypes.DockerImageDesc
 	getSignature() []byte
 	//computeSignature() ([]byte, error)
 	getOutputFromBuild() string
-	addScanEventId(id string)
+	addScanEventId(dbClient DBClient, id string)
 }
 
 type ParameterValue interface {
 	PersistObj
 	getName() string
 	getStringValue() string
-	setStringValue(string) error
+	setStringValue(DBClient, string) error
 	getConfigId() string
 	asParameterValueDesc() *apitypes.ParameterValueDesc
 }
@@ -287,23 +297,24 @@ type ParameterValue interface {
 type ScanConfig interface {
 	Resource
 	getSuccessExpr() string
-	setSuccessExpression(string) error
+	setSuccessExpression(DBClient, string) error
 	setSuccessExpressionDeferredUpdate(string)
 	getRepoId() string
 	getProviderName() string
-	setProviderName(string) error
+	setProviderName(DBClient, string) error
 	setProviderNameDeferredUpdate(string)
 	getParameterValueIds() []string
-	setParameterValue(string, string) (ParameterValue, error)
-	setParameterValueDeferredUpdate(string, string) (ParameterValue, error)
-	deleteParameterValue(name string) error
-	deleteAllParameterValues() error
-	setFlagId(string) error
+	setParameterValue(DBClient, string, string) (ParameterValue, error)
+	setParameterValueDeferredUpdate(DBClient, string, string) (ParameterValue, error)
+	deleteParameterValue(dbClient DBClient, name string) error
+	deleteAllParameterValues(DBClient) error
+	setFlagId(DBClient, string) error
 	getFlagId() string
-	addScanEventId(id string)
+	addParameterValueId(dbClient DBClient, id string)
+	addScanEventId(dbClient DBClient, id string)
 	getScanEventIds() []string
-	deleteScanEventId(string) error
-	asScanConfigDesc() *apitypes.ScanConfigDesc
+	deleteScanEventId(DBClient, string) error
+	asScanConfigDesc(DBClient) *apitypes.ScanConfigDesc
 
 
 }
@@ -313,8 +324,8 @@ type Flag interface {
 	getRepoId() string
 	getSuccessImagePath() string
 	getSuccessImageURL() string
-	addScanConfigRef(string) error
-	removeScanConfigRef(string) error
+	addScanConfigRef(DBClient, string) error
+	removeScanConfigRef(DBClient, string) error
 	usedByScanConfigIds() []string
 	asFlagDesc() *apitypes.FlagDesc
 }
@@ -323,7 +334,7 @@ type Event interface {  // abstract
 	PersistObj
 	getWhen() time.Time
 	getUserObjId() string
-	asEventDesc() apitypes.EventDesc
+	asEventDesc(DBClient) apitypes.EventDesc
 }
 
 type ScanEvent interface {
@@ -332,8 +343,8 @@ type ScanEvent interface {
 	getDockerImageId() string
 	getScanConfigId() string
 	getActualParameterValueIds() []string
-	deleteAllParameterValues() error
-	asScanEventDesc() *apitypes.ScanEventDesc
+	deleteAllParameterValues(DBClient) error
+	asScanEventDesc(DBClient) *apitypes.ScanEventDesc
 }
 
 type ImageCreationEvent interface {  // abstract

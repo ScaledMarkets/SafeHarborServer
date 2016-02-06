@@ -37,7 +37,7 @@ type Server struct {
 	Config *Configuration
 	httpServer *http.Server
 	tcpListener net.Listener
-	dbClient DBClient
+	persistence *Persistence
 	http.Handler
 	certPool *x509.CertPool
 	authService *AuthService
@@ -153,7 +153,7 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		
 		if err != nil { AbortStartup(err.Error()) }
 	}
-	server.dbClient, err = NewInMemClient(server, redisClient)
+	server.persistence, err = NewPersistence(server, redisClient)
 	if err != nil { AbortStartup(err.Error()) }
 	
 	// To do: Make this a TLS listener.

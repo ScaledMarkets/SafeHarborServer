@@ -1,8 +1,11 @@
 /*******************************************************************************
- * The Persistence struct implements persistence. It is extended by the Client struct,
- * in InMemory.go, which implements the Client interface from DBClient.go. Below that,
- * the remaining types (structs) implement the various persistent object types
- * from DBClient.go.
+ * The Persistence struct implements persistence, via redis, and defines the
+ * in-memory cache of objects, realms, and users. Implementing these methods provides
+ * persistence. If SafeHarbor is ever migrated to another database, only the
+ * methods below should need to be re-implemented (in theory).
+ * Redis bindings for go: http://redis.io/clients#go
+ * Chosen binding: https://github.com/xuyu/goredis
+ * Prior binding: https://github.com/alphazero/Go-Redis
  */
 
 package server
@@ -25,33 +28,10 @@ import (
 )
 
 /*******************************************************************************
- * Implements DataError.
- */
-type PersistDataError struct {
-	error
-}
-
-var _ DataError = &PersistDataError{}
-
-func NewPersistDataError(msg string) *PersistDataError {
-	return &PersistDataError{
-		error: util.ConstructError(msg),
-	}
-}
-
-func (dataErr *PersistDataError) asFailureDesc() *apitypes.FailureDesc {
-	return apitypes.NewFailureDesc(dataErr.Error())
-}
-
-/*******************************************************************************
- * Contains all persistence functionality. Implementing these methods provides
- * persistence.
- *
- * Redis bindings for go: http://redis.io/clients#go
- * Chosen binding: https://github.com/xuyu/goredis
- * Prior binding: https://github.com/alphazero/Go-Redis
+ * Contains all of the state needed to interact with the persistent store (redis).
  */
 type Persistence struct {
+	Server *Server
 	InMemoryOnly bool
 	RedisClient *goredis.Redis
 	uniqueId int64
@@ -60,47 +40,96 @@ type Persistence struct {
 	allRealmIds []string
 }
 
-func NewPersistence(inMemoryOnly bool, redisClient *goredis.Redis) (*Persistence, error) {
+func NewPersistence(server *Server, redisClient *goredis.Redis) (*Persistence, error) {
 	var persist = &Persistence{
-		InMemoryOnly: inMemoryOnly,
+		Server: server,
+		InMemoryOnly: server.InMemoryOnly,
 		RedisClient: redisClient,
 	}
-	persist.resetInMemory()
+	persist.resetInMemoryState()
+	
+	var err error = persist.init()
+	if err != nil { return nil, err }
+	
 	return persist, nil
 }
 
 /*******************************************************************************
- * Initialize the in-memory state of the database. This is normally called on
- * startup, of if the database connection must be re-established. Persistent
- * state is not modified.
+ * Delete all persistent data - but do not delete data that is in another repository
+ * such as a docker registry.
  */
-func (persist *Persistence) resetInMemory() {
-	persist.uniqueId = 100000005
-	persist.allRealmIds = make([]string, 0)
-	persist.allObjects = make(map[string]PersistObj)
-	persist.allUsers = make(map[string]User)
+func (persist *Persistence) resetPersistentState() error {
+	
+	// Remove the file repository.
+	fmt.Println("Removing all files at " + persist.Server.Config.FileRepoRootPath)
+	var err error
+	err = os.RemoveAll(persist.Server.Config.FileRepoRootPath)
+	if err != nil { return err }
+	
+	// Recreate the file repository, but empty.
+	os.Mkdir(persist.Server.Config.FileRepoRootPath, 0770)
+
+	fmt.Println("Repository initialized")
+	return nil
 }
 
 /*******************************************************************************
- * Load core database state. Database data is not cached, except for this core data.
- * If the data is not present in the database, it should be created and written out.
+ * 
  */
-func (persist *Persistence) load() error {
-	fmt.Println("Loading core database state...")
-	var id int64
-	var err error
-	id, err = persist.readUniqueId()  // returns 0 if database is "virgin"
-	if err != nil { return err }
-	if id == 0 {
-		err = persist.RedisClient.Set(
-			"UniqueId", fmt.Sprintf("%d", persist.uniqueId), 0, 0, false, false)
+func (persist *Persistence) GetUserObjByUserId(userId string) (User, error) {
+....don''t we need a reference to the transaction?
+	var user = persist.allUsers[userId]
+	if user == nil {
+		var userObjId string
+		var err error
+		userObjId, err = persist.RedisClient.HGet("users", userId)
 		if err != nil { return err }
-	} else {
-		persist.uniqueId = id
+		if userObjId == "" {
+			return nil, nil
+		}
 	}
-	
-	fmt.Println("...completing loading database state.")
-	return nil
+	return userObjId, nil
+}
+
+/*******************************************************************************
+ * Create a directory for the Dockerfiles, images, and any other files owned
+ * by the specified realm.
+ */
+func (persist *Persistence) assignRealmFileDir(realmId string) (string, error) {
+....don''t we need a reference to the transaction?
+	var path = persist.Server.Config.FileRepoRootPath + "/" + realmId
+	// Create the directory. (It is an error if it already exists.)
+	err := os.MkdirAll(path, 0711)
+	return path, err
+}
+
+/*******************************************************************************
+ * Create a directory for the Dockerfiles, images, and any other files owned
+ * by the specified repo. The directory will be created as a subdirectory of the
+ * realm''s directory.
+ */
+func (persist *Persistence) assignRepoFileDir(realmId string, repoId string) (string, error) {
+....don''t we need a reference to the transaction?
+	fmt.Println("assignRepoFileDir(", realmId, ",", repoId, ")...")
+	var err error
+	var realm Realm
+	realm, err = persist.getRealm(realmId)
+	if err != nil { return "", err }
+	....var path = realm.getFileDirectory() + "/" + repoId
+	var curdir string
+	curdir, err = os.Getwd()
+	if err != nil { fmt.Println(err.Error()) }
+	fmt.Println("Current directory is '" + curdir + "'")
+	fmt.Println("Creating directory '" + path + "'...")
+	err = os.MkdirAll(path, 0711)
+	return path, err
+}
+
+/*******************************************************************************
+ * Print the database to stdout. Diagnostic.
+ */
+func (persist *Persistence) printDatabase() {
+	fmt.Println("Not implemented yet")
 }
 
 /*******************************************************************************
@@ -123,75 +152,10 @@ func (persist *Persistence) createUniqueDbObjectId() (string, error) {
 }
 
 /*******************************************************************************
- * Return the current value of the unique object Id generator.
- */
-func (persist *Persistence) readUniqueId() (int64, error) {
-	if persist.InMemoryOnly {
-		return persist.uniqueId, nil
-	} else {
-		var bytes []byte
-		var err error
-		bytes, err = persist.RedisClient.Get("UniqueId")
-		if err != nil { return 0, err }
-		var str = string(bytes)
-		if str == "" { return 0, nil }
-		var id int64
-		id, err = strconv.ParseInt(str, 10, 64)
-		if err != nil { return 0, err }
-		return id, nil
-	}
-}
-
-/*******************************************************************************
- * Obtain a lock on the specified object, blocking until either the lock is
- * obtained, or until the timeout period elapses. If the latter occurs, return
- * an error. If the current thread already has a lock on the specified object,
- * merely return.
- *
- * Possible algorithm:
-	getLock(obj, timeLimit) {
-		elapsedTime = 0
-		startTime = GetCurTime()
-		for {
-			old_pid1 = obj.getPid()
-			old_pid2 = obj.getsetPid(my_pid)	// Try to get the lock.
-			if old_pid2 != old_pid1 {
-												// did not get it
-				obj.setPid(old_pid2)
-				continue
-			}	
-			if obj.getPid() == my_pid			// See if we got the lock.
-				return success
-			elapsedTime = GetCurTime() - startTime
-			if elapsedTime + 100ms > timeLimit
-				return error
-			wait(100ms)
-		}
-	}
- */
-func (persist *Persistence) waitForLockOnObject(obj PersistObj, timeoutSeconds int) error {
-	if persist.InMemoryOnly {
-		return nil
-	} else {
-		return nil  //....
-	}
-}
-
-/*******************************************************************************
- * Release any and all locks on the specified object. If there are no locks on
- * the object, merely return.
- */
-func (persist *Persistence) releaseLock(obj PersistObj) {
-	if persist.InMemoryOnly {
-	} else {
-		//....
-	}
-}
-
-/*******************************************************************************
  * Write an object to the database - making the object persistent.
  */
 func (persist *Persistence) addObject(obj PersistObj) error {
+....don''t we need a reference to the transaction?
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = obj
 	} else {
@@ -216,6 +180,7 @@ func (persist *Persistence) addObject(obj PersistObj) error {
  * longer persistent.
  */
 func (persist *Persistence) deleteObject(obj PersistObj) error {
+....don''t we need a reference to the transaction?
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = nil
 		return nil
@@ -237,7 +202,7 @@ func (persist *Persistence) deleteObject(obj PersistObj) error {
  * construct the persistent object.
  */
 func (persist *Persistence) getObject(factory interface{}, id string) (PersistObj, error) {
-
+....don''t we need a reference to the transaction?
 	if persist.InMemoryOnly {
 		return persist.allObjects[id], nil
 	} else {
@@ -278,7 +243,7 @@ func (persist *Persistence) getObject(factory interface{}, id string) (PersistOb
  * Insert a new Realm into the database. This automatically inserts the
  * underlying persistent object.
  */
-func (persist *Persistence) addRealm(newRealm Realm) error {
+func (persist *Persistence) addRealm(newRealm Realm) error {....don''t we need a reference to the transaction?
 	if persist.InMemoryOnly {
 		persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
 		return persist.addObject(newRealm)
@@ -286,7 +251,7 @@ func (persist *Persistence) addRealm(newRealm Realm) error {
 		var err = persist.addObject(newRealm)
 		if err != nil { return err }
 		var numAdded int64
-		numAdded, err = persist.RedisClient.SAdd("realms", newRealm.getId())
+		....numAdded, err = persist.RedisClient.SAdd("realms", newRealm.getId())
 		if err != nil { return err }
 		if numAdded == 0 { return util.ConstructError("Unable to add realm " + newRealm.getName()) }
 		persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
@@ -297,13 +262,13 @@ func (persist *Persistence) addRealm(newRealm Realm) error {
 /*******************************************************************************
  * Return a list of the Ids of all of the realms in the database.
  */
-func (persist *Persistence) dbGetAllRealmIds() ([]string, error) {
+func (persist *Persistence) dbGetAllRealmIds() ([]string, error) {....don''t we need a reference to the transaction?
 	if persist.InMemoryOnly {
 		return persist.allRealmIds, nil
 	} else {
 		var members []string
 		var err error
-		members, err = persist.RedisClient.SMembers("realms")
+		....members, err = persist.RedisClient.SMembers("realms")
 		if err != nil { return nil, err }
 		return members, nil
 	}
@@ -313,7 +278,7 @@ func (persist *Persistence) dbGetAllRealmIds() ([]string, error) {
  * Insert a new User into the databse. This automatically inserts the
  * underlying persistent object.
  */
-func (persist *Persistence) addUser(user User) error {
+func (persist *Persistence) addUser(user User) error {....don''t we need a reference to the transaction?
 	if persist.InMemoryOnly {
 		persist.allUsers[user.getUserId()] = user
 		return persist.addObject(user)
@@ -322,18 +287,136 @@ func (persist *Persistence) addUser(user User) error {
 		if err != nil { return err }
 		
 		// Check if the user already exists in the set.
-		var isMem bool
-		isMem, err = persist.RedisClient.SIsMember("users", user.getId())
-		if isMem {
+		var userObjId string
+		userObjId, err = persist.GetUserObjByUserId(user.getUserId())
+		if err != nil { return err }
+		if userObjId != "" {
 			return util.ConstructError("User '" + user.getName() + "' is already a member of the set of users")
 		}
 		
-		var numAdded int64
-		numAdded, err = persist.RedisClient.SAdd("users", user.getId())
+		// Write user to user-id hash.
+		var added bool
+		added, err = persist.RedisClient.HSet("users", user.getUserId(), user.getId())
 		if err != nil { return err }
-		if numAdded == 0 { return util.ConstructError("Unable to add user " + user.getName()) }
-		persist.allUsers[user.getUserId()] = user
+		if ! added { return util.ConstructError("Unable to add user " + user.getName()) }
+		
+		// Write user object to database.
+		err = persist.addObject(user)
+		if err != nil { return err }
+		
 		return nil
+	}
+}
+
+
+
+/*******************************************************************************
+								Internal methods
+*******************************************************************************/
+
+
+
+/*******************************************************************************
+ * Initilize the client object. This can be called later to reset the client''s
+ * state (i.e., to erase all objects).
+ */
+func (persist *Persistence) init() error {
+	
+	persist.resetInMemoryState()
+	var err error = persist.loadCoreData()
+	if err != nil { return util.ConstructError("Unable to load database state: " + err.Error()) }
+	
+	if client.Server.Debug { createTestObjects() }
+	
+	return nil
+}
+
+/*******************************************************************************
+ * Load core database state.
+ * If the data is not present in the database, it should be created and written out.
+ */
+func (persist *Persistence) loadCoreData() error {
+	fmt.Println("Loading core database state...")
+	var id int64
+	var err error
+	id, err = persist.readUniqueId()  // returns 0 if database is "virgin"
+	if err != nil { return err }
+	if id == 0 {
+		err = persist.RedisClient.Set(
+			"UniqueId", fmt.Sprintf("%d", persist.uniqueId), 0, 0, false, false)
+		if err != nil { return err }
+	} else {
+		persist.uniqueId = id
+	}
+	
+	fmt.Println("...completing loading database state.")
+	return nil
+}
+
+/*******************************************************************************
+ * Return the current value of the unique object Id generator.
+ */
+func (persist *Persistence) readUniqueId() (int64, error) {
+	if persist.InMemoryOnly {
+		return persist.uniqueId, nil
+	} else {
+		var bytes []byte
+		var err error
+		bytes, err = persist.RedisClient.Get("UniqueId")
+		if err != nil { return 0, err }
+		var str = string(bytes)
+		if str == "" { return 0, nil }
+		var id int64
+		id, err = strconv.ParseInt(str, 10, 64)
+		if err != nil { return 0, err }
+		return id, nil
+	}
+}
+
+/*******************************************************************************
+ * Initialize the in-memory state of the database. This is normally called on
+ * startup, of if the database connection must be re-established. Persistent
+ * state is not modified.
+ */
+func (persist *Persistence) resetInMemoryState() {
+	persist.uniqueId = 100000005
+	persist.allRealmIds = make([]string, 0)
+	persist.allObjects = make(map[string]PersistObj)
+	persist.allUsers = make(map[string]User)
+}
+
+/*******************************************************************************
+ * For test mode only.
+ */
+func createTestObjects() {
+	fmt.Println("Debug mode: creating realm testrealm")
+	var realmInfo *apitypes.RealmInfo
+	realmInfo, err = apitypes.NewRealmInfo("testrealm", "Test Org", "For Testing")
+	if err != nil {
+		fmt.Println(err.Error())
+		panic(err)
+	}
+	var testRealm Realm
+	testRealm, err = client.dbCreateRealm(realmInfo, "testuser1")
+	if err != nil {
+		fmt.Println(err.Error())
+		panic(err)
+	}
+	fmt.Println("Debug mode: creating user testuser1 in realm testrealm")
+	var testUser1 User
+	testUser1, err = client.dbCreateUser("testuser1", "Test User", 
+		"testuser@gmail.com", "Password1", testRealm.getId())
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1);
+	}
+	fmt.Println("User", testUser1.getName())
+	fmt.Println("created user, obj id=" + testUser1.getId())
+	fmt.Println("Giving user admin access to the realm.")
+	_, err = client.setAccess(testRealm, testUser1, []bool{true, true, true, true, true})
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1);
 	}
 }
 

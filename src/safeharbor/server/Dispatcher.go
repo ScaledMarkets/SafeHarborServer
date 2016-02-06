@@ -22,7 +22,7 @@ import (
  * The string arguments are in pairs, where the first is the name of the arg,
  * and the second is the string value.
  */
-type ReqHandlerFuncType func (*Server, *apitypes.SessionToken, url.Values,
+type ReqHandlerFuncType func (*InMemClient, *apitypes.SessionToken, url.Values,
 	map[string][]*multipart.FileHeader) apitypes.RespIntfTp
 
 /*******************************************************************************
@@ -149,7 +149,27 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	if dispatcher.server.Debug {
 		dispatcher.printHTTPParameters(values)
 	}
-	var result apitypes.RespIntfTp = handler(dispatcher.server, sessionToken, values, files)
+	
+	// Start a transaction.
+	var server = dispatcher.server
+	var inMemClient *InMemClient
+	inMemClient, err = NewInMemClient(server)
+	if err != nil {
+		dispatcher.returnSystemErrorResponse(headers, w, err.Error())
+		return
+	}
+	var inMemClients = []*InMemClient{ inMemClient }
+		// We created an array, because that is the only way to get the defer
+		// statement to defer evaluating inMemClient in the function below:
+	defer func() {
+		var inMemClient = inMemClients[0]
+		if inMemClient != nil {
+			inMemClient.abort()
+			inMemClient = nil
+		}
+	}()
+	
+	var result apitypes.RespIntfTp = handler(inMemClients[0], sessionToken, values, files)
 	fmt.Println("Returning result:", result.AsJSON())
 	
 	// Detect whether an error occurred.
@@ -157,10 +177,25 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	if isType {
 		fmt.Printf("Error:", failureDesc.Reason)
 		http.Error(w, failureDesc.AsJSON(), failureDesc.HTTPCode)
+		
+		// Abort transaction.
+		inMemClients[0].abort()
+		inMemClient = nil
+		
+		return
+	}
+	
+	// Commit transaction.
+	err = inMemClients[0].commit()
+	inMemClients[0] = nil
+	inMemClients = nil
+	if err != nil {
+		dispatcher.returnSystemErrorResponse(headers, w, err.Error())
 		return
 	}
 	
 	dispatcher.returnOkResponse(headers, w, result)
+	
 	fmt.Printf("Handled %s\n", reqName)
 }
 
@@ -248,8 +283,21 @@ func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.
 func (dispatcher *Dispatcher) respondNoSuchMethod(headers http.Header,
 	writer http.ResponseWriter, methodName string) {
 	
+	var msg = "No such method," + methodName
 	writer.WriteHeader(404)
-	io.WriteString(writer, "No such method," + methodName)
+	io.WriteString(writer, msg)
+	fmt.Println(msg)
+}
+
+/*******************************************************************************
+ * 
+ */
+func (dispatcher *Dispatcher) returnSystemErrorResponse(headers http.Header,
+	writer http.ResponseWriter, msg string) {
+
+	writer.WriteHeader(500)
+	io.WriteString(writer, msg)
+	fmt.Println(msg)
 }
 
 /*******************************************************************************

@@ -38,144 +38,89 @@ import (
 )
 
 const (
-	LockTimeoutSeconds int = 2
+	TransactionTimeoutSeconds int = 2
 )
 
 /*******************************************************************************
  * The Client type, and methods required by the Client interface in DBClient.go.
  */
 type InMemClient struct {
-	Persistence
+	Persistence *Persistence
 	Server *Server
+	GoRedisTransaction goredis.Transaction
 }
 
-func NewInMemClient(server *Server, redisClient *goredis.Redis) (DBClient, error) {
+func NewInMemClient(server *Server) (*InMemClient, error) {
+	
+	var redisTransaction *goredis.Transaction
+	var err error
+	redisTransaction, err = server.persistence.RedisClient.Transaction()
+	if err != nil { return nil, err }
 	
 	// Create and return a new InMemClient.
 	var pers *Persistence
-	var err error
-	pers, err = NewPersistence(server.InMemoryOnly, redisClient)
-	if err != nil { return nil, err }
 	var client = &InMemClient{
-		Persistence: *pers,
+		Persistence: server.persistence,
 		Server: server,
+		GoRedisTransaction: redisTransaction,
 	}
 	
-	err = client.init()
-	if err != nil { return nil, err }
 	return client, nil
 }
 
-// Initilize the client object. This can be called later to reset the client's
-// state (i.e., to erase all objects).
-func (client *InMemClient) init() error {
-	
-	client.resetInMemory()
-	var err error = client.load()
-	if err != nil { return util.ConstructError("Unable to load database state: " + err.Error()) }
-	
-	// For testing only:
-	if client.Server.Debug {
-		fmt.Println("Debug mode: creating realm testrealm")
-		var realmInfo *apitypes.RealmInfo
-		realmInfo, err = apitypes.NewRealmInfo("testrealm", "Test Org", "For Testing")
-		if err != nil {
-			fmt.Println(err.Error())
-			panic(err)
-		}
-		var testRealm Realm
-		testRealm, err = client.dbCreateRealm(realmInfo, "testuser1")
-		if err != nil {
-			fmt.Println(err.Error())
-			panic(err)
-		}
-		fmt.Println("Debug mode: creating user testuser1 in realm testrealm")
-		var testUser1 User
-		testUser1, err = client.dbCreateUser("testuser1", "Test User", 
-			"testuser@gmail.com", "Password1", testRealm.getId())
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1);
-		}
-		fmt.Println("User", testUser1.getName())
-		fmt.Println("created user, obj id=" + testUser1.getId())
-		fmt.Println("Giving user admin access to the realm.")
-		_, err = client.setAccess(testRealm, testUser1, []bool{true, true, true, true, true})
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1);
-		}
-	}
-	
-	return nil
-}
+func (client *InMemClient) getPersistence() *Persistence { return client.Persistence }
 
-func (client *InMemClient) resetPersistentState() error {
-	
-	// Remove the file repository.
-	fmt.Println("Removing all files at " + client.Server.Config.FileRepoRootPath)
+func (client *InMemClient) getServer() *Server { return client.Server }
+
+func (client *InMemClient) commit() error {
 	var err error
-	err = os.RemoveAll(client.Server.Config.FileRepoRootPath)
-	if err != nil { return err }
-	
-	// Recreate the file repository, but empty.
-	os.Mkdir(client.Server.Config.FileRepoRootPath, 0770)
-
-	fmt.Println("Repository initialized")
-	return nil
+	_, err = client.GoRedisTransaction.Exec()
+	client.GoRedisTransaction.Close()
+	return err
 }
 
-func (client *InMemClient) dbGetUserByUserId(userId string) User {
-	return client.allUsers[userId]
-}
-
-// Create a directory for the Dockerfiles, images, and any other files owned
-// by the specified realm.
-func (client *InMemClient) assignRealmFileDir(realmId string) (string, error) {
-	var path = client.Server.Config.FileRepoRootPath + "/" + realmId
-	// Create the directory. (It is an error if it already exists.)
-	err := os.MkdirAll(path, 0711)
-	return path, err
-}
-
-// Create a directory for the Dockerfiles, images, and any other files owned
-// by the specified repo. The directory will be created as a subdirectory of the
-// realm's directory.
-func (client *InMemClient) assignRepoFileDir(realmId string, repoId string) (string, error) {
-	fmt.Println("assignRepoFileDir(", realmId, ",", repoId, ")...")
+func (client *InMemClient) abort() error {
 	var err error
-	var realm Realm
-	realm, err = client.getRealm(realmId)
-	if err != nil { return "", err }
-	var path = realm.getFileDirectory() + "/" + repoId
-	var curdir string
-	curdir, err = os.Getwd()
-	if err != nil { fmt.Println(err.Error()) }
-	fmt.Println("Current directory is '" + curdir + "'")
-	fmt.Println("Creating directory '" + path + "'...")
-	err = os.MkdirAll(path, 0711)
-	return path, err
+	err = client.GoRedisTransaction.Discard()
+	client.GoRedisTransaction.Close()
+	return err
 }
 
-// Print the database to stdout. Diagnostic.
-func (client *InMemClient) printDatabase() {
-	fmt.Println("Not implemented yet")
+func (client *InMemClient) addObject(obj PersistObj) error {
+	return client.Persistence.addObject(obj)
 }
 
-/*******************************************************************************
- * Return the persistent object that is identified by the specified unique id.
- * An object''s Id is assigned to it by the function that creates the object.
- */
-func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
+func (client *InMemClient) deleteObject(obj PersistObj) error {
+	return client.Persistence.deleteObject(obj)
+}
 
-	return client.getObject(client, id)
+func (client *InMemClient) dbGetAllRealmIds() ([]string, error) {
+	return client.Persistence.dbGetAllRealmIds()
+}
+
+func (client *InMemClient) addRealm(newRealm Realm) error {
+	return client.Persistence.addRealm(newRealm)
+}
+
+func (client *InMemClient) addUser(user User) error {
+	return client.Persistence.addUser(user)
+}
+
+func (client *InMemClient) dbGetUserByUserId(userId string) (User, error) {
+	var userObjId string
+	var err error
+	userObjId, err = client.Persistence.GetUserObjByUserId(userId)
+	if err != nil { return nil, err }
+	if userObjId == nil { return nil, nil }
+	var user User
+	return client.getUser(userObjId)
 }
 
 /*******************************************************************************
  * Base type that is included in each data type as an anonymous field.
  */
 type InMemPersistObj struct {  // abstract
-	Client *InMemClient
+	Persistence *Persistence
 	Id string
 }
 
@@ -185,32 +130,28 @@ func (client *InMemClient) NewInMemPersistObj() (*InMemPersistObj, error) {
 	
 	var id string
 	var err error
-	id, err = client.createUniqueDbObjectId()
+	id, err = client.Persistence.createUniqueDbObjectId()
 	if err != nil { return nil, err }
 	var obj *InMemPersistObj = &InMemPersistObj{
-		Client: client,
+		Persistence: client.Persistence,
 		Id: id,
 	}
 	return obj, nil
+}
+
+func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
+	return client.Persistence.getObject(client, id)
 }
 
 func (persObj *InMemPersistObj) getId() string {
 	return persObj.Id
 }
 
-func (persObj *InMemPersistObj) getDBClient() DBClient {
-	return persObj.Client
+func (persObj *InMemPersistObj) getPersistence() *Persistence {
+	return persObj.Persistence
 }
 
-func (persObj *InMemPersistObj) waitForLock() error {
-	return persObj.Client.waitForLockOnObject(persObj, LockTimeoutSeconds)
-}
-
-func (persObj *InMemPersistObj) releaseLock() {
-	persObj.Client.releaseLock(persObj)
-}
-
-func (persObj *InMemPersistObj) writeBack() error {
+func (persObj *InMemPersistObj) writeBack(dbClient DBClient) error {
 	panic("Abstract method should not be called")
 }
 
@@ -224,13 +165,13 @@ func (persObj *InMemPersistObj) asJSON() string {
 
 func (client *InMemClient) ReconstitutePersistObj(id string) (*InMemPersistObj, error) {
 	return &InMemPersistObj{
-		Client: client,
+		Persistence: client.Persistence,
 		Id: id,
 	}, nil
 }
 
 func (client *InMemClient) writeBack(obj PersistObj) error {
-	return obj.writeBack()
+	return obj.writeBack(client)
 }
 
 func (client *InMemClient) asJSON(obj PersistObj) string {
@@ -246,12 +187,12 @@ type InMemACL struct {  // abstract
 }
 
 func (client *InMemClient) NewInMemACL() (*InMemACL, error) {
-	var pers *InMemPersistObj
+	var persistobj *InMemPersistObj
 	var err error
-	pers, err = client.NewInMemPersistObj()
+	persistobj, err = client.NewInMemPersistObj()
 	if err != nil { return nil, err }
 	var acl *InMemACL = &InMemACL{
-		InMemPersistObj: *pers,
+		InMemPersistObj: *persistobj,
 		ACLEntryIds: make([]string, 0),
 	}
 	return acl, nil
@@ -274,7 +215,7 @@ func (acl *InMemACL) addACLEntry(entry ACLEntry) {
 	acl.ACLEntryIds = append(acl.ACLEntryIds, entry.getId())
 }
 
-func (acl *InMemACL) writeBack() error {
+func (acl *InMemACL) writeBack(dbClient DBClient) error {
 	panic("Abstract method should not be called")
 }
 
@@ -334,13 +275,13 @@ func (client *InMemClient) NewInMemResource(name string, desc string,
 func (client *InMemClient) setAccess(resource Resource, party Party, mask []bool) (ACLEntry, error) {
 	var aclEntry ACLEntry
 	var err error
-	aclEntry, err = party.getACLEntryForResourceId(resource.getId())
+	aclEntry, err = party.getACLEntryForResourceId(client, resource.getId())
 	if err != nil { return nil, err }
 	if aclEntry == nil {
 		aclEntry, err = client.dbCreateACLEntry(resource.getId(), party.getId(), mask)
 		if err != nil { return nil, err }
 	} else {
-		err = aclEntry.setPermissionMask(mask)
+		err = aclEntry.setPermissionMask(client, mask)
 		if err != nil { return nil, err }
 	}
 	
@@ -351,7 +292,7 @@ func (client *InMemClient) addAccess(resource Resource, party Party, mask []bool
 
 	var aclEntry ACLEntry
 	var err error
-	aclEntry, err = party.getACLEntryForResourceId(resource.getId())
+	aclEntry, err = party.getACLEntryForResourceId(client, resource.getId())
 	if err != nil { return nil, err }
 	if aclEntry == nil {
 		aclEntry, err = client.dbCreateACLEntry(resource.getId(), party.getId(), mask)
@@ -362,7 +303,7 @@ func (client *InMemClient) addAccess(resource Resource, party Party, mask []bool
 		for index, _ := range curmask {
 			curmask[index] = curmask[index] || mask[index]
 		}
-		err = aclEntry.setPermissionMask(curmask)
+		err = aclEntry.setPermissionMask(client, curmask)
 		if err != nil { return nil, err }
 		//if err = client.writeBack(aclEntry); err != nil { return nil, err }
 	}
@@ -394,7 +335,7 @@ func (client *InMemClient) deleteAccess(resource Resource, party Party) error {
 			resource.removeACLEntryIdAt(index)
 			
 			// Remove from database.
-			err = client.deleteObject(aclEntry)
+			err = client.Persistence.deleteObject(aclEntry)
 			if err != nil { return err }
 		}
 	}
@@ -406,7 +347,7 @@ func (resource *InMemResource) removeACLEntryIdAt(index int) {
 	resource.ACLEntryIds = apitypes.RemoveAt(index, resource.ACLEntryIds)
 }
 
-func (resource *InMemResource) printACLs(party Party) {
+func (resource *InMemResource) printACLs(dbClient DBClient, party Party) {
 	var curresourceId string = resource.getId()
 	var curresource Resource = resource
 	for {
@@ -415,21 +356,21 @@ func (resource *InMemResource) printACLs(party Party) {
 		for _, entryId := range curresource.getACLEntryIds() {
 			var aclEntry ACLEntry
 			var err error
-			aclEntry, err = curresource.getDBClient().getACLEntry(entryId)
+			aclEntry, err = dbClient.getACLEntry(entryId)
 			if err != nil {
 				fmt.Println(err.Error())
 				continue
 			}
 			var rscId string = aclEntry.getResourceId()
 			var rsc Resource
-			rsc, err = resource.Client.getResource(rscId)
+			rsc, err = dbClient.getResource(rscId)
 			if err != nil {
 				fmt.Println(err.Error())
 				continue
 			}
 			var ptyId string = aclEntry.getPartyId()
 			var pty Party
-			pty, err = curresource.getDBClient().getParty(ptyId)
+			pty, err = dbClient.getParty(ptyId)
 			if err != nil {
 				fmt.Println(err.Error())
 				continue
@@ -444,7 +385,7 @@ func (resource *InMemResource) printACLs(party Party) {
 			break
 		}
 		var err error
-		curresource, err = resource.Client.getResource(curresourceId)
+		curresource, err = dbClient.getResource(curresourceId)
 		if err != nil {
 			fmt.Println(err.Error())
 			break
@@ -455,21 +396,21 @@ func (resource *InMemResource) printACLs(party Party) {
 	for _, entryId := range party.getACLEntryIds() {
 		var aclEntry ACLEntry
 		var err error
-		aclEntry, err = resource.Client.getACLEntry(entryId)
+		aclEntry, err = dbClient.getACLEntry(entryId)
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
 		}
 		var rscId string = aclEntry.getResourceId()
 		var rsc Resource
-		rsc, err = resource.Client.getResource(rscId)
+		rsc, err = dbClient.getResource(rscId)
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
 		}
 		var partyId string = aclEntry.getPartyId()
 		var pty Party
-		pty, err = resource.Client.getParty(partyId)
+		pty, err = dbClient.getParty(partyId)
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
@@ -544,20 +485,13 @@ func (resource *InMemResource) setDescriptionDeferredUpdate(desc string) {
 	resource.Description = desc
 }
 
-func (resource *InMemResource) getACLEntryForPartyId(partyId string) (ACLEntry, error) {
+func (resource *InMemResource) getACLEntryForPartyId(dbClient DBClient, partyId string) (ACLEntry, error) {
 	var err error
 	for _, entryId := range resource.getACLEntryIds() {
-		var obj interface{}
-		obj, err = resource.Client.getPersistentObject(entryId)
-		if obj == nil {
-			err = util.ConstructError("Internal error - no object found for Id " + entryId);
-			continue
-		}
 		var entry ACLEntry
-		var isType bool
-		entry, isType = obj.(ACLEntry)
-		if ! isType {
-			err = util.ConstructError("Internal error - object with Id " + entryId + " is not an ACLEntry");
+		entry, err = dbClient.getACLEntry(entryId)
+		if err != nil {
+			err = util.ConstructError(err.Error());
 			continue
 		}
 		if entry.getPartyId() == partyId {
@@ -749,8 +683,8 @@ func (party *InMemParty) getRealmId() string {
 	return party.RealmId
 }
 
-func (party *InMemParty) getRealm() (Realm, error) {
-	return party.Client.getRealm(party.RealmId)
+func (party *InMemParty) getRealm(dbClient DBClient) (Realm, error) {
+	return dbClient.getRealm(party.RealmId)
 }
 
 func (party *InMemParty) getACLEntryIds() []string {
@@ -767,30 +701,23 @@ func (party *InMemParty) addACLEntry(entry ACLEntry) {
 }
 
 func (client *InMemClient) deleteACLEntryForParty(party Party, entry ACLEntry) error {
-	party.deleteACLEntry(entry)
+	party.deleteACLEntry(client, entry)
 	return client.writeBack(party)
 }
 
-func (party *InMemParty) deleteACLEntry(entry ACLEntry) error {
+func (party *InMemParty) deleteACLEntry(dbClient DBClient, entry ACLEntry) error {
 	party.ACLEntryIds = apitypes.RemoveFrom(entry.getId(), party.ACLEntryIds)
-	var err error = party.Client.deleteObject(entry)
+	var err error = dbClient.deleteObject(entry)
 	return err
 }
 
-func (party *InMemParty) getACLEntryForResourceId(resourceId string) (ACLEntry, error) {
+func (party *InMemParty) getACLEntryForResourceId(dbClient DBClient, resourceId string) (ACLEntry, error) {
 	var err error
 	for _, entryId := range party.getACLEntryIds() {
-		var obj interface{}
-		obj, err = party.Client.getPersistentObject(entryId)
-		if obj == nil {
-			err = util.ConstructError("Internal error - no object found for Id " + entryId);
-			continue
-		}
 		var entry ACLEntry
-		var isType bool
-		entry, isType = obj.(ACLEntry)
-		if ! isType {
-			err = util.ConstructError("Internal error - object with Id " + entryId + " is not an ACLEntry");
+		entry, err = dbClient.getACLEntry(entryId)
+		if err != nil {
+			err = util.ConstructError(err.Error());
 			continue
 		}
 		if entry.getResourceId() == resourceId {
@@ -874,7 +801,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 		"Unidentified realm for realm Id %s", realmId))
 	}
 	var g Group
-	g, err = realm.getGroupByName(name)
+	g, err = realm.getGroupByName(client, name)
 	if err != nil { return nil, err }
 	if g != nil { return nil, util.ConstructError(
 		fmt.Sprintf("Group named %s already exists within realm %s", name,
@@ -887,7 +814,7 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	if err != nil { return nil, err }
 	
 	// Add to parent realm's list
-	err = realm.addGroup(newGroup)
+	err = realm.addGroup(client, newGroup)
 	if err != nil { return nil, err }
 	
 	err = client.writeBack(realm)
@@ -918,14 +845,12 @@ func (group *InMemGroup) getUserObjIds() []string {
 	return group.UserObjIds
 }
 
-func (group *InMemGroup) hasUserWithId(userObjId string) bool {
-	var obj PersistObj
+func (group *InMemGroup) hasUserWithId(dbClient DBClient, userObjId string) bool {
 	var err error 
-	obj, err = group.Client.getPersistentObject(userObjId)
+	var user User
+	user, err = dbClient.getUser(userObjId)
 	if err != nil { return false }
-	if obj == nil { return false }
-	_, isUser := obj.(User)
-	if ! isUser { return false }
+	if user == nil { return false }
 	
 	for _, id := range group.UserObjIds {
 		if id == userObjId { return true }
@@ -933,51 +858,42 @@ func (group *InMemGroup) hasUserWithId(userObjId string) bool {
 	return false
 }
 
-func (group *InMemGroup) addUserId(userObjId string) error {
-	if group.hasUserWithId(userObjId) { return util.ConstructError(fmt.Sprintf(
+func (group *InMemGroup) addUserId(dbClient DBClient, userObjId string) error {
+	if group.hasUserWithId(dbClient, userObjId) { return util.ConstructError(fmt.Sprintf(
 		"User with object Id %s is already in group", userObjId))
 	}
 	
-	var obj PersistObj
 	var err error
-	obj, err = group.Client.getPersistentObject(userObjId)
-	if err != nil { return err }
-	if obj == nil { return util.ConstructError(fmt.Sprintf(
-		"Object with Id %s does not exist", userObjId))
-	}
-	user, isUser := obj.(User)
-	if ! isUser { return util.ConstructError(fmt.Sprintf(
-		"Object with Id %s is not a User", userObjId))
-	}
+	var user User
+	user, err = dbClient.getUser(userObjId)
+	if err != nil { return util.ConstructError(err.Error()) }
 	group.UserObjIds = append(group.UserObjIds, userObjId)
-	err = user.addGroupId(group.getId())
+	err = user.addGroupId(dbClient, group.getId())
 	if err != nil { return err }
 	
-	err = group.Client.writeBack(user)
+	err = dbClient.writeBack(user)
 	if err != nil { return err }
 	
-	err = group.Client.writeBack(group)
+	err = dbClient.writeBack(group)
 	
 	return err
 }
 
-func (group *InMemGroup) removeUser(user User) error {
-	group.waitForLock()
-	defer group.releaseLock()
+func (group *InMemGroup) removeUser(dbClient DBClient, user User) error {
 	var userId string = user.getId()
 	for i, id := range group.UserObjIds {
 		if id == userId {
 			group.UserObjIds = append(group.UserObjIds[0:i], group.UserObjIds[i+1:]...)
-			group.Client.writeBack(group)
+			dbClient.writeBack(group)
 			return nil
 		}
 	}
 	return util.ConstructError("Did not find user in this group")
 }
 
-func (group *InMemGroup) addUser(user User) error {
+func (group *InMemGroup) addUser(dbClient DBClient, user User) error {
 	group.UserObjIds = append(group.UserObjIds, user.getId())
-	return group.Client.writeBack(group)
+	return dbClient.writeBack(group)
 }
 
 func (group *InMemGroup) asGroupDesc() *apitypes.GroupDesc {
@@ -985,9 +901,8 @@ func (group *InMemGroup) asGroupDesc() *apitypes.GroupDesc {
 		group.Id, group.RealmId, group.Name, group.Description, group.CreationTime)
 }
 
-func (group *InMemGroup) writeBack() error {
-		
-	return group.Client.addObject(group)
+func (group *InMemGroup) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(group)
 }
 
 func (group *InMemGroup) asJSON() string {
@@ -1070,7 +985,7 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	if err != nil { return nil, err }
 	
 	// Add to parent realm's list.
-	err = realm.addUser(newUser)
+	err = realm.addUser(client, newUser)
 	if err != nil { return nil, err }
 	
 	err = client.writeBack(realm)
@@ -1080,15 +995,15 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	return newUser, nil
 }
 
-func (user *InMemUser) setPassword(pswd string) error {
-	user.PasswordHash = user.Client.Server.authService.CreatePasswordHash(pswd)
-	user.Client.writeBack(user)
+func (user *InMemUser) setPassword(dbClient DBClient, pswd string) error {
+	user.PasswordHash = dbClient.getServer().authService.CreatePasswordHash(pswd)
+	dbClient.writeBack(user)
 	return nil
 }
 
-func (user *InMemUser) validatePassword(pswd string) bool {
+func (user *InMemUser) validatePassword(dbClient DBClient, pswd string) bool {
 	var empty = []byte{}
-	var authService = user.Client.Server.authService
+	var authService = dbClient.getServer().authService
 	var prospectiveHash []byte = authService.computeHash(pswd).Sum(empty)
 	return authService.compareHashValues(prospectiveHash, user.PasswordHash)
 }
@@ -1110,30 +1025,27 @@ func (user *InMemUser) getUserId() string {
 	return user.UserId
 }
 
-func (user *InMemUser) hasGroupWithId(groupId string) bool {
-	var obj PersistObj
+func (user *InMemUser) hasGroupWithId(dbClient DBClient, groupId string) bool {
 	var err error
-	obj, err = user.Client.getPersistentObject(groupId)
+	var group Group
+	group, err = dbClient.getGroup(groupId)
 	if err != nil { return false }
-	if obj == nil { return false }
-	_, isGroup := obj.(Group)
-	if ! isGroup { return false }
-	
+	if group == nil { return false }
 	for _, id := range user.GroupIds {
 		if id == groupId { return true }
 	}
 	return false
 }
 
-func (user *InMemUser) addGroupId(groupId string) error {
+func (user *InMemUser) addGroupId(dbClient DBClient, groupId string) error {
 	
-	if user.hasGroupWithId(groupId) { return util.ConstructError(fmt.Sprintf(
+	if user.hasGroupWithId(dbClient, groupId) { return util.ConstructError(fmt.Sprintf(
 		"Group with object Id %s is already in User's set of groups", groupId))
 	}
 	
 	var obj PersistObj
 	var err error
-	obj, err = user.Client.getPersistentObject(groupId)
+	obj, err = dbClient.getPersistentObject(groupId)
 	if err != nil { return err }
 	if obj == nil { return util.ConstructError(fmt.Sprintf(
 		"Object with Id %s does not exist", groupId))
@@ -1199,9 +1111,9 @@ func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) ([]stri
 	return realmIds, err
 }
 
-func (user *InMemUser) addLoginAttempt() {
+func (user *InMemUser) addLoginAttempt(dbClient DBClient) {
 	var num = len(user.MostRecentLoginAttempts)
-	var max = user.Client.Server.MaxLoginAttemptsToRetain
+	var max = dbClient.getServer().MaxLoginAttemptsToRetain
 	if num > max { num = num - max }
 	user.MostRecentLoginAttempts = append(
 		user.MostRecentLoginAttempts[num:], fmt.Sprintf("%d", time.Now().Unix()))
@@ -1211,16 +1123,16 @@ func (user *InMemUser) getMostRecentLoginAttempts() []string {
 	return user.MostRecentLoginAttempts
 }
 
-func (user *InMemUser) addEventId(id string) {
+func (user *InMemUser) addEventId(dbClient DBClient, id string) {
 	user.EventIds = append(user.EventIds, id)
-	user.Client.writeBack(user)
+	dbClient.writeBack(user)
 }
 
 func (user *InMemUser) getEventIds() []string {
 	return user.EventIds
 }
 
-func (user *InMemUser) deleteEvent(event Event) error {
+func (user *InMemUser) deleteEvent(dbClient DBClient, event Event) error {
 	
 	// If a ScanEvent, then remove from ScanConfig and remove actual ParameterValues.
 	var scanEvent ScanEvent
@@ -1229,25 +1141,25 @@ func (user *InMemUser) deleteEvent(event Event) error {
 	if isType {
 		var scanConfig ScanConfig
 		var err error
-		scanConfig, err = user.Client.getScanConfig(scanEvent.getScanConfigId())
+		scanConfig, err = dbClient.getScanConfig(scanEvent.getScanConfigId())
 		if err != nil { return err }
-		err = scanConfig.deleteScanEventId(scanEvent.getId())
+		err = scanConfig.deleteScanEventId(dbClient, scanEvent.getId())
 		if err != nil { return err }
-		err = scanEvent.deleteAllParameterValues()
+		err = scanEvent.deleteAllParameterValues(dbClient)
 		if err != nil { return err }
 	}
 	
 	user.EventIds = apitypes.RemoveFrom(event.getId(), user.EventIds)
 	
-	var err error = user.Client.deleteObject(event)
+	var err error = dbClient.deleteObject(event)
 	if err != nil { return err }
-	return user.Client.writeBack(user)
+	return dbClient.writeBack(user)
 }
 
-func (user *InMemUser) asUserDesc() *apitypes.UserDesc {
+func (user *InMemUser) asUserDesc(dbClient DBClient) *apitypes.UserDesc {
 	var adminRealmIds []string
 	var err error
-	adminRealmIds, err = user.getDBClient().getRealmsAdministeredByUser(user.getId())
+	adminRealmIds, err = dbClient.getRealmsAdministeredByUser(user.getId())
 	if err != nil {
 		fmt.Println("In asUserDesc(), " + err.Error())
 		adminRealmIds = make([]string, 0)
@@ -1255,8 +1167,8 @@ func (user *InMemUser) asUserDesc() *apitypes.UserDesc {
 	return apitypes.NewUserDesc(user.Id, user.UserId, user.Name, user.RealmId, adminRealmIds)
 }
 
-func (user *InMemUser) writeBack() error {
-	return user.Client.addObject(user)
+func (user *InMemUser) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(user)
 }
 
 func (user *InMemUser) asJSON() string {
@@ -1393,11 +1305,11 @@ func (entry *InMemACLEntry) getPartyId() string {
 	return entry.PartyId
 }
 
-func (entry *InMemACLEntry) getParty() (Party, error) {
+func (entry *InMemACLEntry) getParty(dbClient DBClient) (Party, error) {
 	var party Party
 	var obj PersistObj
 	var err error
-	obj, err = entry.Client.getPersistentObject(entry.PartyId)
+	obj, err = dbClient.getPersistentObject(entry.PartyId)
 	if err != nil { return nil, err }
 	if obj == nil { return nil, util.ConstructError("Party with Id " + entry.PartyId + " not found") }
 	var isType bool
@@ -1410,9 +1322,9 @@ func (entry *InMemACLEntry) getPermissionMask() []bool {
 	return entry.PermissionMask
 }
 
-func (entry *InMemACLEntry) setPermissionMask(mask []bool) error {
+func (entry *InMemACLEntry) setPermissionMask(dbClient DBClient, mask []bool) error {
 	entry.PermissionMask = mask
-	var err error = entry.Client.writeBack(entry)
+	var err error = dbClient.writeBack(entry)
 	if err != nil { return err }
 	return nil
 }
@@ -1422,8 +1334,8 @@ func (entry *InMemACLEntry) asPermissionDesc() *apitypes.PermissionDesc {
 	return apitypes.NewPermissionDesc(entry.getId(), entry.ResourceId, entry.PartyId, entry.getPermissionMask())
 }
 
-func (entry *InMemACLEntry) writeBack() error {
-	return entry.Client.addObject(entry)
+func (entry *InMemACLEntry) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(entry)
 }
 
 func (entry *InMemACLEntry) asJSON() string {
@@ -1504,10 +1416,10 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	newRealm, err = client.NewInMemRealm(realmInfo, adminUserId)
 	if err != nil { return nil, err }
 	var realmFileDir string
-	realmFileDir, err = client.assignRealmFileDir(newRealm.getId())
+	realmFileDir, err = client.Persistence.assignRealmFileDir(newRealm.getId())
 	if err != nil { return nil, err }
 	newRealm.FileDirectory = realmFileDir
-	err = newRealm.Client.writeBack(newRealm)
+	err = client.writeBack(newRealm)
 	if err != nil { return nil, err }
 	
 	fmt.Println("Created realm")
@@ -1632,17 +1544,12 @@ func (realm *InMemRealm) getRepoIds() []string {
 	return realm.RepoIds
 }
 
-func (realm *InMemRealm) addUserId(userObjId string) error {
+func (realm *InMemRealm) addUserId(dbClient DBClient, userObjId string) error {
 	
 	var user User
-	var obj PersistObj
 	var err error
-	obj, err = realm.Client.getPersistentObject(userObjId)
+	user, err = dbClient.getUser(userObjId)
 	if err != nil { return err }
-	if obj == nil { return util.ConstructError("User with obj Id " + userObjId + " not found") }
-	var isType bool
-	user, isType = obj.(User)
-	if ! isType { return util.ConstructError("Internal error: object is an unexpected type") }
 	if user == nil { return util.ConstructError("Could not identify user with obj Id " + userObjId) }
 	if user.getRealmId() != "" {
 		return util.ConstructError("User with obj Id " + userObjId + " belongs to another realm")
@@ -1650,41 +1557,36 @@ func (realm *InMemRealm) addUserId(userObjId string) error {
 	realm.UserObjIds = append(realm.UserObjIds, userObjId)
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = realm.getId()
-	err = realm.Client.writeBack(realm)
+	err = dbClient.writeBack(realm)
 	return err
 }
 
-func (realm *InMemRealm) removeUserId(userObjId string) (User, error) {
+func (realm *InMemRealm) removeUserId(dbClient DBClient, userObjId string) (User, error) {
 	
 	var user User
-	var obj PersistObj
 	var err error
-	obj, err = realm.Client.getPersistentObject(userObjId)
+	user, err = dbClient.getUser(userObjId)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, util.ConstructError("User with obj Id " + userObjId + " not found") }
-	var isType bool
-	user, isType = obj.(User)
-	if ! isType { return nil, util.ConstructError("Internal error: object is an unexpected type") }
-	if user == nil { return nil, util.ConstructError("Could not identify user with obj Id " + userObjId) }
+	if user == nil { return nil, util.ConstructError("User with obj Id " + userObjId + " not found") }
 	if user.getRealmId() != realm.getId() {
 		return nil, util.ConstructError("User with obj Id " + userObjId + " belongs to another realm")
 	}
 	realm.UserObjIds = apitypes.RemoveFrom(userObjId, realm.UserObjIds)
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = ""
-	err = realm.Client.writeBack(realm)
+	err = dbClient.writeBack(realm)
 	return user, err
 }
 
-func (realm *InMemRealm) deleteUserId(userObjId string) error {
+func (realm *InMemRealm) deleteUserId(dbClient DBClient, userObjId string) error {
 	
 	var user User
 	var err error
-	user, err = realm.removeUserId(userObjId)
+	user, err = realm.removeUserId(dbClient, userObjId)
 	if err != nil { return err }
-	err = realm.Client.deleteObject(user)
+	err = dbClient.deleteObject(user)
 	if err != nil { return err }
-	err = realm.Client.writeBack(realm)
+	err = dbClient.writeBack(realm)
 	return err
 }
 
@@ -1692,31 +1594,31 @@ func (realm *InMemRealm) getGroupIds() []string {
 	return realm.GroupIds
 }
 
-func (realm *InMemRealm) addUser(user User) error {
+func (realm *InMemRealm) addUser(dbClient DBClient, user User) error {
 	realm.UserObjIds = append(realm.UserObjIds, user.getId())
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = realm.getId()
-	return realm.Client.writeBack(realm)
+	return dbClient.writeBack(realm)
 }
 
-func (realm *InMemRealm) addGroup(group Group) error {
+func (realm *InMemRealm) addGroup(dbClient DBClient, group Group) error {
 	realm.GroupIds = append(realm.GroupIds, group.getId())
-	return realm.Client.writeBack(realm)
+	return dbClient.writeBack(realm)
 }
 
-func (realm *InMemRealm) addRepo(repo Repo) error {
+func (realm *InMemRealm) addRepo(dbClient DBClient, repo Repo) error {
 	realm.RepoIds = append(realm.RepoIds, repo.getId())
-	return realm.Client.writeBack(realm)
+	return dbClient.writeBack(realm)
 }
 
 func (realm *InMemRealm) asRealmDesc() *apitypes.RealmDesc {
 	return apitypes.NewRealmDesc(realm.Id, realm.Name, realm.OrgFullName, realm.AdminUserId)
 }
 
-func (realm *InMemRealm) hasUserWithId(userObjId string) bool {
+func (realm *InMemRealm) hasUserWithId(dbClient DBClient, userObjId string) bool {
 	var obj PersistObj
 	var err error
-	obj, err = realm.Client.getPersistentObject(userObjId)
+	obj, err = dbClient.getPersistentObject(userObjId)
 	if err != nil { return false }
 	if obj == nil { return false }
 	_, isUser := obj.(User)
@@ -1728,10 +1630,10 @@ func (realm *InMemRealm) hasUserWithId(userObjId string) bool {
 	return false
 }
 
-func (realm *InMemRealm) hasGroupWithId(groupId string) bool {
+func (realm *InMemRealm) hasGroupWithId(dbClient DBClient, groupId string) bool {
 	var obj PersistObj
 	var err error
-	obj, err = realm.Client.getPersistentObject(groupId)
+	obj, err = dbClient.getPersistentObject(groupId)
 	if err != nil { return false }
 	if obj == nil { return false }
 	_, isGroup := obj.(Group)
@@ -1743,10 +1645,10 @@ func (realm *InMemRealm) hasGroupWithId(groupId string) bool {
 	return false
 }
 
-func (realm *InMemRealm) hasRepoWithId(repoId string) bool {
+func (realm *InMemRealm) hasRepoWithId(dbClient DBClient, repoId string) bool {
 	var obj PersistObj
 	var err error
-	obj, err = realm.Client.getPersistentObject(repoId)
+	obj, err = dbClient.getPersistentObject(repoId)
 	if err != nil { return false }
 	if obj == nil { return false }
 	_, isRepo := obj.(Repo)
@@ -1758,11 +1660,11 @@ func (realm *InMemRealm) hasRepoWithId(repoId string) bool {
 	return false
 }
 
-func (realm *InMemRealm) getUserByName(userName string) (User, error) {
+func (realm *InMemRealm) getUserByName(dbClient DBClient, userName string) (User, error) {
 	for _, id := range realm.UserObjIds {
 		var obj PersistObj
 		var err error
-		obj, err = realm.Client.getPersistentObject(id)
+		obj, err = dbClient.getPersistentObject(id)
 		if err != nil { return nil, err }
 		if obj == nil { return nil, util.ConstructError(fmt.Sprintf(
 			"Internal error: obj with Id %s does not exist", id))
@@ -1776,11 +1678,11 @@ func (realm *InMemRealm) getUserByName(userName string) (User, error) {
 	return nil, nil
 }
 
-func (realm *InMemRealm) getUserByUserId(userId string) (User, error) {
+func (realm *InMemRealm) getUserByUserId(dbClient DBClient, userId string) (User, error) {
 	for _, id := range realm.UserObjIds {
 		var obj PersistObj
 		var err error
-		obj, err = realm.Client.getPersistentObject(id)
+		obj, err = dbClient.getPersistentObject(id)
 		if err != nil { return nil, err }
 		if obj == nil { return nil, util.ConstructError(fmt.Sprintf(
 			"Internal error: obj with Id %s does not exist", id))
@@ -1794,11 +1696,11 @@ func (realm *InMemRealm) getUserByUserId(userId string) (User, error) {
 	return nil, nil
 }
 
-func (realm *InMemRealm) getGroupByName(groupName string) (Group, error) {
+func (realm *InMemRealm) getGroupByName(dbClient DBClient, groupName string) (Group, error) {
 	for _, id := range realm.GroupIds {
 		var obj PersistObj
 		var err error
-		obj, err = realm.Client.getPersistentObject(id)
+		obj, err = dbClient.getPersistentObject(id)
 		if err != nil { return nil, err }
 		if obj == nil { return nil, util.ConstructError(fmt.Sprintf(
 			"Internal error: obj with Id %s does not exist", id))
@@ -1812,11 +1714,11 @@ func (realm *InMemRealm) getGroupByName(groupName string) (Group, error) {
 	return nil, nil
 }
 
-func (realm *InMemRealm) getRepoByName(repoName string) (Repo, error) {
+func (realm *InMemRealm) getRepoByName(dbClient DBClient, repoName string) (Repo, error) {
 	for _, id := range realm.RepoIds {
 		var obj PersistObj
 		var err error
-		obj, err = realm.Client.getPersistentObject(id)
+		obj, err = dbClient.getPersistentObject(id)
 		if err != nil { return nil, err }
 		if obj == nil { return nil, util.ConstructError(fmt.Sprintf(
 			"Internal error: obj with Id %s does not exist", id))
@@ -1830,15 +1732,15 @@ func (realm *InMemRealm) getRepoByName(repoName string) (Repo, error) {
 	return nil, nil
 }
 
-func (realm *InMemRealm) deleteGroup(group Group) error {
+func (realm *InMemRealm) deleteGroup(dbClient DBClient, group Group) error {
 
 	// Remove users from the group.
 	for _, userObjId := range group.getUserObjIds() {
 		var user User
 		var err error
-		user, err = realm.Client.getUser(userObjId)
+		user, err = dbClient.getUser(userObjId)
 		if err != nil { return err }
-		err = group.removeUser(user)
+		err = group.removeUser(dbClient, user)
 		if err != nil { return err }
 	}
 	
@@ -1849,28 +1751,28 @@ func (realm *InMemRealm) deleteGroup(group Group) error {
 	for _, entryId := range entryIdsCopy {
 		var err error
 		var entry ACLEntry
-		entry, err = realm.Client.getACLEntry(entryId)
+		entry, err = dbClient.getACLEntry(entryId)
 		if err != nil { return err }
 		var resource Resource
-		resource, err = realm.Client.getResource(entry.getResourceId())
+		resource, err = dbClient.getResource(entry.getResourceId())
 		if err != nil { return err }
 		var party Party
-		party, err = realm.Client.getParty(entry.getPartyId())
+		party, err = dbClient.getParty(entry.getPartyId())
 		if err != nil { return err }
-		err = realm.Client.deleteAccess(resource, party)
+		err = dbClient.deleteAccess(resource, party)
 		if err != nil { return err }
 	}
 	
 	// Remove the group from its realm.
 	realm.GroupIds = apitypes.RemoveFrom(group.getId(), realm.GroupIds)
 	
-	return realm.Client.writeBack(realm)
+	return dbClient.writeBack(realm)
 }
 
 func (realm *InMemRealm) isRealm() bool { return true }
 
-func (realm *InMemRealm) writeBack() error {
-	return realm.Client.addObject(realm)
+func (realm *InMemRealm) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(realm)
 }
 
 func (realm *InMemRealm) asJSON() string {
@@ -1963,13 +1865,13 @@ func (client *InMemClient) dbCreateRepo(realmId, name, desc string) (Repo, error
 	if err != nil { return nil, err }
 
 	var repoFileDir string
-	repoFileDir, err = client.assignRepoFileDir(realmId, newRepo.getId())
+	repoFileDir, err = client.Persistence.assignRepoFileDir(realmId, newRepo.getId())
 	if err != nil { return nil, err }
 	newRepo.FileDirectory = repoFileDir
 	err = client.writeBack(newRepo)
 	if err != nil { return nil, err }
 	fmt.Println("Created repo")
-	err = realm.addRepo(newRepo)  // Add it to the realm.
+	err = realm.addRepo(client, newRepo)  // Add it to the realm.
 	return newRepo, err
 }
 
@@ -1992,11 +1894,11 @@ func (client *InMemClient) getRepo(id string) (Repo, error) {
 
 func (repo *InMemRepo) getRealmId() string { return repo.ParentId }
 
-func (repo *InMemRepo) getRealm() (Realm, error) {
+func (repo *InMemRepo) getRealm(dbClient DBClient) (Realm, error) {
 	var realm Realm
 	var err error
 	var obj PersistObj
-	obj, err = repo.Client.getPersistentObject(repo.getRealmId())
+	obj, err = dbClient.getPersistentObject(repo.getRealmId())
 	if err != nil { return nil, err }
 	if obj == nil { return nil, util.ConstructError("Realm with Id " + repo.getRealmId() + " not found") }
 	var isType bool
@@ -2021,37 +1923,37 @@ func (repo *InMemRepo) getFlagIds() []string {
 	return repo.FlagIds
 }
 
-func (repo *InMemRepo) addDockerfile(dockerfile Dockerfile) error {
+func (repo *InMemRepo) addDockerfile(dbClient DBClient, dockerfile Dockerfile) error {
 	repo.DockerfileIds = append(repo.DockerfileIds, dockerfile.getId())
-	return repo.Client.writeBack(repo)
+	return dbClient.writeBack(repo)
 }
 
-func (repo *InMemRepo) addDockerImage(image DockerImage) error {
+func (repo *InMemRepo) addDockerImage(dbClient DBClient, image DockerImage) error {
 	repo.DockerImageIds = append(repo.DockerImageIds, image.getId())
-	return repo.Client.writeBack(repo)
+	return dbClient.writeBack(repo)
 }
 
-func (repo *InMemRepo) addScanConfig(config ScanConfig) error {
+func (repo *InMemRepo) addScanConfig(dbClient DBClient, config ScanConfig) error {
 	repo.ScanConfigIds = append(repo.ScanConfigIds, config.getId())
-	return repo.Client.writeBack(repo)
+	return dbClient.writeBack(repo)
 }
 
-func (repo *InMemRepo) deleteScanConfig(config ScanConfig) error {
+func (repo *InMemRepo) deleteScanConfig(dbClient DBClient, config ScanConfig) error {
 	if len(config.getScanEventIds()) > 0 { return util.ConstructError(
 		"Cannot remove ScanConfig: it is referenced by ScanEvents; the associated " +
 		"dockerfile(s) would have to be removed first")
 	}
 	// Remove config's parameter values.
-	config.deleteAllParameterValues()
+	config.deleteAllParameterValues(dbClient)
 	
 	// Remove reference from the flag.
 	var flagId string = config.getFlagId()
 	if flagId != "" {
 		var err error
 		var flag Flag
-		flag, err = repo.Client.getFlag(flagId)
+		flag, err = dbClient.getFlag(flagId)
 		if err != nil { return err }
-		err = flag.removeScanConfigRef(config.getId())
+		err = flag.removeScanConfigRef(dbClient, config.getId())
 		if err != nil { return err }
 	}
 
@@ -2059,17 +1961,17 @@ func (repo *InMemRepo) deleteScanConfig(config ScanConfig) error {
 	repo.ScanConfigIds = apitypes.RemoveFrom(config.getId(), repo.ScanConfigIds)
 
 	// Remove from database.
-	var err error = repo.Client.deleteObject(config)
+	var err error = dbClient.deleteObject(config)
 	if err != nil { return err }
 	
-	return repo.Client.writeBack(repo)
+	return dbClient.writeBack(repo)
 }
 
-func (repo *InMemRepo) deleteFlag(flag Flag) error {
+func (repo *InMemRepo) deleteFlag(dbClient DBClient, flag Flag) error {
 	if len(flag.usedByScanConfigIds()) > 0 {
 		var sc ScanConfig
 		var err error
-		sc, err = repo.Client.getScanConfig(flag.usedByScanConfigIds()[0])
+		sc, err = dbClient.getScanConfig(flag.usedByScanConfigIds()[0])
 		if err != nil { return err }
 		return util.ConstructError(
 			"Cannot remove Flag: it is referenced by one or more ScanConfigs, " +
@@ -2085,34 +1987,34 @@ func (repo *InMemRepo) deleteFlag(flag Flag) error {
 	repo.FlagIds = apitypes.RemoveFrom(flag.getId(), repo.FlagIds)
 	
 	// Remove from database.
-	err = repo.Client.deleteObject(flag)
+	err = dbClient.deleteObject(flag)
 	if err != nil { return err }
 	
-	return repo.Client.writeBack(repo)
+	return dbClient.writeBack(repo)
 }
 
-func (repo *InMemRepo) deleteDockerImage(image DockerImage) error {
+func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) error {
 	
 	// Remove events.
 	for _, eventId := range image.getScanEventIds() {
 		var event Event
 		var err error
-		event, err = repo.Client.getEvent(eventId)
+		event, err = dbClient.getEvent(eventId)
 		if err != nil { return err }
 		var user User
-		user, err = repo.Client.getUser(event.getUserObjId())
+		user, err = dbClient.getUser(event.getUserObjId())
 		if err != nil { return err }
-		err = user.deleteEvent(event)
+		err = user.deleteEvent(dbClient, event)
 		if err != nil { return err }
 	}
 	
 	// Remove ACL entries.
-	var err error = repo.Client.deleteAllAccessToResource(image)
+	var err error = dbClient.deleteAllAccessToResource(image)
 	if err != nil { return err }
 	
 	// Remove from docker.
 	var imageFullName string
-	imageFullName, err = image.getFullName()
+	imageFullName, err = image.getFullName(dbClient)
 	if err != nil { return err }
 	err = docker.RemoveDockerImage(imageFullName)
 	if err != nil { return err }
@@ -2121,21 +2023,21 @@ func (repo *InMemRepo) deleteDockerImage(image DockerImage) error {
 	repo.DockerImageIds = apitypes.RemoveFrom(image.getId(), repo.DockerImageIds)
 	
 	// Remove from database.
-	err = repo.Client.deleteObject(image)
+	err = dbClient.deleteObject(image)
 	if err != nil { return err }
-	return repo.Client.writeBack(repo)
+	return dbClient.writeBack(repo)
 }
 
-func (repo *InMemRepo) addFlag(flag Flag) error {
+func (repo *InMemRepo) addFlag(dbClient DBClient, flag Flag) error {
 	repo.FlagIds = append(repo.FlagIds, flag.getId())
-	return repo.Client.writeBack(repo)
+	return dbClient.writeBack(repo)
 }
 
-func (repo *InMemRepo) getScanConfigByName(name string) (ScanConfig, error) {
+func (repo *InMemRepo) getScanConfigByName(dbClient DBClient, name string) (ScanConfig, error) {
 	for _, configId := range repo.ScanConfigIds {
 		var config ScanConfig
 		var err error
-		config, err = repo.getDBClient().getScanConfig(configId)
+		config, err = dbClient.getScanConfig(configId)
 		if err != nil { return nil, err }
 		if config == nil {
 			return nil, util.ConstructError("Internal error: list ScanConfigIds contains an invalid entry")
@@ -2152,8 +2054,8 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 		repo.CreationTime, repo.getDockerfileIds())
 }
 
-func (repo *InMemRepo) writeBack() error {
-	return repo.Client.addObject(repo)
+func (repo *InMemRepo) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(repo)
 }
 
 func (repo *InMemRepo) asJSON() string {
@@ -2245,7 +2147,7 @@ func (client *InMemClient) dbCreateDockerfile(repoId, name,
 		fmt.Println("Repo with Id " + repoId + " not found")
 		return nil, util.ConstructError(fmt.Sprintf("Repo with Id %s not found", repoId))
 	}
-	err = repo.addDockerfile(newDockerfile)
+	err = repo.addDockerfile(client, newDockerfile)
 	if err != nil { return nil, err }
 	
 	return newDockerfile, nil
@@ -2283,11 +2185,11 @@ func (dockerfile *InMemDockerfile) getRepoId() string {
 	return dockerfile.ParentId
 }
 
-func (dockerfile *InMemDockerfile) getRepo() (Repo, error) {
+func (dockerfile *InMemDockerfile) getRepo(dbClient DBClient) (Repo, error) {
 	var repo Repo
 	var obj PersistObj
 	var err error
-	obj, err = dockerfile.Client.getPersistentObject(dockerfile.getRepoId())
+	obj, err = dbClient.getPersistentObject(dockerfile.getRepoId())
 	if err != nil { return nil, err }
 	if obj == nil { return nil, util.ConstructError("Could not find obj with Id " + dockerfile.getRepoId()) }
 	var isType bool
@@ -2300,9 +2202,9 @@ func (dockerfile *InMemDockerfile) getDockerfileExecEventIds() []string {
 	return dockerfile.DockerfileExecEventIds
 }
 
-func (dockerfile *InMemDockerfile) addEventId(eventId string) error {
+func (dockerfile *InMemDockerfile) addEventId(dbClient DBClient, eventId string) error {
 	dockerfile.DockerfileExecEventIds = append(dockerfile.DockerfileExecEventIds, eventId)
-	return dockerfile.Client.writeBack(dockerfile)
+	return dbClient.writeBack(dockerfile)
 }
 
 func (dockerfile *InMemDockerfile) getExternalFilePath() string {
@@ -2315,8 +2217,8 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() *apitypes.DockerfileDesc {
 
 func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
 
-func (dockerfile *InMemDockerfile) writeBack() error {
-	return dockerfile.Client.addObject(dockerfile)
+func (dockerfile *InMemDockerfile) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(dockerfile)
 }
 
 func (dockerfile *InMemDockerfile) asJSON() string {
@@ -2375,11 +2277,11 @@ func (image *InMemImage) getRepoId() string {
 	return image.ParentId
 }
 
-func (image *InMemImage) getRepo() (Repo, error) {
+func (image *InMemImage) getRepo(dbClient DBClient) (Repo, error) {
 	var repo Repo
 	var obj PersistObj
 	var err error
-	obj, err = image.Client.getPersistentObject(image.getRepoId())
+	obj, err = dbClient.getPersistentObject(image.getRepoId())
 	if err != nil { return nil, err }
 	if obj == nil { return nil, util.ConstructError("Could not find obj with Id " + image.getRepoId()) }
 	var isType bool
@@ -2453,7 +2355,7 @@ func (client *InMemClient) dbCreateDockerImage(repoId, dockerImageTag, desc stri
 		outputFromBuild)
 	if err != nil { return nil, err }
 	fmt.Println("Created DockerImage")
-	err = repo.addDockerImage(newDockerImage)  // Add to repo's list.
+	err = repo.addDockerImage(client, newDockerImage)  // Add to repo's list.
 
 	//var signature []byte
 	//signature, err = newDockerImage.computeSignature()
@@ -2485,7 +2387,7 @@ func (image *InMemDockerImage) computeSignature() ([]byte, error) {
 	var err error
 	var tempFilePath string
 	var imageFullName
-	imageFullName, err = image.getFullName()
+	imageFullName, err = image.getFullName(dbClient)
 	tempFilePath, err = docker.SaveImage(imageFullName)
 	if err != nil { return nil, err }
 	defer func() {
@@ -2509,14 +2411,14 @@ func (image *InMemDockerImage) getDockerImageTag() string {
 	return image.Name
 }
 
-func (image *InMemDockerImage) getFullName() (string, error) {
+func (image *InMemDockerImage) getFullName(dbClient DBClient) (string, error) {
 	// See http://blog.thoward37.me/articles/where-are-docker-images-stored/
 	var repo Repo
 	var realm Realm
 	var err error
-	repo, err = image.Client.getRepo(image.getRepoId())
+	repo, err = dbClient.getRepo(image.getRepoId())
 	if err != nil { return "", err }
-	realm, err = image.Client.getRealm(repo.getRealmId())
+	realm, err = dbClient.getRealm(repo.getRealmId())
 	if err != nil { return "", err }
 	return (realm.getName() + "/" + repo.getName() + ":" + image.Name), nil
 }
@@ -2525,9 +2427,9 @@ func (image *InMemDockerImage) getScanEventIds() []string {
 	return image.ScanEventIds
 }
 
-func (image *InMemDockerImage) addScanEventId(id string) {
+func (image *InMemDockerImage) addScanEventId(dbClient DBClient, id string) {
 	image.ScanEventIds = append(image.ScanEventIds, id)
-	image.Client.writeBack(image)
+	dbClient.writeBack(image)
 }
 
 func (image *InMemDockerImage) getMostRecentScanEventId() string {
@@ -2546,8 +2448,8 @@ func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
 
 func (image *InMemDockerImage) isDockerImage() bool { return true }
 
-func (image *InMemDockerImage) writeBack() error {
-	return image.Client.addObject(image)
+func (image *InMemDockerImage) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(image)
 }
 
 func (image *InMemDockerImage) asJSON() string {
@@ -2611,6 +2513,20 @@ func (client *InMemClient) NewInMemParameterValue(name, value, configId string) 
 	return paramValue, client.addObject(paramValue)
 }
 
+func (client *InMemClient) dbCreateParameterValue(name, value, configId string) (ParameterValue, error) {
+	
+	var scanConfig ScanConfig
+	var err error
+	scanConfig, err = client.getScanConfig(configId)
+	if err != nil { return nil, err }
+	
+	var paramValue ParameterValue
+	paramValue, err = client.NewInMemParameterValue(name, value, configId)
+	if err != nil { return nil, err }
+	scanConfig.addParameterValueId(client, paramValue.getId())
+	return paramValue, nil
+}
+
 func (client *InMemClient) getParameterValue(id string) (ParameterValue, error) {
 	var pv ParameterValue
 	var isType bool
@@ -2636,9 +2552,9 @@ func (paramValue *InMemParameterValue) getStringValue() string {
 	return paramValue.StringValue
 }
 
-func (paramValue *InMemParameterValue) setStringValue(value string) error {
+func (paramValue *InMemParameterValue) setStringValue(dbClient DBClient, value string) error {
 	paramValue.StringValue = value
-	return paramValue.Client.writeBack(paramValue)
+	return dbClient.writeBack(paramValue)
 }
 
 func (paramValue *InMemParameterValue) getConfigId() string {
@@ -2650,8 +2566,8 @@ func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.Paramete
 		paramValue.StringValue)
 }
 
-func (paramValue *InMemParameterValue) writeBack() error {
-	return paramValue.Client.addObject(paramValue)
+func (paramValue *InMemParameterValue) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(paramValue)
 }
 
 func (paramValue *InMemParameterValue) asJSON() string {
@@ -2721,7 +2637,7 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 		"Unidentified repo for repo Id %s", repoId))
 	}
 	var sc ScanConfig
-	sc, err = repo.getScanConfigByName(name)
+	sc, err = repo.getScanConfigByName(client, name)
 	if err != nil { return nil, err }
 	if sc != nil { return nil, util.ConstructError(
 		fmt.Sprintf("ScanConfig named %s already exists within repo %s", name,
@@ -2734,16 +2650,16 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 		paramValueIds, successExpr, flagId)
 	if flagId != "" {
 		var flag Flag
-		flag, err = scanConfig.Client.getFlag(flagId)
+		flag, err = client.getFlag(flagId)
 		if err != nil { return nil, err }
-		err = flag.addScanConfigRef(scanConfig.getId())
+		err = flag.addScanConfigRef(client, scanConfig.getId())
 		if err != nil { return nil, err }
 	}
-	err = scanConfig.Client.writeBack(scanConfig)
+	err = client.writeBack(scanConfig)
 	if err != nil { return nil, err }
 	
 	// Link to repo
-	repo.addScanConfig(scanConfig)
+	repo.addScanConfig(client, scanConfig)
 	
 	fmt.Println("Created ScanConfig")
 	return scanConfig, nil
@@ -2766,9 +2682,9 @@ func (scanConfig *InMemScanConfig) getSuccessExpr() string {
 	return scanConfig.SuccessExpression
 }
 
-func (scanConfig *InMemScanConfig) setSuccessExpression(expr string) error {
+func (scanConfig *InMemScanConfig) setSuccessExpression(dbClient DBClient, expr string) error {
 	scanConfig.setSuccessExpressionDeferredUpdate(expr)
-	return scanConfig.Client.writeBack(scanConfig)
+	return dbClient.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) setSuccessExpressionDeferredUpdate(expr string) {
@@ -2783,9 +2699,9 @@ func (scanConfig *InMemScanConfig) getProviderName() string {
 	return scanConfig.ProviderName
 }
 
-func (scanConfig *InMemScanConfig) setProviderName(name string) error {
+func (scanConfig *InMemScanConfig) setProviderName(dbClient DBClient, name string) error {
 	scanConfig.setProviderNameDeferredUpdate(name)
-	return scanConfig.Client.writeBack(scanConfig)
+	return dbClient.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) setProviderNameDeferredUpdate(name string) {
@@ -2796,48 +2712,52 @@ func (scanConfig *InMemScanConfig) getParameterValueIds() []string {
 	return scanConfig.ParameterValueIds
 }
 
-func (scanConfig *InMemScanConfig) setParameterValue(name, strValue string) (ParameterValue, error) {
-	var paramValue ParameterValue
-	var err error
-	paramValue, err = scanConfig.setParameterValueDeferredUpdate(name, strValue)
-	if err != nil { return paramValue, err }
-	err = scanConfig.Client.writeBack(paramValue)
-	if err != nil { return paramValue, err }
-	return paramValue, scanConfig.Client.writeBack(scanConfig)
+func (scanConfig *InMemScanConfig) addParameterValueId(dbClient DBClient, id string) {
+	scanConfig.ParameterValueIds = append(scanConfig.ParameterValueIds, id)
 }
 
-func (scanConfig *InMemScanConfig) setParameterValueDeferredUpdate(name, strValue string) (ParameterValue, error) {
+func (scanConfig *InMemScanConfig) setParameterValue(dbClient DBClient, name, strValue string) (ParameterValue, error) {
+	var paramValue ParameterValue
+	var err error
+	paramValue, err = scanConfig.setParameterValueDeferredUpdate(dbClient, name, strValue)
+	if err != nil { return paramValue, err }
+	err = dbClient.writeBack(paramValue)
+	if err != nil { return paramValue, err }
+	return paramValue, dbClient.writeBack(scanConfig)
+}
+
+func (scanConfig *InMemScanConfig) setParameterValueDeferredUpdate(dbClient DBClient,
+	name, strValue string) (ParameterValue, error) {
 	
 	// Check if a parameter value already exist for the parameter. If so, replace the value.
 	for _, id := range scanConfig.ParameterValueIds {
 		var pv ParameterValue
 		var err error
-		pv, err = scanConfig.getDBClient().getParameterValue(id)
+		pv, err = dbClient.getParameterValue(id)
 		if err != nil { return nil, err }
 		if pv == nil {
 			fmt.Println("Internal ERROR: broken ParameterValue list for scan config " + scanConfig.getName())
 			continue
 		}
 		if pv.getName() == name {
-			pv.setStringValue(strValue)
+			pv.setStringValue(dbClient, strValue)
 			return pv, nil
 		}
 	}
 	
 	// Did not find a value for a parameter of that name - create a new ParameterValue.
-	var paramValue *InMemParameterValue
+	var paramValue ParameterValue
 	var err error
-	paramValue, err = scanConfig.Client.NewInMemParameterValue(name, strValue, scanConfig.getId())
+	paramValue, err = dbClient.dbCreateParameterValue(name, strValue, scanConfig.getId())
 	if err != nil { return nil, err }
-	scanConfig.ParameterValueIds = append(scanConfig.ParameterValueIds, paramValue.getId())
 	return paramValue, nil
 }
 
-func (scanConfig *InMemScanConfig) deleteParameterValue(name string) error {
+func (scanConfig *InMemScanConfig) deleteParameterValue(dbClient DBClient, name string) error {
 	for i, id := range scanConfig.ParameterValueIds {
 		var pv ParameterValue
 		var err error
-		pv, err = scanConfig.getDBClient().getParameterValue(id)
+		pv, err = dbClient.getParameterValue(id)
 		if err != nil { return err }
 		if pv == nil {
 			fmt.Println("Internal ERROR: broken ParameterValue list for scan config " + scanConfig.getName())
@@ -2845,73 +2765,73 @@ func (scanConfig *InMemScanConfig) deleteParameterValue(name string) error {
 		}
 		if pv.getName() == name {
 			scanConfig.ParameterValueIds = apitypes.RemoveAt(i, scanConfig.ParameterValueIds)
-			err = scanConfig.Client.deleteObject(pv)
+			err = dbClient.deleteObject(pv)
 			if err != nil { return err }
-			return scanConfig.Client.writeBack(scanConfig)
+			return dbClient.writeBack(scanConfig)
 		}
 	}
 	return util.ConstructError("Did not find parameter named '" + name + "'")
 }
 
-func (scanConfig *InMemScanConfig) deleteAllParameterValues() error {
+func (scanConfig *InMemScanConfig) deleteAllParameterValues(dbClient DBClient) error {
 	for _, paramValueId := range scanConfig.getParameterValueIds() {
 		var err error
 		var paramValue ParameterValue
-		paramValue, err = scanConfig.Client.getParameterValue(paramValueId)
+		paramValue, err = dbClient.getParameterValue(paramValueId)
 		if err != nil { return err }
-		scanConfig.Client.deleteObject(paramValue)
+		dbClient.deleteObject(paramValue)
 	}
 	scanConfig.ParameterValueIds = make([]string, 0)
-	return scanConfig.Client.writeBack(scanConfig)
+	return dbClient.writeBack(scanConfig)
 }
 
-func (scanConfig *InMemScanConfig) setFlagId(newFlagId string) error {
+func (scanConfig *InMemScanConfig) setFlagId(dbClient DBClient, newFlagId string) error {
 	if scanConfig.FlagId == newFlagId { return nil } // nothing to do
 	var newFlag Flag
 	var err error
-	newFlag, err = scanConfig.Client.getFlag(newFlagId)
+	newFlag, err = dbClient.getFlag(newFlagId)
 	if err != nil { return err }
 	if scanConfig.FlagId != "" { // already set to a Flag - remove that one
 		var oldFlag Flag
-		oldFlag, err = scanConfig.Client.getFlag(scanConfig.FlagId)
+		oldFlag, err = dbClient.getFlag(scanConfig.FlagId)
 		if err != nil { return err }
-		oldFlag.removeScanConfigRef(scanConfig.getId())
+		oldFlag.removeScanConfigRef(dbClient, scanConfig.getId())
 	}
 	scanConfig.FlagId = newFlagId
-	err = newFlag.addScanConfigRef(scanConfig.getId())  // adds non-redundantly
+	err = newFlag.addScanConfigRef(dbClient, scanConfig.getId())  // adds non-redundantly
 	if err != nil { return err }
-	return scanConfig.Client.writeBack(scanConfig)
+	return dbClient.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) getFlagId() string {
 	return scanConfig.FlagId
 }
 
-func (scanConfig *InMemScanConfig) addScanEventId(id string) {
+func (scanConfig *InMemScanConfig) addScanEventId(dbClient DBClient, id string) {
 	scanConfig.ScanEventIds = append(scanConfig.ScanEventIds, id)
-	scanConfig.Client.writeBack(scanConfig)
+	dbClient.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) getScanEventIds() []string {
 	return scanConfig.ScanEventIds
 }
 
-func (scanConfig *InMemScanConfig) deleteScanEventId(eventId string) error {
+func (scanConfig *InMemScanConfig) deleteScanEventId(dbClient DBClient, eventId string) error {
 	scanConfig.ScanEventIds = apitypes.RemoveFrom(eventId, scanConfig.ScanEventIds)
-	return scanConfig.Client.writeBack(scanConfig)
+	return dbClient.writeBack(scanConfig)
 }
 
 func (resource *InMemScanConfig) isScanConfig() bool {
 	return true
 }
 
-func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
+func (scanConfig *InMemScanConfig) asScanConfigDesc(dbClient DBClient) *apitypes.ScanConfigDesc {
 	
 	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
 	for _, valueId := range scanConfig.ParameterValueIds {
 		var paramValue ParameterValue
 		var err error
-		paramValue, err = scanConfig.Client.getParameterValue(valueId)
+		paramValue, err = dbClient.getParameterValue(valueId)
 		if err != nil {
 			fmt.Println("Internal error: " + err.Error())
 			continue
@@ -2927,8 +2847,8 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc() *apitypes.ScanConfigDesc {
 		scanConfig.SuccessExpression, scanConfig.FlagId, paramValueDescs)
 }
 
-func (scanConfig *InMemScanConfig) writeBack() error {
-	return scanConfig.Client.addObject(scanConfig)
+func (scanConfig *InMemScanConfig) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) asJSON() string {
@@ -3006,7 +2926,7 @@ func (client *InMemClient) dbCreateFlag(name, desc, repoId, successImagePath str
 	if err != nil { return nil, err }
 	
 	// Add to repo's list of flags.
-	err = repo.addFlag(flag)
+	err = repo.addFlag(client, flag)
 	if err != nil { return nil, err }
 
 	// Make persistent.
@@ -3041,19 +2961,19 @@ func (flag *InMemFlag) getSuccessImagePath() string {
 }
 
 func (flag *InMemFlag) getSuccessImageURL() string {
-	return flag.Client.Server.GetHTTPResourceScheme() + "://getFlagImage/?Id=" + flag.getId()
+	return flag.Persistence.Server.GetHTTPResourceScheme() + "://getFlagImage/?Id=" + flag.getId()
 }
 
-func (flag *InMemFlag) addScanConfigRef(scanConfigId string) error {
+func (flag *InMemFlag) addScanConfigRef(dbClient DBClient, scanConfigId string) error {
 	fmt.Println("addScanConfigRef:A")
 	flag.UsedByScanConfigIds = apitypes.AddUniquely(scanConfigId, flag.UsedByScanConfigIds)
-	return flag.Client.writeBack(flag)
+	return dbClient.writeBack(flag)
 }
 
-func (flag *InMemFlag) removeScanConfigRef(scanConfigId string) error {
+func (flag *InMemFlag) removeScanConfigRef(dbClient DBClient, scanConfigId string) error {
 	flag.UsedByScanConfigIds = apitypes.RemoveFrom(scanConfigId, flag.UsedByScanConfigIds)
 	
-	return flag.Client.writeBack(flag)
+	return dbClient.writeBack(flag)
 }
 
 func (flag *InMemFlag) usedByScanConfigIds() []string {
@@ -3069,8 +2989,8 @@ func (flag *InMemFlag) asFlagDesc() *apitypes.FlagDesc {
 		flag.getSuccessImageURL())
 }
 
-func (flag *InMemFlag) writeBack() error {
-	return flag.Client.addObject(flag)
+func (flag *InMemFlag) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(flag)
 }
 
 func (flag *InMemFlag) asJSON() string {
@@ -3176,7 +3096,7 @@ func (client *InMemClient) ReconstituteEvent(id string, when time.Time,
 }
 
 func (client *InMemClient) asEventDesc(event Event) apitypes.EventDesc {
-	return event.asEventDesc()
+	return event.asEventDesc(client)
 }
 
 /*******************************************************************************
@@ -3245,16 +3165,16 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
 	var user User
 	user, err = client.getUser(userObjId)
 	if err != nil { return nil, err }
-	user.addEventId(scanEvent.getId())
+	user.addEventId(client, scanEvent.getId())
 	
 	// Link to ScanConfig.
-	scanConfig.addScanEventId(scanEvent.getId())
+	scanConfig.addScanEventId(client, scanEvent.getId())
 	
 	// Link to image.
 	var image DockerImage
 	image, err = client.getDockerImage(imageId)
 	if err != nil { return nil, err }
-	image.addScanEventId(scanEvent.getId())
+	image.addScanEventId(client, scanEvent.getId())
 
 	fmt.Println("Created ScanEvent")
 	return scanEvent, nil
@@ -3289,24 +3209,24 @@ func (event *InMemScanEvent) getActualParameterValueIds() []string {
 	return event.ActualParameterValueIds
 }
 
-func (event *InMemScanEvent) deleteAllParameterValues() error {
+func (event *InMemScanEvent) deleteAllParameterValues(dbClient DBClient) error {
 	for _, paramId := range event.ActualParameterValueIds {
 		var param ParameterValue
 		var err error
-		param, err = event.Client.getParameterValue(paramId)
+		param, err = dbClient.getParameterValue(paramId)
 		if err != nil { return err }
-		event.Client.deleteObject(param)
+		dbClient.deleteObject(param)
 	}
 	event.ActualParameterValueIds = make([]string, 0)
-	return event.Client.writeBack(event)
+	return dbClient.writeBack(event)
 }
 
-func (event *InMemScanEvent) asScanEventDesc() *apitypes.ScanEventDesc {
+func (event *InMemScanEvent) asScanEventDesc(dbClient DBClient) *apitypes.ScanEventDesc {
 	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
 	for _, valueId := range event.ActualParameterValueIds {
 		var value ParameterValue
 		var err error
-		value, err = event.Client.getParameterValue(valueId)
+		value, err = dbClient.getParameterValue(valueId)
 		if err != nil {
 			fmt.Println("Internal error:", err.Error())
 			continue
@@ -3319,12 +3239,12 @@ func (event *InMemScanEvent) asScanEventDesc() *apitypes.ScanEventDesc {
 		event.Score, event.Result.Vulnerabilities)
 }
 
-func (event *InMemScanEvent) asEventDesc() apitypes.EventDesc {
-	return event.asScanEventDesc()
+func (event *InMemScanEvent) asEventDesc(dbClient DBClient) apitypes.EventDesc {
+	return event.asScanEventDesc(dbClient)
 }
 
-func (event *InMemScanEvent) writeBack() error {
-	return event.Client.addObject(event)
+func (event *InMemScanEvent) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(event)
 }
 
 func (event *InMemScanEvent) asJSON() string {
@@ -3442,13 +3362,13 @@ func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId, imageId,
 	var dockerfile Dockerfile
 	dockerfile, err = client.getDockerfile(dockerfileId)
 	if err != nil { return nil, err }
-	dockerfile.addEventId(newDockerfileExecEvent.getId())
+	dockerfile.addEventId(client, newDockerfileExecEvent.getId())
 	
 	// Link to user.
 	var user User
 	user, err = client.getUser(userObjId)
 	if err != nil { return nil, err }
-	user.addEventId(newDockerfileExecEvent.getId())
+	user.addEventId(client, newDockerfileExecEvent.getId())
 	
 	return newDockerfileExecEvent, nil
 }
@@ -3466,12 +3386,12 @@ func (event *InMemDockerfileExecEvent) asDockerfileExecEventDesc() *apitypes.Doc
 		event.DockerfileId)
 }
 
-func (event *InMemDockerfileExecEvent) asEventDesc() apitypes.EventDesc {
+func (event *InMemDockerfileExecEvent) asEventDesc(dbClient DBClient) apitypes.EventDesc {
 	return event.asDockerfileExecEventDesc()
 }
 
-func (event *InMemDockerfileExecEvent) writeBack() error {
-	return event.Client.addObject(event)
+func (event *InMemDockerfileExecEvent) writeBack(dbClient DBClient) error {
+	return dbClient.addObject(event)
 }
 
 func (event *InMemDockerfileExecEvent) asJSON() string {

@@ -125,7 +125,7 @@ func AssertErrIsNil(err error, msg string) bool {
  * Authenticate the session, using either the session token or an HTTP parameter
  * that provides a valid session Id.
  */
-func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
+func authenticateSession(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	values url.Values) (*apitypes.SessionToken, *apitypes.FailureDesc) {
 	
 	if sessionToken == nil {
@@ -145,18 +145,18 @@ func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
 		if ! found { return nil, apitypes.NewFailureDesc("Unauthenticated - no session Id found") }
 		sessionId = valuear[0]
 		if sessionId == "" { return nil, apitypes.NewFailureDesc("Unauthenticated - session Id appears to be malformed") }
-		sessionToken = server.authService.identifySession(sessionId)  // returns nil if invalid
+		sessionToken = dbClient.Server.authService.identifySession(sessionId)  // returns nil if invalid
 		if sessionToken == nil { return nil, apitypes.NewFailureDesc("Unauthenticated - session Id is invalid") }
 	}
 
-	if ! server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
+	if ! dbClient.Server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
 		return nil, apitypes.NewFailureDesc("Invalid session Id")
 	}
 	
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
 	fmt.Println("userid=", userId)
-	var user User = server.dbClient.dbGetUserByUserId(userId)
+	var user User = dbClient.dbGetUserByUserId(userId)
 	if user == nil {
 		return nil, apitypes.NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
@@ -168,15 +168,15 @@ func authenticateSession(server *Server, sessionToken *apitypes.SessionToken,
  * Get the current authenticated user. If no one is authenticated, return nil. If
  * any other error, return an error.
  */
-func getCurrentUser(server *Server, sessionToken *apitypes.SessionToken) (User, error) {
+func getCurrentUser(dbClient DBClient, sessionToken *apitypes.SessionToken) (User, error) {
 	if sessionToken == nil { return nil, nil }
 	
-	if ! server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
+	if ! dbClient.getServer().getAuthService().sessionIdIsValid(sessionToken.UniqueSessionId) {
 		return nil, util.ConstructError("Session is not valid")
 	}
 	
 	var userId string = sessionToken.AuthenticatedUserid
-	var user User = server.dbClient.dbGetUserByUserId(userId)
+	var user User = dbClient.dbGetUserByUserId(userId)
 	if user == nil {
 		return nil, util.ConstructError("user object cannot be identified from user id " + userId)
 	}
@@ -187,17 +187,17 @@ func getCurrentUser(server *Server, sessionToken *apitypes.SessionToken) (User, 
 /*******************************************************************************
  * Authorize the request, based on the authenticated identity.
  */
-func authorizeHandlerAction(server *Server, sessionToken *apitypes.SessionToken,
+func authorizeHandlerAction(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	mask []bool, resourceId, attemptedAction string) *apitypes.FailureDesc {
 	
-	if server.Authorize {
+	if dbClient.Server.Authorize {
 		
-		isAuthorized, err := server.authService.authorized(server.dbClient,
+		isAuthorized, err := dbClient.Server.authService.authorized(dbClient,
 			sessionToken, mask, resourceId)
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		if ! isAuthorized {
 			var resource Resource
-			resource, err = server.dbClient.getResource(resourceId)
+			resource, err = dbClient.getResource(resourceId)
 			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 			if resource == nil {
 				return apitypes.NewFailureDesc("Unable to identify resource with Id " + resourceId)
@@ -284,19 +284,19 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 /*******************************************************************************
  * 
  */
-func buildDockerfile(server *Server, dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
-	dbClient DBClient, values url.Values) (DockerImage, error) {
+func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
+	values url.Values) (DockerImage, error) {
 
 	var repo Repo
 	var err error
-	repo, err = dockerfile.getRepo()
+	repo, err = dockerfile.getRepo(dbClient)
 	if err != nil { return nil, err }
 	var realm Realm
-	realm, err = repo.getRealm()
+	realm, err = repo.getRealm(dbClient)
 	if err != nil { return nil, err }
 	
 	var user User
-	user, err = getCurrentUser(server, sessionToken)
+	user, err = getCurrentUser(dbClient, sessionToken)
 	if err != nil { return nil, err }
 
 	var imageName string
