@@ -242,8 +242,9 @@ func (persist *Persistence) addObject(txn TxnContext, obj PersistObj) error {
 		// appropriate go type, using reflection.
 		
 		var err = getRedisTransaction(txn).Command("SET",
+			ObjectIdPrefix + obj.getId(), obj.asJSON())
 		//var err = persist.RedisClient.Set(
-			ObjectIdPrefix + obj.getId(), obj.asJSON(), 0, 0, false, false)
+		//	ObjectIdPrefix + obj.getId(), obj.asJSON(), 0, 0, false, false)
 		if err != nil { debug.PrintStack() }
 		if err != nil { return err }
 	}
