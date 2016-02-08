@@ -52,6 +52,7 @@ func NewPersistence(server *Server, redisClient *goredis.Redis) (*Persistence, e
 		InMemoryOnly: server.InMemoryOnly,
 		RedisClient: redisClient,
 	}
+	server.persistence = persist
 	persist.resetInMemoryState()
 	
 	var err error = persist.init()

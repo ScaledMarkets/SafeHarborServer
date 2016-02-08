@@ -153,7 +153,7 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 		
 		if err != nil { AbortStartup(err.Error()) }
 	}
-	server.persistence, err = NewPersistence(server, redisClient)
+	_, err = NewPersistence(server, redisClient)
 	if err != nil { AbortStartup(err.Error()) }
 	
 	// To do: Make this a TLS listener.
