@@ -83,6 +83,9 @@ func (txn *GoRedisTransactionWrapper) abort() error {
 func (persist *Persistence) NewTxnContext() (TxnContext, error) {
 	var goRedisTxn *goredis.Transaction
 	var err error
+	
+	
+	
 	if persist.RedisClient == nil { return nil, errors.New("Redis not configured") }
 	goRedisTxn, err = persist.RedisClient.Transaction()
 	if err != nil { return nil, err }
