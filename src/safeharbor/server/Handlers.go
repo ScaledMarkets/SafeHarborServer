@@ -129,10 +129,10 @@ func clearAll(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values
 	dbClient.Server.authService.clearAllSessions()
 	
 	// Remove and re-create the repository directory.
-	err = dbClient.resetPersistentState()
+	err = dbClient.Persistence.resetPersistentState()
 	if err != nil { return apitypes.NewResult(500, err.Error()) }
 	fmt.Println("Initializing database...")
-	dbClient.init()
+	dbClient.Persistence.init()
 	
 	return apitypes.NewResult(200, "Persistent state reset")
 }
@@ -150,7 +150,7 @@ func printDatabase(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 		return apitypes.NewFailureDesc("Not in debug mode - returning from printDatabase")
 	}
 	
-	dbClient.printDatabase()
+	dbClient.Persistence.printDatabase()
 	
 	return apitypes.NewResult(200, "Database printed to stdout on server.")
 }
@@ -168,7 +168,9 @@ func authenticate(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	// Verify credentials.
-	var user User = dbClient.dbGetUserByUserId(creds.UserId)
+	var user User
+	user, err = dbClient.dbGetUserByUserId(creds.UserId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if user == nil {
 		return apitypes.NewFailureDesc("User not found in the database")
 	}
@@ -341,7 +343,8 @@ func changePassword(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	}
 	
 	var user User
-	user = dbClient.dbGetUserByUserId(userId)
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if user == nil { return apitypes.NewFailureDesc("User unidentified") }
 	
 	var oldPswd string
@@ -403,7 +406,9 @@ func createGroup(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	
 	if addMe {
 		var userId string = sessionToken.AuthenticatedUserid
-		var user User = dbClient.dbGetUserByUserId(userId)
+		var user User
+		user, err = dbClient.dbGetUserByUserId(userId)
+		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		err = group.addUserId(dbClient, user.getId())
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	}
@@ -650,7 +655,9 @@ func createRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	realmInfo, err = apitypes.GetRealmInfo(values)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	var user User
+	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	fmt.Println("Creating realm", realmInfo.RealmName)
 	var realm Realm
 	realm, err = dbClient.dbCreateRealm(realmInfo, user.getId())
@@ -748,7 +755,8 @@ func getUserDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var user User
-	user = dbClient.dbGetUserByUserId(userId)
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if user == nil { return apitypes.NewFailureDesc("User with user id " + userId +
 		" not found.") }
 	
@@ -938,7 +946,9 @@ func createRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 
 	// Add ACL entry to enable the current user to access what he/she just created.
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	var user User
+	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	_, err = dbClient.dbCreateACLEntry(repo.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -1546,7 +1556,10 @@ func getMyDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
 	fmt.Println("userid=", userId)
-	var user User = dbClient.dbGetUserByUserId(userId)
+	var user User
+	var err error
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if user == nil {
 		return apitypes.NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
@@ -1564,7 +1577,10 @@ func getMyGroups(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var groupDescs apitypes.GroupDescs = make([]*apitypes.GroupDesc, 0)
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	var user User
+	var err error
+	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var groupIds []string = user.getGroupIds()
 	for _, groupId := range groupIds {
 		var group Group
@@ -1591,7 +1607,10 @@ func getMyRealms(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 
 	var realms map[string]Realm = make(map[string]Realm)
 	
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	var user User
+	var err error
+	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var aclEntrieIds []string = user.getACLEntryIds()
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
@@ -1635,7 +1654,10 @@ func getMyRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	var realms map[string]Realm = make(map[string]Realm)
 	var repos map[string]Repo = make(map[string]Repo)
 	
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	var user User
+	var err error
+	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	var aclEntrieIds []string = user.getACLEntryIds()
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
@@ -1688,9 +1710,11 @@ func getMyDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	
+	var user User
 	var err error
+	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
 	var leaves map[string]Resource
 	leaves, err = getLeafResources(dbClient, user, ADockerfile)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -1717,9 +1741,11 @@ func getMyDockerImages(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	
+	var user User
 	var err error
+	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
 	var leaves map[string]Resource
 	leaves, err = getLeafResources(dbClient, user, ADockerImage)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -1746,9 +1772,11 @@ func getMyScanConfigs(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	
+	var user User
 	var err error
+	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
 	var leaves map[string]Resource
 	leaves, err = getLeafResources(dbClient, user, AScanConfig)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -1775,9 +1803,11 @@ func getMyFlags(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	
+	var user User
 	var err error
+	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
 	var leaves map[string]Resource
 	leaves, err = getLeafResources(dbClient, user, AFlag)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
@@ -1879,7 +1909,9 @@ func defineScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	
 	// Add ACL entry to enable the current user to access what he/she just created.
 	var userId string = sessionToken.AuthenticatedUserid
-	var user User = dbClient.dbGetUserByUserId(userId)
+	var user User
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if user == nil { return apitypes.NewFailureDesc(
 		"Internal error - could not identify user after use has been authenticated") }
 
@@ -1984,7 +2016,9 @@ func updateScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	
 	// Add success image, if one was attached.
 	var userId string = sessionToken.AuthenticatedUserid
-	var user User = dbClient.dbGetUserByUserId(userId)
+	var user User
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if user == nil { return apitypes.NewFailureDesc(
 		"Internal error - could not identify user after use has been authenticated") }
 	var imageFilepath string
@@ -2154,7 +2188,9 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 
 	// Create a scan event.
 	var userId string = sessionToken.AuthenticatedUserid
-	var user User = dbClient.dbGetUserByUserId(userId)
+	var user User
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if user == nil { return apitypes.NewFailureDesc("User with Id " + userId + " not found") }
 	var scanEvent ScanEvent
 	scanEvent, err = dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
@@ -2255,7 +2291,10 @@ func getUserEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var userId string = sessionToken.AuthenticatedUserid
-	var user User = dbClient.dbGetUserByUserId(userId)
+	var user User
+	var err error
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	if user == nil { return apitypes.NewFailureDesc("Unidentified user, " + userId) }
 	var eventIds []string = user.getEventIds()
 	

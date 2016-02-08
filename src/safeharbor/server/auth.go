@@ -170,7 +170,9 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
 	fmt.Println("userid=", userId)
-	var user User = dbClient.dbGetUserByUserId(userId)
+	var user User
+	var err error
+	user, err = dbClient.dbGetUserByUserId(userId)
 	if user == nil {
 		return false, util.ConstructError("user object cannot be identified from user id " + userId)
 	}
@@ -193,7 +195,6 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 	// that is specified by the actionMask.
 	var party Party = user  // start with the user.
 	var resource Resource
-	var err error
 	resource, err = dbClient.getResource(resourceId)
 	if err != nil { return false, err }
 	if resource == nil {

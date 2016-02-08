@@ -13,18 +13,24 @@ package server
 import (
 	"fmt"
 	"sync/atomic"
-	//"errors"
+	"errors"
 	"strconv"
 	"reflect"
-	//"os"
+	"os"
 	//"time"
 	//"runtime/debug"	
 	
 	"goredis"
 	
-	"safeharbor/apitypes"
+	//"safeharbor/apitypes"
 	//"safeharbor/docker"
 	"safeharbor/util"
+)
+
+const (
+	ObjectIdPrefix = "obj/"
+	RealmHashName = "realms"
+	UserHashName = "users"
 )
 
 /*******************************************************************************
@@ -37,7 +43,7 @@ type Persistence struct {
 	uniqueId int64
 	allObjects map[string]PersistObj
 	allUsers map[string]User  // maps user id to user
-	allRealmIds []string
+	realmMap map[string]Realm
 }
 
 func NewPersistence(server *Server, redisClient *goredis.Redis) (*Persistence, error) {
@@ -52,6 +58,36 @@ func NewPersistence(server *Server, redisClient *goredis.Redis) (*Persistence, e
 	if err != nil { return nil, err }
 	
 	return persist, nil
+}
+
+type GoRedisTransactionWrapper struct {
+	GoRedisTransaction *goredis.Transaction
+}
+
+func (txn *GoRedisTransactionWrapper) commit() error {
+	var err error
+	var t *goredis.Transaction = getRedisTransaction(txn)
+	_, err = t.Exec()
+	t.Close()
+	return err
+}
+
+func (txn *GoRedisTransactionWrapper) abort() error {
+	var err error
+	var t *goredis.Transaction = getRedisTransaction(txn)
+	err = t.Discard()
+	t.Close()
+	return err
+}
+
+func (persist *Persistence) NewTxnContext() (TxnContext, error) {
+	var goRedisTxn *goredis.Transaction
+	var err error
+	goRedisTxn, err = persist.RedisClient.Transaction()
+	if err != nil { return nil, err }
+	return &GoRedisTransactionWrapper{
+		GoRedisTransaction: goRedisTxn,
+	}, nil
 }
 
 /*******************************************************************************
@@ -74,29 +110,63 @@ func (persist *Persistence) resetPersistentState() error {
 }
 
 /*******************************************************************************
- * 
+ * Note: We assume that a user''s user-id is not changed once it has been set.
  */
-func (persist *Persistence) GetUserObjByUserId(userId string) (User, error) {
-....don''t we need a reference to the transaction?
+func (persist *Persistence) GetUserObjIdByUserId(txn TxnContext, userId string) (string, error) {
+
 	var user = persist.allUsers[userId]
 	if user == nil {
 		var userObjId string
 		var err error
-		userObjId, err = persist.RedisClient.HGet("users", userId)
-		if err != nil { return err }
-		if userObjId == "" {
-			return nil, nil
-		}
+		var bytes []byte
+		bytes, err = persist.RedisClient.HGet(UserHashName, userId)
+		if err != nil { return "", err }
+		userObjId = string(bytes)
+		return userObjId, nil
+	} else {
+		return user.getId(), nil
 	}
-	return userObjId, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func (persist *Persistence) setUserId(txn TxnContext, userId string) error {
+	return errors.New("Cannot change a user id")
+}
+
+/*******************************************************************************
+ * 
+ */
+func (persist *Persistence) setRealmName(txn TxnContext, name string) error {
+	return errors.New("Cannot change a realm name")
+}
+
+/*******************************************************************************
+ * Note: We assume that a realm''s name is not changed once it has been set.
+ */
+func (persist *Persistence) GetRealmObjIdByRealmName(txn TxnContext, realmName string) (string, error) {
+
+	var realm = persist.realmMap[realmName]
+	if realm == nil {
+		var realmObjId string
+		var bytes []byte
+		var err error
+		bytes, err = persist.RedisClient.HGet(RealmHashName, realmName)
+		if err != nil { return "", err }
+		realmObjId = string(bytes)
+		return realmObjId, nil
+	} else {
+		return realm.getId(), nil
+	}
 }
 
 /*******************************************************************************
  * Create a directory for the Dockerfiles, images, and any other files owned
  * by the specified realm.
  */
-func (persist *Persistence) assignRealmFileDir(realmId string) (string, error) {
-....don''t we need a reference to the transaction?
+func (persist *Persistence) assignRealmFileDir(txn TxnContext, realmId string) (string, error) {
+
 	var path = persist.Server.Config.FileRepoRootPath + "/" + realmId
 	// Create the directory. (It is an error if it already exists.)
 	err := os.MkdirAll(path, 0711)
@@ -108,14 +178,10 @@ func (persist *Persistence) assignRealmFileDir(realmId string) (string, error) {
  * by the specified repo. The directory will be created as a subdirectory of the
  * realm''s directory.
  */
-func (persist *Persistence) assignRepoFileDir(realmId string, repoId string) (string, error) {
-....don''t we need a reference to the transaction?
-	fmt.Println("assignRepoFileDir(", realmId, ",", repoId, ")...")
+func (persist *Persistence) assignRepoFileDir(txn TxnContext, realm Realm, repoId string) (string, error) {
+
 	var err error
-	var realm Realm
-	realm, err = persist.getRealm(realmId)
-	if err != nil { return "", err }
-	....var path = realm.getFileDirectory() + "/" + repoId
+	var path = realm.getFileDirectory() + "/" + repoId
 	var curdir string
 	curdir, err = os.Getwd()
 	if err != nil { fmt.Println(err.Error()) }
@@ -154,8 +220,8 @@ func (persist *Persistence) createUniqueDbObjectId() (string, error) {
 /*******************************************************************************
  * Write an object to the database - making the object persistent.
  */
-func (persist *Persistence) addObject(obj PersistObj) error {
-....don''t we need a reference to the transaction?
+func (persist *Persistence) addObject(txn TxnContext, obj PersistObj) error {
+
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = obj
 	} else {
@@ -168,8 +234,10 @@ func (persist *Persistence) addObject(obj PersistObj) error {
 		//    "<typename>": { <object fields> }
 		// so that getPersistentObject will later be able to map the JSON to the
 		// appropriate go type, using reflection.
-		var err = persist.RedisClient.Set(
-			"obj/" + obj.getId(), obj.asJSON(), 0, 0, false, false)
+		
+		var err = getRedisTransaction(txn).Command("SET",
+		//var err = persist.RedisClient.Set(
+			ObjectIdPrefix + obj.getId(), obj.asJSON(), 0, 0, false, false)
 		if err != nil { return err }
 	}
 	return nil
@@ -179,17 +247,17 @@ func (persist *Persistence) addObject(obj PersistObj) error {
  * Remove the specified object from the database. After this, the object is no
  * longer persistent.
  */
-func (persist *Persistence) deleteObject(obj PersistObj) error {
-....don''t we need a reference to the transaction?
+func (persist *Persistence) deleteObject(txn TxnContext, obj PersistObj) error {
+
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = nil
 		return nil
 	} else {
-		var numDeleted int64
 		var err error
-		numDeleted, err = persist.RedisClient.Del("obj/" + obj.getId())
+		err = getRedisTransaction(txn).Command("DEL", ObjectIdPrefix + obj.getId())
+		//numDeleted, err = persist.RedisClient.Del(ObjectIdPrefix + obj.getId())
 		if err != nil { return err }
-		if numDeleted == 0 { return util.ConstructError("Unable to delete object with Id " + obj.getId()) }
+		//if numDeleted == 0 { return util.ConstructError("Unable to delete object with Id " + obj.getId()) }
 		persist.allObjects[obj.getId()] = nil
 		return nil
 	}
@@ -201,13 +269,21 @@ func (persist *Persistence) deleteObject(obj PersistObj) error {
  * The factory is the object that has the Reconstitute methods needed to
  * construct the persistent object.
  */
-func (persist *Persistence) getObject(factory interface{}, id string) (PersistObj, error) {
-....don''t we need a reference to the transaction?
+func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id string) (PersistObj, error) {
+
 	if persist.InMemoryOnly {
 		return persist.allObjects[id], nil
 	} else {
 		
-		// First see if we have it in memory.
+		// Set a watch on the object so that if it changes, the transaction will
+		// fail. Note that we cannot retrieve the value as part of the transaction,
+		// and so we are relying on the fact that the watch is set before we read
+		// the value.
+		var err error
+		err = getRedisTransaction(txn).Command("WATCH", ObjectIdPrefix + id)
+		if err != nil { return nil, err }
+		
+		// First see if we have it cached in memory.
 		if persist.allObjects[id] != nil { return persist.allObjects[id], nil }
 		
 		// Read JSON from the database, using the id as the key; then deserialize
@@ -217,8 +293,12 @@ func (persist *Persistence) getObject(factory interface{}, id string) (PersistOb
 		// values from the hashmap that is built by the unmarshalling.
 		
 		var bytes []byte
-		var err error
-		bytes, err = persist.RedisClient.Get("obj/" + id)
+		
+		// Read the value of the object from the database. This is done outside
+		// of the transaction, because Redis does not allow one to read a value
+		// as part of a transaction and then act on that value within the
+		// transaction.
+		bytes, err = persist.RedisClient.Get(ObjectIdPrefix + id)
 		if err != nil { return nil, err }
 		if bytes == nil { return nil, nil }
 		if len(bytes) == 0 { return nil, nil }
@@ -243,34 +323,51 @@ func (persist *Persistence) getObject(factory interface{}, id string) (PersistOb
  * Insert a new Realm into the database. This automatically inserts the
  * underlying persistent object.
  */
-func (persist *Persistence) addRealm(newRealm Realm) error {....don''t we need a reference to the transaction?
+func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 	if persist.InMemoryOnly {
-		persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
-		return persist.addObject(newRealm)
+		persist.realmMap[newRealm.getName()] = newRealm
+		return persist.addObject(txn, newRealm)
 	} else {
-		var err = persist.addObject(newRealm)
+		// Check if the realm already exists in the hash.
+		var realmObjId string
+		var err error
+		realmObjId, err = persist.GetRealmObjIdByRealmName(txn, newRealm.getName())
 		if err != nil { return err }
-		var numAdded int64
-		....numAdded, err = persist.RedisClient.SAdd("realms", newRealm.getId())
+		if realmObjId != "" {
+			return util.ConstructError(
+				"A realm with name '" + newRealm.getName() + "' already exists")
+		}
+
+		// Write realm to realm hash.
+		var added bool
+		added, err = persist.RedisClient.HSet(RealmHashName, newRealm.getName(), newRealm.getId())
 		if err != nil { return err }
-		if numAdded == 0 { return util.ConstructError("Unable to add realm " + newRealm.getName()) }
-		persist.allRealmIds = append(persist.allRealmIds, newRealm.getId())
+		if ! added { return util.ConstructError("Unable to add realm " + newRealm.getName()) }
+		
+		persist.realmMap[newRealm.getName()] = newRealm
+		err = persist.addObject(txn, newRealm)
+		if err != nil { return err }
+		
 		return nil
 	}
 }
 
 /*******************************************************************************
- * Return a list of the Ids of all of the realms in the database.
+ * Return a map of the Name/Ids of all of the realms in the database.
  */
-func (persist *Persistence) dbGetAllRealmIds() ([]string, error) {....don''t we need a reference to the transaction?
+func (persist *Persistence) dbGetAllRealmIds(txn TxnContext) (map[string]string, error) {
 	if persist.InMemoryOnly {
-		return persist.allRealmIds, nil
+		var realmIdMap = make(map[string]string)
+		for name, realm := range persist.realmMap {
+			realmIdMap[name] = realm.getId()
+		}
+		return realmIdMap, nil
 	} else {
-		var members []string
+		var realmMap map[string]string
 		var err error
-		....members, err = persist.RedisClient.SMembers("realms")
+		realmMap, err = persist.RedisClient.HGetAll(RealmHashName)
 		if err != nil { return nil, err }
-		return members, nil
+		return realmMap, nil
 	}
 }
 
@@ -278,30 +375,31 @@ func (persist *Persistence) dbGetAllRealmIds() ([]string, error) {....don''t we 
  * Insert a new User into the databse. This automatically inserts the
  * underlying persistent object.
  */
-func (persist *Persistence) addUser(user User) error {....don''t we need a reference to the transaction?
+func (persist *Persistence) addUser(txn TxnContext, user User) error {
 	if persist.InMemoryOnly {
 		persist.allUsers[user.getUserId()] = user
-		return persist.addObject(user)
+		return persist.addObject(txn, user)
 	} else {
-		var err = persist.addObject(user)
+		var err = persist.addObject(txn, user)
 		if err != nil { return err }
 		
 		// Check if the user already exists in the set.
 		var userObjId string
-		userObjId, err = persist.GetUserObjByUserId(user.getUserId())
+		userObjId, err = persist.GetUserObjIdByUserId(txn, user.getUserId())
 		if err != nil { return err }
 		if userObjId != "" {
-			return util.ConstructError("User '" + user.getName() + "' is already a member of the set of users")
+			return util.ConstructError(
+				"A user with name '" + user.getName() + "' already exists")
 		}
 		
 		// Write user to user-id hash.
 		var added bool
-		added, err = persist.RedisClient.HSet("users", user.getUserId(), user.getId())
+		added, err = persist.RedisClient.HSet(UserHashName, user.getUserId(), user.getId())
 		if err != nil { return err }
 		if ! added { return util.ConstructError("Unable to add user " + user.getName()) }
 		
 		// Write user object to database.
-		err = persist.addObject(user)
+		err = persist.addObject(txn, user)
 		if err != nil { return err }
 		
 		return nil
@@ -326,7 +424,13 @@ func (persist *Persistence) init() error {
 	var err error = persist.loadCoreData()
 	if err != nil { return util.ConstructError("Unable to load database state: " + err.Error()) }
 	
-	if client.Server.Debug { createTestObjects() }
+	if persist.Server.Debug {
+		var client *InMemClient
+		client, err = NewInMemClient(persist.Server)
+		if err != nil { return err }
+		client.createTestObjects()
+		client.commit()
+	}
 	
 	return nil
 }
@@ -380,44 +484,9 @@ func (persist *Persistence) readUniqueId() (int64, error) {
  */
 func (persist *Persistence) resetInMemoryState() {
 	persist.uniqueId = 100000005
-	persist.allRealmIds = make([]string, 0)
+	persist.realmMap = make(map[string]Realm)
 	persist.allObjects = make(map[string]PersistObj)
 	persist.allUsers = make(map[string]User)
-}
-
-/*******************************************************************************
- * For test mode only.
- */
-func createTestObjects() {
-	fmt.Println("Debug mode: creating realm testrealm")
-	var realmInfo *apitypes.RealmInfo
-	realmInfo, err = apitypes.NewRealmInfo("testrealm", "Test Org", "For Testing")
-	if err != nil {
-		fmt.Println(err.Error())
-		panic(err)
-	}
-	var testRealm Realm
-	testRealm, err = client.dbCreateRealm(realmInfo, "testuser1")
-	if err != nil {
-		fmt.Println(err.Error())
-		panic(err)
-	}
-	fmt.Println("Debug mode: creating user testuser1 in realm testrealm")
-	var testUser1 User
-	testUser1, err = client.dbCreateUser("testuser1", "Test User", 
-		"testuser@gmail.com", "Password1", testRealm.getId())
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1);
-	}
-	fmt.Println("User", testUser1.getName())
-	fmt.Println("created user, obj id=" + testUser1.getId())
-	fmt.Println("Giving user admin access to the realm.")
-	_, err = client.setAccess(testRealm, testUser1, []bool{true, true, true, true, true})
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1);
-	}
 }
 
 /*******************************************************************************
@@ -491,4 +560,11 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 	var retValues []reflect.Value = method.Call(actArgAr)
 	var retValue0 interface{} = retValues[0].Interface()
 	return typeName, retValue0, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func getRedisTransaction(txn TxnContext) *goredis.Transaction {
+	return txn.(*GoRedisTransactionWrapper).GoRedisTransaction
 }

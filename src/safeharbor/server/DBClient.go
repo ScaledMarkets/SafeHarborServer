@@ -5,6 +5,9 @@
  * The implementations should perform complete actions - i.e., maintain referential
  * integrity and satisfy all constraints and relationships.
  * Authorization (access control) is not part of the contract, however.
+ * Methods are assumed to be called in the context of a transaction - an
+ * implementation is expected to provide the transaction context. The methods
+ * 'commit' and 'abort' should be used to finalize the transaction.
  *
  * The Group, Permission, Repo, Dockerfile, Image, User, and Realm have
  * asGroupDesc, asPermissionDesc, asRepoDesc, asDockerfileDesc, asImageDesc,
@@ -32,16 +35,36 @@ type DataError interface {
 	asFailureDesc() *apitypes.FailureDesc
 }
 
+type TxnContext interface {
+	commit() error
+	abort() error
+}
+
 type DBClient interface {
 	
 	getPersistence() *Persistence
 	getServer() *Server
+	
+	getTransactionContext() TxnContext
 	commit() error
 	abort() error
 	
 	addObject(obj PersistObj) error
+		/** Write a new object to the database. Error results if the object is already
+			in the database. */
+	
 	deleteObject(obj PersistObj) error
+		/** Remove an object from the database. Error results if the object is not
+			in the database. */
+	
 	getPersistentObject(id string) (PersistObj, error)
+		/** Return the database object identified by the id, or error if not found. */
+	
+	writeBack(PersistObj) error
+		/** Update the state of the object in the database. Error if object not found. */
+	
+	asJSON(PersistObj) string
+		/** Externalize the object as a JSON-formatted string. */
 	
 	addRealm(newRealm Realm) error
 	dbGetAllRealmIds() ([]string, error)
@@ -76,11 +99,7 @@ type DBClient interface {
 	getEvent(string) (Event, error)
 	getScanEvent(string) (ScanEvent, error)
 	getRealmsAdministeredByUser(string) ([]string, error)  // those realms for which user can edit the realm
-	
-	// From PersistObj
-	writeBack(PersistObj) error
-	asJSON(PersistObj) string
-	
+		
 	// From Party
 	setActive(Party, bool) error
 	addACLEntryForParty(Party, ACLEntry) error

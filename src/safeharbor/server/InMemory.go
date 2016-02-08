@@ -28,7 +28,7 @@ import (
 	"time"
 	"runtime/debug"	
 	
-	"goredis"
+	//"goredis"
 	
 	"safeharbor/apitypes"
 	"safeharbor/docker"
@@ -47,22 +47,21 @@ const (
 type InMemClient struct {
 	Persistence *Persistence
 	Server *Server
-	GoRedisTransaction goredis.Transaction
+	txn TxnContext  // database transaction context
 }
 
 func NewInMemClient(server *Server) (*InMemClient, error) {
 	
-	var redisTransaction *goredis.Transaction
+	var txn TxnContext
 	var err error
-	redisTransaction, err = server.persistence.RedisClient.Transaction()
+	txn, err = server.persistence.NewTxnContext()
 	if err != nil { return nil, err }
 	
 	// Create and return a new InMemClient.
-	var pers *Persistence
 	var client = &InMemClient{
 		Persistence: server.persistence,
 		Server: server,
-		GoRedisTransaction: redisTransaction,
+		txn: txn,
 	}
 	
 	return client, nil
@@ -72,47 +71,54 @@ func (client *InMemClient) getPersistence() *Persistence { return client.Persist
 
 func (client *InMemClient) getServer() *Server { return client.Server }
 
+func (client *InMemClient) getTransactionContext() TxnContext { return client.txn }
+
+// Commit the database transaction - after calling this, methods on this instance
+// of InMemClient can no longer be called.
 func (client *InMemClient) commit() error {
-	var err error
-	_, err = client.GoRedisTransaction.Exec()
-	client.GoRedisTransaction.Close()
-	return err
+	return client.txn.commit()
 }
 
+// Abort the database transaction - after calling this, methods on this instance
+// of InMemClient can no longer be called.
 func (client *InMemClient) abort() error {
-	var err error
-	err = client.GoRedisTransaction.Discard()
-	client.GoRedisTransaction.Close()
-	return err
+	return client.txn.abort()
 }
 
 func (client *InMemClient) addObject(obj PersistObj) error {
-	return client.Persistence.addObject(obj)
+	return client.Persistence.addObject(client.txn, obj)
 }
 
 func (client *InMemClient) deleteObject(obj PersistObj) error {
-	return client.Persistence.deleteObject(obj)
+	return client.Persistence.deleteObject(client.txn, obj)
 }
 
 func (client *InMemClient) dbGetAllRealmIds() ([]string, error) {
-	return client.Persistence.dbGetAllRealmIds()
+	var realmIdMap map[string]string
+	var err error
+	realmIdMap, err = client.Persistence.dbGetAllRealmIds(client.txn)
+	if err != nil { return nil, err }
+	var realmIds = make([]string, 0)
+	for _, realmId := range realmIdMap {
+		realmIds = append(realmIds, realmId)
+	}
+	return realmIds, nil
 }
 
 func (client *InMemClient) addRealm(newRealm Realm) error {
-	return client.Persistence.addRealm(newRealm)
+	return client.Persistence.addRealm(client.txn, newRealm)
 }
 
 func (client *InMemClient) addUser(user User) error {
-	return client.Persistence.addUser(user)
+	return client.Persistence.addUser(client.txn, user)
 }
 
 func (client *InMemClient) dbGetUserByUserId(userId string) (User, error) {
 	var userObjId string
 	var err error
-	userObjId, err = client.Persistence.GetUserObjByUserId(userId)
+	userObjId, err = client.Persistence.GetUserObjIdByUserId(client.txn, userId)
 	if err != nil { return nil, err }
-	if userObjId == nil { return nil, nil }
-	var user User
+	if userObjId == "" { return nil, nil }
 	return client.getUser(userObjId)
 }
 
@@ -140,7 +146,7 @@ func (client *InMemClient) NewInMemPersistObj() (*InMemPersistObj, error) {
 }
 
 func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
-	return client.Persistence.getObject(client, id)
+	return client.Persistence.getObject(client.txn, client, id)
 }
 
 func (persObj *InMemPersistObj) getId() string {
@@ -335,7 +341,7 @@ func (client *InMemClient) deleteAccess(resource Resource, party Party) error {
 			resource.removeACLEntryIdAt(index)
 			
 			// Remove from database.
-			err = client.Persistence.deleteObject(aclEntry)
+			err = client.Persistence.deleteObject(client.txn, aclEntry)
 			if err != nil { return err }
 		}
 	}
@@ -969,12 +975,15 @@ func (client *InMemClient) NewInMemUser(userId string, name string,
 func (client *InMemClient) dbCreateUser(userId string, name string,
 	email string, pswd string, realmId string) (User, error) {
 	
-	if client.dbGetUserByUserId(userId) != nil {
+	var user User
+	var err error
+	user, err = client.dbGetUserByUserId(userId)
+	if err != nil { return nil, err }
+	if user != nil {
 		return nil, util.ConstructError("A user with Id " + userId + " already exists")
 	}
 	
 	var realm Realm
-	var err error
 	realm, err = client.getRealm(realmId)
 	if err != nil { return nil, err }
 	if realm == nil { return nil, util.ConstructError("Realm with Id " + realmId + " not found") }
@@ -1416,7 +1425,7 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	newRealm, err = client.NewInMemRealm(realmInfo, adminUserId)
 	if err != nil { return nil, err }
 	var realmFileDir string
-	realmFileDir, err = client.Persistence.assignRealmFileDir(newRealm.getId())
+	realmFileDir, err = client.Persistence.assignRealmFileDir(client.txn, newRealm.getId())
 	if err != nil { return nil, err }
 	newRealm.FileDirectory = realmFileDir
 	err = client.writeBack(newRealm)
@@ -1430,6 +1439,10 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	//	fmt.Println("allObjects[", realmId, "] is a", reflect.TypeOf(allObjects[realmId]))
 	//}
 	return newRealm, nil
+}
+
+func (realm *InMemRealm) setNameDeferredUpdate(name string) {
+	realm.Name = name
 }
 
 func (client *InMemClient) dbDeactivateRealm(realmId string) error {
@@ -1772,6 +1785,7 @@ func (realm *InMemRealm) deleteGroup(dbClient DBClient, group Group) error {
 func (realm *InMemRealm) isRealm() bool { return true }
 
 func (realm *InMemRealm) writeBack(dbClient DBClient) error {
+	// Important: it is assumed that the name has changed.
 	return dbClient.addObject(realm)
 }
 
@@ -1865,7 +1879,7 @@ func (client *InMemClient) dbCreateRepo(realmId, name, desc string) (Repo, error
 	if err != nil { return nil, err }
 
 	var repoFileDir string
-	repoFileDir, err = client.Persistence.assignRepoFileDir(realmId, newRepo.getId())
+	repoFileDir, err = client.Persistence.assignRepoFileDir(client.txn, realm, newRepo.getId())
 	if err != nil { return nil, err }
 	newRepo.FileDirectory = repoFileDir
 	err = client.writeBack(newRepo)
@@ -3416,4 +3430,40 @@ func (client *InMemClient) ReconstituteDockerfileExecEvent(id string, when time.
 		DockerfileId: dockerfileId,
 		DockerfileExternalObjId: extObjId,
 	}, nil
+}
+
+/*******************************************************************************
+ * For test mode only.
+ */
+func (client *InMemClient) createTestObjects() {
+	fmt.Println("Debug mode: creating realm testrealm")
+	var realmInfo *apitypes.RealmInfo
+	var err error
+	realmInfo, err = apitypes.NewRealmInfo("testrealm", "Test Org", "For Testing")
+	if err != nil {
+		fmt.Println(err.Error())
+		panic(err)
+	}
+	var testRealm Realm
+	testRealm, err = client.dbCreateRealm(realmInfo, "testuser1")
+	if err != nil {
+		fmt.Println(err.Error())
+		panic(err)
+	}
+	fmt.Println("Debug mode: creating user testuser1 in realm testrealm")
+	var testUser1 User
+	testUser1, err = client.dbCreateUser("testuser1", "Test User", 
+		"testuser@gmail.com", "Password1", testRealm.getId())
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1);
+	}
+	fmt.Println("User", testUser1.getName())
+	fmt.Println("created user, obj id=" + testUser1.getId())
+	fmt.Println("Giving user admin access to the realm.")
+	_, err = client.setAccess(testRealm, testUser1, []bool{true, true, true, true, true})
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1);
+	}
 }

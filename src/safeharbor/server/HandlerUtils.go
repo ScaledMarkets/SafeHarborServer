@@ -156,7 +156,10 @@ func authenticateSession(dbClient *InMemClient, sessionToken *apitypes.SessionTo
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
 	fmt.Println("userid=", userId)
-	var user User = dbClient.dbGetUserByUserId(userId)
+	var user User
+	var err error
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return nil, apitypes.NewFailureDesc(err.Error()) }
 	if user == nil {
 		return nil, apitypes.NewFailureDesc("user object cannot be identified from user id " + userId)
 	}
@@ -171,12 +174,15 @@ func authenticateSession(dbClient *InMemClient, sessionToken *apitypes.SessionTo
 func getCurrentUser(dbClient DBClient, sessionToken *apitypes.SessionToken) (User, error) {
 	if sessionToken == nil { return nil, nil }
 	
-	if ! dbClient.getServer().getAuthService().sessionIdIsValid(sessionToken.UniqueSessionId) {
+	if ! dbClient.getServer().authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
 		return nil, util.ConstructError("Session is not valid")
 	}
 	
 	var userId string = sessionToken.AuthenticatedUserid
-	var user User = dbClient.dbGetUserByUserId(userId)
+	var user User
+	var err error
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return nil, err }
 	if user == nil {
 		return nil, util.ConstructError("user object cannot be identified from user id " + userId)
 	}
@@ -224,7 +230,9 @@ func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient,
 	
 	// Create an ACL entry for the new file, to allow access by the current user.
 	fmt.Println("Adding ACL entry")
-	var user User = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	var user User
+	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	if err != nil { return dockerfile, err }
 	_, err = dbClient.dbCreateACLEntry(dockerfile.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	if err != nil { return dockerfile, err }
