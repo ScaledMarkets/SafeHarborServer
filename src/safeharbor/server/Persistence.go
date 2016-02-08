@@ -288,7 +288,7 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		// and so we are relying on the fact that the watch is set before we read
 		// the value.
 		var err error
-		err = getRedisTransaction(txn).Command("WATCH", ObjectIdPrefix + id)
+		err = getRedisTransaction(txn).Watch(ObjectIdPrefix + id)
 		if err != nil { debug.PrintStack() }
 		if err != nil { return nil, err }
 		
