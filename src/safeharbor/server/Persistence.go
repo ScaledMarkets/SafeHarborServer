@@ -85,7 +85,7 @@ func (persist *Persistence) NewTxnContext() (TxnContext, error) {
 	var err error
 	
 	
-	if persist == nil { return nil, errors.New("Unexpected") }
+	//if persist == nil { return nil, errors.New("Unexpected") }
 	if persist.RedisClient == nil { return nil, errors.New("Redis not configured") }
 	goRedisTxn, err = persist.RedisClient.Transaction()
 	if err != nil { return nil, err }
