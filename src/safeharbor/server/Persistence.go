@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"os"
 	//"time"
-	//"runtime/debug"	
+	"runtime/debug"	
 	
 	"goredis"
 	
@@ -158,6 +158,7 @@ func (persist *Persistence) GetRealmObjIdByRealmName(txn TxnContext, realmName s
 		var bytes []byte
 		var err error
 		bytes, err = persist.RedisClient.HGet(RealmHashName, realmName)
+		if err != nil { debug.PrintStack() }
 		if err != nil { return "", err }
 		realmObjId = string(bytes)
 		return realmObjId, nil
@@ -243,6 +244,7 @@ func (persist *Persistence) addObject(txn TxnContext, obj PersistObj) error {
 		var err = getRedisTransaction(txn).Command("SET",
 		//var err = persist.RedisClient.Set(
 			ObjectIdPrefix + obj.getId(), obj.asJSON(), 0, 0, false, false)
+		if err != nil { debug.PrintStack() }
 		if err != nil { return err }
 	}
 	return nil
@@ -286,6 +288,7 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		// the value.
 		var err error
 		err = getRedisTransaction(txn).Command("WATCH", ObjectIdPrefix + id)
+		if err != nil { debug.PrintStack() }
 		if err != nil { return nil, err }
 		
 		// First see if we have it cached in memory.
@@ -346,6 +349,7 @@ func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 		// Write realm to realm hash.
 		var added bool
 		added, err = persist.RedisClient.HSet(RealmHashName, newRealm.getName(), newRealm.getId())
+		if err != nil { debug.PrintStack() }
 		if err != nil { return err }
 		if ! added { return util.ConstructError("Unable to add realm " + newRealm.getName()) }
 		
@@ -371,6 +375,7 @@ func (persist *Persistence) dbGetAllRealmIds(txn TxnContext) (map[string]string,
 		var realmMap map[string]string
 		var err error
 		realmMap, err = persist.RedisClient.HGetAll(RealmHashName)
+		if err != nil { debug.PrintStack() }
 		if err != nil { return nil, err }
 		return realmMap, nil
 	}
