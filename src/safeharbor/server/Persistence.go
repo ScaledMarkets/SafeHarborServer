@@ -116,6 +116,10 @@ func (persist *Persistence) resetPersistentState() error {
 	
 	// Recreate the file repository, but empty.
 	os.Mkdir(persist.Server.Config.FileRepoRootPath, 0770)
+	
+	// Clear redis.
+	err = persist.RedisClient.FlushAll()
+	if err != nil { return err }
 
 	fmt.Println("Repository initialized")
 	return nil
