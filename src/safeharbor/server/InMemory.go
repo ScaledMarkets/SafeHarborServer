@@ -42,7 +42,26 @@ const (
 )
 
 /*******************************************************************************
- * The Client type, and methods required by the Client interface in DBClient.go.
+ * Implements DataError.
+ */
+type PersistDataError struct {
+	error
+}
+
+var _ DataError = &PersistDataError{}
+
+func NewPersistDataError(msg string) *PersistDataError {
+	return &PersistDataError{
+		error: util.ConstructError(msg),
+	}
+}
+
+func (dataErr *PersistDataError) asFailureDesc() *apitypes.FailureDesc {
+	return apitypes.NewFailureDesc(dataErr.Error())
+}
+
+/*******************************************************************************
+ * Implements DBClient.
  */
 type InMemClient struct {
 	Persistence *Persistence

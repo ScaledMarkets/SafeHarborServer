@@ -17,6 +17,7 @@ import (
 func main() {
 	
 	var debug *bool = flag.Bool("debug", false, "Run in debug mode: this enables the clearAll REST method.")
+	var nocache *bool = flag.Bool("nocache", false, "Always refresh objects from the database.")
 	var stubScanners *bool = flag.Bool("stubs", false, "Use stubs for scanners.")
 	var noauthor *bool = flag.Bool("noauthorization", false, "Disable authorization: access control lists are ignored.")
 	var help *bool = flag.Bool("help", false, "Provide help instructions.")
@@ -43,7 +44,7 @@ func main() {
 	}
 	
 	fmt.Println("Creating SafeHarbor server...")
-	var svr *server.Server = server.NewServer(*debug, *stubScanners, *noauthor,
+	var svr *server.Server = server.NewServer(*debug, *nocache, *stubScanners, *noauthor,
 		*port, *adapter, *secretSalt, *inMemoryOnly)
 	if svr == nil { os.Exit(1) }
 

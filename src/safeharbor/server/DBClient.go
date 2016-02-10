@@ -29,17 +29,25 @@ import (
 	"safeharbor/providers"
 )
 
-// Custom error type that indicates that data inconsistency was detected.
-// Should return an HTTP status of 409 to the client.
+/*******************************************************************************
+ * Custom error type that indicates that data inconsistency was detected.
+ * Should return an HTTP status of 409 to the client.
+ */
 type DataError interface {
 	asFailureDesc() *apitypes.FailureDesc
 }
 
+/*******************************************************************************
+ * 
+ */
 type TxnContext interface {
 	commit() error
 	abort() error
 }
 
+/*******************************************************************************
+ * 
+ */
 type DBClient interface {
 	
 	getPersistence() *Persistence

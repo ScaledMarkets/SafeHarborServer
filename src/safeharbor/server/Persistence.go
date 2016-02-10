@@ -293,7 +293,9 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		if err != nil { return nil, err }
 		
 		// First see if we have it cached in memory.
-		if persist.allObjects[id] != nil { return persist.allObjects[id], nil }
+		if ! persist.Server.NoCache {
+			if persist.allObjects[id] != nil { return persist.allObjects[id], nil }
+		}
 		
 		// Read JSON from the database, using the id as the key; then deserialize
 		// (unmarshall) the JSON into an object. The outermost JSON object will be

@@ -47,7 +47,8 @@ type Server struct {
 	Authorize bool
 	MaxLoginAttemptsToRetain int
 	InMemoryOnly bool
-	Debug bool
+	Debug bool // for test only
+	NoCache bool // for test only
 }
 
 const (
@@ -57,7 +58,7 @@ const (
 /*******************************************************************************
  * Create a Server structure. This includes reading in the auth server cert.
  */
-func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
+func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port int,
 	adapter string, secretSalt string, inMemOnly bool) *Server {
 	
 	// Read configuration. (Defined in a JSON file.)
@@ -115,6 +116,7 @@ func NewServer(debug bool, stubScanners bool, noauthor bool, port int,
 	// Construct a Server with the configuration and cert pool.
 	var server *Server = &Server{
 		Debug: debug,
+		NoCache: nocache,
 		Authorize: (! noauthor),
 		Config:  config,
 		certPool: certPool,
