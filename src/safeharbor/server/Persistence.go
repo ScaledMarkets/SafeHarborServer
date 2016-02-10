@@ -41,9 +41,9 @@ type Persistence struct {
 	InMemoryOnly bool
 	RedisClient *goredis.Redis
 	uniqueId int64
-	allObjects map[string]PersistObj
-	allUsers map[string]User  // maps user id to user
-	realmMap map[string]Realm
+	allObjects map[string]PersistObj  // maps object id to PersistObj
+	allUsers map[string]User  // maps user id to User
+	realmMap map[string]Realm  // maps realm name to Realm
 }
 
 func NewPersistence(server *Server, redisClient *goredis.Redis) (*Persistence, error) {
@@ -62,6 +62,7 @@ func NewPersistence(server *Server, redisClient *goredis.Redis) (*Persistence, e
 }
 
 type GoRedisTransactionWrapper struct {
+	Persistence *Persistence
 	GoRedisTransaction *goredis.Transaction
 }
 
@@ -70,6 +71,11 @@ func (txn *GoRedisTransactionWrapper) commit() error {
 	var t *goredis.Transaction = getRedisTransaction(txn)
 	_, err = t.Exec()
 	t.Close()
+	
+	if txn.Persistence.Server.NoCache {
+		txn.Persistence.resetPersistentState()
+	}
+	
 	return err
 }
 
@@ -91,6 +97,7 @@ func (persist *Persistence) NewTxnContext() (TxnContext, error) {
 	goRedisTxn, err = persist.RedisClient.Transaction()
 	if err != nil { return nil, err }
 	return &GoRedisTransactionWrapper{
+		Persistence: persist,
 		GoRedisTransaction: goRedisTxn,
 	}, nil
 }
@@ -293,9 +300,7 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		if err != nil { return nil, err }
 		
 		// First see if we have it cached in memory.
-		if ! persist.Server.NoCache {
-			if persist.allObjects[id] != nil { return persist.allObjects[id], nil }
-		}
+		if persist.allObjects[id] != nil { return persist.allObjects[id], nil }
 		
 		// Read JSON from the database, using the id as the key; then deserialize
 		// (unmarshall) the JSON into an object. The outermost JSON object will be
