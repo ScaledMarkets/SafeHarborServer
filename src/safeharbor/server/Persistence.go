@@ -108,6 +108,10 @@ func (persist *Persistence) NewTxnContext() (TxnContext, error) {
  */
 func (persist *Persistence) resetPersistentState() error {
 	
+	fmt.Println()
+	fmt.Println("---------------RESET PERSISTENT STATE-----------------")
+	fmt.Println()
+	
 	// Remove the file repository.
 	fmt.Println("Removing all files at " + persist.Server.Config.FileRepoRootPath)
 	var err error
