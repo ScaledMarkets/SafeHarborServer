@@ -450,6 +450,7 @@ func (persist *Persistence) init() error {
 	var err error = persist.loadCoreData()
 	if err != nil { return util.ConstructError("Unable to load database state: " + err.Error()) }
 	
+	/*
 	if persist.Server.Debug {
 		var client *InMemClient
 		client, err = NewInMemClient(persist.Server)
@@ -457,6 +458,7 @@ func (persist *Persistence) init() error {
 		client.createTestObjects()
 		client.commit()
 	}
+	*/
 	
 	return nil
 }
