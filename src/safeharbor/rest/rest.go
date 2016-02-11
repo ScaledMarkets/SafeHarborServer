@@ -106,7 +106,7 @@ func (restContext *RestContext) SendFilePost(sessionId string, reqName string, n
 	values []string, path string) (*http.Response, error) {
 
 	var urlstr string = fmt.Sprintf(
-		"http://%s:%s/%s",
+		"http://%s:%d/%s",
 		restContext.hostname, restContext.port, reqName)
 
 	// Prepare a form that you will submit to that URL.
