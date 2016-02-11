@@ -110,6 +110,7 @@ func (persist *Persistence) resetPersistentState() error {
 	
 	fmt.Println()
 	fmt.Println("---------------RESET PERSISTENT STATE-----------------")
+	debug.PrintStack()
 	fmt.Println()
 	
 	// Remove the file repository.
