@@ -146,9 +146,7 @@ func (persist *Persistence) GetUserObjIdByUserId(txn TxnContext, userId string) 
 		var bytes []byte
 		bytes, err = persist.RedisClient.HGet(UserHashName, userId)
 		if err != nil { return "", err }
-		if (bytes == nil) || (len(bytes) == 0) {
-			return "", errors.New("User with Id " + userId + " not found")
-		}
+		if (bytes == nil) || (len(bytes) == 0) { return "", nil }
 		var userObjId = string(bytes)
 		return userObjId, nil
 	}
