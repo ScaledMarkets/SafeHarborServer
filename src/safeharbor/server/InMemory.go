@@ -1095,6 +1095,16 @@ func (user *InMemUser) validatePassword(dbClient DBClient, pswd string) bool {
 	var empty = []byte{}
 	var authService = dbClient.getServer().authService
 	var prospectiveHash []byte = authService.computeHash(pswd).Sum(empty)
+	
+	// debug
+	fmt.Println("User's password hash: \n\t[")
+	for _, h := range user.PasswordHash {
+		fmt.Print(fmt.Sprintf("%d, ", h))
+	}
+	fmt.Println("]")
+	// end debug
+	
+	
 	return authService.compareHashValues(prospectiveHash, user.PasswordHash)
 }
 
