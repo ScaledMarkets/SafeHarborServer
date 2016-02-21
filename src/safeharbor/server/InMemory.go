@@ -67,6 +67,11 @@ type InMemClient struct {
 	Persistence *Persistence
 	Server *Server
 	txn TxnContext  // database transaction context
+	
+	// Private (transaction-scope) object cache.
+	objectsCache map[string]PersistObj  // maps object id to PersistObj
+	usersCache map[string]User  // maps user id to User obj
+	realmMapCache map[string]Realm  // maps realm name to Realm obj
 }
 
 func NewInMemClient(server *Server) (*InMemClient, error) {
@@ -83,6 +88,8 @@ func NewInMemClient(server *Server) (*InMemClient, error) {
 		txn: txn,
 	}
 	
+	client.resetTransactionCache()
+	
 	return client, nil
 }
 
@@ -92,24 +99,64 @@ func (client *InMemClient) getServer() *Server { return client.Server }
 
 func (client *InMemClient) getTransactionContext() TxnContext { return client.txn }
 
+func (client *InMemClient) resetTransactionCache() {
+	client.objectsCache = make(map[string]PersistObj)
+	client.usersCache = make(map[string]User)
+	client.realmMapCache = make(map[string]Realm)
+}
+
 // Commit the database transaction - after calling this, methods on this instance
 // of InMemClient can no longer be called.
 func (client *InMemClient) commit() error {
+	client.resetTransactionCache()
 	return client.txn.commit()
 }
 
 // Abort the database transaction - after calling this, methods on this instance
 // of InMemClient can no longer be called.
 func (client *InMemClient) abort() error {
+	client.resetTransactionCache()
 	return client.txn.abort()
 }
 
+func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
+	var cachedObj PersistObj = client.objectsCache[id]
+	if cachedObj != nil { return cachedObj, nil }
+
+	var obj PersistObj
+	var err error
+	obj, err = client.Persistence.getObject(client.txn, client, id)
+	if err != nil { return nil, err }
+	if obj == nil { return nil, util.ConstructError("Object with Id " + id + " not found") }
+	client.objectsCache[id] = obj
+	return obj, nil
+}
+
 func (client *InMemClient) addObject(obj PersistObj) error {
+	
+	// Check cache for object.
+	var cachedObj PersistObj = client.objectsCache[obj.getId()]
+	if cachedObj != nil { return util.ConstructError("Object already exists") }
+	client.objectsCache[obj.getId()] = obj  // Add object to cache
+	
+	// Update database.
 	return client.Persistence.addObject(client.txn, obj)
 }
 
+func (client *InMemClient) writeBack(obj PersistObj) error {
+	client.objectsCache[obj.getId()] = obj  // update cache
+	return obj.writeBack(client)  // update database
+}
+
 func (client *InMemClient) deleteObject(obj PersistObj) error {
+	var cachedObj PersistObj = client.objectsCache[obj.getId()]
+	if cachedObj != nil { client.objectsCache[obj.getId()] = nil }  // remove from cache
+	
 	return client.Persistence.deleteObject(client.txn, obj)
+}
+
+func (client *InMemClient) asJSON(obj PersistObj) string {
+	return obj.asJSON()
 }
 
 func (client *InMemClient) dbGetAllRealmIds() ([]string, error) {
@@ -119,26 +166,55 @@ func (client *InMemClient) dbGetAllRealmIds() ([]string, error) {
 	if err != nil { return nil, err }
 	var realmIds = make([]string, 0)
 	for _, realmId := range realmIdMap {
-		realmIds = append(realmIds, realmId)
+		if client.realmMapCache[realmId] == nil { // don't add cached realms yet
+			realmIds = append(realmIds, realmId)
+		}
 	}
+	
+	// Add any cached realms to the list.
+	for _, realm := range client.realmMapCache {
+		realmIds = append(realmIds, realm.getId())
+	}
+	
 	return realmIds, nil
 }
 
 func (client *InMemClient) addRealm(newRealm Realm) error {
-	return client.Persistence.addRealm(client.txn, newRealm)
+	var cachedRealm Realm = client.realmMapCache[newRealm.getId()]
+	if cachedRealm != nil { return util.ConstructError("Realm already exists") }
+	client.realmMapCache[newRealm.getId()] = newRealm  // Add the realm to the cache.
+	client.objectsCache[newRealm.getId()] = newRealm  // Add object to cache
+	return client.Persistence.addRealm(client.txn, newRealm)  // Add to database.
 }
 
 func (client *InMemClient) addUser(user User) error {
+	var cachedUser User = client.usersCache[user.getId()]
+	if cachedUser != nil { return util.ConstructError("User already exists") }
+	client.usersCache[user.getId()] = user  // Add the user to the cache.
+	client.objectsCache[user.getId()] = user  // Add object to cache
+	
 	return client.Persistence.addUser(client.txn, user)
 }
 
 func (client *InMemClient) dbGetUserByUserId(userId string) (User, error) {
+	
+	var cachedUser User = client.usersCache[userId]
+	if cachedUser != nil { return cachedUser, nil }
+	
 	var userObjId string
 	var err error
 	userObjId, err = client.Persistence.GetUserObjIdByUserId(client.txn, userId)
 	if err != nil { return nil, err }
 	if userObjId == "" { return nil, nil }
-	return client.getUser(userObjId)
+	var user User
+	user, err = client.getUser(userObjId)
+	if err != nil { return nil, err }
+	
+	// Add user to cache.
+	client.usersCache[userId] = user
+	client.objectsCache[userId] = user
+	
+	return user, nil
 }
 
 /*******************************************************************************
@@ -162,10 +238,6 @@ func (client *InMemClient) NewInMemPersistObj() (*InMemPersistObj, error) {
 		Id: id,
 	}
 	return obj, nil
-}
-
-func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
-	return client.Persistence.getObject(client.txn, client, id)
 }
 
 func (persObj *InMemPersistObj) getId() string {
@@ -193,14 +265,6 @@ func (client *InMemClient) ReconstitutePersistObj(id string) (*InMemPersistObj, 
 		Persistence: client.Persistence,
 		Id: id,
 	}, nil
-}
-
-func (client *InMemClient) writeBack(obj PersistObj) error {
-	return obj.writeBack(client)
-}
-
-func (client *InMemClient) asJSON(obj PersistObj) string {
-	return obj.asJSON()
 }
 
 /*******************************************************************************

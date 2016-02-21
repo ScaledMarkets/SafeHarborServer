@@ -45,7 +45,6 @@ type Persistence struct {
 	
 	// Only use this for in-memory only testing.
 	allObjects map[string]PersistObj  // maps object id to PersistObj
-	
 	allUserIds map[string]string  // maps user id to User obj Id
 	realmMap map[string]string  // maps realm name to Realm obj Id
 }
