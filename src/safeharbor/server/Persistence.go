@@ -329,6 +329,14 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		if bytes == nil { return nil, nil }
 		if len(bytes) == 0 { return nil, nil }
 		
+		// debug
+		fmt.Println("getObject: object value=\n\t")
+		var o = string(bytes)
+		fmt.Println(o)
+		// end debug
+		
+		
+		
 		var obj interface{}
 		_, obj, err = ReconstituteObject(factory, string(bytes))
 		if err != nil { return nil, err }
