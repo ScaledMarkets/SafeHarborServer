@@ -17,3 +17,12 @@ func ConstructError(msg string) error {
 	debug.PrintStack()
 	return errors.New(msg)
 }
+
+/*******************************************************************************
+ * 
+ */
+func PrintError(err error) error {
+	fmt.Println(err.Error())
+	debug.PrintStack()
+	return err
+}

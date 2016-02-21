@@ -53,7 +53,6 @@ import (
 	//"strings"
 	//"time"
 	"strconv"
-	"runtime/debug"
 
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
@@ -175,12 +174,12 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 		fmt.Println("Removing all files at " + path)
 		os.RemoveAll(path)
 	}()
-	if err != nil { return nil, printError(err) }
+	if err != nil { return nil, util.PrintError(err) }
 
 	// Retrieve history
 	fmt.Println("Getting image's history")
 	layerIDs, err := history(imageName)
-	if err != nil { return nil, printError(err) }
+	if err != nil { return nil, util.PrintError(err) }
 	if len(layerIDs) == 0 { return nil, util.ConstructError("Could not get image's history") }
 
 	// Analyze layers
@@ -194,7 +193,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 		} else {
 			err = analyzeLayer(clairContext.getEndpoint(), path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], "")
 		}
-		if err != nil { return nil, printError(err) }
+		if err != nil { return nil, util.PrintError(err) }
 	}
 
 	// Get vulnerabilities
@@ -202,7 +201,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	var vulnerabilities []Vulnerability
 	vulnerabilities, err = getVulnerabilities(
 		clairContext.getEndpoint(), layerIDs[len(layerIDs)-1], clairContext.MinimumVulnerabilityPriority)
-	if err != nil { return nil, printError(err) }
+	if err != nil { return nil, util.PrintError(err) }
 	if len(vulnerabilities) == 0 {
 		fmt.Println("No vulnerabilities found for image")
 	}
@@ -475,13 +474,4 @@ func getVulnerabilities(endpoint, layerID, minimumPriority string) ([]Vulnerabil
 	}
 
 	return apiResponse.Vulnerabilities, nil
-}
-
-/*******************************************************************************
- * 
- */
-func printError(err error) error {
-	fmt.Println(err.Error())
-	debug.PrintStack()
-	return err
 }
