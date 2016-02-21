@@ -1114,6 +1114,8 @@ func (user *InMemUser) validatePassword(dbClient DBClient, pswd string) bool {
 		fmt.Print(fmt.Sprintf("%d, ", h))
 	}
 	fmt.Println("]")
+	fmt.Println(fmt.Sprintf("UserId: %s", user.getUserId()))
+	fmt.Println(fmt.Sprintf("UserName: %s", user.getName()))
 	// end debug
 	
 	
