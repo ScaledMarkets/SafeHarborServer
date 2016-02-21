@@ -1041,15 +1041,27 @@ func (client *InMemClient) NewInMemUser(userId string, name string,
 	var err error
 	party, err = client.NewInMemParty(name, realmId)
 	if err != nil { return nil, err }
+	var passwordHash []byte = client.Server.authService.CreatePasswordHash(pswd)
 	var newUser = &InMemUser{
 		InMemParty: *party,
 		UserId: userId,
 		EmailAddress: email,
-		PasswordHash: client.Server.authService.CreatePasswordHash(pswd),
+		PasswordHash: passwordHash,
 		GroupIds: make([]string, 0),
 		MostRecentLoginAttempts: make([]string, 0),
 		EventIds: make([]string, 0),
 	}
+	
+	// debug
+	fmt.Println("Creating password hash: \n\t")
+	for _, b := range passwordHash {
+		fmt.Print(fmt.Sprintf("%d, ", b))
+	}
+	fmt.Println("]")
+	// end debug
+	
+	
+	
 	return newUser, client.addUser(newUser)
 }
 
