@@ -346,6 +346,13 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		persistObj, isType = obj.(PersistObj)
 		if ! isType { return nil, util.ConstructError("Object is not a PersistObj") }
 		
+		// debug
+		fmt.Print("Reconstituted object as JSON:\n\t")
+		fmt.Println(persistObj.asJSON())
+		// end debug
+		
+		
+		
 		return persistObj, nil
 	}
 }
@@ -529,6 +536,13 @@ func (persist *Persistence) clearCache() {
 }
 
 /*******************************************************************************
+ * 
+ */
+func getRedisTransaction(txn TxnContext) *goredis.Transaction {
+	return txn.(*GoRedisTransactionWrapper).GoRedisTransaction
+}
+
+/*******************************************************************************
  * Construct an object as defined by the specified JSON string. Returns the
  * name of the object type and the object, or an error. The factory has
  * a ReconstituteXYZ method for constructing the object.
@@ -599,11 +613,4 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 	var retValues []reflect.Value = method.Call(actArgAr)
 	var retValue0 interface{} = retValues[0].Interface()
 	return typeName, retValue0, nil
-}
-
-/*******************************************************************************
- * 
- */
-func getRedisTransaction(txn TxnContext) *goredis.Transaction {
-	return txn.(*GoRedisTransactionWrapper).GoRedisTransaction
 }
