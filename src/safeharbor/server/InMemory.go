@@ -1319,6 +1319,14 @@ func (client *InMemClient) ReconstituteUser(id string, isActive bool,
 		userId, emailAddr string, pswdHash []byte, groupIds []string,
 		loginAttmpts []string, eventIds []string) (User, error) {
 	
+	// debug
+	fmt.Println(fmt.Sprintf("ReconstituteUser: name=%s, pswdHash=\n\t[", name))
+	for _, b := range pswdHash {
+		fmt.Print(fmt.Sprintf("%d, ", b))
+	}
+	fmt.Println("]")
+	// end debug
+	
 	var party *InMemParty
 	var err error
 	party, err = client.ReconstituteParty(id, isActive, name, creationTime, realmId, aclEntryIds)
