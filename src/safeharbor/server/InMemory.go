@@ -132,15 +132,13 @@ func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
 	return obj, nil
 }
 
-func (client *InMemClient) addObject(obj PersistObj) error {
+func (client *InMemClient) updateObject(obj PersistObj) error {
 	
 	// Check cache for object.
-	var cachedObj PersistObj = client.objectsCache[obj.getId()]
-	if cachedObj != nil { return util.ConstructError("Object already exists") }
 	client.objectsCache[obj.getId()] = obj  // Add object to cache
 	
 	// Update database.
-	return client.Persistence.addObject(client.txn, obj)
+	return client.Persistence.updateObject(client.txn, obj)
 }
 
 func (client *InMemClient) writeBack(obj PersistObj) error {
@@ -875,7 +873,7 @@ func (client *InMemClient) NewInMemGroup(realmId string, name string,
 		Description: desc,
 		UserObjIds: make([]string, 0),
 	}
-	return newGroup, client.addObject(newGroup)
+	return newGroup, client.updateObject(newGroup)
 }
 
 func (client *InMemClient) dbCreateGroup(realmId string, name string,
@@ -991,7 +989,7 @@ func (group *InMemGroup) asGroupDesc() *apitypes.GroupDesc {
 }
 
 func (group *InMemGroup) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(group)
+	return dbClient.updateObject(group)
 }
 
 func (group *InMemGroup) asJSON() string {
@@ -1260,7 +1258,7 @@ func (user *InMemUser) asUserDesc(dbClient DBClient) *apitypes.UserDesc {
 }
 
 func (user *InMemUser) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(user)
+	return dbClient.updateObject(user)
 }
 
 func (user *InMemUser) asJSON() string {
@@ -1336,7 +1334,7 @@ func (client *InMemClient) NewInMemACLEntry(resourceId string, partyId string,
 		PartyId: partyId,
 		PermissionMask: permissionMask,
 	}
-	return newACLEntry, client.addObject(newACLEntry)
+	return newACLEntry, client.updateObject(newACLEntry)
 }
 
 func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
@@ -1427,7 +1425,7 @@ func (entry *InMemACLEntry) asPermissionDesc() *apitypes.PermissionDesc {
 }
 
 func (entry *InMemACLEntry) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(entry)
+	return dbClient.updateObject(entry)
 }
 
 func (entry *InMemACLEntry) asJSON() string {
@@ -1868,8 +1866,8 @@ func (realm *InMemRealm) deleteGroup(dbClient DBClient, group Group) error {
 func (realm *InMemRealm) isRealm() bool { return true }
 
 func (realm *InMemRealm) writeBack(dbClient DBClient) error {
-	// Important: it is assumed that the name has changed.
-	return dbClient.addObject(realm)
+	// Important: it is assumed that the name has not changed.
+	return dbClient.updateObject(realm)
 }
 
 func (realm *InMemRealm) asJSON() string {
@@ -1944,7 +1942,7 @@ func (client *InMemClient) NewInMemRepo(realmId, name, desc string) (*InMemRepo,
 		FlagIds: make([]string, 0),
 		FileDirectory: "",
 	}
-	return newRepo, client.addObject(newRepo)
+	return newRepo, client.updateObject(newRepo)
 }
 
 func (client *InMemClient) dbCreateRepo(realmId, name, desc string) (Repo, error) {
@@ -2152,7 +2150,7 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 }
 
 func (repo *InMemRepo) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(repo)
+	return dbClient.updateObject(repo)
 }
 
 func (repo *InMemRepo) asJSON() string {
@@ -2224,7 +2222,7 @@ func (client *InMemClient) NewInMemDockerfile(repoId, name, desc,
 		FilePath: filepath,
 		DockerfileExecEventIds: make([]string, 0),
 	}
-	return newDockerfile, client.addObject(newDockerfile)
+	return newDockerfile, client.updateObject(newDockerfile)
 }
 
 func (client *InMemClient) dbCreateDockerfile(repoId, name,
@@ -2315,7 +2313,7 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() *apitypes.DockerfileDesc {
 func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
 
 func (dockerfile *InMemDockerfile) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(dockerfile)
+	return dbClient.updateObject(dockerfile)
 }
 
 func (dockerfile *InMemDockerfile) asJSON() string {
@@ -2430,7 +2428,7 @@ func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string,
 		ScanEventIds: []string{},
 		OutputFromBuild: outputFromBuild,
 	}
-	return newDockerImage, client.addObject(newDockerImage)
+	return newDockerImage, client.updateObject(newDockerImage)
 }
 
 func (client *InMemClient) dbCreateDockerImage(repoId, dockerImageTag, desc string,
@@ -2546,7 +2544,7 @@ func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
 func (image *InMemDockerImage) isDockerImage() bool { return true }
 
 func (image *InMemDockerImage) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(image)
+	return dbClient.updateObject(image)
 }
 
 func (image *InMemDockerImage) asJSON() string {
@@ -2607,7 +2605,7 @@ func (client *InMemClient) NewInMemParameterValue(name, value, configId string) 
 		StringValue: value,
 		ConfigId: configId,
 	}
-	return paramValue, client.addObject(paramValue)
+	return paramValue, client.updateObject(paramValue)
 }
 
 func (client *InMemClient) dbCreateParameterValue(name, value, configId string) (ParameterValue, error) {
@@ -2664,7 +2662,7 @@ func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.Paramete
 }
 
 func (paramValue *InMemParameterValue) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(paramValue)
+	return dbClient.updateObject(paramValue)
 }
 
 func (paramValue *InMemParameterValue) asJSON() string {
@@ -2719,7 +2717,7 @@ func (client *InMemClient) NewInMemScanConfig(name, desc, repoId,
 		ParameterValueIds: paramValueIds,
 		FlagId: flagId,
 	}
-	return scanConfig, client.addObject(scanConfig)
+	return scanConfig, client.updateObject(scanConfig)
 }
 
 func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
@@ -2945,7 +2943,7 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc(dbClient DBClient) *apitypes
 }
 
 func (scanConfig *InMemScanConfig) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(scanConfig)
+	return dbClient.updateObject(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) asJSON() string {
@@ -3009,7 +3007,7 @@ func (client *InMemClient) NewInMemFlag(name, desc, repoId,
 		SuccessImagePath: successImagePath,
 		UsedByScanConfigIds: make([]string, 0),
 	}
-	return flag, client.addObject(flag)
+	return flag, client.updateObject(flag)
 }
 
 func (client *InMemClient) dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error) {
@@ -3087,7 +3085,7 @@ func (flag *InMemFlag) asFlagDesc() *apitypes.FlagDesc {
 }
 
 func (flag *InMemFlag) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(flag)
+	return dbClient.updateObject(flag)
 }
 
 func (flag *InMemFlag) asJSON() string {
@@ -3226,7 +3224,7 @@ func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
 		Score: score,
 		Result: *result,
 	}
-	return scanEvent, client.addObject(scanEvent)
+	return scanEvent, client.updateObject(scanEvent)
 }
 
 func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
@@ -3341,7 +3339,7 @@ func (event *InMemScanEvent) asEventDesc(dbClient DBClient) apitypes.EventDesc {
 }
 
 func (event *InMemScanEvent) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(event)
+	return dbClient.updateObject(event)
 }
 
 func (event *InMemScanEvent) asJSON() string {
@@ -3443,7 +3441,7 @@ func (client *InMemClient) NewInMemDockerfileExecEvent(dockerfileId, imageId,
 		DockerfileId: dockerfileId,
 		DockerfileExternalObjId: "",  // for when we add git
 	}
-	return event, client.addObject(event)
+	return event, client.updateObject(event)
 }
 
 func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId, imageId,
@@ -3488,7 +3486,7 @@ func (event *InMemDockerfileExecEvent) asEventDesc(dbClient DBClient) apitypes.E
 }
 
 func (event *InMemDockerfileExecEvent) writeBack(dbClient DBClient) error {
-	return dbClient.addObject(event)
+	return dbClient.updateObject(event)
 }
 
 func (event *InMemDockerfileExecEvent) asJSON() string {

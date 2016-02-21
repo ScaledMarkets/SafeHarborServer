@@ -57,9 +57,8 @@ type DBClient interface {
 	commit() error
 	abort() error
 	
-	addObject(obj PersistObj) error
-		/** Write a new object to the database. Error results if the object is already
-			in the database. */
+	updateObject(obj PersistObj) error
+		/** Update the object in the database. If object does not exist, create it. */
 	
 	deleteObject(obj PersistObj) error
 		/** Remove an object from the database. Error results if the object is not
@@ -69,7 +68,8 @@ type DBClient interface {
 		/** Return the database object identified by the id, or error if not found. */
 	
 	writeBack(PersistObj) error
-		/** Update the state of the object in the database. Error if object not found. */
+		/** Update the state of the object in the database. If the object exists,
+			then update it. */
 	
 	asJSON(PersistObj) string
 		/** Externalize the object as a JSON-formatted string. */

@@ -243,9 +243,9 @@ func (persist *Persistence) createUniqueDbObjectId() (string, error) {
 
 /*******************************************************************************
  * Write an object to the database - making the object persistent.
- * If the object is already in the database, return an error.
+ * If the object is already in the database, create it.
  */
-func (persist *Persistence) addObject(txn TxnContext, obj PersistObj) error {
+func (persist *Persistence) updateObject(txn TxnContext, obj PersistObj) error {
 
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = obj
@@ -270,32 +270,6 @@ func (persist *Persistence) addObject(txn TxnContext, obj PersistObj) error {
 			ObjectIdPrefix + obj.getId(), obj.asJSON())
 		if err != nil { debug.PrintStack() }
 		if err != nil { return err }
-	}
-	return nil
-}
-
-/*******************************************************************************
- * Update the value of an object in the database. If the object is not in the
- * database, return an error.
- */
-func (persist *Persistence) updateObject(txn TxnContext, obj PersistObj) error {
-	
-	if persist.InMemoryOnly {
-		persist.allObjects[obj.getId()] = obj
-	} else {
-		var exists bool
-		var err error
-		
-		// Check that object exists in the database.
-		exists, err = persist.RedisClient.Exists(ObjectIdPrefix + obj.getId())
-		if err != nil { return err }
-		if ! exists {
-			return errors.New("Object with Id " + obj.getId() + " not found")
-		}
-		
-		err = getRedisTransaction(txn).Command("SET", ObjectIdPrefix + obj.getId())
-		if err != nil { return err }
-		persist.allObjects[obj.getId()] = nil
 	}
 	return nil
 }
@@ -375,7 +349,7 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 	if persist.InMemoryOnly {
 		persist.realmMap[newRealm.getName()] = newRealm.getId()
-		return persist.addObject(txn, newRealm)
+		return persist.updateObject(txn, newRealm)
 	} else {
 		// Check if the realm already exists in the hash.
 		var realmObjId string
@@ -395,7 +369,7 @@ func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 		if ! added { return util.ConstructError("Unable to add realm " + newRealm.getName()) }
 		
 		persist.realmMap[newRealm.getName()] = newRealm.getId()
-		err = persist.addObject(txn, newRealm)
+		err = persist.updateObject(txn, newRealm)
 		if err != nil { return err }
 		
 		return nil
@@ -425,9 +399,9 @@ func (persist *Persistence) dbGetAllRealmIds(txn TxnContext) (map[string]string,
 func (persist *Persistence) addUser(txn TxnContext, user User) error {
 	if persist.InMemoryOnly {
 		persist.allUserIds[user.getUserId()] = user.getId()
-		return persist.addObject(txn, user)
+		return persist.updateObject(txn, user)
 	} else {
-		var err = persist.addObject(txn, user)
+		var err = persist.updateObject(txn, user)
 		if err != nil { return err }
 		
 		// Check if the user already exists in the set.
@@ -446,7 +420,7 @@ func (persist *Persistence) addUser(txn TxnContext, user User) error {
 		if ! added { return util.ConstructError("Unable to add user " + user.getName()) }
 		
 		// Write user object to database.
-		err = persist.addObject(txn, user)
+		err = persist.updateObject(txn, user)
 		if err != nil { return err }
 		
 		return nil
