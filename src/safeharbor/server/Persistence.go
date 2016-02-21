@@ -182,9 +182,7 @@ func (persist *Persistence) GetRealmObjIdByRealmName(txn TxnContext, realmName s
 		bytes, err = persist.RedisClient.HGet(RealmHashName, realmName)
 		if err != nil { debug.PrintStack() }
 		if err != nil { return "", err }
-		if (bytes == nil) || (len(bytes) == 0) {
-			return "", errors.New("Realm with name " + realmName + " not found")
-		}
+		if (bytes == nil) || (len(bytes) == 0) { return "", nil }
 		realmObjId = string(bytes)
 		return realmObjId, nil
 	}
