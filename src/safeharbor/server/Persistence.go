@@ -594,19 +594,17 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 			if actArg.Len() > 0 {
 				actArgAr[i] = reflect.MakeSlice(methodType.In(i), actArg.Len(), actArg.Len())
 			}
-			actArg = actArgAr[i]
-			//reflect.Copy(
-			for j := 0; j < actArg.Len(); j++ {
-				actArg.Index(j).Set(actArg.Index(j).Convert(methodType.In(i).Elem()))
+			for j := 0; j < actArgAr[i].Len(); j++ {
+				actArgAr[i].Index(j).Set(actArgAr[i].Index(j).Convert(methodType.In(i).Elem()))
 			}
 		}
 		
 		// Check that arg types match.
-		if ! actArg.Type().AssignableTo(methodType.In(i)) {
+		if ! actArgAr[i].Type().AssignableTo(methodType.In(i)) {
 			return typeName, nil, util.ConstructError(fmt.Sprintf(
 				"For argument #%d, type of actual arg, %s, " +
 				"is not assignable to the required type, %s. JSON=%s",
-				(i+1), actArg.Type().String(), methodType.In(i).String(), json))
+				(i+1), actArgAr[i].Type().String(), methodType.In(i).String(), json))
 		}
 	}
 	
