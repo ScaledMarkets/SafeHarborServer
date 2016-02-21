@@ -41,9 +41,13 @@ type Persistence struct {
 	InMemoryOnly bool
 	RedisClient *goredis.Redis
 	uniqueId int64
+	
+	
+	// Only use this for in-memory only testing.
 	allObjects map[string]PersistObj  // maps object id to PersistObj
-	allUsers map[string]User  // maps user id to User
-	realmMap map[string]Realm  // maps realm name to Realm
+	
+	allUserIds map[string]string  // maps user id to User obj Id
+	realmMap map[string]string  // maps realm name to Realm obj Id
 }
 
 func NewPersistence(server *Server, redisClient *goredis.Redis) (*Persistence, error) {
@@ -73,7 +77,7 @@ func (txn *GoRedisTransactionWrapper) commit() error {
 	t.Close()
 	
 	if txn.Persistence.Server.NoCache {
-		txn.Persistence.resetPersistentState()
+		txn.Persistence.clearCache()
 	}
 	
 	return err
@@ -135,17 +139,18 @@ func (persist *Persistence) resetPersistentState() error {
  */
 func (persist *Persistence) GetUserObjIdByUserId(txn TxnContext, userId string) (string, error) {
 
-	var user = persist.allUsers[userId]
-	if user == nil {
-		var userObjId string
+	if persist.InMemoryOnly {
+		return persist.allUserIds[userId], nil
+	} else {
 		var err error
 		var bytes []byte
 		bytes, err = persist.RedisClient.HGet(UserHashName, userId)
 		if err != nil { return "", err }
-		userObjId = string(bytes)
+		if (bytes == nil) || (len(bytes) == 0) {
+			return "", errors.New("User with Id " + userId + " not found")
+		}
+		var userObjId = string(bytes)
 		return userObjId, nil
-	} else {
-		return user.getId(), nil
 	}
 }
 
@@ -168,18 +173,20 @@ func (persist *Persistence) setRealmName(txn TxnContext, name string) error {
  */
 func (persist *Persistence) GetRealmObjIdByRealmName(txn TxnContext, realmName string) (string, error) {
 
-	var realm = persist.realmMap[realmName]
-	if realm == nil {
+	if persist.InMemoryOnly {
+		return persist.realmMap[realmName], nil
+	} else {
 		var realmObjId string
 		var bytes []byte
 		var err error
 		bytes, err = persist.RedisClient.HGet(RealmHashName, realmName)
 		if err != nil { debug.PrintStack() }
 		if err != nil { return "", err }
+		if (bytes == nil) || (len(bytes) == 0) {
+			return "", errors.New("Realm with name " + realmName + " not found")
+		}
 		realmObjId = string(bytes)
 		return realmObjId, nil
-	} else {
-		return realm.getId(), nil
 	}
 }
 
@@ -241,14 +248,21 @@ func (persist *Persistence) createUniqueDbObjectId() (string, error) {
 
 /*******************************************************************************
  * Write an object to the database - making the object persistent.
+ * If the object is already in the database, return an error.
  */
 func (persist *Persistence) addObject(txn TxnContext, obj PersistObj) error {
 
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = obj
 	} else {
-		// Update cache.
-		persist.allObjects[obj.getId()] = obj
+		// Verify that object does not exist in the database.
+		var exists bool
+		var err error
+		exists, err = persist.RedisClient.Exists(ObjectIdPrefix + obj.getId())
+		if err != nil { return err }
+		if exists {
+			return errors.New("Object with Id " + obj.getId() + " already exists")
+		}
 		
 		// Serialize (marshall) the object to JSON, and store it in redis using the
 		// object's Id as the key. When the object is written out, it will be
@@ -257,12 +271,36 @@ func (persist *Persistence) addObject(txn TxnContext, obj PersistObj) error {
 		// so that getPersistentObject will later be able to map the JSON to the
 		// appropriate go type, using reflection.
 		
-		var err = getRedisTransaction(txn).Command("SET",
+		err = getRedisTransaction(txn).Command("SET",
 			ObjectIdPrefix + obj.getId(), obj.asJSON())
-		//var err = persist.RedisClient.Set(
-		//	ObjectIdPrefix + obj.getId(), obj.asJSON(), 0, 0, false, false)
 		if err != nil { debug.PrintStack() }
 		if err != nil { return err }
+	}
+	return nil
+}
+
+/*******************************************************************************
+ * Update the value of an object in the database. If the object is not in the
+ * database, return an error.
+ */
+func (persist *Persistence) updateObject(txn TxnContext, obj PersistObj) error {
+	
+	if persist.InMemoryOnly {
+		persist.allObjects[obj.getId()] = obj
+	} else {
+		var exists bool
+		var err error
+		
+		// Check that object exists in the database.
+		exists, err = persist.RedisClient.Exists(ObjectIdPrefix + obj.getId())
+		if err != nil { return err }
+		if ! exists {
+			return errors.New("Object with Id " + obj.getId() + " not found")
+		}
+		
+		err = getRedisTransaction(txn).Command("SET", ObjectIdPrefix + obj.getId())
+		if err != nil { return err }
+		persist.allObjects[obj.getId()] = nil
 	}
 	return nil
 }
@@ -275,16 +313,13 @@ func (persist *Persistence) deleteObject(txn TxnContext, obj PersistObj) error {
 
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = nil
-		return nil
 	} else {
 		var err error
 		err = getRedisTransaction(txn).Command("DEL", ObjectIdPrefix + obj.getId())
-		//numDeleted, err = persist.RedisClient.Del(ObjectIdPrefix + obj.getId())
 		if err != nil { return err }
-		//if numDeleted == 0 { return util.ConstructError("Unable to delete object with Id " + obj.getId()) }
 		persist.allObjects[obj.getId()] = nil
-		return nil
 	}
+	return nil
 }
 
 /*******************************************************************************
@@ -307,9 +342,6 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		err = getRedisTransaction(txn).Watch(ObjectIdPrefix + id)
 		if err != nil { debug.PrintStack() }
 		if err != nil { return nil, err }
-		
-		// First see if we have it cached in memory.
-		if persist.allObjects[id] != nil { return persist.allObjects[id], nil }
 		
 		// Read JSON from the database, using the id as the key; then deserialize
 		// (unmarshall) the JSON into an object. The outermost JSON object will be
@@ -337,9 +369,6 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		persistObj, isType = obj.(PersistObj)
 		if ! isType { return nil, util.ConstructError("Object is not a PersistObj") }
 		
-		// Add to in-memory cache.
-		persist.allObjects[id] = persistObj;
-		
 		return persistObj, nil
 	}
 }
@@ -350,7 +379,7 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
  */
 func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 	if persist.InMemoryOnly {
-		persist.realmMap[newRealm.getName()] = newRealm
+		persist.realmMap[newRealm.getName()] = newRealm.getId()
 		return persist.addObject(txn, newRealm)
 	} else {
 		// Check if the realm already exists in the hash.
@@ -370,7 +399,7 @@ func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 		if err != nil { return err }
 		if ! added { return util.ConstructError("Unable to add realm " + newRealm.getName()) }
 		
-		persist.realmMap[newRealm.getName()] = newRealm
+		persist.realmMap[newRealm.getName()] = newRealm.getId()
 		err = persist.addObject(txn, newRealm)
 		if err != nil { return err }
 		
@@ -383,11 +412,7 @@ func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
  */
 func (persist *Persistence) dbGetAllRealmIds(txn TxnContext) (map[string]string, error) {
 	if persist.InMemoryOnly {
-		var realmIdMap = make(map[string]string)
-		for name, realm := range persist.realmMap {
-			realmIdMap[name] = realm.getId()
-		}
-		return realmIdMap, nil
+		return persist.realmMap, nil
 	} else {
 		var realmMap map[string]string
 		var err error
@@ -404,7 +429,7 @@ func (persist *Persistence) dbGetAllRealmIds(txn TxnContext) (map[string]string,
  */
 func (persist *Persistence) addUser(txn TxnContext, user User) error {
 	if persist.InMemoryOnly {
-		persist.allUsers[user.getUserId()] = user
+		persist.allUserIds[user.getUserId()] = user.getId()
 		return persist.addObject(txn, user)
 	} else {
 		var err = persist.addObject(txn, user)
@@ -513,9 +538,17 @@ func (persist *Persistence) readUniqueId() (int64, error) {
  */
 func (persist *Persistence) resetInMemoryState() {
 	persist.uniqueId = 100000005
-	persist.realmMap = make(map[string]Realm)
+	persist.clearCache()
+}
+
+/*******************************************************************************
+ * Clear all objects in the in-memory cache, so that future requests will have
+ * to reload the data. Do not reset the uniqueId value.
+ */
+func (persist *Persistence) clearCache() {
+	persist.realmMap = make(map[string]string)
 	persist.allObjects = make(map[string]PersistObj)
-	persist.allUsers = make(map[string]User)
+	persist.allUserIds = make(map[string]string)
 }
 
 /*******************************************************************************

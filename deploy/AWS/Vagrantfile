@@ -87,4 +87,10 @@ Vagrant.configure(2) do |config|
 		#	cmd: "#{@SafeHarborExecPath}"
 #	end
 
+	# Install clair.
+	config.vm.provision "shell", inline: <<-SHELL
+		sudo docker pull quay.io/coreos/clair
+		# To run clair:
+		#sudo docker run -i -t -m 500M -v /tmp:/tmp -p 6060:6060 quay.io/coreos/clair:latest --db-type=bolt --db-path=/db/database
+	SHELL
 end

@@ -20,10 +20,18 @@
 	a very minimal “remote” support, allowing Clair to run somewhere else:
 	the local images are served by a web server.
 	
+	Installing clair:
 	docker pull quay.io/coreos/clair
-	sudo docker run -i -t -m 500M -v /tmp:/tmp -p 6060:6060 quay.io/coreos/clair:latest --db-type=bolt --db-path=/db/database
+	
+	Running clair:
+	sudo docker run -p 6060:6060 -p 6061:6061 -v /home/centos:/config:ro quay.io/coreos/clair:latest --config=/config/clairconfig.yaml
+	old: sudo docker run -i -t -m 500M -v /tmp:/tmp -p 6060:6060 quay.io/coreos/clair:latest --db-type=bolt --db-path=/db/database
+	
+	For the analyze-local-images tool:
 	sudo GOPATH=/home/vagrant go get -u github.com/coreos/clair/contrib/analyze-local-images
 	/home/vagrant/bin/analyze-local-images <Docker Image ID>
+	
+	"ImageFormat": "Docker"
  */
 
 package providers
@@ -45,6 +53,7 @@ import (
 	//"strings"
 	//"time"
 	"strconv"
+	"runtime/debug"
 
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
@@ -166,12 +175,12 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 		fmt.Println("Removing all files at " + path)
 		os.RemoveAll(path)
 	}()
-	if err != nil { return nil, err }
+	if err != nil { return nil, printError(err) }
 
 	// Retrieve history
 	fmt.Println("Getting image's history")
 	layerIDs, err := history(imageName)
-	if err != nil { return nil, err }
+	if err != nil { return nil, printError(err) }
 	if len(layerIDs) == 0 { return nil, util.ConstructError("Could not get image's history") }
 
 	// Analyze layers
@@ -185,7 +194,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 		} else {
 			err = analyzeLayer(clairContext.getEndpoint(), path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], "")
 		}
-		if err != nil { return nil, err }
+		if err != nil { return nil, printError(err) }
 	}
 
 	// Get vulnerabilities
@@ -193,7 +202,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	var vulnerabilities []Vulnerability
 	vulnerabilities, err = getVulnerabilities(
 		clairContext.getEndpoint(), layerIDs[len(layerIDs)-1], clairContext.MinimumVulnerabilityPriority)
-	if err != nil { return nil, err }
+	if err != nil { return nil, printError(err) }
 	if len(vulnerabilities) == 0 {
 		fmt.Println("No vulnerabilities found for image")
 	}
@@ -414,7 +423,9 @@ func history(imageName string) ([]string, error) {
  * 
  */
 func analyzeLayer(endpoint, path, layerID, parentLayerID string) error {
-	payload := struct{ ID, Path, ParentID string }{ID: layerID, Path: path, ParentID: parentLayerID}
+	payload := struct{ ID, Path, ParentID, ImageFormat string }{
+		ID: layerID, Path: path, ParentID: parentLayerID, ImageFormat: "Docker",
+	}
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -464,4 +475,13 @@ func getVulnerabilities(endpoint, layerID, minimumPriority string) ([]Vulnerabil
 	}
 
 	return apiResponse.Vulnerabilities, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func printError(err error) error {
+	fmt.Println(err.Error())
+	debug.PrintStack()
+	return err
 }
