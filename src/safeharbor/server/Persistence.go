@@ -614,6 +614,8 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 				// end debug
 				
 				v.Index(j).Set(newv)
+				
+				fmt.Println("...Set value.")  // debug
 			}
 		}
 		
