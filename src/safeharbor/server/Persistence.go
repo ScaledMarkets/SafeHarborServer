@@ -575,56 +575,44 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 	
 	// Check that argument types of the actuals match the types of the formals.
 	var actArgArCopy = make([]reflect.Value, len(actArgAr))
-	copy(actArgArCopy, actArgAr) // make shallow copy of actArgAr
-	for i, actArg := range actArgArCopy {
-		if ! actArg.IsValid() { fmt.Println(fmt.Sprintf("\targ %d is a zero value", i)) }
+	copy(actArgArCopy, actArgAr) // make shallow copy of actArgAr so we can change actArgAr
+	for a, actArg := range actArgArCopy {
+		if ! actArg.IsValid() { fmt.Println(fmt.Sprintf("\targ %d is a zero value", a)) }
 		
-		// Problem: Empty JSON lists were created as []interface{}. However, if the
-		// formal arg type is more specialized, e.g., []string, then the call
-		// via method.Call(args) will fail. Therefore, if an actual arg is an empty
-		// list, we need to replace it with an actual that is a list of the
-		// type required by the formal arg. Also, some types, e.g., []int, must
-		// be converted to the required formal type, e.g., []uint8.
 		var argKind = actArg.Type().Kind()
 		if (argKind == reflect.Array) || (argKind == reflect.Slice) {
+			// Arg is an array.
+			// Problem: Empty JSON lists were created as []interface{}. However, if the
+			// formal arg type is more specialized, e.g., []string, then the call
+			// via method.Call(args) will fail. Therefore, if an actual arg is an empty
+			// list, we need to replace it with an actual that is a list of the
+			// type required by the formal arg. Also, some types, e.g., []int, must
+			// be converted to the required formal type, e.g., []uint8.
+			
 			// Replace actArg with an array of the formal type.
-			var replacementArrayValue = reflect.Indirect(reflect.New(methodType.In(i)))
-			actArgAr[i] = replacementArrayValue
+			//if actArg.Len() > 0 {
+				actArgAr[a] = reflect.MakeSlice(methodType.In(a), actArg.Len(), actArg.Len())
+			//} else {
+			//	actArgAr[a] = reflect.Indirect(reflect.New(methodType.In(a)))  // empty
+			//}
 			
-			if actArg.Len() > 0 {
-				actArgAr[i] = reflect.MakeSlice(methodType.In(i), actArg.Len(), actArg.Len())
-			}
-			
-			for j := 0; j < actArgAr[i].Len(); j++ {
+			var eType = methodType.In(a).Elem()  // element type
+			for e := 0; e < actArg.Len(); e++ {  // for each element of arg
 				
-				fmt.Println("again")
-				fmt.Println(fmt.Sprintf("actArgAr[%d] is a %s", i, actArgAr[i].Type().String()))
-				var v = actArgAr[i].Index(j)
-				var newv = actArgAr[i].Index(j).Convert(methodType.In(i).Elem())
-				
-				// debug
-				fmt.Println("type of v is " + v.Type().String())
-				fmt.Println("type of newv is " + newv.Type().String())
-				var auint uint8 = 0
-				if v.Type().AssignableTo(reflect.TypeOf(auint)) {
-					fmt.Println(fmt.Sprintf("value of v is %d", v.Uint()))
-					fmt.Println(fmt.Sprintf("value of newv is %d", newv.Uint()))
-				}
-				// end debug
+				var v = actArg.Index(e)  // value of act arg elt
+				var actArgValue = actArg.Index(e)
+				var newv = actArgValue.Convert(eType)
 				
 				v.Set(newv)
-				//v.Index(j).Set(newv)
-				
-				fmt.Println("...Set value.")  // debug
 			}
 		}
 		
 		// Check that arg types match.
-		if ! actArgAr[i].Type().AssignableTo(methodType.In(i)) {
+		if ! actArgAr[a].Type().AssignableTo(methodType.In(a)) {
 			return typeName, nil, util.ConstructError(fmt.Sprintf(
 				"For argument #%d, type of actual arg, %s, " +
 				"is not assignable to the required type, %s. JSON=%s",
-				(i+1), actArgAr[i].Type().String(), methodType.In(i).String(), json))
+				(a+1), actArgAr[a].Type().String(), methodType.In(a).String(), json))
 		}
 	}
 	
