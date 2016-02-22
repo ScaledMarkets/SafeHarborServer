@@ -3123,7 +3123,7 @@ func (flag *InMemFlag) writeBack(dbClient DBClient) error {
 func (flag *InMemFlag) asJSON() string {
 	
 	var json = "\"Flag\": {" + flag.resourceFieldsAsJSON()
-	json = json + fmt.Sprintf("\"SuccessImagePath\": \"%s\", \"UsedByScanConfigIds\": [",
+	json = json + fmt.Sprintf(", \"SuccessImagePath\": \"%s\", \"UsedByScanConfigIds\": [",
 		flag.SuccessImagePath)
 	for i, id := range flag.UsedByScanConfigIds {
 		if i != 0 { json = json + ", " }
