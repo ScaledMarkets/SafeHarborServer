@@ -600,7 +600,8 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 				var newv = actArgAr[i].Index(j).Convert(methodType.In(i).Elem())
 				
 				// debug
-				fmt.Println(fmt.Sprintf("Replacing %d with %d", v.Int(), newv.Int()))
+				fmt.Println("type of v is " + v.Type().String())
+				fmt.Println("type of newv is " + newv.Type().String())
 				// end debug
 				
 				v.Index(j).Set(newv)
