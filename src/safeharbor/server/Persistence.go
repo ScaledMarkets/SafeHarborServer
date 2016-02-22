@@ -613,7 +613,8 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 				fmt.Println("Setting value...")
 				// end debug
 				
-				v.Index(j).Set(newv)
+				v.Set(newv)
+				//v.Index(j).Set(newv)
 				
 				fmt.Println("...Set value.")  // debug
 			}
