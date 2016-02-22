@@ -610,6 +610,7 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 					fmt.Println(fmt.Sprintf("value of v is %d", v.Uint()))
 					fmt.Println(fmt.Sprintf("value of newv is %d", newv.Uint()))
 				}
+				fmt.Println("Setting value...")
 				// end debug
 				
 				v.Index(j).Set(newv)
