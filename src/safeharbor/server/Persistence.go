@@ -595,7 +595,15 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 				actArgAr[i] = reflect.MakeSlice(methodType.In(i), actArg.Len(), actArg.Len())
 			}
 			for j := 0; j < actArgAr[i].Len(); j++ {
-				actArgAr[i].Index(j).Set(actArgAr[i].Index(j).Convert(methodType.In(i).Elem()))
+				
+				var v = actArgAr[i]
+				var newv = actArgAr[i].Index(j).Convert(methodType.In(i).Elem())
+				
+				// debug
+				fmt.Println(fmt.Sprintf("Replacing %d with %d", v, newv))
+				// end debug
+				
+				v.Index(j).Set(newv)
 			}
 		}
 		
