@@ -605,7 +605,7 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 				// debug
 				fmt.Println("type of v is " + v.Type().String())
 				fmt.Println("type of newv is " + newv.Type().String())
-				var auint uint = 0
+				var auint uint8 = 0
 				if v.Type().AssignableTo(reflect.TypeOf(auint)) {
 					fmt.Println(fmt.Sprintf("value of v is %d", v.Uint()))
 					fmt.Println(fmt.Sprintf("value of newv is %d", newv.Uint()))
