@@ -597,6 +597,7 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 			
 			for j := 0; j < actArgAr[i].Len(); j++ {
 				
+				fmt.Println(fmt.Sprintf("actArgAr[%d] is a %s", i, actArgAr[i].Type().String()))
 				var v = actArgAr[i].Index(j)
 				var newv = actArgAr[i].Index(j).Convert(methodType.In(i).Elem())
 				
