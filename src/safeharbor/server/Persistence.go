@@ -589,8 +589,6 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 			// type required by the formal arg. Also, some types, e.g., []int, must
 			// be converted to the required formal type, e.g., []uint8.
 			
-			fmt.Println("A")
-			
 			// Replace actArg with an array of the formal type.
 			//if actArg.Len() > 0 {
 				actArgAr[a] = reflect.MakeSlice(methodType.In(a), actArg.Len(), actArg.Len())
@@ -598,25 +596,17 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 			//	actArgAr[a] = reflect.Indirect(reflect.New(methodType.In(a)))  // empty
 			//}
 			
-			fmt.Println("B")
-			
 			var eType = methodType.In(a).Elem()  // element type
 			for e := 0; e < actArg.Len(); e++ {  // for each element of arg
 				
-				fmt.Println("C")
-			
-				var v = actArg.Index(e)  // value of act arg elt
-				fmt.Println("D")
 				var actArgValue = actArg.Index(e)
-				fmt.Println("E")
 				var newv = actArgValue.Convert(eType)
-				fmt.Println("F")
 				
-				v.Set(newv)
+				fmt.Println("F")
+				actArgAr[a].Index(e).Set(newv)
 				fmt.Println("G")
 			}
 		}
-		fmt.Println("H")
 		
 		// Check that arg types match.
 		if ! actArgAr[a].Type().AssignableTo(methodType.In(a)) {
