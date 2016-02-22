@@ -256,7 +256,7 @@ func (persist *Persistence) updateObject(txn TxnContext, obj PersistObj) error {
 		exists, err = persist.RedisClient.Exists(ObjectIdPrefix + obj.getId())
 		if err != nil { return err }
 		if exists {
-			return errors.New("Object with Id " + obj.getId() + " already exists")
+			return util.ConstructError("Object with Id " + obj.getId() + " already exists")
 		}
 		
 		// Serialize (marshall) the object to JSON, and store it in redis using the
