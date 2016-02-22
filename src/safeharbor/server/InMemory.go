@@ -2982,7 +2982,7 @@ func (scanConfig *InMemScanConfig) asJSON() string {
 	
 	var json = "\"ScanConfig\": {" + scanConfig.resourceFieldsAsJSON()
 	json = json + fmt.Sprintf(
-		"\"SuccessExpression\": \"%s\", \"ProviderName\": \"%s\", \"ParameterValueIds\": [",
+		", \"SuccessExpression\": \"%s\", \"ProviderName\": \"%s\", \"ParameterValueIds\": [",
 		scanConfig.SuccessExpression, scanConfig.ProviderName)
 	for i, id := range scanConfig.ParameterValueIds {
 		if i != 0 { json = json + ", " }
