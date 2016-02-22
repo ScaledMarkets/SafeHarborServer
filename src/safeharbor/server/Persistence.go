@@ -243,22 +243,13 @@ func (persist *Persistence) createUniqueDbObjectId() (string, error) {
 
 /*******************************************************************************
  * Write an object to the database - making the object persistent.
- * If the object is already in the database, create it.
+ * If the object is not already in the database, create it.
  */
 func (persist *Persistence) updateObject(txn TxnContext, obj PersistObj) error {
 
 	if persist.InMemoryOnly {
 		persist.allObjects[obj.getId()] = obj
 	} else {
-		// Verify that object does not exist in the database.
-		var exists bool
-		var err error
-		exists, err = persist.RedisClient.Exists(ObjectIdPrefix + obj.getId())
-		if err != nil { return err }
-		if exists {
-			return util.ConstructError("Object with Id " + obj.getId() + " already exists")
-		}
-		
 		// Serialize (marshall) the object to JSON, and store it in redis using the
 		// object's Id as the key. When the object is written out, it will be
 		// written as,
@@ -266,7 +257,7 @@ func (persist *Persistence) updateObject(txn TxnContext, obj PersistObj) error {
 		// so that getPersistentObject will later be able to map the JSON to the
 		// appropriate go type, using reflection.
 		
-		err = getRedisTransaction(txn).Command("SET",
+		var err = getRedisTransaction(txn).Command("SET",
 			ObjectIdPrefix + obj.getId(), obj.asJSON())
 		if err != nil { debug.PrintStack() }
 		if err != nil { return err }
@@ -329,14 +320,6 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		if bytes == nil { return nil, nil }
 		if len(bytes) == 0 { return nil, nil }
 		
-		// debug
-		fmt.Println("getObject: object value=\n\t")
-		var o = string(bytes)
-		fmt.Println(o)
-		// end debug
-		
-		
-		
 		var obj interface{}
 		_, obj, err = ReconstituteObject(factory, string(bytes))
 		if err != nil { return nil, err }
@@ -345,13 +328,6 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		var isType bool
 		persistObj, isType = obj.(PersistObj)
 		if ! isType { return nil, util.ConstructError("Object is not a PersistObj") }
-		
-		// debug
-		fmt.Print("Reconstituted object as JSON:\n\t")
-		fmt.Println(persistObj.asJSON())
-		// end debug
-		
-		
 		
 		return persistObj, nil
 	}
