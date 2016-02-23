@@ -124,6 +124,7 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 		MinimumVulnerabilityPriority: minPriority,
 		ClairService: clairSvc,
 		sessionId: "",
+		imageRetrievalPort: 9279,
 	}, nil
 }
 
@@ -143,6 +144,7 @@ type ClairRestContext struct {
 	MinimumVulnerabilityPriority string
 	ClairService *ClairService
 	sessionId string
+	imageRetrievalPort int  // for clair to call back to, to get images
 }
 
 func (clairContext *ClairRestContext) getEndpoint() string {
@@ -181,6 +183,28 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	layerIDs, err := history(imageName)
 	if err != nil { return nil, util.PrintError(err) }
 	if len(layerIDs) == 0 { return nil, util.ConstructError("Could not get image's history") }
+
+	// Setup a simple HTTP server if Clair is not local. This enables us to
+	// provide the external Clair REST service with a URL for each layer.
+	if !strings.Contains(clairContexzt.getEndpoint(), "127.0.0.1") && !strings.Contains(clairContexzt.getEndpoint(), "localhost") {
+		go func(path string) {
+			allowedHost := strings.TrimPrefix(clairContexzt.getEndpoint(), "http://")
+			portIndex := strings.Index(allowedHost, ":")
+			if portIndex >= 0 {
+				allowedHost = allowedHost[:portIndex]
+			}
+
+			fmt.Printf("Setting up HTTP server (allowing: %s)\n", allowedHost)
+
+			err := http.ListenAndServe(":"+strconv.Itoa(clairContext.imageRetrievalPort), restrictedFileServer(path, allowedHost))
+			if err != nil {
+				log.Fatalf("- An error occurs with the HTTP Server: %s\n", err)
+			}
+		}(path)
+
+		path = "http://" + *myAddress + ":" + strconv.Itoa(clairContext.imageRetrievalPort)
+		time.Sleep(200 * time.Millisecond)
+	}
 
 	// Analyze layers
 	fmt.Printf("Analyzing %d layers\n", len(layerIDs))
@@ -422,9 +446,11 @@ func history(imageName string) ([]string, error) {
  * 
  */
 func analyzeLayer(endpoint, path, layerID, parentLayerID string) error {
+	
 	payload := struct{ ID, Path, ParentID, ImageFormat string }{
 		ID: layerID, Path: path, ParentID: parentLayerID, ImageFormat: "Docker",
 	}
+	
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -474,4 +500,18 @@ func getVulnerabilities(endpoint, layerID, minimumPriority string) ([]Vulnerabil
 	}
 
 	return apiResponse.Vulnerabilities, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func restrictedFileServer(path, allowedHost string) http.Handler {
+	fc := func(w http.ResponseWriter, r *http.Request) {
+		if r.Host == allowedHost {
+			http.FileServer(http.Dir(path)).ServeHTTP(w, r)
+			return
+		}
+		w.WriteHeader(403)
+	}
+	return http.HandlerFunc(fc)
 }
