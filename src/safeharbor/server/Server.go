@@ -76,7 +76,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port 
 	if adapter != "" { config.netIntfName = adapter }
 	
 	// Determine the IP address.
-	config.ipaddr, err = util.DetermineIPAddress(adapter)
+	config.ipaddr, err = util.DetermineIPAddress(config.netIntfName)
 	if err != nil { return nil, err }
 	if config.ipaddr == "" {
 		fmt.Println("Did not find an IP4 address for network interface " + config.netIntfName)
