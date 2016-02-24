@@ -10,7 +10,7 @@
 	"ScanServices": {
 		"clair": {
 			"Host": "localhost",
-			"Port": "6060"
+			"Port": "6060",
 		}
 	}
 }

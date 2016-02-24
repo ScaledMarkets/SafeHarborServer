@@ -27,7 +27,7 @@ import (
 	//"rest"
 	"safeharbor/apitypes"
 	"safeharbor/providers"
-	//"safeharbor/util"
+	"safeharbor/util"
 )
 
 /*******************************************************************************
@@ -59,7 +59,7 @@ const (
  * Create a Server structure. This includes reading in the auth server cert.
  */
 func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port int,
-	adapter string, secretSalt string, inMemOnly bool) *Server {
+	adapter string, secretSalt string, inMemOnly bool) (*Server, error) {
 	
 	// Read configuration. (Defined in a JSON file.)
 	fmt.Println("Reading configuration")
@@ -68,7 +68,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port 
 	config, err = getConfiguration()
 	if err != nil {
 		fmt.Println(err.Error())
-		return nil
+		return nil, err
 	}
 	
 	// Override conf.json with any command line options.
@@ -76,38 +76,11 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port 
 	if adapter != "" { config.netIntfName = adapter }
 	
 	// Determine the IP address.
-	var intfs []net.Interface
-	intfs, err = net.Interfaces()
-	if err != nil {
-		fmt.Println(err.Error())
-		return nil
-	}
-	for _, intf := range intfs {
-		fmt.Println("Examining interface " + intf.Name)
-		if intf.Name == config.netIntfName {
-			var addrs []net.Addr
-			addrs, err = intf.Addrs()
-			if err != nil {
-				fmt.Println(err.Error())
-				return nil
-			}
-			for _, addr := range addrs {
-				fmt.Println("\tExamining address " + addr.String())
-				config.ipaddr = strings.Split(addr.String(), "/")[0]
-				var ip net.IP = net.ParseIP(config.ipaddr)
-				if ip.To4() == nil {
-					fmt.Println("\t\tskipping")
-					continue // skip IP6 addresses
-				}
-				fmt.Println("Found " + addr.String() + " on network " + addr.Network());
-				break
-			}
-			break
-		}
-	}
+	config.ipaddr, err = util.DetermineIPAddress(adapter)
+	if err != nil { return nil, err }
 	if config.ipaddr == "" {
 		fmt.Println("Did not find an IP4 address for network interface " + config.netIntfName)
-		return nil
+		return nil, err
 	}
 	
 	// Read all certificates.
@@ -127,8 +100,8 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port 
 	
 	// Ensure that the file repository exists.
 	if ! fileExists(server.Config.FileRepoRootPath) {
-		fmt.Println("Repository does not exist,", server.Config.FileRepoRootPath)
-		return nil
+		return nil, util.ConstructError(
+			"Repository does not exist, " + server.Config.FileRepoRootPath)
 	}
 	
 	// Tell dispatcher how to find server.
@@ -189,18 +162,19 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port 
 	var isType bool
 	clairConfig, isType = obj.(map[string]interface{})
 	if ! isType { AbortStartup("Configuration of clair services is ill-formed:") }
+	clairConfig["LocalAdapter"] = config.netIntfName
 	var scanSvc providers.ScanService
 	if stubScanners {
 		scanSvc, err = providers.CreateClairServiceStub(clairConfig) // for testing only
 	} else {
-		scanSvc, err = providers.CreateClairService(clairConfig) // for testing only
+		scanSvc, err = providers.CreateClairService(clairConfig)
 	}
 	if err != nil { AbortStartup(err.Error()) }
 	server.ScanServices = []providers.ScanService{
 		scanSvc,
 	}
 	
-	return server
+	return server, nil
 }
 
 /*******************************************************************************

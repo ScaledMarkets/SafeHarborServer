@@ -41,14 +41,20 @@ func CreateClairServiceStub(params map[string]interface{}) (ScanService, error) 
 	
 	var host string
 	var portStr string
+	var localAdapter string
 	var isType bool
 	
 	host, isType = params["Host"].(string)
-	portStr, isType = params["Port"].(string)
 	if host == "" { return nil, util.ConstructError("Parameter 'Host' not specified") }
-	if portStr == "" { return nil, util.ConstructError("Parameter 'Port' not specified") }
 	if ! isType { return nil, util.ConstructError("Parameter 'Host' is not a string") }
+
+	portStr, isType = params["Port"].(string)
+	if portStr == "" { return nil, util.ConstructError("Parameter 'Port' not specified") }
 	if ! isType { return nil, util.ConstructError("Parameter 'Port' is not a string") }
+
+	localAdapter, isType = params["LocalAdapter"].(string)
+	if localAdapter == "" { return nil, util.ConstructError("Parameter 'LocalAdapter' not specified") }
+	if ! isType { return nil, util.ConstructError("Parameter 'LocalAdapter' is not a string") }
 	
 	var port int
 	var err error

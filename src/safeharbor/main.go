@@ -44,8 +44,14 @@ func main() {
 	}
 	
 	fmt.Println("Creating SafeHarbor server...")
-	var svr *server.Server = server.NewServer(*debug, *nocache, *stubScanners, *noauthor,
+	var svr *server.Server
+	var err error
+	svr, err = server.NewServer(*debug, *nocache, *stubScanners, *noauthor,
 		*port, *adapter, *secretSalt, *inMemoryOnly)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 	if svr == nil { os.Exit(1) }
 
 	svr.Start()

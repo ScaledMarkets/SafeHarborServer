@@ -56,8 +56,6 @@ func NewPersistence(server *Server, redisClient *goredis.Redis) (*Persistence, e
 		RedisClient: redisClient,
 	}
 	server.persistence = persist
-	persist.resetInMemoryState()
-	
 	var err error = persist.init()
 	if err != nil { return nil, err }
 	
@@ -487,6 +485,7 @@ func (persist *Persistence) readUniqueId() (int64, error) {
 		var id int64
 		id, err = strconv.ParseInt(str, 10, 64)
 		if err != nil { return 0, err }
+		fmt.Println(fmt.Sprintf("Read unique Id %s from database", id))
 		return id, nil
 	}
 }

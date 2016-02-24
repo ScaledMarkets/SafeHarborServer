@@ -50,9 +50,10 @@ import (
 	"os"
 	"os/exec"
 	//"strconv"
-	//"strings"
+	"strings"
 	//"time"
 	"strconv"
+	"time"
 
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
@@ -60,9 +61,14 @@ import (
 	"safeharbor/util"
 )
 
+const (
+	ImageRetrievalPort = 9279
+)
+
 type ClairService struct {
 	Host string
 	Port int
+	LocalAdapter string  // of this machine, for clair to call back
 	Params map[string]string
 }
 
@@ -70,14 +76,20 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 	
 	var host string
 	var portStr string
+	var localAdapter string
 	var isType bool
 	
 	host, isType = params["Host"].(string)
-	portStr, isType = params["Port"].(string)
 	if host == "" { return nil, util.ConstructError("Parameter 'Host' not specified") }
-	if portStr == "" { return nil, util.ConstructError("Parameter 'Port' not specified") }
 	if ! isType { return nil, util.ConstructError("Parameter 'Host' is not a string") }
+
+	portStr, isType = params["Port"].(string)
+	if portStr == "" { return nil, util.ConstructError("Parameter 'Port' not specified") }
 	if ! isType { return nil, util.ConstructError("Parameter 'Port' is not a string") }
+
+	localAdapter, isType = params["LocalAdapter"].(string)
+	if localAdapter == "" { return nil, util.ConstructError("Parameter 'LocalAdapter' not specified") }
+	if ! isType { return nil, util.ConstructError("Parameter 'LocalAdapter' is not a string") }
 	
 	var port int
 	var err error
@@ -87,6 +99,7 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 	return &ClairService{
 		Host: host,
 		Port: port,
+		LocalAdapter: localAdapter,
 		Params: map[string]string{
 			"MinimumPriority": "The minimum priority level of vulnerabilities to report",
 		},
@@ -118,13 +131,24 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 		// this param is optional so do not require its presence.
 	}
 	
+	// Determine the IP address.
+	var ipaddr string
+	var err error
+	ipaddr, err = util.DetermineIPAddress(clairSvc.LocalAdapter)
+	if err != nil { return nil, err }
+	if ipaddr == "" {
+		return nil, util.ConstructError(
+			"Did not find an IP4 address for network interface " + clairSvc.LocalAdapter)
+	}
+	
 	return &ClairRestContext{
 		RestContext: *rest.CreateRestContext(
 			clairSvc.Host, clairSvc.Port, setClairSessionId),
 		MinimumVulnerabilityPriority: minPriority,
 		ClairService: clairSvc,
 		sessionId: "",
-		imageRetrievalPort: 9279,
+		imageRetrievalIP: ipaddr,
+		imageRetrievalPort: ImageRetrievalPort,
 	}, nil
 }
 
@@ -144,6 +168,7 @@ type ClairRestContext struct {
 	MinimumVulnerabilityPriority string
 	ClairService *ClairService
 	sessionId string
+	imageRetrievalIP string  // for clair to call back to, to get images
 	imageRetrievalPort int  // for clair to call back to, to get images
 }
 
@@ -186,9 +211,11 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 
 	// Setup a simple HTTP server if Clair is not local. This enables us to
 	// provide the external Clair REST service with a URL for each layer.
-	if !strings.Contains(clairContexzt.getEndpoint(), "127.0.0.1") && !strings.Contains(clairContexzt.getEndpoint(), "localhost") {
+	if !strings.Contains(clairContext.getEndpoint(), "127.0.0.1") &&
+		!strings.Contains(clairContext.getEndpoint(), "localhost") {
+		
 		go func(path string) {
-			allowedHost := strings.TrimPrefix(clairContexzt.getEndpoint(), "http://")
+			allowedHost := strings.TrimPrefix(clairContext.getEndpoint(), "http://")
 			portIndex := strings.Index(allowedHost, ":")
 			if portIndex >= 0 {
 				allowedHost = allowedHost[:portIndex]
@@ -198,11 +225,11 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 
 			err := http.ListenAndServe(":"+strconv.Itoa(clairContext.imageRetrievalPort), restrictedFileServer(path, allowedHost))
 			if err != nil {
-				log.Fatalf("- An error occurs with the HTTP Server: %s\n", err)
+				fmt.Println("- An error occurs with the HTTP Server: %s\n", err.Error())
 			}
 		}(path)
 
-		path = "http://" + *myAddress + ":" + strconv.Itoa(clairContext.imageRetrievalPort)
+		path = "http://" + clairContext.imageRetrievalIP + ":" + strconv.Itoa(clairContext.imageRetrievalPort)
 		time.Sleep(200 * time.Millisecond)
 	}
 
