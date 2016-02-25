@@ -39,6 +39,7 @@ package providers
 import (
 	//"errors"
 	"net/http"
+	"net"
 	"fmt"
 
 	"bufio"
@@ -68,8 +69,9 @@ const (
 type ClairService struct {
 	Host string
 	Port int
-	LocalAdapter string  // of this machine, for clair to call back
+	LocalIPAddress string  // of this machine, for clair to call back
 	Params map[string]string
+	ImageTarBaseDir string
 }
 
 func CreateClairService(params map[string]interface{}) (ScanService, error) {
@@ -87,23 +89,48 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 	if portStr == "" { return nil, util.ConstructError("Parameter 'Port' not specified") }
 	if ! isType { return nil, util.ConstructError("Parameter 'Port' is not a string") }
 
-	localAdapter, isType = params["LocalAdapter"].(string)
-	if localAdapter == "" { return nil, util.ConstructError("Parameter 'LocalAdapter' not specified") }
-	if ! isType { return nil, util.ConstructError("Parameter 'LocalAdapter' is not a string") }
+	localIPAddress, isType = params["LocalIPAddress"].(string)
+	if localIPAddress == "" { return nil, util.ConstructError("Parameter 'localIPAddress' not specified") }
+	if ! isType { return nil, util.ConstructError("Parameter 'localIPAddress' is not a string") }
 	
 	var port int
 	var err error
 	port, err = strconv.Atoi(portStr)
 	if err != nil { return nil, err }
 	
-	return &ClairService{
+	var tempDir string
+	var err error
+	tempDir, err = ioutil.TempDir("", "image-tars-for-clair")
+	if err != nil { return nil, err }
+	
+	var clairSvc = &ClairService{
 		Host: host,
 		Port: port,
-		LocalAdapter: localAdapter,
+		LocalIPAddress: localIPAddress,
+		ImageTarBaseDir: tempDir,
 		Params: map[string]string{
 			"MinimumPriority": "The minimum priority level of vulnerabilities to report",
 		},
-	}, nil
+	}
+	
+	// Setup a simple HTTP server. This enables us to
+	// provide the external Clair REST service with a URL for each layer.
+	var imageRetrievalAddress = localIPAddress + ":" + strconv.Itoa(ImageRetrievalPort)
+	go func(tarFileBaseDir string) {
+		
+		var allowedHost = strings.TrimPrefix(clairContext.getEndpoint(), "http://")
+		var portIndex int = strings.Index(allowedHost, ":")
+		if portIndex >= 0 { allowedHost = allowedHost[:portIndex] }
+
+		// Set up HTTP server allowing allowedHost.
+		err := http.ListenAndServe(
+			imageRetrievalAddress, restrictedFileServer(tarFileBaseDir, allowedHost))
+		if err != nil {
+			fmt.Println("- An error occurred with the HTTP Server: %s\n", err.Error())
+		}
+	}(tarFileBaseDir)
+	
+	return clairSvc, nil
 }
 
 func (clairSvc *ClairService) GetName() string { return "clair" }
@@ -132,10 +159,7 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 	}
 	
 	// Determine the IP address.
-	var ipaddr string
-	var err error
-	ipaddr, err = util.DetermineIPAddress(clairSvc.LocalAdapter)
-	if err != nil { return nil, err }
+	var ipaddr = clairSvc.LocalIPAddress
 	if ipaddr == "" {
 		return nil, util.ConstructError(
 			"Did not find an IP4 address for network interface " + clairSvc.LocalAdapter)
@@ -170,6 +194,7 @@ type ClairRestContext struct {
 	sessionId string
 	imageRetrievalIP string  // for clair to call back to, to get images
 	imageRetrievalPort int  // for clair to call back to, to get images
+	ImageTarBaseDir string
 }
 
 func (clairContext *ClairRestContext) getEndpoint() string {
@@ -193,65 +218,42 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	
 	// Use the docker 'save' command to extract image to a tar of tar files.
 	// Must be extracted to a temp directory that is shared with the clair container.
-	
-	// Save image
 	fmt.Printf("Saving %s\n", imageName)
-	path, err := save(imageName)
+	var tarFileRelDir string
+	var err error
+	tarFileRelDir, err = saveImageAsTars(clairContext.ImageTarBaseDir, imageName)
 	defer func() {
-		fmt.Println("Removing all files at " + path)
-		os.RemoveAll(path)
+		fmt.Println("Removing all files at " + clairContext.ImageTarBaseDir + tarFileRelDir)
+		os.RemoveAll(tarFileRelDir)
 	}()
 	if err != nil { return nil, util.PrintError(err) }
+	var tarDirURL = "http://" + clairContext.imageRetrievalIP + ":" +
+		strconv.Itoa(clairContext.imageRetrievalPort) + "/" + tarFileRelDir
 
-	// Retrieve history
-	fmt.Println("Getting image's history")
-	layerIDs, err := history(imageName)
+	// Retrieve image's layer Ids.
+	fmt.Println("Getting image's layer Ids (aka 'history')...")
+	var layerIds []string
+	layerIds, err = getLayerIds(imageName)
 	if err != nil { return nil, util.PrintError(err) }
-	if len(layerIDs) == 0 { return nil, util.ConstructError("Could not get image's history") }
-
-	// Setup a simple HTTP server if Clair is not local. This enables us to
-	// provide the external Clair REST service with a URL for each layer.
-	if !strings.Contains(clairContext.getEndpoint(), "127.0.0.1") &&
-		!strings.Contains(clairContext.getEndpoint(), "localhost") {
-		
-		go func(path string) {
-			allowedHost := strings.TrimPrefix(clairContext.getEndpoint(), "http://")
-			portIndex := strings.Index(allowedHost, ":")
-			if portIndex >= 0 {
-				allowedHost = allowedHost[:portIndex]
-			}
-
-			fmt.Printf("Setting up HTTP server (allowing: %s)\n", allowedHost)
-
-			err := http.ListenAndServe(":"+strconv.Itoa(clairContext.imageRetrievalPort), restrictedFileServer(path, allowedHost))
-			if err != nil {
-				fmt.Println("- An error occurs with the HTTP Server: %s\n", err.Error())
-			}
-		}(path)
-
-		path = "http://" + clairContext.imageRetrievalIP + ":" + strconv.Itoa(clairContext.imageRetrievalPort)
-		time.Sleep(200 * time.Millisecond)
-	}
+	if len(layerIds) == 0 { return nil, util.ConstructError("Could not get image's history") }
 
 	// Analyze layers
-	fmt.Printf("Analyzing %d layers\n", len(layerIDs))
-	for i := 0; i < len(layerIDs); i++ {
-		fmt.Printf("- Analyzing %s\n", layerIDs[i])
-
+	fmt.Printf("Analyzing %d layers\n", len(layerIds))
+	var priorLayerId = ""
+	for _, layerId := range layerIds {
+		fmt.Printf("- Analyzing %s\n", layerIds[i])
+		var layerURL = tarDirURL + "/" + layerId + "/layer.tar"
 		var err error
-		if i > 0 {
-			err = analyzeLayer(clairContext.getEndpoint(), path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], layerIDs[i-1])
-		} else {
-			err = analyzeLayer(clairContext.getEndpoint(), path+"/"+layerIDs[i]+"/layer.tar", layerIDs[i], "")
-		}
+		err = analyzeLayer(clairContext.getEndpoint(), layerURL, layerId, priorLayerId)
 		if err != nil { return nil, util.PrintError(err) }
+		priorLayerId = layerId
 	}
 
 	// Get vulnerabilities
 	fmt.Println("Getting image's vulnerabilities")
 	var vulnerabilities []Vulnerability
 	vulnerabilities, err = getVulnerabilities(
-		clairContext.getEndpoint(), layerIDs[len(layerIDs)-1], clairContext.MinimumVulnerabilityPriority)
+		clairContext.getEndpoint(), layerIds[len(layerIds)-1], clairContext.MinimumVulnerabilityPriority)
 	if err != nil { return nil, util.PrintError(err) }
 	if len(vulnerabilities) == 0 {
 		fmt.Println("No vulnerabilities found for image")
@@ -401,8 +403,8 @@ func setClairSessionId(req *http.Request, sessionId string) {
  * Retrieve image as a tar of tars, and extract each tar (layer).
  * Return the path to the directory containing the layer tar files.
  */
-func save(imageName string) (string, error) {
-	path, err := ioutil.TempDir("", "analyze-local-image-")
+func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
+	path, err := ioutil.TempDir(imageTarBaseDir, "")
 	if err != nil {
 		return "", err
 	}
@@ -441,7 +443,7 @@ func save(imageName string) (string, error) {
 /*******************************************************************************
  * Retrieve a list of the layer Ids.
  */
-func history(imageName string) ([]string, error) {
+func getLayerIds(imageName string) ([]string, error) {
 	var stderr bytes.Buffer
 	cmd := exec.Command("docker", "history", "-q", "--no-trunc", imageName)
 	cmd.Stderr = &stderr
@@ -455,18 +457,18 @@ func history(imageName string) ([]string, error) {
 		return []string{}, util.ConstructError(stderr.String())
 	}
 
-	var layers []string
+	var layerIds []string
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
-		layers = append(layers, scanner.Text())
+		layerIds = append(layerIds, scanner.Text())
 	}
 
-	for i := len(layers)/2 - 1; i >= 0; i-- {
-		opp := len(layers) - 1 - i
-		layers[i], layers[opp] = layers[opp], layers[i]
+	for i := len(layerIds)/2 - 1; i >= 0; i-- {
+		opp := len(layerIds) - 1 - i
+		layerIds[i], layerIds[opp] = layerIds[opp], layerIds[i]
 	}
 
-	return layers, nil
+	return layerIds, nil
 }
 
 /*******************************************************************************

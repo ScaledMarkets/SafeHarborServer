@@ -162,7 +162,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port 
 	var isType bool
 	clairConfig, isType = obj.(map[string]interface{})
 	if ! isType { AbortStartup("Configuration of clair services is ill-formed:") }
-	clairConfig["LocalAdapter"] = config.netIntfName
+	clairConfig["LocalIPAddress"] = config.ipaddr
 	var scanSvc providers.ScanService
 	if stubScanners {
 		scanSvc, err = providers.CreateClairServiceStub(clairConfig) // for testing only

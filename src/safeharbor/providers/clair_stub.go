@@ -32,6 +32,7 @@ import (
 type ClairServiceStub struct {
 	Host string
 	Port int
+	LocalIPAddress string  // of this machine, for clair to call back
 	Params map[string]string
 }
 
@@ -52,9 +53,9 @@ func CreateClairServiceStub(params map[string]interface{}) (ScanService, error) 
 	if portStr == "" { return nil, util.ConstructError("Parameter 'Port' not specified") }
 	if ! isType { return nil, util.ConstructError("Parameter 'Port' is not a string") }
 
-	localAdapter, isType = params["LocalAdapter"].(string)
-	if localAdapter == "" { return nil, util.ConstructError("Parameter 'LocalAdapter' not specified") }
-	if ! isType { return nil, util.ConstructError("Parameter 'LocalAdapter' is not a string") }
+	localIPAddress, isType = params["LocalIPAddress"].(string)
+	if localIPAddress == "" { return nil, util.ConstructError("Parameter 'localIPAddress' not specified") }
+	if ! isType { return nil, util.ConstructError("Parameter 'localIPAddress' is not a string") }
 	
 	var port int
 	var err error
@@ -64,6 +65,7 @@ func CreateClairServiceStub(params map[string]interface{}) (ScanService, error) 
 	return &ClairServiceStub{
 		Host: host,
 		Port: port,
+		LocalIPAddress: localIPAddress,
 		Params: map[string]string{
 			"MinimumPriority": "The minimum priority level of vulnerabilities to report",
 		},
