@@ -229,7 +229,13 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 		os.RemoveAll(tarFileRelDir)
 	}()
 	if err != nil { return nil, util.PrintError(err) }
-	fmt.Println("Image layers saved to " + tarFileRelDir)
+	var fullPath = clairContext.ClairService.ImageTarBaseDir + "/" + tarFileRelDir
+	fmt.Println("Image layers saved to " + fullPath + ":")
+	var layerFileInfos []os.FileInfo
+	layerFileInfos, err = ioutil.ReadDir(fullPath)
+	for _, fileInfo := range layerFileInfos {
+		fmt.Println("\t" + fileInfo.Name())
+	}
 	var tarDirURL = "http://" + clairContext.imageRetrievalIP + ":" +
 		strconv.Itoa(clairContext.imageRetrievalPort) + "/" + tarFileRelDir
 
@@ -487,8 +493,12 @@ func analyzeLayer(endpoint, path, layerID, parentLayerID string) error {
 	if err != nil {
 		return err
 	}
+	
+	var url = endpoint + postLayerURI
+	fmt.Println("Sending request to clair:")
+	fmt.Println("POST " + url + " " + string(jsonPayload))
 
-	request, err := http.NewRequest("POST", endpoint+postLayerURI, bytes.NewBuffer(jsonPayload))
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return err
 	}
