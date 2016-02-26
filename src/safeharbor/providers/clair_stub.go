@@ -16,7 +16,7 @@ import (
 	//"flag"
 	//"io/ioutil"
 	//"log"
-	"os"
+	//"os"
 	//"os/exec"
 	//"strconv"
 	//"strings"
@@ -42,7 +42,7 @@ func CreateClairServiceStub(params map[string]interface{}) (ScanService, error) 
 	
 	var host string
 	var portStr string
-	var localAdapter string
+	var localIPAddress string
 	var isType bool
 	
 	host, isType = params["Host"].(string)
@@ -141,17 +141,8 @@ func (clairContext *ClairRestContextStub) PingService() *apitypes.Result {
  */
 func (clairContext *ClairRestContextStub) ScanImage(imageName string) (*ScanResult, error) {
 	
-	// Use the docker 'save' command to extract image to a tar of tar files.
-	// Must be extracted to a temp directory that is shared with the clair container.
-	
 	// Save image
 	fmt.Printf("Saving %s\n", imageName)
-	path, err := save(imageName)
-	defer func() {
-		fmt.Println("Removing all files at " + path)
-		os.RemoveAll(path)
-	}()
-	if err != nil { return nil, err }
 
 	// Retrieve history
 	fmt.Println("Getting image's history")

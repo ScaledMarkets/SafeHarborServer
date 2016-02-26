@@ -39,7 +39,7 @@ package providers
 import (
 	//"errors"
 	"net/http"
-	"net"
+	//"net"
 	"fmt"
 
 	"bufio"
@@ -54,7 +54,7 @@ import (
 	"strings"
 	//"time"
 	"strconv"
-	"time"
+	//"time"
 
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
@@ -78,7 +78,7 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 	
 	var host string
 	var portStr string
-	var localAdapter string
+	var localIPAddress string
 	var isType bool
 	
 	host, isType = params["Host"].(string)
@@ -99,9 +99,9 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 	if err != nil { return nil, err }
 	
 	var tempDir string
-	var err error
 	tempDir, err = ioutil.TempDir("", "image-tars-for-clair")
 	if err != nil { return nil, err }
+	fmt.Println("Using dir " + tempDir + " for saving image layers")
 	
 	var clairSvc = &ClairService{
 		Host: host,
@@ -115,10 +115,12 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 	
 	// Setup a simple HTTP server. This enables us to
 	// provide the external Clair REST service with a URL for each layer.
+	// To do: Use a separate non-public network adapter for this.
+	fmt.Println("Starting HTTP service for clair to call to retrieve layers...")
 	var imageRetrievalAddress = localIPAddress + ":" + strconv.Itoa(ImageRetrievalPort)
 	go func(tarFileBaseDir string) {
 		
-		var allowedHost = strings.TrimPrefix(clairContext.getEndpoint(), "http://")
+		var allowedHost = host
 		var portIndex int = strings.Index(allowedHost, ":")
 		if portIndex >= 0 { allowedHost = allowedHost[:portIndex] }
 
@@ -128,7 +130,7 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 		if err != nil {
 			fmt.Println("- An error occurred with the HTTP Server: %s\n", err.Error())
 		}
-	}(tarFileBaseDir)
+	}(tempDir)
 	
 	return clairSvc, nil
 }
@@ -162,7 +164,7 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 	var ipaddr = clairSvc.LocalIPAddress
 	if ipaddr == "" {
 		return nil, util.ConstructError(
-			"Did not find an IP4 address for network interface " + clairSvc.LocalAdapter)
+			"Did not find an IP4 address for clair to call back on")
 	}
 	
 	return &ClairRestContext{
@@ -227,6 +229,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 		os.RemoveAll(tarFileRelDir)
 	}()
 	if err != nil { return nil, util.PrintError(err) }
+	fmt.Println("Image layers saved to " + tarFileRelDir)
 	var tarDirURL = "http://" + clairContext.imageRetrievalIP + ":" +
 		strconv.Itoa(clairContext.imageRetrievalPort) + "/" + tarFileRelDir
 
@@ -241,7 +244,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	fmt.Printf("Analyzing %d layers\n", len(layerIds))
 	var priorLayerId = ""
 	for _, layerId := range layerIds {
-		fmt.Printf("- Analyzing %s\n", layerIds[i])
+		fmt.Printf("- Analyzing %s\n", layerId)
 		var layerURL = tarDirURL + "/" + layerId + "/layer.tar"
 		var err error
 		err = analyzeLayer(clairContext.getEndpoint(), layerURL, layerId, priorLayerId)
