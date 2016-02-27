@@ -36,7 +36,8 @@ func BuildDockerfile(dockerfileExternalFilePath,
 	output, err = cmd.CombinedOutput()
 	var outputStr string = string(output)
 	if ! strings.HasPrefix(outputStr, "Error") {
-		return "", util.ConstructError("An image with name " + imageName + " already exists.")
+		return "", util.ConstructError(
+			outputStr + "; perhaps an image with name " + imageName + " already exists.")
 	}
 	
 	// Verify that the image name conforms to Docker's requirements.
