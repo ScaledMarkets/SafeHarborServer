@@ -126,7 +126,7 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 		if portIndex >= 0 { allowedHost = allowedHost[:portIndex] }
 
 		// Set up HTTP server allowing allowedHost.
-		fmt.Println("Listening on " + imageRetrievalAddress)
+		fmt.Println("Listening to Clair on " + imageRetrievalAddress)
 		err := http.ListenAndServe(
 			imageRetrievalAddress, restrictedFileServer(tarFileBaseDir, allowedHost))
 		if err != nil {
@@ -611,6 +611,7 @@ func getVulnerabilities(endpoint, layerID, minimumPriority string) ([]Vulnerabil
  * 
  */
 func restrictedFileServer(path, allowedHost string) http.Handler {
+	fmt.Println("Setting up file server for Clair, rooted at " + path)
 	fc := func(w http.ResponseWriter, r *http.Request) {
 		if r.Host == allowedHost {
 			http.FileServer(http.Dir(path)).ServeHTTP(w, r)
