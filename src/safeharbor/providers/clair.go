@@ -56,7 +56,7 @@ import (
 	"strconv"
 	"path"
 	//"time"
-
+	
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
 	"safeharbor/rest"
@@ -546,22 +546,20 @@ func historyFromCommand(imageName string) ([]string, error) {
 /*******************************************************************************
  * 
  */
-func analyzeLayer(endpoint, path, layerID, parentLayerID string) error {
+func analyzeLayer(endpoint, path, layerName, parentLayerName string) error {
 	
-	payload := struct{ ID, Path, ParentID, ImageFormat string }{
-		ID: layerID, Path: path, ParentID: parentLayerID, ImageFormat: "Docker",
-	}
-	
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
+	var jsonPayload string = fmt.Sprintf("{\"Layer\": {" +
+		"\"Name\": \"%s\", " +
+		"\"Path\": \"%s\", " +
+		"\"ParentName\": \"%s\", " +
+		"\"Format\": \"%s\"}}",
+		layerName, path, parentLayerName, "Docker")
 	
 	var url = endpoint + postLayerURI
 	fmt.Println("Sending request to clair:")
 	fmt.Println("POST " + url + " " + string(jsonPayload))
 
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsonPayload)))
 	if err != nil {
 		return err
 	}
