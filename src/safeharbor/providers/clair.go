@@ -549,7 +549,7 @@ func historyFromCommand(imageName string) ([]string, error) {
 func analyzeLayer(endpoint, path, layerName, parentLayerName string) error {
 	
 	var jsonPayload string = fmt.Sprintf("{\"Layer\": {" +
-		"\"Name\": \"%s\", " +
+		"\"ID\": \"%s\", " +
 		"\"Path\": \"%s\", " +
 		"\"ParentName\": \"%s\", " +
 		"\"Format\": \"%s\"}}",
