@@ -35,7 +35,7 @@ func BuildDockerfile(dockerfileExternalFilePath,
 	var err error
 	output, err = cmd.CombinedOutput()
 	var outputStr string = string(output)
-	if ! strings.HasPrefix(outputStr, "Error") {
+	if ! strings.Contains(outputStr, "Error") {
 		return "", util.ConstructError(
 			"'" + outputStr + "'; perhaps an image with name " + imageName + " already exists.")
 	}
