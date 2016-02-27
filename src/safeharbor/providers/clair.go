@@ -231,12 +231,16 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	}()
 	if err != nil { return nil, util.PrintError(err) }
 	var fullPath = clairContext.ClairService.ImageTarBaseDir + "/" + tarFileRelDir
+
+	// debug
 	fmt.Println("Image layers saved to " + fullPath + ":")
 	var layerFileInfos []os.FileInfo
 	layerFileInfos, err = ioutil.ReadDir(fullPath)
 	for _, fileInfo := range layerFileInfos {
 		fmt.Println("\t" + fileInfo.Name())
 	}
+	// end debug
+
 	var tarDirURL = "http://" + clairContext.imageRetrievalIP + ":" +
 		strconv.Itoa(clairContext.imageRetrievalPort) + "/" + tarFileRelDir
 
@@ -247,6 +251,16 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	if err != nil { return nil, util.PrintError(err) }
 	if len(layerIds) == 0 { return nil, util.ConstructError("Could not get image's history") }
 
+	
+	// debug
+	fmt.Println("Layer Ids:")
+	for _, id := range layerIds {
+		fmt.Println("\t" + id)
+	}
+	// end debug
+	
+	
+	
 	// Analyze layers
 	fmt.Printf("Analyzing %d layers\n", len(layerIds))
 	var priorLayerId = ""
