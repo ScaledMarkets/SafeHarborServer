@@ -54,6 +54,7 @@ import (
 	"strings"
 	//"time"
 	"strconv"
+	"path"
 	//"time"
 
 	// SafeHarbor packages:
@@ -410,10 +411,11 @@ func setClairSessionId(req *http.Request, sessionId string) {
 
 /*******************************************************************************
  * Retrieve image as a tar of tars, and extract each tar (layer).
- * Return the path to the directory containing the layer tar files.
+ * Return the path to the directory containing the layer tar files,
+ * relative to imageTarBaseDir.
  */
 func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
-	path, err := ioutil.TempDir(imageTarBaseDir, "")
+	dirPath, err := ioutil.TempDir(imageTarBaseDir, "")
 	if err != nil {
 		return "", err
 	}
@@ -421,7 +423,7 @@ func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
 	var stderr bytes.Buffer
 	save := exec.Command("docker", "save", imageName)
 	save.Stderr = &stderr
-	extract := exec.Command("tar", "xf", "-", "-C"+path)
+	extract := exec.Command("tar", "xf", "-", "-C" + dirPath)
 	extract.Stderr = &stderr
 	pipe, err := extract.StdinPipe()
 	if err != nil {
@@ -446,7 +448,7 @@ func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
 		return "", util.ConstructError(stderr.String())
 	}
 
-	return path, nil
+	return path.Base(dirPath), nil
 }
 
 /*******************************************************************************
