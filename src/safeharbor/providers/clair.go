@@ -176,6 +176,7 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 		sessionId: "",
 		imageRetrievalIP: ipaddr,
 		imageRetrievalPort: ImageRetrievalPort,
+			
 	}, nil
 }
 
@@ -197,7 +198,6 @@ type ClairRestContext struct {
 	sessionId string
 	imageRetrievalIP string  // for clair to call back to, to get images
 	imageRetrievalPort int  // for clair to call back to, to get images
-	ImageTarBaseDir string
 }
 
 func (clairContext *ClairRestContext) getEndpoint() string {
@@ -224,9 +224,9 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	fmt.Printf("Saving %s\n", imageName)
 	var tarFileRelDir string
 	var err error
-	tarFileRelDir, err = saveImageAsTars(clairContext.ImageTarBaseDir, imageName)
+	tarFileRelDir, err = saveImageAsTars(clairContext.ClairService.ImageTarBaseDir, imageName)
 	defer func() {
-		fmt.Println("Removing all files at " + clairContext.ImageTarBaseDir + tarFileRelDir)
+		fmt.Println("Removing all files at " + clairContext.ClairService.ImageTarBaseDir + tarFileRelDir)
 //		os.RemoveAll(tarFileRelDir)
 	}()
 	if err != nil { return nil, util.PrintError(err) }
