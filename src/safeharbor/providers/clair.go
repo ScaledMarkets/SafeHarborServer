@@ -415,42 +415,39 @@ func setClairSessionId(req *http.Request, sessionId string) {
  * relative to imageTarBaseDir.
  */
 func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
-	dirPath, err := ioutil.TempDir(imageTarBaseDir, "")
+	
+	dirPath, err := ioutil.TempDir(imageTarBaseDir, "layers")
 	if err != nil {
 		return "", err
 	}
 
-	var saveCmd *exec.Cmd
-	saveCmd = exec.Command("docker", "save", imageName)
-	var saveOutput []byte
-	saveOutput, err = saveCmd.Output()  // blocks
-		if err != nil { return "", util.ConstructError(
-			err.Error() + "; output: " + string(saveOutput)) }
-	
-	var extractCmd *exec.Cmd
-	extractCmd = exec.Command("tar", "xf", "-", "-C" + dirPath)
-	var extractOutput []byte
-	extractOutput, err = extractCmd.Output()  // blocks
-		if err != nil { return "", util.ConstructError(
-			err.Error() + "; output: " + string(extractOutput)) }
-	
-	// debug
-	fmt.Println("================================")
-	fmt.Println("|")
-	fmt.Println("|")
-	fmt.Println("saveImageAsTars: Extracted layers to " + dirPath)
-	fmt.Println("save output:", string(saveOutput))
-	fmt.Println("extract output:", string(extractOutput))
-	fmt.Println("dir contents:")
-	var layerFileInfos []os.FileInfo
-	layerFileInfos, err = ioutil.ReadDir(dirPath)
-	for _, fileInfo := range layerFileInfos {
-		fmt.Println("\t" + fileInfo.Name())
+	var stderr bytes.Buffer
+	save := exec.Command("docker", "save", imageName)
+	save.Stderr = &stderr
+	extract := exec.Command("tar", "xf", "-", "-C"+dirPath)
+	extract.Stderr = &stderr
+	pipe, err := extract.StdinPipe()
+	if err != nil {
+		return "", err
 	}
-	fmt.Println("|")
-	fmt.Println("|")
-	fmt.Println("================================")
-	// end debug
+	save.Stdout = pipe
+
+	err = extract.Start()
+	if err != nil {
+		return "", util.ConstructError(stderr.String())
+	}
+	err = save.Run()
+	if err != nil {
+		return "", util.ConstructError(stderr.String())
+	}
+	err = pipe.Close()
+	if err != nil {
+		return "", err
+	}
+	err = extract.Wait()
+	if err != nil {
+		return "", util.ConstructError(stderr.String())
+	}
 
 	return path.Base(dirPath), nil
 }
