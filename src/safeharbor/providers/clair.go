@@ -247,10 +247,14 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	// Retrieve image's layer Ids.
 	fmt.Println("Getting image's layer Ids (aka 'history')...")
 	var layerIds []string
-	layerIds, err = getLayerIds(imageName)
-	if err != nil { return nil, util.PrintError(err) }
-	if len(layerIds) == 0 { return nil, util.ConstructError("Could not get image's history") }
-
+	layerIds, err = historyFromManifest(fullPath)
+	if err != nil {
+		layerIds, err = historyFromCommand(imageName)
+	}	
+	
+	if err != nil || len(layerIds) == 0 {
+		return nil, util.ConstructError("- Could not get image's history: " + err.Error())
+	}
 	
 	// debug
 	fmt.Println("Layer Ids:")
@@ -478,9 +482,39 @@ func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
 }
 
 /*******************************************************************************
- * Retrieve a list of the layer Ids.
+ * 
  */
-func getLayerIds(imageName string) ([]string, error) {
+func historyFromManifest(path string) ([]string, error) {
+	mf, err := os.Open(path + "/manifest.json")
+	if err != nil {
+		return nil, err
+	}
+	defer mf.Close()
+
+	// https://github.com/docker/docker/blob/master/image/tarexport/tarexport.go#L17
+	type manifestItem struct {
+		Config   string
+		RepoTags []string
+		Layers   []string
+	}
+
+	var manifest []manifestItem
+	if err = json.NewDecoder(mf).Decode(&manifest); err != nil {
+		return nil, err
+	} else if len(manifest) != 1 {
+		return nil, err
+	}
+	var layers []string
+	for _, layer := range manifest[0].Layers {
+		layers = append(layers, strings.TrimSuffix(layer, "/layer.tar"))
+	}
+	return layers, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func historyFromCommand(imageName string) ([]string, error) {
 	var stderr bytes.Buffer
 	cmd := exec.Command("docker", "history", "-q", "--no-trunc", imageName)
 	cmd.Stderr = &stderr
@@ -494,18 +528,18 @@ func getLayerIds(imageName string) ([]string, error) {
 		return []string{}, util.ConstructError(stderr.String())
 	}
 
-	var layerIds []string
+	var layers []string
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
-		layerIds = append(layerIds, scanner.Text())
+		layers = append(layers, scanner.Text())
 	}
 
-	for i := len(layerIds)/2 - 1; i >= 0; i-- {
-		opp := len(layerIds) - 1 - i
-		layerIds[i], layerIds[opp] = layerIds[opp], layerIds[i]
+	for i := len(layers)/2 - 1; i >= 0; i-- {
+		opp := len(layers) - 1 - i
+		layers[i], layers[opp] = layers[opp], layers[i]
 	}
 
-	return layerIds, nil
+	return layers, nil
 }
 
 /*******************************************************************************
