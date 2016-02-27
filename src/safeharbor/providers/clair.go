@@ -416,40 +416,51 @@ func setClairSessionId(req *http.Request, sessionId string) {
  */
 func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
 	
-	dirPath, err := ioutil.TempDir(imageTarBaseDir, "layers")
-	if err != nil {
-		return "", err
-	}
+	fullPath, err := ioutil.TempDir(imageTarBaseDir, "layers")
+		if err != nil { return "", err }
 
+		
+	// debug
+	fmt.Println("Created temp dir " + fullPath)
+	// end debug
+		
+		
 	var stderr bytes.Buffer
 	save := exec.Command("docker", "save", imageName)
 	save.Stderr = &stderr
-	extract := exec.Command("tar", "xf", "-", "-C"+dirPath)
+	
+	extract := exec.Command("tar", "xf", "-", "-C" + fullPath)
 	extract.Stderr = &stderr
+	
 	pipe, err := extract.StdinPipe()
-	if err != nil {
-		return "", err
-	}
+		if err != nil { return "", err }
+	
 	save.Stdout = pipe
 
-	err = extract.Start()
-	if err != nil {
-		return "", util.ConstructError(stderr.String())
-	}
-	err = save.Run()
-	if err != nil {
-		return "", util.ConstructError(stderr.String())
-	}
+	err = extract.Start()  // does not block
+		if err != nil { return "", util.ConstructError(stderr.String()) }
+	
+	err = save.Run()  // blocks until done
+		if err != nil { return "", util.ConstructError(stderr.String()) }
+	
 	err = pipe.Close()
-	if err != nil {
-		return "", err
-	}
+		if err != nil { return "", err }
+	
 	err = extract.Wait()
-	if err != nil {
-		return "", util.ConstructError(stderr.String())
-	}
+		if err != nil { return "", util.ConstructError(stderr.String()) }
 
-	return path.Base(dirPath), nil
+		
+	// debug
+	var layerFileInfos []os.FileInfo
+	layerFileInfos, err = ioutil.ReadDir(fullPath)
+	for _, fileInfo := range layerFileInfos {
+		fmt.Println("\t" + fileInfo.Name())
+	}
+	// end debug
+		
+		
+		
+	return path.Base(fullPath), nil
 }
 
 /*******************************************************************************
