@@ -126,6 +126,7 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 		if portIndex >= 0 { allowedHost = allowedHost[:portIndex] }
 
 		// Set up HTTP server allowing allowedHost.
+		fmt.Println("Listening on " + imageRetrievalAddress)
 		err := http.ListenAndServe(
 			imageRetrievalAddress, restrictedFileServer(tarFileBaseDir, allowedHost))
 		if err != nil {
