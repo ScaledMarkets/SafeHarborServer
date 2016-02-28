@@ -257,7 +257,7 @@ func (persist *Persistence) updateObject(txn TxnContext, obj PersistObj) error {
 		
 		var key string = ObjectIdPrefix + obj.getId()
 		var json = obj.asJSON()
-		fmt.Println("Writing Object Id " + key + " value: " + json)
+		//fmt.Println("Writing Object Id " + key + " value: " + json)
 		var err = getRedisTransaction(txn).Command("SET", key, json)
 		if err != nil { debug.PrintStack() }
 		if err != nil { return err }

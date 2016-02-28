@@ -1052,16 +1052,6 @@ func (client *InMemClient) NewInMemUser(userId string, name string,
 		EventIds: make([]string, 0),
 	}
 	
-	// debug
-	fmt.Println("Creating password hash: \n\t")
-	for _, b := range passwordHash {
-		fmt.Print(fmt.Sprintf("%d, ", b))
-	}
-	fmt.Println("]")
-	// end debug
-	
-	
-	
 	return newUser, client.addUser(newUser)
 }
 
@@ -1107,18 +1097,6 @@ func (user *InMemUser) validatePassword(dbClient DBClient, pswd string) bool {
 	var empty = []byte{}
 	var authService = dbClient.getServer().authService
 	var prospectiveHash []byte = authService.computeHash(pswd).Sum(empty)
-	
-	// debug
-	fmt.Println("User's password hash: \n\t[")
-	for _, h := range user.PasswordHash {
-		fmt.Print(fmt.Sprintf("%d, ", h))
-	}
-	fmt.Println("]")
-	fmt.Println(fmt.Sprintf("UserId: %s", user.getUserId()))
-	fmt.Println(fmt.Sprintf("UserName: %s", user.getName()))
-	// end debug
-	
-	
 	return authService.compareHashValues(prospectiveHash, user.PasswordHash)
 }
 
@@ -1318,14 +1296,6 @@ func (client *InMemClient) ReconstituteUser(id string, isActive bool,
 		name string, creationTime time.Time, realmId string, aclEntryIds []string,
 		userId, emailAddr string, pswdHash []byte, groupIds []string,
 		loginAttmpts []string, eventIds []string) (User, error) {
-	
-	// debug
-	fmt.Println(fmt.Sprintf("ReconstituteUser: name=%s, pswdHash=\n\t[", name))
-	for _, b := range pswdHash {
-		fmt.Print(fmt.Sprintf("%d, ", b))
-	}
-	fmt.Println("]")
-	// end debug
 	
 	var party *InMemParty
 	var err error
