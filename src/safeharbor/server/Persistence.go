@@ -124,7 +124,7 @@ func (persist *Persistence) resetPersistentState() error {
 	os.Mkdir(persist.Server.Config.FileRepoRootPath, 0770)
 	
 	// Clear redis.
-	err = persist.RedisClient.FlushAll()
+	err = persist.clearDatabase()
 	if err != nil { return err }
 
 	fmt.Println("Repository initialized")
@@ -432,18 +432,7 @@ func (persist *Persistence) init() error {
 	
 	persist.resetInMemoryState()
 	
-	fmt.Println("****Deleting all keys in database***")
-	var err = persist.RedisClient.FlushAll()
-	if err != nil { return err }
-	var nkeys int64
-	nkeys, err = persist.RedisClient.DBSize()
-	if err != nil { return err }
-	if nkeys == 0 { fmt.Println("All database keys successfully deleted") } else {
-		return util.ConstructError(fmt.Sprintf(
-			"Database not deleted: %d keys remain", nkeys))
-	}
-
-	err = persist.loadCoreData()
+	var err = persist.loadCoreData()
 	if err != nil { return util.ConstructError("Unable to load database state: " + err.Error()) }
 	
 	/*
@@ -520,6 +509,24 @@ func (persist *Persistence) clearCache() {
 	persist.realmMap = make(map[string]string)
 	persist.allObjects = make(map[string]PersistObj)
 	persist.allUserIds = make(map[string]string)
+}
+
+/*******************************************************************************
+ * Delete the entire contents of the database.
+ */
+func (persist *Persistence) clearDatabase() error {
+	
+	fmt.Println("****Deleting all keys in database***")
+	var err = persist.RedisClient.FlushAll()
+	if err != nil { return err }
+	var nkeys int64
+	nkeys, err = persist.RedisClient.DBSize()
+	if err != nil { return err }
+	if nkeys == 0 { fmt.Println("All database keys successfully deleted") } else {
+		return util.ConstructError(fmt.Sprintf(
+			"Database not deleted: %d keys remain", nkeys))
+	}
+	return nil
 }
 
 /*******************************************************************************
