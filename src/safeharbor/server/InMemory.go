@@ -1001,7 +1001,7 @@ func (group *InMemGroup) asJSON() string {
 		if i != 0 { json = json + ", " }
 		json = json + fmt.Sprintf("\"%s\"", id)
 	}
-	json = json + "}"
+	json = json + "]}"
 	return json
 }
 
