@@ -434,8 +434,16 @@ func (persist *Persistence) init() error {
 	var err error = persist.loadCoreData()
 	if err != nil { return util.ConstructError("Unable to load database state: " + err.Error()) }
 	
+	fmt.Println("****Deleting all keys in database***")
 	err = persist.RedisClient.FlushAll()
 	if err != nil { return err }
+	var nkeys int64
+	nkeys, err = persist.RedisClient.DBSize()
+	if err != nil { return err }
+	if nkeys == 0 { fmt.Println("All database keys successfully deleted") } else {
+		return util.ConstructError(fmt.Sprintf(
+			"Database not deleted: %d keys remain", nkeys))
+	}
 	
 	/*
 	if persist.Server.Debug {
