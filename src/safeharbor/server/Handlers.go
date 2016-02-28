@@ -732,8 +732,10 @@ func moveUserToRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 		return apitypes.NewFailureDesc("The user is already in the destination realm")
 	}
 	
+	fmt.Println("Removing user Id " + userObjId + " from realm " + origRealm.getName())
 	_, err = origRealm.removeUserId(dbClient, userObjId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	fmt.Println("Adding user Id " + userObjId + " to realm " + destRealm.getName())
 	err = destRealm.addUserId(dbClient, userObjId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
