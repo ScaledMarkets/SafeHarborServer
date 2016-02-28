@@ -255,8 +255,10 @@ func (persist *Persistence) updateObject(txn TxnContext, obj PersistObj) error {
 		// so that getPersistentObject will later be able to map the JSON to the
 		// appropriate go type, using reflection.
 		
-		var err = getRedisTransaction(txn).Command("SET",
-			ObjectIdPrefix + obj.getId(), obj.asJSON())
+		var key string = ObjectIdPrefix + obj.getId()
+		var json = obj.asJSON()
+		fmt.Println("Writing Object Id " + key + " value: " + json)
+		var err = getRedisTransaction(txn).Command("SET", key, json)
 		if err != nil { debug.PrintStack() }
 		if err != nil { return err }
 	}
