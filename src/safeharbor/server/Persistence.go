@@ -434,6 +434,9 @@ func (persist *Persistence) init() error {
 	var err error = persist.loadCoreData()
 	if err != nil { return util.ConstructError("Unable to load database state: " + err.Error()) }
 	
+	err = persist.RedisClient.FlushAll()
+	if err != nil { return err }
+	
 	/*
 	if persist.Server.Debug {
 		var client *InMemClient
