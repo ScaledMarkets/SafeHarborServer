@@ -1684,6 +1684,8 @@ func (realm *InMemRealm) addUserId(dbClient DBClient, userObjId string) error {
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = realm.getId()
 	err = dbClient.writeBack(realm)
+	if err != nil { return err }
+	err = dbClient.writeBack(inMemUser)
 	return err
 }
 
@@ -1701,6 +1703,8 @@ func (realm *InMemRealm) removeUserId(dbClient DBClient, userObjId string) (User
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = ""
 	err = dbClient.writeBack(realm)
+	if err != nil { return user, err }
+	err = dbClient.writeBack(inMemUser)
 	return user, err
 }
 
