@@ -549,7 +549,7 @@ func historyFromCommand(imageName string) ([]string, error) {
 func analyzeLayer(endpoint, path, layerName, parentLayerName string) error {
 	
 	var jsonPayload string = fmt.Sprintf("{\"Layer\": {" +
-		"\"ID\": \"%s\", " +
+		"\"Name\": \"%s\", " +
 		"\"Path\": \"%s\", " +
 		"\"ParentName\": \"%s\", " +
 		"\"Format\": \"%s\"}}",
@@ -612,6 +612,7 @@ func restrictedFileServer(path, allowedHost string) http.Handler {
 	fmt.Println("Setting up file server for Clair, rooted at " + path)
 	fc := func(w http.ResponseWriter, r *http.Request) {
 		if r.Host == allowedHost {
+			fmt.Println("Received request for URI: " + r.RequestURI)
 			http.FileServer(http.Dir(path)).ServeHTTP(w, r)
 			return
 		}
