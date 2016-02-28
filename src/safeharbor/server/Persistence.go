@@ -431,11 +431,9 @@ func (persist *Persistence) addUser(txn TxnContext, user User) error {
 func (persist *Persistence) init() error {
 	
 	persist.resetInMemoryState()
-	var err error = persist.loadCoreData()
-	if err != nil { return util.ConstructError("Unable to load database state: " + err.Error()) }
 	
 	fmt.Println("****Deleting all keys in database***")
-	err = persist.RedisClient.FlushAll()
+	var err = persist.RedisClient.FlushAll()
 	if err != nil { return err }
 	var nkeys int64
 	nkeys, err = persist.RedisClient.DBSize()
@@ -444,6 +442,9 @@ func (persist *Persistence) init() error {
 		return util.ConstructError(fmt.Sprintf(
 			"Database not deleted: %d keys remain", nkeys))
 	}
+
+	err = persist.loadCoreData()
+	if err != nil { return util.ConstructError("Unable to load database state: " + err.Error()) }
 	
 	/*
 	if persist.Server.Debug {
