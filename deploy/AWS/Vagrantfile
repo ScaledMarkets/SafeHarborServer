@@ -87,6 +87,9 @@ Vagrant.configure(2) do |config|
 		#	cmd: "#{@SafeHarborExecPath}"
 #	end
 
+	# Install Postgress.
+	yum install postgresql-server
+
 	# Install clair.
 	config.vm.provision "shell", inline: <<-SHELL
 		sudo docker pull quay.io/coreos/clair
