@@ -585,7 +585,7 @@ func analyzeLayer(endpoint, path, layerName, parentLayerName string) error {
  */
 func getVulnerabilities(endpoint, layerID, minimumPriority string) ([]Vulnerability, error) {
 	
-	var url = endpoint + fmt.Sprintf(getLayerVulnerabilitiesURI, layerID, minimumPriority)
+	var url = endpoint + fmt.Sprintf(getLayerVulnerabilitiesURI, layerID)
 	fmt.Println(url)
 	
 	response, err := http.Get(url)
