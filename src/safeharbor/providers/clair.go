@@ -611,12 +611,12 @@ func getVulnerabilities(endpoint, layerID, minimumPriority string) ([]Vulnerabil
 func restrictedFileServer(path, allowedHost string) http.Handler {
 	fmt.Println("Setting up file server for Clair, rooted at " + path)
 	fc := func(w http.ResponseWriter, r *http.Request) {
-		if r.Host == allowedHost {
+		//if r.Host == allowedHost {
 			fmt.Println("Received request for URI: " + r.RequestURI)
 			http.FileServer(http.Dir(path)).ServeHTTP(w, r)
 			return
-		}
-		w.WriteHeader(403)
+		//}
+		//w.WriteHeader(403)
 	}
 	return http.HandlerFunc(fc)
 }
