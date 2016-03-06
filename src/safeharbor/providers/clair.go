@@ -398,7 +398,7 @@ func (clairContext *ClairRestContext) GetLayersAffectedByVulnerability() {
 
 const (
 	postLayerURI               = "/v1/layers"
-	getLayerVulnerabilitiesURI = "/v1/layers/%s/vulnerabilities?minimumPriority=%s"
+	getLayerVulnerabilitiesURI = "/v1/layers/%s?vulnerabilities"
 )
 
 type APIVulnerabilitiesResponse struct {
