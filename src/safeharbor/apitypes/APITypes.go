@@ -13,6 +13,7 @@
  *      the design in the slide "API REST Binding". We could use go's built-in
  *		JSON formatting for this, but we do it manually to have better control
  *		of what gets sent.
+ * To do: Define JSON schema for the API. See http://json-schema.org/example2.html.
  */
 
 package apitypes

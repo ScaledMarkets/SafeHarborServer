@@ -16,6 +16,17 @@ import (
 
 func main() {
 	
+	var oldStdout *os.File = os.Stdout
+	var logfile *os.File
+	var err error
+	logfile, err = os.OpenFile("safeharbor.log", O_RDWR | O_APPEND | O_CREATE, 0660)   
+	if err != nil {          
+		fmt.Println("While opening log file:")
+		fmt.Println(err.Error())     
+		os.Exit(2)
+	}
+	os.Stdout = logfile
+	
 	var debug *bool = flag.Bool("debug", false, "Run in debug mode: this enables the clearAll REST method.")
 	var nocache *bool = flag.Bool("nocache", false, "Always refresh objects from the database.")
 	var stubScanners *bool = flag.Bool("stubs", false, "Use stubs for scanners.")
@@ -30,16 +41,19 @@ func main() {
 	
 	if flag.NArg() > 0 {
 		usage()
+		logfile.Close()
 		os.Exit(2)
 	}
 	
 	if *help {
 		usage()
+		logfile.Close()
 		os.Exit(0)
 	}
 	
 	if *secretSalt == "" {
 		fmt.Println("Must specify a random value for -secretkey")
+		logfile.Close()
 		os.Exit(2)
 	}
 	
@@ -50,11 +64,18 @@ func main() {
 		*port, *adapter, *secretSalt, *inMemoryOnly)
 	if err != nil {
 		fmt.Println(err.Error())
+		logfile.Close()
 		os.Exit(1)
 	}
-	if svr == nil { os.Exit(1) }
+	if svr == nil {
+		logfile.Close()
+		os.Exit(1)
+	}
 
 	svr.Start()
+	
+	logfile.Close()
+	os.Stdout = oldStdout
 }
 
 func usage() {

@@ -1,0 +1,16 @@
+{
+	"INTFNAME": "en0",
+    "PORT": "80",
+    "LOCAL_AUTH_CERT_PATH": "docker_auth.crt",
+    "LOCAL_ROOT_CERT_PATH": "scaledmarkets.crt",
+    "FILE_REPOSITORY_ROOT": "Repositories",
+    
+	"REDIS_PASSWORD": "ahdal8934k383898&*kdu&^",
+	
+	"ScanServices": {
+		"clair": {
+			"Host": "localhost",
+			"Port": "6060"
+		}
+	}
+}
