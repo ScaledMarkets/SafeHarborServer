@@ -4,7 +4,7 @@
 # docker tag scaledmarkets/safeharborserver:latest 500058573678.dkr.ecr.us-east-1.amazonaws.com/scaledmarkets:latest
 # docker push 500058573678.dkr.ecr.us-east-1.amazonaws.com/scaledmarkets/safeharborserver
 
-FROM dockerhub/centos:7
+FROM docker.io/centos:7
 WORKDIR /
 ADD ["safeharbor", "."]
 ADD ["*.yaml", "."]
