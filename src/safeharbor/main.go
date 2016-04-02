@@ -19,7 +19,7 @@ func main() {
 	var oldStdout *os.File = os.Stdout
 	var logfile *os.File
 	var err error
-	logfile, err = os.OpenFile("safeharbor.log", O_RDWR | O_APPEND | O_CREATE, 0660)   
+	logfile, err = os.OpenFile("safeharbor.log", os.O_RDWR | os.O_APPEND | os.O_CREATE, 0660)   
 	if err != nil {          
 		fmt.Println("While opening log file:")
 		fmt.Println(err.Error())     
@@ -59,7 +59,6 @@ func main() {
 	
 	fmt.Println("Creating SafeHarbor server...")
 	var svr *server.Server
-	var err error
 	svr, err = server.NewServer(*debug, *nocache, *stubScanners, *noauthor,
 		*port, *adapter, *secretSalt, *inMemoryOnly)
 	if err != nil {
