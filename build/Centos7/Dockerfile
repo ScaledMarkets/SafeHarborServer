@@ -7,8 +7,8 @@
 FROM docker.io/centos:7
 WORKDIR /
 ADD ["safeharbor", "."]
-ADD ["*.yaml", "."]
-ADD ["*.conf", "."]
-ADD ["*.json", "."]
+ADD ["*.yaml", "./"]
+ADD ["*.conf", "./"]
+ADD ["*.json", "./"]
 ENTRYPOINT ["safeharbor"]
 CMD ["-port", "6000"]
