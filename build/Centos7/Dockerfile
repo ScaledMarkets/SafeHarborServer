@@ -6,6 +6,7 @@
 FROM docker.io/centos:7
 RUN mkdir /safeharbor
 ADD ["safeharbor", "/safeharbor/"]
+ADD ["*.crt", "/safeharbor/"]
 ADD ["*.yaml", "/safeharbor/"]
 ADD ["*.conf", "/safeharbor/"]
 ADD ["*.json", "/safeharbor/"]

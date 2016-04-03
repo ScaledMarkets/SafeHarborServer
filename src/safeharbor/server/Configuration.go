@@ -62,27 +62,34 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 
 	var exists bool
 	
+	// INTFNAME
 	config.netIntfName, exists = entries["INTFNAME"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find INTFNAME in configuration") }
 	
+	// PORT
 	var portStr string
 	portStr, exists = entries["PORT"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find PORT in configuration") }
 	config.port, err = strconv.Atoi(portStr)
 	if err != nil { return nil, fmt.Errorf("PORT value in configuration is not an integer") }
 	
+	// LOCAL_AUTH_CERT_PATH
 	config.LocalAuthCertPath, exists = entries["LOCAL_AUTH_CERT_PATH"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find LOCAL_AUTH_CERT_PATH in configuration") }
 	
+	// LOCAL_ROOT_CERT_PATH
 	config.LocalRootCertPath, exists = entries["LOCAL_ROOT_CERT_PATH"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find LOCAL_ROOT_CERT_PATH in configuration") }
 	
+	// FILE_REPOSITORY_ROOT
 	config.FileRepoRootPath, exists = entries["FILE_REPOSITORY_ROOT"].(string)
 	if ! exists { config.FileRepoRootPath = "Repository" }
 	config.FileRepoRootPath = strings.TrimRight(config.FileRepoRootPath, "/ ")
 	
+	// REDIS_HOST
 	config.RedisHost, _ = entries["REDIS_HOST"].(string)
 	
+	// REDIS_PORT
 	var redisPortStr string
 	redisPortStr, exists = entries["REDIS_PORT"].(string)
 	if exists {
@@ -92,8 +99,20 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 		config.RedisPort = 0
 	}
 	
+	// REDIS_PASSWORD
 	config.RedisPswd, exists = entries["REDIS_PASSWORD"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find REDIS_PASSWORD in configuration") }
+	
+	// ScanServices
+	var obj interface{}
+	obj, exists = entries["ScanServices"]
+	if ! exists { return nil, fmt.Errorf("Did not find ScanServices in configuration") }
+	var isType bool
+	config.ScanServices, isType = obj.(map[string]interface{})
+	if ! isType {
+		fmt.Println("ScanServices is a", reflect.TypeOf(obj))
+		return nil, fmt.Errorf("Scan configuration is ill-formatted")
+	}
 	
 	//config.service, exists = entries["SERVICE"]
 	//if ! exists { return nil, fmt.Errorf("Did not find SERVICE in configuration") }
@@ -111,16 +130,6 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	
 	//config.AuthKeyPath, exists = entries["AUTH_PRIVATE_KEY_PATH"]
 	//if ! exists { return nil, fmt.Errorf("Did not find AUTH_PRIVATE_KEY_PATH in configuration") }
-	
-	var obj interface{}
-	obj, exists = entries["ScanServices"]
-	if ! exists { return nil, fmt.Errorf("Did not find ScanServices in configuration") }
-	var isType bool
-	config.ScanServices, isType = obj.(map[string]interface{})
-	if ! isType {
-		fmt.Println("ScanServices is a", reflect.TypeOf(obj))
-		return nil, fmt.Errorf("Scan configuration is ill-formatted")
-	}
 	
 	fmt.Println("Configuration values obtained")
 	return config, nil
