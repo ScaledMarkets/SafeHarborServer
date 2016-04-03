@@ -1,7 +1,7 @@
 #!/bin/sh
 
 export ScaledMarketsRegistry=500058573678.dkr.ecr.us-east-1.amazonaws.com/scaledmarkets
-export SafeHarborImageName=$ScaledMarketsRegistry/safeharborserver
+export SafeHarborImageName=$ScaledMarketsRegistry:safeharborserver
 
 
 # Install docker on centos7:
