@@ -1,8 +1,7 @@
 # Build and publish as follows:
 # cp ../../bin/safeharbor .
-# docker build -t scaledmarkets/safeharborserver .
-# docker tag scaledmarkets/safeharborserver:latest 500058573678.dkr.ecr.us-east-1.amazonaws.com/scaledmarkets:latest
-# docker push 500058573678.dkr.ecr.us-east-1.amazonaws.com/scaledmarkets/safeharborserver
+# docker build -t 500058573678.dkr.ecr.us-east-1.amazonaws.com/scaledmarkets:safeharborserver .
+# docker push 500058573678.dkr.ecr.us-east-1.amazonaws.com/scaledmarkets:safeharborserver
 
 FROM docker.io/centos:7
 RUN mkdir /safeharbor
