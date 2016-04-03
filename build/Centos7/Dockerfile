@@ -10,5 +10,6 @@ ADD ["*.crt", "/safeharbor/"]
 ADD ["*.yaml", "/safeharbor/"]
 ADD ["*.conf", "/safeharbor/"]
 ADD ["*.json", "/safeharbor/"]
+WORKDIR /safeharbor/
 #ENTRYPOINT ["/safeharbor/safeharbor"]
 #CMD ["/safeharbor/safeharbor", "-port", "6000"]
