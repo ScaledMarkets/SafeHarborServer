@@ -30,6 +30,7 @@ import (
 )
 
 type ClairServiceStub struct {
+	UseSSL bool,
 	Host string
 	Port int
 	LocalIPAddress string  // of this machine, for clair to call back
@@ -63,6 +64,7 @@ func CreateClairServiceStub(params map[string]interface{}) (ScanService, error) 
 	if err != nil { return nil, err }
 	
 	return &ClairServiceStub{
+		UseSSL: false,
 		Host: host,
 		Port: port,
 		LocalIPAddress: localIPAddress,
@@ -96,8 +98,8 @@ func (clairSvc *ClairServiceStub) CreateScanContext(params map[string]string) (S
 	}
 	
 	return &ClairRestContextStub{
-		RestContext: *rest.CreateRestContext(
-			clairSvc.Host, clairSvc.Port, setClairSessionStubId),
+		RestContext: *rest.CreateRestContext(clairSvc.UseSSL,
+			clairSvc.Host, clairSvc.Port, "", "", setClairSessionStubId),
 		MinimumVulnerabilityPriority: minPriority,
 		ClairServiceStub: clairSvc,
 		sessionId: "",
@@ -192,7 +194,7 @@ func (clairContext *ClairRestContextStub) ScanImage(imageName string) (*ScanResu
 func (clairContext *ClairRestContextStub) GetVersions() (apiVersion string, engineVersion string, err error) {
 
 	var resp *http.Response
-	resp, err = clairContext.SendGet(clairContext.sessionId,
+	resp, err = clairContext.SendSessionGet(clairContext.sessionId,
 		"v1/versions",
 		[]string{},
 		[]string{})

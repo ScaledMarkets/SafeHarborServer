@@ -36,6 +36,7 @@ func main() {
 	var adapter *string = flag.String("adapter", "", "Network adapter to use (e.g., eth0)")
 	var secretSalt *string = flag.String("secretkey", "", "Secret value to make session hashes unpredictable.")
 	var inMemoryOnly *bool = flag.Bool("inmem", false, "Do not persist the data")
+	var noRegistry *bool = flag.Bool("noregistry", false, "Do not use docker registry - use local docker instead")
 	
 	flag.Parse()
 	
@@ -60,7 +61,7 @@ func main() {
 	fmt.Println("Creating SafeHarbor server...")
 	var svr *server.Server
 	svr, err = server.NewServer(*debug, *nocache, *stubScanners, *noauthor,
-		*port, *adapter, *secretSalt, *inMemoryOnly)
+		*port, *adapter, *secretSalt, *inMemoryOnly, *noRegistry)
 	if err != nil {
 		fmt.Println(err.Error())
 		logfile.Close()

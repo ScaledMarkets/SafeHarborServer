@@ -49,6 +49,7 @@ type Server struct {
 	InMemoryOnly bool
 	Debug bool // for test only
 	NoCache bool // for test only
+	NoRegistry bool // for test only
 }
 
 const (
@@ -59,7 +60,7 @@ const (
  * Create a Server structure. This includes reading in the auth server cert.
  */
 func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port int,
-	adapter string, secretSalt string, inMemOnly bool) (*Server, error) {
+	adapter string, secretSalt string, inMemOnly bool, noRegistry bool) (*Server, error) {
 	
 	// Read configuration. (Defined in a JSON file.)
 	fmt.Println("Reading configuration")
@@ -96,12 +97,16 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port 
 		dispatcher: NewDispatcher(),
 		MaxLoginAttemptsToRetain: 5,
 		InMemoryOnly: inMemOnly,
+		NoRegistry: noRegistry,
 	}
 	
 	// Ensure that the file repository exists.
 	if ! fileExists(server.Config.FileRepoRootPath) {
-		return nil, util.ConstructError(
-			"Repository does not exist, " + server.Config.FileRepoRootPath)
+		err = os.MkdirAll(server.Config.FileRepoRootPath, 0700)
+		if err != nil { AbortStartup(
+			"Unable to create directory '" + server.Config.FileRepoRootPath +
+			"'; " + err.Error())
+		}
 	}
 	
 	// Tell dispatcher how to find server.

@@ -17,6 +17,18 @@ import (
 	"safeharbor/util"
 )
 
+
+....replace with REST calls:
+Registry 2.0:
+https://github.com/docker/distribution/blob/master/docs/spec/api.md
+
+Registry 1.4:
+https://docs.docker.com/apidocs/v1.4.0/
+	
+Engine:
+https://github.com/docker/docker/blob/master/docs/reference/api/docker_remote_api_v1.24.md
+
+
 /*******************************************************************************
  * 
  */
@@ -29,8 +41,9 @@ func BuildDockerfile(dockerfileExternalFilePath,
 	}
 	fmt.Println("Image name =", imageName)
 	
-	// Check if am image with that name already exists.
+	// Check if an image with that name already exists.
 	var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "inspect", imageName)
+		// GET /containers/4fa6e0f0c678/json HTTP/1.1
 	var output []byte
 	var err error
 	output, err = cmd.CombinedOutput()
@@ -83,6 +96,10 @@ func BuildDockerfile(dockerfileExternalFilePath,
 		"--file", tempDirPath + "/" + dockerfileName,
 		"--tag", imageFullName, tempDirPath)
 	
+		// POST /build HTTP/1.1
+		//
+		// {{ TAR STREAM }}
+		
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.
 	output, err = cmd.CombinedOutput()
@@ -304,6 +321,8 @@ func SaveImage(imageFullName string) (string, error) {
 	var tempFilePath = tempFile.Name()
 	
 	var cmd *exec.Cmd = exec.Command("docker", "save", "-o", tempFilePath, imageFullName)
+		// ....need to use registry API
+		
 	fmt.Println(fmt.Sprintf("Running docker save -o%s %s", tempFilePath, imageFullName))
 	err = cmd.Run()
 	if err != nil { return "", err }
@@ -322,6 +341,8 @@ func GetDigest(imageId string) ([]byte, error) {
  */
 func RemoveDockerImage(imageFullName string) error {
 	var cmd *exec.Cmd = exec.Command("docker", "rmi", imageFullName)
+		// DELETE /images/test HTTP/1.1
+		
 	fmt.Println(fmt.Sprintf("Running docker rmi %s", imageFullName))
 	return cmd.Run()
 }

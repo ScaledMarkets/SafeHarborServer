@@ -14,23 +14,30 @@ import (
 
 type RestContext struct {
 	httpClient *http.Client
+	ssl bool
 	hostname string
 	port int
+	UserId string
+	Password string
 	setSessionId func(request *http.Request, id string)
 }
 
 /*******************************************************************************
  * 
  */
-func CreateRestContext(hostname string, port int, sessionIdSetter func(*http.Request, string)) *RestContext {
+func CreateRestContext(ssl bool, hostname string, port int, userId string, password string,
+	sessionIdSetter func(*http.Request, string)) *RestContext {
 	return &RestContext{
 		httpClient: &http.Client{
 			Transport: &http.Transport{
 				DisableCompression: true,
 			},
 		},
+		ssl: ssl,
 		hostname: hostname,
 		port: port,
+		UseId: userId,
+		Password: password,
 		setSessionId: sessionIdSetter,
 	}
 }
@@ -49,7 +56,7 @@ func (restContext *RestContext) GetPort() int { return restContext.port }
  * Send a GET request to the SafeHarborServer, at the specified REST endpoint method
  * (reqName), with the specified query parameters.
  */
-func (restContext *RestContext) SendGet(sessionId string, reqName string, names []string,
+func (restContext *RestContext) SendSessionGet(sessionId string, reqName string, names []string,
 	values []string) (*http.Response, error) {
 
 	return restContext.sendReq(sessionId, "GET", reqName, names, values)
@@ -60,7 +67,7 @@ func (restContext *RestContext) SendGet(sessionId string, reqName string, names 
  * REST API, as defined in the slides "SafeHarbor REST API" of the design,
  * https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
  */
-func (restContext *RestContext) SendPost(sessionId string, reqName string, names []string,
+func (restContext *RestContext) SendSessionPost(sessionId string, reqName string, names []string,
 	values []string) (*http.Response, error) {
 
 	return restContext.sendReq(sessionId, "POST", reqName, names, values)
@@ -71,7 +78,7 @@ func (restContext *RestContext) SendPost(sessionId string, reqName string, names
  * REST API, as defined in the slides "SafeHarbor REST API" of the design,
  * https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
  */
-func (restContext *RestContext) sendReq(sessionId string, reqMethod string,
+func (restContext *RestContext) sendSessionReq(sessionId string, reqMethod string,
 	reqName string, names []string, values []string) (*http.Response, error) {
 
 	// Send REST POST request to server.
@@ -98,11 +105,10 @@ func (restContext *RestContext) sendReq(sessionId string, reqMethod string,
 	return resp, nil
 }
 
-
 /*******************************************************************************
  * Send request as a multi-part so that a file can be attached.
  */
-func (restContext *RestContext) SendFilePost(sessionId string, reqName string, names []string,
+func (restContext *RestContext) SendSessionFilePost(sessionId string, reqName string, names []string,
 	values []string, path string) (*http.Response, error) {
 
 	var urlstr string = fmt.Sprintf(

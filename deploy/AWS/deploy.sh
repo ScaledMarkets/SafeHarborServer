@@ -15,9 +15,6 @@ sudo docker pull docker.io/postgres
 sudo docker pull quay.io/coreos/clair
 sudo docker pull $SafeHarborImageName
 
-# Configure host:
-sudo mkdir -p /home/centos/safeharbordata
-
 # Start redis.
 sudo docker run --net=host -d -v /home/centos/SafeHarborServer/build/Centos7:/config -v /home/centos/safeharbordata:/data docker.io/redis redis-server --appendonly yes /config/redis.conf
 
@@ -26,6 +23,21 @@ sudo docker run --net=host -d -e POSTGRES_PASSWORD=4word2day -d docker.io/postgr
 
 # Start Clair.
 sudo docker run --net=host -d -v /home/centos/SafeHarborServer/build/Centos7:/config:ro quay.io/coreos/clair:latest --config=/config/clairconfig.yaml
+
+# Create Docker Registry password file.
+docker run --entrypoint htpasswd docker.io/registry:2 -Bbn $registryUser $registryPassword > $DataVolMountPoint/registryauth/htpasswd
+
+# Start Docker Registry.
+sudo docker run --net=host -d -p 5000:5000 --name registry \
+	-v $RegistryPath/registryauth:/auth \
+	-v $DataVolMountPoint/registrydata:/var/lib/registry
+	-e "REGISTRY_AUTH=htpasswd" \
+	-e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
+	-e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
+	#-v $DataVolMountPoint/registrycerts:/certs \
+	#-e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
+	#-e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
+	docker.io/registry:2
 
 # Start SafeHarborServer.
 #sudo docker run --net=host -d -p 6000:6000 -v $DataVolMountPoint:/safeharbor/data $SafeHarborImageName /safeharbor/safeharbor -debug -secretkey=jafakeu9s3ls -port=6000
