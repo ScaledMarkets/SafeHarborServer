@@ -56,8 +56,7 @@ func (restContext *RestContext) GetPort() int { return restContext.port }
  * Send a GET request to the SafeHarborServer, at the specified REST endpoint method
  * (reqName), with the specified query parameters.
  */
-func (restContext *RestContext) SendSessionGet(sessionId string, reqName string, names []string,
-	values []string) (*http.Response, error) {
+func (restContext *RestContext) SendSessionGet(sessionId string, reqName string) (*http.Response, error) {
 
 	return restContext.sendReq(sessionId, "GET", reqName, names, values)
 }
