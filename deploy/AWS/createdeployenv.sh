@@ -2,10 +2,10 @@
 
 source env.sh
 
-# Configure host:
+# Configure host.
 sudo mkdir -p $DataVolMountPoint
 
-# Create Docker Registry password file.
+# Create directories needed by docker Registry.
 mkdir -p $DataVolMountPoint/registryauth
 mkdir -p $DataVolMountPoint/registrydata
 mkdir -p $DataVolMountPoint/registrycerts
