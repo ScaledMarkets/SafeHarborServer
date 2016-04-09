@@ -252,13 +252,13 @@ func (groupDesc *GroupDesc) AsJSON() string {
 type GroupDescs []*GroupDesc
 
 func (groupDescs GroupDescs) AsJSON() string {
-	var response string = "[\n"
+	var response string = "{" + httpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range groupDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.AsJSON()
 	}
-	response = response + "]"
+	response = response + "]}"
 	return response
 }
 
@@ -356,13 +356,13 @@ func (userDesc *UserDesc) AsJSON() string {
 type UserDescs []*UserDesc
 
 func (userDescs UserDescs) AsJSON() string {
-	var response string = "["
+	var response string = "{" + httpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range userDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.AsJSON()
 	}
-	response = response + "]"
+	response = response + "]}"
 	return response
 }
 
@@ -400,13 +400,13 @@ type RealmDescs []*RealmDesc
 
 func (realmDescs RealmDescs) AsJSON() string {
 	
-	var response string = "["
+	var response string = "{" + httpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range realmDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.AsJSON()
 	}
-	response = response + "]"
+	response = response + "]}"
 	return response
 }
 
@@ -495,13 +495,13 @@ func (repoDesc *RepoDesc) AsJSON() string {
 type RepoDescs []*RepoDesc
 
 func (repoDescs RepoDescs) AsJSON() string {
-	var response string = "["
+	var response string = "{" + httpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range repoDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.AsJSON()
 	}
-	response = response + "]"
+	response = response + "]}"
 	return response
 }
 
@@ -538,13 +538,13 @@ func (dockerfileDesc *DockerfileDesc) AsJSON() string {
 type DockerfileDescs []*DockerfileDesc
 
 func (dockerfileDescs DockerfileDescs) AsJSON() string {
-	var response string = "["
+	var response string = "{" + httpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range dockerfileDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.AsJSON()
 	}
-	response = response + "]"
+	response = response + "]}"
 	return response
 }
 
@@ -617,13 +617,13 @@ func (imageDesc *DockerImageDesc) AsJSON() string {
 type DockerImageDescs []*DockerImageDesc
 
 func (imageDescs DockerImageDescs) AsJSON() string {
-	var response string = "["
+	var response string = "{" + httpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range imageDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.AsJSON()
 	}
-	response = response + "]"
+	response = response + "]}"
 	return response
 }
 
@@ -749,13 +749,13 @@ func (scanProviderDesc *ScanProviderDesc) AsJSON() string {
 type ScanProviderDescs []*ScanProviderDesc
 
 func (scanProviderDescs ScanProviderDescs) AsJSON() string {
-	var response string = "["
+	var response string = "{" + httpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range scanProviderDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.AsJSON()
 	}
-	response = response + "]"
+	response = response + "]}"
 	return response
 }
 
@@ -823,13 +823,13 @@ func (scanConfig *ScanConfigDesc) AsJSON() string {
 type ScanConfigDescs []*ScanConfigDesc
 
 func (scanConfigDescs ScanConfigDescs) AsJSON() string {
-	var response string = "["
+	var response string = "{" + httpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range scanConfigDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.AsJSON()
 	}
-	response = response + "]"
+	response = response + "]}"
 	return response
 }
 
@@ -875,13 +875,13 @@ func (flagDesc *FlagDesc) AsJSON() string {
 type FlagDescs []*FlagDesc
 
 func (flagDescs FlagDescs) AsJSON() string {
-	var response string = "["
+	var response string = "{" + httpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range flagDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.AsJSON()
 	}
-	response = response + "]"
+	response = response + "]}"
 	return response
 }
 
@@ -935,13 +935,13 @@ func (eventDesc *EventDescBase) AsJSON() string {
 type EventDescs []EventDesc
 
 func (eventDescs EventDescs) AsJSON() string {
-	var response string = "["
+	var response string = "{" + httpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range eventDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
 		response = response + desc.AsJSON()
 	}
-	response = response + "]"
+	response = response + "]}"
 	return response
 }
 
@@ -1161,6 +1161,13 @@ func RespondWithServerError(writer http.ResponseWriter, err string) {
 func NewFailureMessage(reason string, httpCode int) string {
 	return fmt.Sprintf("{\"HTTPStatusCode\": %d, \"HTTPReasonPhrase\": \"%s\"}",
 		httpCode, reason)
+}
+
+/*******************************************************************************
+ * 
+ */
+func httpOKResponse() string {
+	return "\"HTTPStatusCode\": 200, \"HTTPReasonPhrase\": \"OK\""
 }
 
 /*******************************************************************************
