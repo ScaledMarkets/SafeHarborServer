@@ -96,14 +96,11 @@ var _ RespIntfTp = &BaseType{}
  */
 type Result struct {
 	BaseType
-	Status int  // HTTP status code (e.g., 200 is success)
-	Message string
 }
 
 func NewResult(status int, message string) *Result {
 	return &Result{
-		Status: status,
-		Message: message,
+		BaseType: *NewBaseType(status, message),
 	}
 }
 

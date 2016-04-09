@@ -36,10 +36,7 @@ func ping(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	fmt.Println("ping request received")
-	return &apitypes.Result{
-		Status: 200,
-		Message: "Server is up",
-	}
+	return apitypes.NewResult(200, "Server is up")
 }
 
 /*******************************************************************************
@@ -524,10 +521,7 @@ func addGroupUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	user.addGroupId(dbClient, groupId)
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	return &apitypes.Result{
-		Status: 200,
-		Message: "User added to group",
-	}
+	return apitypes.NewResult(200, "User added to group")
 }
 
 /*******************************************************************************
