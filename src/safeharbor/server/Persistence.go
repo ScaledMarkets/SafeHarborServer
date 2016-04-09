@@ -92,11 +92,12 @@ func (persist *Persistence) NewTxnContext() (TxnContext, error) {
 	var goRedisTxn *goredis.Transaction
 	var err error
 	
-	
-	//if persist == nil { return nil, errors.New("Unexpected") }
+	if ! persist.InMemoryOnly {
 	if persist.RedisClient == nil { return nil, util.ConstructError("Redis not configured") }
-	goRedisTxn, err = persist.RedisClient.Transaction()
-	if err != nil { return nil, err }
+		goRedisTxn, err = persist.RedisClient.Transaction()
+		if err != nil { return nil, err }
+	}
+	
 	return &GoRedisTransactionWrapper{
 		Persistence: persist,
 		GoRedisTransaction: goRedisTxn,
@@ -299,9 +300,11 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		// and so we are relying on the fact that the watch is set before we read
 		// the value.
 		var err error
-		err = getRedisTransaction(txn).Watch(ObjectIdPrefix + id)
-		if err != nil { debug.PrintStack() }
-		if err != nil { return nil, err }
+		if ! persist.InMemoryOnly {
+			err = getRedisTransaction(txn).Watch(ObjectIdPrefix + id)
+			if err != nil { debug.PrintStack() }
+			if err != nil { return nil, err }
+		}
 		
 		// Read JSON from the database, using the id as the key; then deserialize
 		// (unmarshall) the JSON into an object. The outermost JSON object will be

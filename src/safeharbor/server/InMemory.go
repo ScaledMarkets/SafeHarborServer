@@ -109,14 +109,22 @@ func (client *InMemClient) resetTransactionCache() {
 // of InMemClient can no longer be called.
 func (client *InMemClient) commit() error {
 	client.resetTransactionCache()
-	return client.txn.commit()
+	if client.Persistence.InMemoryOnly {
+		return nil
+	} else {
+		return client.txn.commit()
+	}
 }
 
 // Abort the database transaction - after calling this, methods on this instance
 // of InMemClient can no longer be called.
 func (client *InMemClient) abort() error {
 	client.resetTransactionCache()
-	return client.txn.abort()
+	if client.Persistence.InMemoryOnly {
+		return nil
+	} else {
+		return client.txn.abort()
+	}
 }
 
 func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
