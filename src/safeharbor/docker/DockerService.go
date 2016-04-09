@@ -17,8 +17,7 @@ import (
 	"safeharbor/util"
 )
 
-
-....replace with REST calls:
+/* Replace with REST calls.
 Registry 2.0:
 https://github.com/docker/distribution/blob/master/docs/spec/api.md
 
@@ -27,7 +26,7 @@ https://docs.docker.com/apidocs/v1.4.0/
 	
 Engine:
 https://github.com/docker/docker/blob/master/docs/reference/api/docker_remote_api_v1.24.md
-
+*/
 
 /*******************************************************************************
  * 

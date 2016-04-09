@@ -60,6 +60,8 @@ var DeleteMask []bool = []bool{false, false, false, false, true}
  * All types defined here include this type as a go "anonymous field".
  */
 type BaseType struct {
+	HTTPStatusCode int
+	HTTPReasonPhrase string
 }
 
 type RespIntfTp interface {  // response interface type
@@ -67,8 +69,20 @@ type RespIntfTp interface {  // response interface type
 	SendFile() (path string, deleteAfter bool)
 }
 
+func NewBaseType(statusCode int, reason string) *BaseType {
+	return &BaseType{
+		HTTPStatusCode: statusCode,
+		HTTPReasonPhrase: reason,
+	}
+}
+
+func (b *BaseType) baseTypeFieldsAsJSON() string {
+	return fmt.Sprintf("\"HTTPStatusCode\": %d, \"HTTPReasonPhrase\": \"%s\"",
+		b.HTTPStatusCode, b.HTTPReasonPhrase)
+}
+
 func (b *BaseType) AsJSON() string {
-	return ""
+	panic("Call to method that should be abstract")
 }
 
 func (b *BaseType) SendFile() (path string, deleteAfter bool) {
@@ -94,8 +108,7 @@ func NewResult(status int, message string) *Result {
 }
 
 func (result *Result) AsJSON() string {
-	return fmt.Sprintf("{\"Status\": \"%d\", \"Message\": \"%s\"}",
-		result.Status, result.Message)
+	return fmt.Sprintf("{%s}", result.baseTypeFieldsAsJSON())
 }
 
 /*******************************************************************************
@@ -125,8 +138,6 @@ func (response *FileResponse) SendFile() (string, bool) {
  */
 type FailureDesc struct {
 	BaseType
-	Reason string
-	HTTPCode int
 }
 
 func NewFailureDesc(reason string) *FailureDesc {
@@ -134,13 +145,12 @@ func NewFailureDesc(reason string) *FailureDesc {
 		". Stack trace follows, but the error might be 'normal'")
 	debug.PrintStack()  // debug
 	return &FailureDesc{
-		Reason: reason,
-		HTTPCode: 500,  // see https://golang.org/pkg/net/http/#pkg-constants
+		BaseType: *NewBaseType(500, reason), // see https://golang.org/pkg/net/http/#pkg-constants
 	}
 }
 
 func (failureDesc *FailureDesc) AsJSON() string {
-	return NewFailureMessage(failureDesc.Reason, failureDesc.HTTPCode)
+	return NewFailureMessage(failureDesc.HTTPReasonPhrase, failureDesc.HTTPStatusCode)
 }
 
 /*******************************************************************************
@@ -173,7 +183,7 @@ func GetCredentials(values url.Values) (*Credentials, error) {
 }
 
 func (creds *Credentials) AsJSON() string {
-	return fmt.Sprintf("{\"UserId\": \"%s\"}", creds.UserId)
+	return fmt.Sprintf("{%s, \"UserId\": \"%s\"}", creds.baseTypeFieldsAsJSON(), creds.UserId)
 }
 
 /*******************************************************************************
@@ -205,8 +215,8 @@ func (sessionToken *SessionToken) SetIsAdminUser(isAdmin bool) {
 }
 
 func (sessionToken *SessionToken) AsJSON() string {
-	return fmt.Sprintf("{\"UniqueSessionId\": \"%s\", \"AuthenticatedUserid\": \"%s\", " +
-		"\"RealmId\": \"%s\", \"IsAdmin\": %s}",
+	return fmt.Sprintf("{%s, \"UniqueSessionId\": \"%s\", \"AuthenticatedUserid\": \"%s\", " +
+		"\"RealmId\": \"%s\", \"IsAdmin\": %s}", sessionToken.baseTypeFieldsAsJSON(),
 		sessionToken.UniqueSessionId, sessionToken.AuthenticatedUserid,
 		sessionToken.RealmId, BoolToString(sessionToken.IsAdmin))
 }
@@ -234,7 +244,8 @@ func NewGroupDesc(groupId, realmId, groupName, desc string, creationDate time.Ti
 }
 
 func (groupDesc *GroupDesc) AsJSON() string {
-	return fmt.Sprintf("{\"RealmId\": \"%s\", \"GroupName\": \"%s\", \"CreationDate\": %s, \"GroupId\": \"%s\", \"Description\": \"%s\"}",
+	return fmt.Sprintf("{%s, \"RealmId\": \"%s\", \"GroupName\": \"%s\", \"CreationDate\": %s, \"GroupId\": \"%s\", \"Description\": \"%s\"}",
+		groupDesc.baseTypeFieldsAsJSON(),
 		groupDesc.RealmId, groupDesc.GroupName, groupDesc.CreationDate, groupDesc.GroupId, groupDesc.Description)
 }
 
@@ -303,7 +314,8 @@ func GetUserInfo(values url.Values) (*UserInfo, error) {
 }
 
 func (userInfo *UserInfo) AsJSON() string {
-	return fmt.Sprintf("{\"UserId\": \"%s\", \"UserName\": \"%s\", \"EmailAddress\": \"%s\", \"RealmId\": \"%s\"}",
+	return fmt.Sprintf("{%s, \"UserId\": \"%s\", \"UserName\": \"%s\", \"EmailAddress\": \"%s\", \"RealmId\": \"%s\"}",
+		userInfo.baseTypeFieldsAsJSON(),
 		userInfo.UserId, userInfo.UserName, userInfo.EmailAddress, userInfo.RealmId)
 }
 
@@ -330,7 +342,8 @@ func NewUserDesc(id, userId, userName, realmId string, canModRealms []string) *U
 }
 
 func (userDesc *UserDesc) AsJSON() string {
-	var response string = fmt.Sprintf("{\"Id\": \"%s\", \"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\", \"CanModifyTheseRealms\": [",
+	var response string = fmt.Sprintf("{%s, \"Id\": \"%s\", \"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\", \"CanModifyTheseRealms\": [",
+		userDesc.baseTypeFieldsAsJSON(),
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId)
 	for i, adminRealmId := range userDesc.CanModifyTheseRealms {
 		if i > 0 { response = response + ", " }
@@ -378,7 +391,8 @@ func NewRealmDesc(id string, name string, orgName string, adminUserId string) *R
 }
 
 func (realmDesc *RealmDesc) AsJSON() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"RealmName\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
+	return fmt.Sprintf("{%s, \"Id\": \"%s\", \"RealmName\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
+		realmDesc.baseTypeFieldsAsJSON(),
 		realmDesc.Id, realmDesc.RealmName, realmDesc.OrgFullName, realmDesc.AdminUserId)
 }
 
@@ -433,8 +447,8 @@ func GetRealmInfo(values url.Values) (*RealmInfo, error) {
 }
 
 func (realmInfo *RealmInfo) AsJSON() string {
-	return fmt.Sprintf("{\"RealmName\": \"%s\", \"OrgFullName\": \"%s\"}",
-		realmInfo.RealmName, realmInfo.OrgFullName)
+	return fmt.Sprintf("{%s, \"RealmName\": \"%s\", \"OrgFullName\": \"%s\"}",
+		realmInfo.baseTypeFieldsAsJSON(), realmInfo.RealmName, realmInfo.OrgFullName)
 }
 
 /*******************************************************************************
@@ -464,9 +478,10 @@ func NewRepoDesc(id string, realmId string, name string, desc string,
 }
 
 func (repoDesc *RepoDesc) AsJSON() string {
-	var resp string = fmt.Sprintf("{\"Id\": \"%s\", \"RealmId\": \"%s\", " +
+	var resp string = fmt.Sprintf("{%s, \"Id\": \"%s\", \"RealmId\": \"%s\", " +
 		"\"RepoName\": \"%s\", \"Description\": \"%s\", \"CreationDate\": %s, " +
 		"\"DockerfileIds\": [",
+		repoDesc.baseTypeFieldsAsJSON(),
 		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName, repoDesc.Description,
 		repoDesc.CreationDate)
 	for i, id := range repoDesc.DockerfileIds {
@@ -515,7 +530,8 @@ func NewDockerfileDesc(id string, repoId string, name string, desc string) *Dock
 }
 
 func (dockerfileDesc *DockerfileDesc) AsJSON() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"RepoId\": \"%s\", \"DockerfileName\": \"%s\", \"Description\": \"%s\"}",
+	return fmt.Sprintf("{%s, \"Id\": \"%s\", \"RepoId\": \"%s\", \"DockerfileName\": \"%s\", \"Description\": \"%s\"}",
+		dockerfileDesc.baseTypeFieldsAsJSON(),
 		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.DockerfileName, dockerfileDesc.Description)
 }
 
@@ -585,9 +601,9 @@ func (imageDesc *DockerImageDesc) AsJSON() string {
 	var dockerBuildOutput *docker.DockerBuildOutput
 	dockerBuildOutput, _ = docker.ParseBuildOutput(imageDesc.OutputFromBuild)
 	
-	var s = fmt.Sprintf("{\"ObjId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", " +
+	var s = fmt.Sprintf("{%s, \"ObjId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", " +
 		"\"Description\": \"%s\", \"CreationDate\": %s, " +
-		"\"Signature\": [",
+		"\"Signature\": [", imageDesc.baseTypeFieldsAsJSON(),
 		imageDesc.ObjId, imageDesc.RepoId, imageDesc.Name, imageDesc.Description,
 		imageDesc.CreationDate)
 	for i, b := range imageDesc.Signature {
@@ -645,7 +661,8 @@ func (mask *PermissionMask) SetCanDelete(can bool) { mask.Mask[4] = can }
 
 func (mask *PermissionMask) AsJSON() string {
 	return fmt.Sprintf(
-		"{\"CanCreateIn\": %d, \"CanRead\": %d, \"CanWrite\": %d, \"CanExecute\": %d, \"CanDelete\": %d}",
+		"{%s, \"CanCreateIn\": %d, \"CanRead\": %d, \"CanWrite\": %d, \"CanExecute\": %d, \"CanDelete\": %d}",
+		mask.baseTypeFieldsAsJSON(),
 		mask.CanCreateIn, mask.CanRead, mask.CanWrite, mask.CanExecute, mask.CanDelete)
 }
 
@@ -673,9 +690,9 @@ func NewPermissionDesc(aclEntryId string, resourceId string, partyId string,
 
 func (desc *PermissionDesc) AsJSON() string {
 	return fmt.Sprintf(
-		"{\"ACLEntryId\": \"%s\", \"ResourceId\": \"%s\", \"PartyId\": \"%s\", " +
+		"{%s, \"ACLEntryId\": \"%s\", \"ResourceId\": \"%s\", \"PartyId\": \"%s\", " +
 		"\"CanCreateIn\": %s, \"CanRead\": %s, \"CanWrite\": %s, \"CanExecute\": %s, \"CanDelete\": %s}",
-		desc.ACLEntryId, desc.ResourceId, desc.PartyId,
+		desc.baseTypeFieldsAsJSON(), desc.ACLEntryId, desc.ResourceId, desc.PartyId,
 		BoolToString(desc.CanCreateIn()), BoolToString(desc.CanRead()),
 		BoolToString(desc.CanWrite()), BoolToString(desc.CanExecute()),
 		BoolToString(desc.CanDelete()))
@@ -718,8 +735,8 @@ func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc 
 }
 
 func (scanProviderDesc *ScanProviderDesc) AsJSON() string {
-	var response string = fmt.Sprintf("{\"ProviderName\": \"%s\", \"Parameters\": [",
-		scanProviderDesc.ProviderName)
+	var response string = fmt.Sprintf("{%s, \"ProviderName\": \"%s\", \"Parameters\": [",
+		scanProviderDesc.baseTypeFieldsAsJSON(), scanProviderDesc.ProviderName)
 	var firstTime bool = true
 	for _, paramInfo := range scanProviderDesc.Parameters {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
@@ -791,9 +808,10 @@ func NewScanConfigDesc(id, provName, expr, flagId string, paramValueDescs []*Par
 }
 
 func (scanConfig *ScanConfigDesc) AsJSON() string {
-	var s string = fmt.Sprintf("{\"Id\": \"%s\", \"ProviderName\": \"%s\", " +
+	var s string = fmt.Sprintf("{%s, \"Id\": \"%s\", \"ProviderName\": \"%s\", " +
 		"\"SuccessExpression\": \"%s\", \"FlagId\": \"%s\", " +
-		"\"ParameterValueDescs\": [", scanConfig.Id, scanConfig.ProviderName,
+		"\"ParameterValueDescs\": [", scanConfig.baseTypeFieldsAsJSON(),
+		scanConfig.Id, scanConfig.ProviderName,
 		scanConfig.SuccessExpression, scanConfig.FlagId)
 	for i, paramValueDesc := range scanConfig.ParameterValueDescs {
 		if i > 0 { s = s + ",\n" }
@@ -842,8 +860,9 @@ func NewFlagDesc(flagId, repoId, name, imageURL string) *FlagDesc {
 }
 
 func (flagDesc *FlagDesc) AsJSON() string {
-	var s = fmt.Sprintf("{\"FlagId\": \"%s\", \"RepoId\": \"%s\", " +
+	var s = fmt.Sprintf("{%s, \"FlagId\": \"%s\", \"RepoId\": \"%s\", " +
 		"\"Name\": \"%s\", \"ImageURL\": \"%s\", \"UsedByConfig\": [",
+		flagDesc.baseTypeFieldsAsJSON(),
 		flagDesc.FlagId, flagDesc.RepoId, flagDesc.Name, flagDesc.ImageURL)
 	for i, configId := range flagDesc.UsedByConfigIds {
 		if i > 0 { s = ", " + s }
@@ -908,7 +927,8 @@ func (eventDesc *EventDescBase) GetUserObjId() string {
 }
 
 func (eventDesc *EventDescBase) AsJSON() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\"}",
+	return fmt.Sprintf("{%s, \"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\"}",
+		eventDesc.baseTypeFieldsAsJSON(),
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId)
 }
 
@@ -958,8 +978,9 @@ func NewScanEventDesc(objId string, when time.Time, userObjId string,
 type ScanEventDescs []*ScanEventDesc
 
 func (eventDesc *ScanEventDesc) AsJSON() string {
-	var s = fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
+	var s = fmt.Sprintf("{%s, \"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
 		"\"ScanConfigId\": \"%s\", \"ProviderName\": \"%s\", \"Score\": \"%s\", ",
+		eventDesc.baseTypeFieldsAsJSON(),
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
 		eventDesc.ScanConfigId, eventDesc.ProviderName, eventDesc.Score)
 	
@@ -1017,8 +1038,8 @@ func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
 }
 
 func (eventDesc *DockerfileExecEventDesc) AsJSON() string {
-	return fmt.Sprintf("{\"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
-		"\"DockefileId\": \"%s\"}",
+	return fmt.Sprintf("{%s, \"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
+		"\"DockefileId\": \"%s\"}", eventDesc.baseTypeFieldsAsJSON(),
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
 		eventDesc.DockerfileId)
 }
@@ -1138,7 +1159,8 @@ func RespondWithServerError(writer http.ResponseWriter, err string) {
  * 
  */
 func NewFailureMessage(reason string, httpCode int) string {
-	return fmt.Sprintf("{\"Reason\": \"%s\", \"HTTPCode\": \"%d\"}", reason, httpCode)
+	return fmt.Sprintf("{\"HTTPStatusCode\": %d, \"HTTPReasonPhrase\": \"%s\"}",
+		httpCode, reason)
 }
 
 /*******************************************************************************

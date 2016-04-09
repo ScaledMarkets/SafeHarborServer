@@ -68,7 +68,7 @@ const (
 )
 
 type ClairService struct {
-	UseSSL bool,
+	UseSSL bool
 	Host string
 	Port int
 	LocalIPAddress string  // of this machine, for clair to call back
@@ -319,9 +319,7 @@ func (clairContext *ClairRestContext) GetVersions() (apiVersion string, engineVe
 
 	var resp *http.Response
 	resp, err = clairContext.SendSessionGet(clairContext.sessionId,
-		"v1/versions",
-		[]string{},
-		[]string{})
+		"v1/versions")
 	
 	if err != nil { return "", "", err }
 	defer resp.Body.Close()

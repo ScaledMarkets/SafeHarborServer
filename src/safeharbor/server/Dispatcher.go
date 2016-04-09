@@ -175,8 +175,8 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	// Detect whether an error occurred.
 	failureDesc, isType := result.(*apitypes.FailureDesc)
 	if isType {
-		fmt.Printf("Error:", failureDesc.Reason)
-		http.Error(w, failureDesc.AsJSON(), failureDesc.HTTPCode)
+		fmt.Printf("Error:", failureDesc.HTTPReasonPhrase)
+		http.Error(w, failureDesc.AsJSON(), failureDesc.HTTPStatusCode)
 		
 		// Abort transaction.
 		inMemClients[0].abort()

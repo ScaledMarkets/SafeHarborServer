@@ -36,7 +36,7 @@ func CreateRestContext(ssl bool, hostname string, port int, userId string, passw
 		ssl: ssl,
 		hostname: hostname,
 		port: port,
-		UseId: userId,
+		UserId: userId,
 		Password: password,
 		setSessionId: sessionIdSetter,
 	}
@@ -58,7 +58,8 @@ func (restContext *RestContext) GetPort() int { return restContext.port }
  */
 func (restContext *RestContext) SendSessionGet(sessionId string, reqName string) (*http.Response, error) {
 
-	return restContext.sendReq(sessionId, "GET", reqName, names, values)
+	return restContext.sendSessionReq(sessionId, "GET", reqName,
+		make([]string, 0), make([]string, 0))
 }
 
 /*******************************************************************************
@@ -69,7 +70,7 @@ func (restContext *RestContext) SendSessionGet(sessionId string, reqName string)
 func (restContext *RestContext) SendSessionPost(sessionId string, reqName string, names []string,
 	values []string) (*http.Response, error) {
 
-	return restContext.sendReq(sessionId, "POST", reqName, names, values)
+	return restContext.sendSessionReq(sessionId, "POST", reqName, names, values)
 }
 
 /*******************************************************************************
