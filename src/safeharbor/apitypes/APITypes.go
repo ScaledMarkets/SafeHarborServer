@@ -120,6 +120,7 @@ type FileResponse struct {
 
 func NewFileResponse(status int, filePath string, deleteAfter bool) *FileResponse {
 	return &FileResponse{
+		BaseType: *NewBaseType(status, ""),
 		Status: status,
 		FilePath: filePath,
 		DeleteAfter: deleteAfter,
@@ -161,6 +162,7 @@ type Credentials struct {
 
 func NewCredentials(uid string, pwd string) *Credentials {
 	return &Credentials{
+		BaseType: *NewBaseType(200, "OK"),
 		UserId: uid,
 		Password: pwd,
 	}
@@ -196,6 +198,7 @@ type SessionToken struct {
 
 func NewSessionToken(sessionId string, userId string) *SessionToken {
 	return &SessionToken{
+		BaseType: *NewBaseType(200, "OK"),
 		UniqueSessionId: sessionId,
 		AuthenticatedUserid: userId,
 		RealmId: "",
@@ -232,6 +235,7 @@ type GroupDesc struct {
 
 func NewGroupDesc(groupId, realmId, groupName, desc string, creationDate time.Time) *GroupDesc {
 	return &GroupDesc{
+		BaseType: *NewBaseType(200, "OK"),
 		GroupId: groupId,
 		RealmId: realmId,
 		GroupName: groupName,
@@ -277,6 +281,7 @@ type UserInfo struct {
 
 func NewUserInfo(userid, name, email, pswd, realmId string) *UserInfo {
 	return &UserInfo{
+		BaseType: *NewBaseType(200, "OK"),
 		UserId: userid,
 		UserName: name,
 		EmailAddress: email,
@@ -330,6 +335,7 @@ type UserDesc struct {
 
 func NewUserDesc(id, userId, userName, realmId string, canModRealms []string) *UserDesc {
 	return &UserDesc{
+		BaseType: *NewBaseType(200, "OK"),
 		Id: id,
 		UserId: userId,
 		UserName: userName,
@@ -380,6 +386,7 @@ type RealmDesc struct {
 
 func NewRealmDesc(id string, name string, orgName string, adminUserId string) *RealmDesc {
 	return &RealmDesc{
+		BaseType: *NewBaseType(200, "OK"),
 		Id: id,
 		RealmName: name,
 		OrgFullName: orgName,
@@ -425,6 +432,7 @@ func NewRealmInfo(realmName string, orgName string, desc string) (*RealmInfo, er
 	if realmName == "" { return nil, util.ConstructError("realmName is empty") }
 	if orgName == "" { return nil, util.ConstructError("orgName is empty") }
 	return &RealmInfo{
+		BaseType: *NewBaseType(200, "OK"),
 		RealmName: realmName,
 		OrgFullName: orgName,
 		Description: desc,
@@ -465,6 +473,7 @@ func NewRepoDesc(id string, realmId string, name string, desc string,
 	creationTime time.Time, dockerfileIds []string) *RepoDesc {
 
 	return &RepoDesc{
+		BaseType: *NewBaseType(200, "OK"),
 		Id: id,
 		RealmId: realmId,
 		RepoName: name,
@@ -519,6 +528,7 @@ type DockerfileDesc struct {
 
 func NewDockerfileDesc(id string, repoId string, name string, desc string) *DockerfileDesc {
 	return &DockerfileDesc{
+		BaseType: *NewBaseType(200, "OK"),
 		Id: id,
 		RepoId: repoId,
 		DockerfileName: name,
@@ -563,6 +573,7 @@ type ImageDesc struct {
 
 func NewImageDesc(objId, repoId, name, desc string, creationTime time.Time) *ImageDesc {
 	return &ImageDesc{
+		BaseType: *NewBaseType(200, "OK"),
 		ObjId: objId,
 		RepoId: repoId,
 		Name: name,
@@ -638,6 +649,7 @@ type PermissionMask struct {
 
 func NewPermissionMask(mask []bool) *PermissionMask {
 	return &PermissionMask{
+		BaseType: *NewBaseType(200, "OK"),
 		Mask: mask,
 	}
 }
@@ -678,6 +690,7 @@ func NewPermissionDesc(aclEntryId string, resourceId string, partyId string,
 	permissionMask []bool) *PermissionDesc {
 
 	return &PermissionDesc{
+		BaseType: *NewBaseType(200, "OK"),
 		ACLEntryId: aclEntryId,
 		ResourceId: resourceId,
 		PartyId: partyId,
@@ -726,6 +739,7 @@ type ScanProviderDesc struct {
 
 func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc {
 	return &ScanProviderDesc{
+		BaseType: *NewBaseType(200, "OK"),
 		ProviderName: name,
 		Parameters: params,
 	}
@@ -796,6 +810,7 @@ type ScanConfigDesc struct {
 
 func NewScanConfigDesc(id, provName, expr, flagId string, paramValueDescs []*ParameterValueDesc) *ScanConfigDesc {
 	return &ScanConfigDesc{
+		BaseType: *NewBaseType(200, "OK"),
 		Id: id,
 		ProviderName: provName,
 		SuccessExpression: expr,
@@ -848,6 +863,7 @@ type FlagDesc struct {
 
 func NewFlagDesc(flagId, repoId, name, imageURL string) *FlagDesc {
 	return &FlagDesc{
+		BaseType: *NewBaseType(200, "OK"),
 		FlagId: flagId,
 		RepoId: repoId,
 		Name: name,
