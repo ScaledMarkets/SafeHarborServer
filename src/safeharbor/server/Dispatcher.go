@@ -171,7 +171,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	
 	var result apitypes.RespIntfTp = handler(inMemClients[0], sessionToken, values, files)
 	fmt.Println("handleRequest: A")
-	fmt.Println("Returning result:", result.AsJSON())
+	if result.AsJSON() != "" { fmt.Println("Returning result:", result.AsJSON()) }
 	fmt.Println("handleRequest: B")
 	
 	// Detect whether an error occurred.
@@ -207,7 +207,9 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
  * Generate a 200 HTTP response by converting the result into a
  * string consisting of name=value lines.
  */
-func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.ResponseWriter, result apitypes.RespIntfTp) {
+func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.ResponseWriter,
+	result apitypes.RespIntfTp) {
+
 	var jsonResponse string = result.AsJSON()
 	
 	if jsonResponse == "" {
