@@ -172,6 +172,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	var result apitypes.RespIntfTp = handler(inMemClients[0], sessionToken, values, files)
 	fmt.Println("handleRequest: A")
 	if result == nil { fmt.Println("result is nil") }
+	fmt.Println("handleRequest: A1")
 	if result.AsJSON() != "" { fmt.Println("Returning result:", result.AsJSON()) }
 	fmt.Println("handleRequest: B")
 	
