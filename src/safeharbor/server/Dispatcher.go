@@ -173,7 +173,9 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	fmt.Println("handleRequest: A")
 	if result == nil { fmt.Println("result is nil") }
 	fmt.Println("handleRequest: A1")
-	if result.AsJSON() != "" { fmt.Println("Returning result:", result.AsJSON()) }
+	var jsonResponse string = result.AsJSON()
+	fmt.Println("handleRequest: A2")
+	if jsonResponse != "" { fmt.Println("Returning result:", jsonResponse) }
 	fmt.Println("handleRequest: B")
 	
 	// Detect whether an error occurred.
