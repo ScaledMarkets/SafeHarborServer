@@ -170,13 +170,9 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	}()
 	
 	var result apitypes.RespIntfTp = handler(inMemClients[0], sessionToken, values, files)
-	fmt.Println("handleRequest: A")
 	if result == nil { fmt.Println("result is nil") }
-	fmt.Println("handleRequest: A1")
 	var jsonResponse string = result.AsJSON()
-	fmt.Println("handleRequest: A2")
 	if jsonResponse != "" { fmt.Println("Returning result:", jsonResponse) }
-	fmt.Println("handleRequest: B")
 	
 	// Detect whether an error occurred.
 	failureDesc, isType := result.(*apitypes.FailureDesc)
@@ -200,9 +196,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 		return
 	}
 	
-	fmt.Println("handleRequest: C")
 	dispatcher.returnOkResponse(headers, w, result)
-	fmt.Println("handleRequest: D")
 	
 	fmt.Printf("Handled %s\n", reqName)
 }
@@ -224,16 +218,13 @@ func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.
 			io.WriteString(writer, "Internal error: No JSON response or file path in result")
 			return
 		}
-		fmt.Println("returnOkResponse: A")
 		// Write the file to the response writer. It is assumed that the file is
 		// a temp file.
 		f, err := os.Open(filePath)
 		if deleteAfter {
-			fmt.Println("returnOkResponse: B")
 			if dispatcher.server.Debug {
 				// Copy file to a scratch area before deleting it.
 				defer func() {
-					fmt.Println("returnOkResponse: C")
 					err = os.MkdirAll("temp", os.ModePerm)
 					if err != nil { fmt.Println(err.Error()); return }
 					
@@ -251,7 +242,6 @@ func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.
 					defer scratchFile.Close()
 					if err != nil { fmt.Println(err.Error()); return }
 					
-					fmt.Println("returnOkResponse: D")
 					var buf = make([]byte, 10000)
 					for {
 						var numBytesRead int
@@ -260,7 +250,6 @@ func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.
 
 						_, err = scratchFile.Write(buf[0:numBytesRead])
 						if (err != nil) { fmt.Println(err.Error()); return }
-					fmt.Println("returnOkResponse: E")
 					}
 				}()
 			} else {
@@ -270,17 +259,14 @@ func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.
 				}()
 			}
 		}
-		fmt.Println("returnOkResponse: F")
 		if err != nil {
 			io.WriteString(writer, err.Error())
 			return
 		}
 		
-		fmt.Println("returnOkResponse: G")
 		writer.Header().Set("Content-Type", "application/octet-stream")
 		
 		_, err = io.Copy(writer, f)
-		fmt.Println("returnOkResponse: H")
 		
 		if err != nil {
 			io.WriteString(writer, err.Error())

@@ -850,10 +850,8 @@ func getRealmRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
-	fmt.Println("getRealmRepos: A")
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, realmId,
 		"getRealmRepos"); failMsg != nil { return failMsg }
-	fmt.Println("getRealmRepos: B")
 	
 	var realm Realm
 	realm, err = dbClient.getRealm(realmId)
@@ -2048,27 +2046,19 @@ func getFlagImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
-	fmt.Println("getFlagImage:A")
-	
-	
 	var flagId string
 	var err error
 	flagId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "FlagId")
-	fmt.Println("getFlagImage:B")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var flag Flag
 	flag, err = dbClient.getFlag(flagId)
-	fmt.Println("getFlagImage:C")
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("getFlagImage:D")
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, flagId,
 		"getFlagImage"); failMsg != nil { return failMsg }
-	fmt.Println("getFlagImage:E")
 
 	var path string = flag.getSuccessImagePath()
-	fmt.Println("getFlagImage:F")
 	
 	return apitypes.NewFileResponse(200, path, false)
 }
