@@ -127,6 +127,10 @@ func NewFileResponse(status int, filePath string, deleteAfter bool) *FileRespons
 	}
 }
 
+func (response *FileResponse) AsJSON() string {
+	return ""
+}
+
 func (response *FileResponse) SendFile() (string, bool) {
 	return response.FilePath, response.DeleteAfter
 }
