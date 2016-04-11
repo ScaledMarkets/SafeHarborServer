@@ -56,7 +56,8 @@ type Server struct {
 /*******************************************************************************
  * Create a Server structure. This includes reading in the auth server cert.
  */
-func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port int,
+func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
+	publicHostname string, port int,
 	adapter string, secretSalt string, inMemOnly bool, noRegistry bool) (*Server, error) {
 	
 	// Read configuration. (Defined in a JSON file.)
@@ -72,6 +73,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port 
 	// Override conf.json with any command line options.
 	if port != 0 { config.port = port }
 	if adapter != "" { config.netIntfName = adapter }
+	if publicHostname != "" { config.PublicHostname = publicHostname }
 	
 	// Determine the IP address.
 	config.ipaddr, err = util.DetermineIPAddress(config.netIntfName)
@@ -96,6 +98,10 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool, port 
 		InMemoryOnly: inMemOnly,
 		NoRegistry: noRegistry,
 	}
+	
+	// Identify public URL - needed so that the server can provide a URL/URI for
+	// file resources to download.
+	server.PublicURL = fmt.Sprintf("http://%s:%d", config.PublicHostname, config.port)
 	
 	// Ensure that the file repository exists.
 	if ! fileExists(server.Config.FileRepoRootPath) {
@@ -348,16 +354,6 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	
 	server.dispatch(sessionToken, writer, httpReq)
 	server.authService.addSessionIdToResponse(sessionToken, writer)
-	
-	// Get the server URL.
-	var headers http.Header = httpReq.Header  // map[string][]string
-	if (sessionToken != nil) && (server.PublicURL == "") {
-		var host = headers["Host"][0]
-		if host == "" { host = headers["host"][0] }
-		if host != "" {
-			server.PublicURL = host
-		}
-	}
 
 	fmt.Println("---returning from request---\n\n\n")
 }
@@ -462,7 +458,7 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 /*******************************************************************************
  * Return the URL of this server.
  */
-func (server *Server) GetBaseURL() string {
+func (server *Server) GetBasePublicURL() string {
 	return server.PublicURL
 }
 

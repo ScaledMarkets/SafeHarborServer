@@ -3071,7 +3071,7 @@ func (flag *InMemFlag) getSuccessImagePath() string {
 }
 
 func (flag *InMemFlag) getSuccessImageURL() string {
-	var baseURL = flag.Persistence.Server.GetBaseURL()
+	var baseURL = flag.Persistence.Server.GetBasePublicURL()
 	baseURL = strings.TrimRight(baseURL, "/")
 	return baseURL + "/getFlagImage/?Id=" + flag.getId()
 }

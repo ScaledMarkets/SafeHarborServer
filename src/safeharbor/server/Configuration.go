@@ -22,6 +22,7 @@ import (
 
 type Configuration struct {
 	service string
+	PublicHostname string
 	ipaddr string
 	netIntfName string // e.g., eth0, en1, etc.
 	port int
@@ -65,6 +66,11 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	// INTFNAME
 	config.netIntfName, exists = entries["INTFNAME"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find INTFNAME in configuration") }
+	
+	// PUBLIC_HOSTNAME
+	var publicHostname string
+	publicHostname, exists = entries["PUBLIC_HOSTNAME"].(string)
+	if exists { config.PublicHostname = publicHostname }
 	
 	// PORT
 	var portStr string

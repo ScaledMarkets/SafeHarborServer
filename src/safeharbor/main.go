@@ -32,6 +32,7 @@ func main() {
 	var stubScanners *bool = flag.Bool("stubs", false, "Use stubs for scanners.")
 	var noauthor *bool = flag.Bool("noauthorization", false, "Disable authorization: access control lists are ignored.")
 	var help *bool = flag.Bool("help", false, "Provide help instructions.")
+	var publicHostname *string = flag.String("host", "", "The public host name or IP address of the server")
 	var port *int = flag.Int("port", 0, "The TCP port on which the SafeHarborServer should listen. If not set, then the value is taken from the conf.json file.")
 	var adapter *string = flag.String("adapter", "", "Network adapter to use (e.g., eth0)")
 	var secretSalt *string = flag.String("secretkey", "", "Secret value to make session hashes unpredictable.")
@@ -61,7 +62,7 @@ func main() {
 	fmt.Println("Creating SafeHarbor server...")
 	var svr *server.Server
 	svr, err = server.NewServer(*debug, *nocache, *stubScanners, *noauthor,
-		*port, *adapter, *secretSalt, *inMemoryOnly, *noRegistry)
+		*publicHostname, *port, *adapter, *secretSalt, *inMemoryOnly, *noRegistry)
 	if err != nil {
 		fmt.Println(err.Error())
 		logfile.Close()
