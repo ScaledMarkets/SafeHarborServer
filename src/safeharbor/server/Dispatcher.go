@@ -172,6 +172,7 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	var result apitypes.RespIntfTp = handler(inMemClients[0], sessionToken, values, files)
 	fmt.Println("handleRequest: A")
 	fmt.Println("Returning result:", result.AsJSON())
+	fmt.Println("handleRequest: B")
 	
 	// Detect whether an error occurred.
 	failureDesc, isType := result.(*apitypes.FailureDesc)
@@ -195,9 +196,9 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 		return
 	}
 	
-	fmt.Println("handleRequest: B")
-	dispatcher.returnOkResponse(headers, w, result)
 	fmt.Println("handleRequest: C")
+	dispatcher.returnOkResponse(headers, w, result)
+	fmt.Println("handleRequest: D")
 	
 	fmt.Printf("Handled %s\n", reqName)
 }
