@@ -35,6 +35,7 @@ import (
  */
 type Server struct {
 	Config *Configuration
+	PublicURL string
 	httpServer *http.Server
 	tcpListener net.Listener
 	persistence *Persistence
@@ -51,10 +52,6 @@ type Server struct {
 	NoCache bool // for test only
 	NoRegistry bool // for test only
 }
-
-const (
-	ProtocolScheme = "http"  // change to https when we enable that.
-)
 
 /*******************************************************************************
  * Create a Server structure. This includes reading in the auth server cert.
@@ -351,6 +348,17 @@ func (server *Server) ServeHTTP(writer http.ResponseWriter, httpReq *http.Reques
 	
 	server.dispatch(sessionToken, writer, httpReq)
 	server.authService.addSessionIdToResponse(sessionToken, writer)
+	
+	// Get the server URL.
+	var headers http.Header = httpReq.Header  // map[string][]string
+	if (sessionToken != nil) && (server.PublicURL == "") {
+		var host = headers["Host"][0]
+		if host == "" { host = headers["host"][0] }
+		if host != "" {
+			server.PublicURL = host
+		}
+	}
+
 	fmt.Println("---returning from request---\n\n\n")
 }
 
@@ -451,8 +459,11 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 	server.dispatcher.handleRequest(sessionToken, headers, writer, reqName, values, files)
 }
 
-func (server *Server) GetHTTPResourceScheme() string {
-	return ProtocolScheme
+/*******************************************************************************
+ * Return the URL of this server.
+ */
+func (server *Server) GetBaseURL() string {
+	return server.PublicURL
 }
 
 /*******************************************************************************

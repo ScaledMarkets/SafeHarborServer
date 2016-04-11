@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"os"
 	"time"
+	"strings"
 	"runtime/debug"	
 	
 	//"goredis"
@@ -3070,7 +3071,9 @@ func (flag *InMemFlag) getSuccessImagePath() string {
 }
 
 func (flag *InMemFlag) getSuccessImageURL() string {
-	return flag.Persistence.Server.GetHTTPResourceScheme() + "://getFlagImage/?Id=" + flag.getId()
+	var baseURL = flag.Persistence.Server.GetBaseURL()
+	baseURL = strings.TrimRight(baseURL, "/")
+	return baseURL + "/getFlagImage/?Id=" + flag.getId()
 }
 
 func (flag *InMemFlag) addScanConfigRef(dbClient DBClient, scanConfigId string) error {

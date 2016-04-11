@@ -31,6 +31,8 @@ func PrintError(err error) error {
 
 /*******************************************************************************
  * Determine the IP address of the host on which this function is executed.
+ * Note that this address is local to the network in which the host exists -
+ * it is probably not a public IP address.
  */
 func DetermineIPAddress(adapter string) (string, error) {
 	
