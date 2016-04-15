@@ -32,7 +32,7 @@ import (
 	//"goredis"
 	
 	"safeharbor/apitypes"
-	"safeharbor/docker"
+	//"safeharbor/docker"
 	"safeharbor/rest"
 	"safeharbor/util"
 	"safeharbor/providers"
@@ -2123,10 +2123,15 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 	if err != nil { return err }
 	
 	// Remove from docker.
-	var imageFullName string
-	imageFullName, err = image.getFullName(dbClient)
+	var imageFullName, namespace, imageName, tag string
+	namespace, imageName, tag, err = image.getFullNameParts(dbClient)
 	if err != nil { return err }
-	err = docker.RemoveDockerImage(imageFullName)
+	if namespace == "" {
+		imageFullName = imageName
+	} else {
+		imageFullName = namespace + "/" + imageName
+	}
+	err = dbClient.getServer().DockerServices.RemoveDockerImage(imageFullName, tag)
 	if err != nil { return err }
 	
 	// Remove from repo.
@@ -2531,6 +2536,19 @@ func (image *InMemDockerImage) getFullName(dbClient DBClient) (string, error) {
 	realm, err = dbClient.getRealm(repo.getRealmId())
 	if err != nil { return "", err }
 	return (realm.getName() + "/" + repo.getName() + ":" + image.Name), nil
+}
+
+func (image *InMemDockerImage) getFullNameParts(dbClient DBClient) (
+	string, string, string, error) {
+
+	var repo Repo
+	var realm Realm
+	var err error
+	repo, err = dbClient.getRepo(image.getRepoId())
+	if err != nil { return "", "", "", err }
+	realm, err = dbClient.getRealm(repo.getRealmId())
+	if err != nil { return "", "", "", err }
+	return realm.getName(), repo.getName(), image.Name, nil
 }
 
 func (image *InMemDockerImage) getScanEventIds() []string {

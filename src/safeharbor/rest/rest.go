@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"net/url"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 	"bytes"
 	"encoding/json"
+	"errors"
+	"reflect"
 )
 
 type RestContext struct {
@@ -23,7 +26,7 @@ type RestContext struct {
 }
 
 /*******************************************************************************
- * 
+ * userId and password are optional.
  */
 func CreateRestContext(ssl bool, hostname string, port int, userId string, password string,
 	sessionIdSetter func(*http.Request, string)) *RestContext {
@@ -48,24 +51,104 @@ func (restContext *RestContext) Print() {
 	fmt.Println(fmt.Sprintf("\tport: %d", restContext.port))
 }
 
+func (restContext *RestContext) GetScheme() string {
+	if restContext.ssl { return "https" } else { return "http" }
+}
+
 func (restContext *RestContext) GetHostname() string { return restContext.hostname }
 
 func (restContext *RestContext) GetPort() int { return restContext.port }
 
+func (restContext *RestContext) GetUserId() string { return restContext.UserId }
+
+func (restContext *RestContext) getPassword() string { return restContext.Password }
+
 /*******************************************************************************
  * Send a GET request to the SafeHarborServer, at the specified REST endpoint method
- * (reqName), with the specified query parameters.
+ * (reqName), with the specified query parameters, using basic authentication.
  */
-func (restContext *RestContext) SendSessionGet(sessionId string, reqName string) (*http.Response, error) {
+func (restContext *RestContext) SendBasicGet(reqName string) (*http.Response, error) {
+	
+	var urlstr string = restContext.getURL(reqName)
+	var resp *http.Response
+	var err error
+	resp, err = restContext.httpClient.Get(urlstr)
+	if err != nil { return nil, err }
+	return resp, nil
+}
 
-	return restContext.sendSessionReq(sessionId, "GET", reqName,
-		make([]string, 0), make([]string, 0))
+/*******************************************************************************
+ * Send a HEAD request to the SafeHarborServer, at the specified REST endpoint method
+ * (reqName), with the specified query parameters, using basic authentication.
+ */
+func (restContext *RestContext) SendBasicHead(reqName string) (*http.Response, error) {
+	
+	var urlstr string = restContext.getURL(reqName)
+	var resp *http.Response
+	var err error
+	resp, err = restContext.httpClient.Head(urlstr)
+	if err != nil { return nil, err }
+	return resp, nil
+}
+
+/*******************************************************************************
+ * Send a DELETE request to the SafeHarborServer, at the specified REST endpoint method
+ * (reqName), with the specified query parameters, using basic authentication.
+ */
+func (restContext *RestContext) SendBasicDelete(reqName string) (*http.Response, error) {
+	
+	var urlstr string = restContext.getURL(reqName)
+	var resp *http.Response
+	var request *http.Request
+	var err error
+	request, err = http.NewRequest("DELETE", urlstr, nil)
+	if err != nil { return nil, err }
+	resp, err = restContext.httpClient.Do(request)
+	if err != nil { return nil, err }
+	return resp, nil
+}
+
+/*******************************************************************************
+ * Send a POST request to the SafeHarborServer, at the specified REST endpoint method
+ * (reqName), with the specified query parameters, using basic authentication.
+ */
+func (restContext *RestContext) SendBasicPost(reqName string, names []string,
+	values []string) (*http.Response, error) {
+	
+	var urlstr string = restContext.getURL(reqName)
+	var data = make(map[string][]string)
+	for i, value := range values { data[names[i]] = []string{value} }
+	var resp *http.Response
+	var err error
+	resp, err = restContext.httpClient.PostForm(urlstr, data)
+	if err != nil { return nil, err }
+	return resp, nil
+}
+
+/*******************************************************************************
+ * Send request as a multi-part so that a file can be attached. Use basic authentication.
+ */
+func (restContext *RestContext) SendBasicFilePost(reqName string, names []string,
+	values []string, path string) (*http.Response, error) {
+
+	return restContext.SendFilePost("", reqName, names, values, path)
+}
+
+/*******************************************************************************
+ * Send a GET request to the SafeHarborServer, at the specified REST endpoint method
+ * (reqName), with the specified query parameters, using the specified session Id.
+ */
+func (restContext *RestContext) SendSessionGet(sessionId string, reqName string,
+	names []string, values []string) (*http.Response, error) {
+
+	return restContext.sendSessionReq(sessionId, "GET", reqName, names, values)
 }
 
 /*******************************************************************************
  * Send an HTTP POST formatted according to what is required by the SafeHarborServer
  * REST API, as defined in the slides "SafeHarbor REST API" of the design,
  * https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
+ * Use the specified session Id.
  */
 func (restContext *RestContext) SendSessionPost(sessionId string, reqName string, names []string,
 	values []string) (*http.Response, error) {
@@ -82,22 +165,24 @@ func (restContext *RestContext) sendSessionReq(sessionId string, reqMethod strin
 	reqName string, names []string, values []string) (*http.Response, error) {
 
 	// Send REST POST request to server.
-	var urlstr string = fmt.Sprintf(
-		"http://%s:%d/%s",
-		restContext.hostname, restContext.port, reqName)
-	
+	var urlstr string = restContext.getURL(reqName)
 	var data url.Values = url.Values{}
-	for index, each := range names {
-		data[each] = []string{values[index]}
+	if names != nil {
+		for index, each := range names {
+			data[each] = []string{values[index]}
+		}
 	}
 	var reader io.Reader = strings.NewReader(data.Encode())
 	var request *http.Request
 	var err error
 	request, err = http.NewRequest(reqMethod, urlstr, reader)
 	if err != nil { return nil, err }
-	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if sessionId != "" { restContext.setSessionId(request, sessionId) }
-	//if sessionId != "" { request.Header.Set("Session-Id", sessionId) }
+	if reqMethod == "POST" {
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	if sessionId != "" {
+		restContext.setSessionId(request, sessionId)
+	}
 	
 	var resp *http.Response
 	resp, err = restContext.httpClient.Do(request)
@@ -111,9 +196,17 @@ func (restContext *RestContext) sendSessionReq(sessionId string, reqMethod strin
 func (restContext *RestContext) SendSessionFilePost(sessionId string, reqName string, names []string,
 	values []string, path string) (*http.Response, error) {
 
-	var urlstr string = fmt.Sprintf(
-		"http://%s:%d/%s",
-		restContext.hostname, restContext.port, reqName)
+	return restContext.SendFilePost(sessionId, reqName, names, values, path)
+}
+
+/*******************************************************************************
+ * Send request as a multi-part so that a file can be attached.
+ */
+func (restContext *RestContext) SendFilePost(sessionId string,
+	reqName string, names []string,
+	values []string, path string) (*http.Response, error) {
+
+	var urlstr string = restContext.getURL(reqName)
 
 	// Prepare a form that you will submit to that URL.
 	var b bytes.Buffer
@@ -164,9 +257,13 @@ func (restContext *RestContext) SendSessionFilePost(sessionId string, reqName st
  * Parse an HTTP JSON response that can be converted to a map.
  */
 func ParseResponseBodyToMap(body io.ReadCloser) (map[string]interface{}, error) {
-	var value []byte = ReadResponseBody(body)
+	var value []byte
+	var err error
+	value, err = ioutil.ReadAll(body)
+	if err != nil { return nil, err }
+	//var value []byte = ReadResponseBody(body)
 	var obj map[string]interface{}
-	err := json.Unmarshal(value, &obj)
+	err = json.Unmarshal(value, &obj)
 	//var dec *json.Decoder = json.NewDecoder(body)
 	//err := dec.Decode(&obj)
 	if err != nil { return nil, err }
@@ -177,50 +274,64 @@ func ParseResponseBodyToMap(body io.ReadCloser) (map[string]interface{}, error) 
 	//var isType bool
 	
 	//result, _ = obj.(map[string]interface{})
-	//assertThat(isType, "Wrong type: obj is not a map[string]interface{}")
+	//AssertThat(isType, "Wrong type: obj is not a map[string]interface{}")
 	return obj, nil
 }
 
 /*******************************************************************************
  * Parse an HTTP JSON response that can be converted to an array of maps.
+ * The response is assumed to consist of a single object with three fields:
+ *	"HTTPStatusCode" - int
+ *	"HTTPReasonPhrase" - string
+ *	"payload" - json array (this is what is converted to a golang array of maps).
  */
 func ParseResponseBodyToMaps(body io.ReadCloser) ([]map[string]interface{}, error) {
-	var value []byte = ReadResponseBody(body)
-	var obj []map[string]interface{}
-	err := json.Unmarshal(value, &obj)
+	var value []byte
+	var err error
+	value, err = ioutil.ReadAll(body)
 	if err != nil { return nil, err }
+	var obj map[string]interface{}
+	err = json.Unmarshal(value, &obj)
+	if err != nil { return nil, err }
+	
+	var isType bool
+	var httpStatusCode int
+	var httpReasonPhrase string
+
+	var f64 float64
+	f64, isType = obj["HTTPStatusCode"].(float64)
+	if ! isType { return nil, errors.New("HTTPStatusCode is not an int: it is a " +
+		reflect.TypeOf(obj["HTTPStatusCode"]).String()) }
+	httpStatusCode = int(f64)
+	if httpStatusCode != 200 {
+		return nil, errors.New(fmt.Sprintf("HTTP status %s returned", httpStatusCode))
+	}
+
+	httpReasonPhrase, isType = obj["HTTPReasonPhrase"].(string)
+	if httpReasonPhrase == "" { return nil, errors.New("No HTTPReasonPhrase") }
+	if ! isType { return nil, errors.New("HTTPReasonPhrase is not a string") }
+
+	var iar []interface{}
+	iar, isType = obj["payload"].([]interface{})
+	if ! isType { return nil, errors.New("payload is not an array of interface") }
+	
+	var maps = make([]map[string]interface{}, 0)
+	for _, elt := range iar {
+		var m map[string]interface{}
+		m, isType = elt.(map[string]interface{})
+		if ! isType { return nil, errors.New("Element is not a map[string]interface") }
+		maps = append(maps, m)
+	}
+	
 	//var isType bool
 	//result, isType = obj.([]map[string]interface{})
 	//if ! isType {
 	//	fmt.Println("This is what was returned:")
 	//	fmt.Println(result)
 	//}
-	//assertThat(isType, "Wrong type: obj is not a []map[string]interface{} - it is a " + 
+	//AssertThat(isType, "Wrong type: obj is not a []map[string]interface{} - it is a " + 
 	//	fmt.Sprintf("%s", reflect.TypeOf(obj)))
-	return obj, nil
-}
-
-/*******************************************************************************
- * Parse an arbitrary HTTP JSON response.
- */
-func ReadResponseBody(body io.ReadCloser) []byte {
-	
-	var value []byte = make([]byte, 0)
-	//var s string = ""
-	for {
-		var buf []byte = make([]byte, 100)
-		n, err := body.Read(buf)
-		if n > 0 { value = append(value, buf[0:n]...) }
-		//fmt.Println("Read", string(buf))
-		if err != nil { break }
-		if n < len(buf) { break }
-	}
-	fmt.Println("rest.ReadResponseBody this:")
-	fmt.Println(string(value))
-	fmt.Println("--")
-	fmt.Println()
-	
-	return value
+	return maps, nil
 }
 
 /*******************************************************************************
@@ -252,10 +363,23 @@ func (restContext *RestContext) Verify200Response(resp *http.Response) bool {
 }
 
 /*******************************************************************************
+ * 
+ */
+func (restContext *RestContext) getURL(reqName string) string {
+	var basicAuthCreds = ""
+	if restContext.UserId != "" {
+		basicAuthCreds = fmt.Sprintf("%s:%s@", restContext.UserId, restContext.Password)
+	}
+	return fmt.Sprintf(
+		"%s://%s%s:%d/%s",
+		restContext.GetScheme(), basicAuthCreds, restContext.hostname, restContext.port, reqName)
+}
+
+/*******************************************************************************
+ * 
  * Utility to encode an arbitrary string value, which might contain quotes and other
  * characters, so that it can be safely and securely transported as a JSON string value,
  * delimited by double quotes. Ref. http://json.org/.
- * To do: ....Deal with unicode sequences.
  */
 func EncodeStringForJSON(value string) string {
 	// Replace each occurrence of double-quote and backslash with backslash double-quote

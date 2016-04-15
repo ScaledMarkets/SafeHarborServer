@@ -318,8 +318,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 func (clairContext *ClairRestContext) GetVersions() (apiVersion string, engineVersion string, err error) {
 
 	var resp *http.Response
-	resp, err = clairContext.SendSessionGet(clairContext.sessionId,
-		"v1/versions")
+	resp, err = clairContext.SendSessionGet(clairContext.sessionId, "v1/versions", nil, nil)
 	
 	if err != nil { return "", "", err }
 	defer resp.Body.Close()

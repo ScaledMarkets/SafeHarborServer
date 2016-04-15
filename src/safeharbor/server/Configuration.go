@@ -29,6 +29,10 @@ type Configuration struct {
 	RedisHost string
 	RedisPort int
 	RedisPswd string
+	RegistryHost string
+	RegistryPort int
+	RegistryUserId string
+	RegistryPassword string
 	LocalAuthCertPath string
 	LocalRootCertPath string // may be null
 	AuthServerName string
@@ -108,6 +112,24 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	// REDIS_PASSWORD
 	config.RedisPswd, exists = entries["REDIS_PASSWORD"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find REDIS_PASSWORD in configuration") }
+	
+	// REGISTRY_HOST
+	config.RegistryHost, exists = entries["REGISTRY_HOST"].(string)
+	
+	// REGISTRY_PORT
+	portStr, exists = entries["REGISTRY_PORT"].(string)
+	if exists {
+		config.RegistryPort, err = strconv.Atoi(portStr)
+		if err != nil { return nil, fmt.Errorf(
+			"REGISTRY_PORT value in configuration is not an integer")
+		}
+	}
+	
+	// REGISTRY_USERID
+	config.RegistryUserId, exists = entries["REGISTRY_USERID"].(string)
+	
+	// REGISTRY_PASSWORD
+	config.RegistryPassword, exists = entries["REGISTRY_PASSWORD"].(string)
 	
 	// ScanServices
 	var obj interface{}

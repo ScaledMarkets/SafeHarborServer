@@ -145,11 +145,11 @@ func authenticateSession(dbClient *InMemClient, sessionToken *apitypes.SessionTo
 		if ! found { return nil, apitypes.NewFailureDesc("Unauthenticated - no session Id found") }
 		sessionId = valuear[0]
 		if sessionId == "" { return nil, apitypes.NewFailureDesc("Unauthenticated - session Id appears to be malformed") }
-		sessionToken = dbClient.Server.authService.identifySession(sessionId)  // returns nil if invalid
+		sessionToken = dbClient.getServer().authService.identifySession(sessionId)  // returns nil if invalid
 		if sessionToken == nil { return nil, apitypes.NewFailureDesc("Unauthenticated - session Id is invalid") }
 	}
 
-	if ! dbClient.Server.authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
+	if ! dbClient.getServer().authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
 		return nil, apitypes.NewFailureDesc("Invalid session Id")
 	}
 	
@@ -196,9 +196,9 @@ func getCurrentUser(dbClient DBClient, sessionToken *apitypes.SessionToken) (Use
 func authorizeHandlerAction(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	mask []bool, resourceId, attemptedAction string) *apitypes.FailureDesc {
 	
-	if dbClient.Server.Authorize {
+	if dbClient.getServer().Authorize {
 		
-		isAuthorized, err := dbClient.Server.authService.authorized(dbClient,
+		isAuthorized, err := dbClient.getServer().authService.authorized(dbClient,
 			sessionToken, mask, resourceId)
 		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 		if ! isAuthorized {
@@ -315,8 +315,9 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
 	if err != nil { return nil, err }
-	outputStr, err = docker.BuildDockerfile(dockerfile.getExternalFilePath(),
-		dockerfile.getName(), realm.getName(), repo.getName(), imageName)
+	outputStr, err = dbClient.getServer().DockerServices.BuildDockerfile(
+		dockerfile.getExternalFilePath(), dockerfile.getName(), realm.getName(),
+		repo.getName(), imageName)
 	if err != nil { return nil, err }
 	
 	var dockerBuildOutput *docker.DockerBuildOutput

@@ -26,6 +26,7 @@ import (
 	// SafeHarbor packages:
 	//"rest"
 	"safeharbor/apitypes"
+	"safeharbor/docker"
 	"safeharbor/providers"
 	"safeharbor/util"
 )
@@ -42,6 +43,7 @@ type Server struct {
 	http.Handler
 	certPool *x509.CertPool
 	authService *AuthService
+	DockerServices *docker.DockerServices
 	ScanServices []providers.ScanService
 	dispatcher *Dispatcher
 	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
@@ -138,6 +140,18 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	}
 	_, err = NewPersistence(server, redisClient)
 	if err != nil { AbortStartup(err.Error()) }
+	
+	if ! server.NoRegistry {
+		if config.RegistryHost == "" { AbortStartup("REGISTRY_HOST not set in configuration") }
+		if config.RegistryPort == 0 { AbortStartup("REGISTRY_PORT not set in configuration") }
+		if config.RegistryUserId == "" { AbortStartup("REGISTRY_USERID not set in configuration") }
+		if config.RegistryPassword == "" { AbortStartup("REGISTRY_PASSWORD not set in configuration") }
+		var registry *docker.DockerRegistry
+		registry, err = docker.OpenDockerRegistryConnection(false, config.RegistryHost, config.RegistryPort,
+			config.RegistryUserId, config.RegistryPassword, func (req *http.Request, s string) {})
+		if err != nil { AbortStartup(err.Error()) }
+		server.DockerServices = docker.NewDockerServices(registry)
+	}
 	
 	// To do: Make this a TLS listener.
 	// Instantiate an HTTP server with the SafeHarbor server as the handler.

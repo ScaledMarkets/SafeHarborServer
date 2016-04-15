@@ -303,6 +303,7 @@ type DockerImage interface {
 	Image
 	getDockerImageTag() string  // Return same as getName().
 	getFullName(DBClient) (string, error)  // Return the fully qualified docker image path.
+	getFullNameParts(DBClient) (namespace, name, tag string, err error)
 	getScanEventIds() []string // ordered from oldest to newest
 	getMostRecentScanEventId() string
 	asDockerImageDesc() *apitypes.DockerImageDesc
