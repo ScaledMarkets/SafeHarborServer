@@ -63,7 +63,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	var exists bool
 	var err error
 	exists, err = dockerSvcs.Registry.ImageExists(realmName + "/" + repoName, imageName)
-	if ! exists {
+	if exists {
 		return "", util.ConstructError(
 			"Image with name " + realmName + "/" + repoName + ":" + imageName + " already exists.")
 	}
