@@ -36,14 +36,16 @@ https://github.com/docker/docker/blob/master/image/spec/v1.md
 
 type DockerServices struct {
 	Registry *DockerRegistry
+	Engine *DockerEngine
 }
 
 /*******************************************************************************
  * 
  */
-func NewDockerServices(registry *DockerRegistry) *DockerServices {
+func NewDockerServices(registry *DockerRegistry, engine *DockerEngine) *DockerServices {
 	return &DockerServices{
 		Registry: registry,
+		Engine: engine,
 	}
 }
 
@@ -67,17 +69,18 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 		return "", util.ConstructError(
 			"Image with name " + realmName + "/" + repoName + ":" + imageName + " already exists.")
 	}
-	/*
-	var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "inspect", imageName)
-		// GET /containers/4fa6e0f0c678/json HTTP/1.1
-	var output []byte
-	output, err = cmd.CombinedOutput()
-	var outputStr string = string(output)
-	if ! strings.Contains(outputStr, "Error") {
-		return "", util.ConstructError(
-			"'" + outputStr + "'; perhaps an image with name " + imageName + " already exists.")
-	}
-	*/
+	
+		/* Obsolete: -----------------
+		var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "inspect", imageName)
+			// GET /containers/4fa6e0f0c678/json HTTP/1.1
+		var output []byte
+		output, err = cmd.CombinedOutput()
+		var outputStr string = string(output)
+		if ! strings.Contains(outputStr, "Error") {
+			return "", util.ConstructError(
+				"'" + outputStr + "'; perhaps an image with name " + imageName + " already exists.")
+		}
+		------------------------------- */
 	
 	// Verify that the image name conforms to Docker's requirements.
 	err = NameConformsToDockerRules(imageName)
@@ -125,9 +128,10 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 		"--file", tempDirPath + "/" + dockerfileName,
 		"--tag", imageFullName, tempDirPath)
 	
+		// https://docs.docker.com/engine/reference/api/docker_remote_api_v1.23/#build-image-from-a-dockerfile
 		// POST /build HTTP/1.1
 		//
-		// {{ TAR STREAM }}
+		// {{ TAR STREAM }} (this is the contents of the "build context")
 		
 	// Execute the command in the temporary directory.
 	// This initiates processing of the dockerfile.

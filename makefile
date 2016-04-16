@@ -39,6 +39,11 @@ compile: $(build_dir)/$(PACKAGENAME)
 $(build_dir)/$(PACKAGENAME): src/..
 	@GOPATH=$(CURDIR) go install $(PACKAGENAME)
 
+# Generate REST docs.
+# http://apidocjs.com/
+# https://howtonode.org/introduction-to-npm
+docs:
+
 clean:
 	rm -r -f $(build_dir)/$(PACKAGENAME)
 

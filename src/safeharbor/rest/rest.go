@@ -112,7 +112,7 @@ func (restContext *RestContext) SendBasicDelete(reqName string) (*http.Response,
  * Send a POST request to the SafeHarborServer, at the specified REST endpoint method
  * (reqName), with the specified query parameters, using basic authentication.
  */
-func (restContext *RestContext) SendBasicPost(reqName string, names []string,
+func (restContext *RestContext) SendBasicFormPost(reqName string, names []string,
 	values []string) (*http.Response, error) {
 	
 	var urlstr string = restContext.getURL(reqName)

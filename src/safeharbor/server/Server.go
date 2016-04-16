@@ -141,6 +141,10 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	_, err = NewPersistence(server, redisClient)
 	if err != nil { AbortStartup(err.Error()) }
 	
+	var engine *docker.DockerEngine
+	engine, err = docker.OpenDockerEngineConnection()
+	if err != nil { AbortStartup("When connecting to docker engine: " + err.Error()) }
+	
 	if ! server.NoRegistry {
 		if config.RegistryHost == "" { AbortStartup("REGISTRY_HOST not set in configuration") }
 		if config.RegistryPort == 0 { AbortStartup("REGISTRY_PORT not set in configuration") }
@@ -150,7 +154,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		registry, err = docker.OpenDockerRegistryConnection(false, config.RegistryHost, config.RegistryPort,
 			config.RegistryUserId, config.RegistryPassword, func (req *http.Request, s string) {})
 		if err != nil { AbortStartup("When connecting to registry: " + err.Error()) }
-		server.DockerServices = docker.NewDockerServices(registry)
+		server.DockerServices = docker.NewDockerServices(registry, engine)
 	}
 	
 	// To do: Make this a TLS listener.
