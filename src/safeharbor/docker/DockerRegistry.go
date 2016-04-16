@@ -105,6 +105,7 @@ func (registry *DockerRegistry) ImageExists(name string, tag string) (bool, erro
 	// https://github.com/docker/distribution/blob/master/docs/spec/api.md
 	// https://docs.docker.com/apidocs/v1.4.0/#!/repositories/GetRepository
 	var uri = "/v2/" + name + "/manifests/" + tag
+	fmt.Println("Sending URI to registry: " + uri)  // debug
 	//v0: GET /api/v0/repositories/{namespace}/{reponame}
 	// Make HEAD request to registry.
 	var response *http.Response
@@ -112,6 +113,8 @@ func (registry *DockerRegistry) ImageExists(name string, tag string) (bool, erro
 	response, err = registry.SendBasicHead(uri)
 	if err != nil { return false, err }
 	if response.StatusCode == 200 {
+		fmt.Println("Response from registry:")  // debug
+		fmt.Println(response.Body)  // debug
 		return true, nil
 	} else if response.StatusCode == 404 { // Not Found
 		return false, nil

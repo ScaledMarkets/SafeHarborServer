@@ -136,7 +136,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 			(config.RedisHost + ":" + fmt.Sprintf("%d", config.RedisPort)),
 			db, config.RedisPswd, timeout, maxidle})
 		
-		if err != nil { AbortStartup(err.Error()) }
+		if err != nil { AbortStartup("When connecting to redis: " + err.Error()) }
 	}
 	_, err = NewPersistence(server, redisClient)
 	if err != nil { AbortStartup(err.Error()) }
@@ -149,7 +149,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		var registry *docker.DockerRegistry
 		registry, err = docker.OpenDockerRegistryConnection(false, config.RegistryHost, config.RegistryPort,
 			config.RegistryUserId, config.RegistryPassword, func (req *http.Request, s string) {})
-		if err != nil { AbortStartup(err.Error()) }
+		if err != nil { AbortStartup("When connecting to registry: " + err.Error()) }
 		server.DockerServices = docker.NewDockerServices(registry)
 	}
 	
@@ -163,7 +163,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	// Instantiate a TCP socker listener.
 	fmt.Println("...Creating socket listener at", config.ipaddr, "port", config.port, "...")
 	server.tcpListener, err = newTCPListener(config.ipaddr, config.port)
-	if err != nil { AbortStartup(err.Error()) }
+	if err != nil { AbortStartup("When creating socket listener: " + err.Error()) }
 	
 	// Verify that the docker service is running, and start it if not.
 	// sudo service docker start
@@ -191,7 +191,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	} else {
 		scanSvc, err = providers.CreateClairService(clairConfig)
 	}
-	if err != nil { AbortStartup(err.Error()) }
+	if err != nil { AbortStartup("When instantiating Clair scan service: " + err.Error()) }
 	server.ScanServices = []providers.ScanService{
 		scanSvc,
 	}
