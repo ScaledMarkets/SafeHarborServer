@@ -28,9 +28,13 @@ sudo docker run --net=host -d -v /home/centos/SafeHarborServer/build/Centos7:/co
 docker run --entrypoint htpasswd docker.io/registry:2 -Bbn $registryUser $registryPassword > $DataVolMountPoint/registryauth/htpasswd
 
 # Start Docker Registry.
+# Note that we must mount the /var/run/docker.sock unix socket in the container
+# so that the container can access the docker engine.
 sudo docker run --net=host -d -p 5000:5000 --name registry \
 	-v $RegistryPath/registryauth:/auth \
 	-v $DataVolMountPoint/registrydata:/var/lib/registry
+	-v /var/run/docker.sock:/var/run/docker.sock \
+	-u safeharbor \
 	-e "REGISTRY_AUTH=htpasswd" \
 	-e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
 	-e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
@@ -41,4 +45,7 @@ sudo docker run --net=host -d -p 5000:5000 --name registry \
 
 # Start SafeHarborServer.
 #sudo docker run --net=host -d -p 6000:6000 -v $DataVolMountPoint:/safeharbor/data $SafeHarborImageName /safeharbor/safeharbor -debug -secretkey=jafakeu9s3ls -port=6000
-sudo docker run -i -t --net=host -p 6000:6000 -v $DataVolMountPoint:/safeharbor/data $SafeHarborImageName bash
+sudo docker run -i -t --net=host -p 6000:6000 \
+	-v $DataVolMountPoint:/safeharbor/data \
+	-v /var/run/docker.sock:/var/run/docker.sock \
+	$SafeHarborImageName bash

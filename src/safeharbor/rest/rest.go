@@ -285,7 +285,7 @@ func ParseResponseBodyToMap(body io.ReadCloser) (map[string]interface{}, error) 
  *	"HTTPReasonPhrase" - string
  *	"payload" - json array (this is what is converted to a golang array of maps).
  */
-func ParseResponseBodyToMaps(body io.ReadCloser) ([]map[string]interface{}, error) {
+func ParseResponseBodyToPayloadMaps(body io.ReadCloser) ([]map[string]interface{}, error) {
 	var value []byte
 	var err error
 	value, err = ioutil.ReadAll(body)
