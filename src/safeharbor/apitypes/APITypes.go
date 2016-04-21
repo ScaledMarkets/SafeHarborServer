@@ -611,7 +611,7 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 func (imageDesc *DockerImageDesc) AsJSON() string {
 	
 	var dockerBuildOutput *docker.DockerBuildOutput
-	dockerBuildOutput, _ = docker.ParseBuildOutput(imageDesc.OutputFromBuild)
+	dockerBuildOutput, _ = docker.ParseBuildRESTOutput(imageDesc.OutputFromBuild)
 	
 	var s = fmt.Sprintf("{%s, \"ObjId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", " +
 		"\"Description\": \"%s\", \"CreationDate\": %s, " +

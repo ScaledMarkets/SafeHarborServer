@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
+	"encoding/json"
 	//"os/exec"
 	//"errors"
 	"regexp"
@@ -169,8 +170,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 }
 
 /*******************************************************************************
- * Parse docker build output - i.e., parses the output string that is returned
- * by BuildDockerfile.
+ * Parse the string that is returned by the docker build command.
  * Partial results are returned, but with an error.
  *
  * Parse algorithm:
@@ -187,6 +187,8 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 		When encounter "Successfully built"
 			Set final image id
 			Done and complete.
+		When encounter "Error"
+			Done with error
 		Otherwise read line (i.e., skip the line) and go to state 1.
 	2. Looking for step parts:
 		When encounter " ---> ",
@@ -267,7 +269,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	Removing intermediate container 3bac4e50b6f9
 	Successfully built 03dcea1bc8a6
  */
-func ParseBuildOutput(buildOutputStr string) (*DockerBuildOutput, error) {
+func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 	
 	var output *DockerBuildOutput = NewDockerBuildOutput()
 	
@@ -313,6 +315,12 @@ func ParseBuildOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 				return output, nil
 			}
 			
+			therest = strings.TrimPrefix(line, "Error")
+			if len(therest) < len(line) {
+				output.ErrorMessage = therest
+				return output, util.ConstructError(output.ErrorMessage)
+			}
+			
 			lineNo++
 			state = 1
 			continue
@@ -348,6 +356,63 @@ func ParseBuildOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 	}
 	output.ErrorMessage = "Did not find a final image Id"
 	return output, util.ConstructError(output.ErrorMessage)
+}
+
+/*******************************************************************************
+ * Parse the string that is returned by the docker daemon REST build function.
+ * Partial results are returned, but with an error.
+ *
+ * Parse algorithm:
+ * 
+ * Sample output:
+	{"stream": "Step 1..."}
+	{"stream": "..."}
+	{"error": "Error...", "errorDetail": {"code": 123, "message": "Error..."}}
+	
+ * Another sample:
+	{"stream":"Step 1 : FROM centos\n"}
+	{"stream":" ---\u003e 968790001270\n"}
+	{"stream":"Step 2 : RUN touch newfile\n"}
+	{"stream":" ---\u003e Using cache\n"}
+	{"stream":" ---\u003e b0c79ad65744\n"}
+	{
+ */
+func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
+	
+	var outputstr string
+	var err error
+	outputstr, err = extractBuildOutputFromRESTResponse(restResponse)
+	if err != nil { return nil, err }
+	return ParseBuildCommandOutput(outputstr)
+}
+
+/*******************************************************************************
+ * The docker daemon build function - a REST function - returns a series of
+ * JSON objects that encode the output of the build operation. We need to parse
+ * the JSON and extract/decode the build operation output.
+ */
+func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
+	
+	var obj interface{}
+	var err error
+	var decoder *json.Decoder = json.NewDecoder(strings.NewReader(restResponse))
+	err = decoder.Decode(&obj)
+	if err != nil { return "", err }
+	
+	type Message struct {
+		name string
+		value string
+	}
+
+	var output = ""
+	var message Message
+	for decoder.More() {
+		err = decoder.Decode(&message)
+		if err != nil { return "", err }
+		output = output + message.value
+	}
+	
+	return output
 }
 
 /*******************************************************************************

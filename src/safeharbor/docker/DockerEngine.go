@@ -175,14 +175,13 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (stri
 	var n int
 	var buf []byte = make([]byte, 100)
 	var bytes []byte = make([]byte, 0)
+	var responseStr = ""
 	for {
 		n, err = response.Body.Read(buf)
 		if err != nil { break }
-		bytes = append(bytes, buf[0:n]...)
+		responseStr = responseStr + string(buf[0:n])
 		if n < len(buf) { break }
 	}
-	var responseStr = string(bytes)
-	
 	
 	fmt.Println("BuildImage: H")  // debug
 	return responseStr, nil
