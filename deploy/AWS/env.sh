@@ -5,3 +5,5 @@ export SafeHarborImageName=$ScaledMarketsRegistryNamespace/safeharborserver
 export DataVolMountPoint=/home/centos/safeharbordata  # this gets mapped to the container data directory.
 export registryUser=safeharbor
 export registryPassword=gksspie8a
+export SafeHarborPort=6000
+export RegistryPort=5000

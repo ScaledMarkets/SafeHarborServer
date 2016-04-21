@@ -171,8 +171,11 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 			"Did not find an IP4 address for clair to call back on")
 	}
 	
+	var scheme string
+	if clairSvc.UseSSL { scheme = "https" } else { scheme = "http" }
+	
 	return &ClairRestContext{
-		RestContext: *rest.CreateRestContext(clairSvc.UseSSL,
+		RestContext: *rest.CreateTCPRestContext(scheme,
 			clairSvc.Host, clairSvc.Port, "", "", setClairSessionId),
 		MinimumVulnerabilityPriority: minPriority,
 		ClairService: clairSvc,

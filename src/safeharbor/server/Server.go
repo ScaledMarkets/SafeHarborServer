@@ -151,8 +151,8 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		if config.RegistryUserId == "" { AbortStartup("REGISTRY_USERID not set in configuration") }
 		if config.RegistryPassword == "" { AbortStartup("REGISTRY_PASSWORD not set in configuration") }
 		var registry *docker.DockerRegistry
-		registry, err = docker.OpenDockerRegistryConnection(false, config.RegistryHost, config.RegistryPort,
-			config.RegistryUserId, config.RegistryPassword, func (req *http.Request, s string) {})
+		registry, err = docker.OpenDockerRegistryConnection(config.RegistryHost, config.RegistryPort,
+			config.RegistryUserId, config.RegistryPassword)
 		if err != nil { AbortStartup("When connecting to registry: " + err.Error()) }
 		server.DockerServices = docker.NewDockerServices(registry, engine)
 	}

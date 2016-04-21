@@ -97,8 +97,11 @@ func (clairSvc *ClairServiceStub) CreateScanContext(params map[string]string) (S
 		// this param is optional so do not require its presence.
 	}
 	
+	var scheme string
+	if clairSvc.UseSSL { scheme = "https" } else { scheme = "http" }
+	
 	return &ClairRestContextStub{
-		RestContext: *rest.CreateRestContext(clairSvc.UseSSL,
+		RestContext: *rest.CreateTCPRestContext(scheme,
 			clairSvc.Host, clairSvc.Port, "", "", setClairSessionStubId),
 		MinimumVulnerabilityPriority: minPriority,
 		ClairServiceStub: clairSvc,

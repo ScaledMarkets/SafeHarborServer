@@ -9,7 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
-	"os/exec"
+	//"os/exec"
 	//"errors"
 	"regexp"
 	
@@ -121,41 +121,41 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	// Image id format: <hash>[:TAG]
 	
 	var imageFullName string = realmName + "/" + repoName + ":" + imageName
-	var cmd *exec.Cmd
-	var output []byte
+	
 	var outputStr string
-	cmd = exec.Command("docker", "build", 
-		"--file", tempDirPath + "/" + dockerfileName,
-		"--tag", imageFullName, tempDirPath)
+	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName)
 	
-		// https://docs.docker.com/engine/reference/api/docker_remote_api_v1.23/#build-image-from-a-dockerfile
-		// POST /build HTTP/1.1
-		//
-		// {{ TAR STREAM }} (this is the contents of the "build context")
+		/* Obsolete: -----------------
+	
+		var cmd *exec.Cmd
+		var output []byte
+		cmd = exec.Command("docker", "build", 
+			"--file", tempDirPath + "/" + dockerfileName,
+			"--tag", imageFullName, tempDirPath)
 		
-	// Execute the command in the temporary directory.
-	// This initiates processing of the dockerfile.
-	output, err = cmd.CombinedOutput()
-	outputStr = string(output)
-	fmt.Println("...finished processing dockerfile.")
-	fmt.Println("Output from docker build command:")
-	fmt.Println(outputStr)
-	fmt.Println()
-	fmt.Println("End of output from docker build command.")
-	
-	fmt.Println("Files in " + tempDirPath + ":")
-	dirfiles, _ := ioutil.ReadDir(tempDirPath)
-	for _, f := range dirfiles {
-		fmt.Println("\t" + f.Name())
-	}
-	
-	if err != nil {
+			// https://docs.docker.com/engine/reference/api/docker_remote_api_v1.23/#build-image-from-a-dockerfile
+			// POST /build HTTP/1.1
+			//
+			// {{ TAR STREAM }} (this is the contents of the "build context")
+			
+		// Execute the command in the temporary directory.
+		// This initiates processing of the dockerfile.
+		output, err = cmd.CombinedOutput()
+		outputStr = string(output)
+		fmt.Println("...finished processing dockerfile.")
+		fmt.Println("Output from docker build command:")
+		fmt.Println(outputStr)
 		fmt.Println()
-		fmt.Println("Returning from buildDockerfile, with error")
-		return "", util.ConstructError(err.Error() + ", " + outputStr)
-	}
-	fmt.Println("Performed docker build command successfully.")
-	return outputStr, nil
+		fmt.Println("End of output from docker build command.")
+		
+		fmt.Println("Files in " + tempDirPath + ":")
+		dirfiles, _ := ioutil.ReadDir(tempDirPath)
+		for _, f := range dirfiles {
+			fmt.Println("\t" + f.Name())
+		}
+		------------------------------- */
+	
+	return outputStr, err
 }
 
 /*******************************************************************************

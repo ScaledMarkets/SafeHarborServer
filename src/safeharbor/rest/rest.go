@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"mime/multipart"
 	"fmt"
+	"net"
 	"net/url"
 	"io"
 	"io/ioutil"
@@ -17,7 +18,7 @@ import (
 
 type RestContext struct {
 	httpClient *http.Client
-	ssl bool
+	scheme string
 	hostname string
 	port int
 	UserId string
@@ -26,19 +27,41 @@ type RestContext struct {
 }
 
 /*******************************************************************************
- * userId and password are optional.
+ * For TCP/IP. userId and password are optional.
  */
-func CreateRestContext(ssl bool, hostname string, port int, userId string, password string,
+func CreateTCPRestContext(scheme, hostname string, port int, userId string, password string,
 	sessionIdSetter func(*http.Request, string)) *RestContext {
+
+	return &RestContext{
+		httpClient: &http.Client{
+			Transport: &http.Transport{},
+		},
+		scheme: scheme,
+		hostname: hostname,
+		port: port,
+		UserId: userId,
+		Password: password,
+		setSessionId: sessionIdSetter,
+	}
+}
+
+/*******************************************************************************
+ * For Unix domain sockets. userId and password are optional.
+ */
+func CreateUnixRestContext(
+	dialer func(network, addr string) (net.Conn, error),
+	userId string, password string,
+	sessionIdSetter func(*http.Request, string)) *RestContext {
+
 	return &RestContext{
 		httpClient: &http.Client{
 			Transport: &http.Transport{
-				DisableCompression: true,
+				Dial: dialer,
 			},
 		},
-		ssl: ssl,
-		hostname: hostname,
-		port: port,
+		scheme: "unix",
+		hostname: "",
+		port: 0,
 		UserId: userId,
 		Password: password,
 		setSessionId: sessionIdSetter,
@@ -51,9 +74,7 @@ func (restContext *RestContext) Print() {
 	fmt.Println(fmt.Sprintf("\tport: %d", restContext.port))
 }
 
-func (restContext *RestContext) GetScheme() string {
-	if restContext.ssl { return "https" } else { return "http" }
-}
+func (restContext *RestContext) GetScheme() string { return restContext.scheme }
 
 func (restContext *RestContext) GetHostname() string { return restContext.hostname }
 
@@ -72,8 +93,12 @@ func (restContext *RestContext) SendBasicGet(reqName string) (*http.Response, er
 	var urlstr string = restContext.getURL(reqName)
 	var resp *http.Response
 	var err error
+	fmt.Println("Sending GET...")  // debug
 	resp, err = restContext.httpClient.Get(urlstr)
+	fmt.Println("...response received.")  // debug
 	if err != nil { return nil, err }
+	fmt.Println("Returning normal response...")  // debug
+
 	return resp, nil
 }
 
@@ -135,11 +160,37 @@ func (restContext *RestContext) SendBasicFilePost(reqName string, names []string
 }
 
 /*******************************************************************************
+ * Send a POST request with a body of an arbitrary content type.
+ * The headers parameter may be nil.
+ */
+func (restContext *RestContext) SendBasicStreamPost(reqName string, 
+	headers map[string]string, content io.Reader) (*http.Response, error) {
+	
+	var request *http.Request
+	var err error
+	request, err = http.NewRequest("POST", restContext.getURL(reqName), content)
+	if err != nil { return nil, err }
+	
+	if headers != nil {
+		for name, value := range headers {
+			request.Header.Set(name, value)
+		}
+	}
+	
+	// Submit the request
+	var response *http.Response
+	response, err = restContext.httpClient.Do(request)
+	if err != nil { return nil, err }
+
+	return response, nil
+}
+
+/*******************************************************************************
  * Send a GET request to the SafeHarborServer, at the specified REST endpoint method
  * (reqName), with the specified query parameters, using the specified session Id.
  */
-func (restContext *RestContext) SendSessionGet(sessionId string, reqName string,
-	names []string, values []string) (*http.Response, error) {
+func (restContext *RestContext) SendSessionGet(sessionId string, reqName string, names []string,
+	values []string) (*http.Response, error) {
 
 	return restContext.sendSessionReq(sessionId, "GET", reqName, names, values)
 }
@@ -267,15 +318,41 @@ func ParseResponseBodyToMap(body io.ReadCloser) (map[string]interface{}, error) 
 	//var dec *json.Decoder = json.NewDecoder(body)
 	//err := dec.Decode(&obj)
 	if err != nil { return nil, err }
-	//AssertErrIsNil(err, "When unmarshalling obj")
 	
-	
-	//var result map[string]interface{}
-	//var isType bool
-	
-	//result, _ = obj.(map[string]interface{})
-	//AssertThat(isType, "Wrong type: obj is not a map[string]interface{}")
 	return obj, nil
+}
+
+/*******************************************************************************
+ * Parse an HTTP JSON response that can be converted to an array of maps.
+ */
+func ParseResponseBodyToMaps(body io.ReadCloser) ([]map[string]interface{}, error) {
+	var value []byte
+	var err error
+	value, err = ioutil.ReadAll(body)
+	if err != nil { return nil, err }
+	var obj interface{}
+	err = json.Unmarshal(value, &obj)
+	if err != nil { return nil, err }
+	
+	var ar []interface{}
+	var isType bool
+	ar, isType = obj.([]interface{})
+	if ! isType { return nil, errors.New(
+		"Wrong type: obj is not a []interface{} - it is a " + 
+			fmt.Sprintf("%s", reflect.TypeOf(obj)))
+	}
+	var maps = make([]map[string]interface{}, 0)
+	for _, elt := range ar {
+		var m map[string]interface{}
+		m, isType = elt.(map[string]interface{})
+		if ! isType { return nil, errors.New(
+			"Wrong type: obj is not a []map[string]interface{} - it is a " + 
+			fmt.Sprintf("%s", reflect.TypeOf(obj)))
+		}
+		maps = append(maps, m)
+	}
+	
+	return maps, nil
 }
 
 /*******************************************************************************
@@ -323,14 +400,6 @@ func ParseResponseBodyToPayloadMaps(body io.ReadCloser) ([]map[string]interface{
 		maps = append(maps, m)
 	}
 	
-	//var isType bool
-	//result, isType = obj.([]map[string]interface{})
-	//if ! isType {
-	//	fmt.Println("This is what was returned:")
-	//	fmt.Println(result)
-	//}
-	//AssertThat(isType, "Wrong type: obj is not a []map[string]interface{} - it is a " + 
-	//	fmt.Sprintf("%s", reflect.TypeOf(obj)))
 	return maps, nil
 }
 
@@ -370,9 +439,17 @@ func (restContext *RestContext) getURL(reqName string) string {
 	if restContext.UserId != "" {
 		basicAuthCreds = fmt.Sprintf("%s:%s@", restContext.UserId, restContext.Password)
 	}
+	var portspec = ""
+	if restContext.port != 0 { portspec = fmt.Sprintf(":%d", restContext.port) }
+	var httpScheme = restContext.GetScheme()
+	var hostname = restContext.hostname
+	if restContext.GetScheme() == "unix" {
+		httpScheme = "http"  // override
+		hostname = "fakehost.fak"
+	}
 	return fmt.Sprintf(
-		"%s://%s%s:%d/%s",
-		restContext.GetScheme(), basicAuthCreds, restContext.hostname, restContext.port, reqName)
+		"%s://%s%s%s/%s",
+		httpScheme, basicAuthCreds, hostname, portspec, reqName)
 }
 
 /*******************************************************************************
