@@ -145,17 +145,17 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	engine, err = docker.OpenDockerEngineConnection()
 	if err != nil { AbortStartup("When connecting to docker engine: " + err.Error()) }
 	
+	var registry *docker.DockerRegistry
 	if ! server.NoRegistry {
 		if config.RegistryHost == "" { AbortStartup("REGISTRY_HOST not set in configuration") }
 		if config.RegistryPort == 0 { AbortStartup("REGISTRY_PORT not set in configuration") }
 		if config.RegistryUserId == "" { AbortStartup("REGISTRY_USERID not set in configuration") }
 		if config.RegistryPassword == "" { AbortStartup("REGISTRY_PASSWORD not set in configuration") }
-		var registry *docker.DockerRegistry
 		registry, err = docker.OpenDockerRegistryConnection(config.RegistryHost, config.RegistryPort,
 			config.RegistryUserId, config.RegistryPassword)
 		if err != nil { AbortStartup("When connecting to registry: " + err.Error()) }
-		server.DockerServices = docker.NewDockerServices(registry, engine)
 	}
+	server.DockerServices = docker.NewDockerServices(registry, engine)
 	
 	// To do: Make this a TLS listener.
 	// Instantiate an HTTP server with the SafeHarbor server as the handler.
