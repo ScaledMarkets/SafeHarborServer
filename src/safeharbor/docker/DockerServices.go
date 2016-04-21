@@ -65,10 +65,12 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	var exists bool
 	var err error
 	exists, err = dockerSvcs.Registry.ImageExists(realmName + "/" + repoName, imageName)
+	fmt.Println("BuildDockerfile: A")  // debug
 	if exists {
 		return "", util.ConstructError(
 			"Image with name " + realmName + "/" + repoName + ":" + imageName + " already exists.")
 	}
+	fmt.Println("BuildDockerfile: B")  // debug
 	
 		/* Obsolete: -----------------
 		var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "inspect", imageName)
@@ -84,11 +86,13 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	
 	// Verify that the image name conforms to Docker's requirements.
 	err = NameConformsToDockerRules(imageName)
+	fmt.Println("BuildDockerfile: C")  // debug
 	if err != nil { return "", err }
 	
 	// Create a temporary directory to serve as the build context.
 	var tempDirPath string
 	tempDirPath, err = ioutil.TempDir("", "")
+	fmt.Println("BuildDockerfile: D")  // debug
 	//....TO DO: Is the above a security problem? Do we need to use a private
 	// directory? I think so.
 	defer func() {
@@ -100,9 +104,11 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	// Copy dockerfile to that directory.
 	var in, out *os.File
 	in, err = os.Open(dockerfileExternalFilePath)
+	fmt.Println("BuildDockerfile: E")  // debug
 	if err != nil { return "", err }
 	var dockerfileCopyPath string = tempDirPath + "/" + dockerfileName
 	out, err = os.Create(dockerfileCopyPath)
+	fmt.Println("BuildDockerfile: F")  // debug
 	if err != nil { return "", err }
 	_, err = io.Copy(out, in)
 	if err != nil { return "", err }
@@ -124,6 +130,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	
 	var outputStr string
 	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName)
+	fmt.Println("BuildDockerfile: G")  // debug
 	
 		/* Obsolete: -----------------
 	
