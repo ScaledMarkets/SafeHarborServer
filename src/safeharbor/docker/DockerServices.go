@@ -64,6 +64,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	// Check if an image with that name already exists.
 	var exists bool
 	var err error
+	fmt.Println("BuildDockerfile: 0")  // debug
 	exists, err = dockerSvcs.Registry.ImageExists(realmName + "/" + repoName, imageName)
 	fmt.Println("BuildDockerfile: A")  // debug
 	if exists {
