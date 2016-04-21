@@ -174,7 +174,6 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (stri
 	
 	var n int
 	var buf []byte = make([]byte, 100)
-	var bytes []byte = make([]byte, 0)
 	var responseStr = ""
 	for {
 		n, err = response.Body.Read(buf)

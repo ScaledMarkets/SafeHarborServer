@@ -395,8 +395,8 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	
 	var obj interface{}
 	var err error
-	var decoder *json.Decoder = json.NewDecoder(strings.NewReader(restResponse))
-	err = decoder.Decode(&obj)
+	var dec *json.Decoder = json.NewDecoder(strings.NewReader(restResponse))
+	err = dec.Decode(&obj)
 	if err != nil { return "", err }
 	
 	type Message struct {
@@ -406,13 +406,14 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 
 	var output = ""
 	var message Message
-	for decoder.More() {
-		err = decoder.Decode(&message)
+	for {
+		err = dec.Decode(&message)
+		if err == io.EOF { break }
 		if err != nil { return "", err }
 		output = output + message.value
 	}
 	
-	return output
+	return output, nil
 }
 
 /*******************************************************************************
