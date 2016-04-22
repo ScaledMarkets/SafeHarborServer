@@ -67,16 +67,13 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	// Check if an image with that name already exists.
 	var exists bool = false
 	var err error = nil
-	fmt.Println("BuildDockerfile: 0")  // debug
 	if dockerSvcs.Registry != nil {
 		exists, err = dockerSvcs.Registry.ImageExists(realmName + "/" + repoName, imageName)
 	}
-	fmt.Println("BuildDockerfile: A")  // debug
 	if exists {
 		return "", util.ConstructError(
 			"Image with name " + realmName + "/" + repoName + ":" + imageName + " already exists.")
 	}
-	fmt.Println("BuildDockerfile: B")  // debug
 	
 		/* Obsolete: -----------------
 		var cmd *exec.Cmd = exec.Command("/usr/bin/docker", "inspect", imageName)
@@ -92,13 +89,11 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	
 	// Verify that the image name conforms to Docker's requirements.
 	err = NameConformsToDockerRules(imageName)
-	fmt.Println("BuildDockerfile: C")  // debug
 	if err != nil { return "", err }
 	
 	// Create a temporary directory to serve as the build context.
 	var tempDirPath string
 	tempDirPath, err = ioutil.TempDir("", "")
-	fmt.Println("BuildDockerfile: D")  // debug
 	//....TO DO: Is the above a security problem? Do we need to use a private
 	// directory? I think so.
 	defer func() {
@@ -110,11 +105,9 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	// Copy dockerfile to that directory.
 	var in, out *os.File
 	in, err = os.Open(dockerfileExternalFilePath)
-	fmt.Println("BuildDockerfile: E")  // debug
 	if err != nil { return "", err }
 	var dockerfileCopyPath string = tempDirPath + "/" + dockerfileName
 	out, err = os.Create(dockerfileCopyPath)
-	fmt.Println("BuildDockerfile: F")  // debug
 	if err != nil { return "", err }
 	_, err = io.Copy(out, in)
 	if err != nil { return "", err }
@@ -136,7 +129,6 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	
 	var outputStr string
 	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName)
-	fmt.Println("BuildDockerfile: G")  // debug
 	
 		/* Obsolete: -----------------
 	
@@ -273,9 +265,6 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
  */
 func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 	
-	fmt.Println("ParseBuildCommandOutput: A")  // debug
-	fmt.Println("buildOutputStr=" + buildOutputStr)  // debug
-	
 	var output *DockerBuildOutput = NewDockerBuildOutput()
 	
 	var lines = strings.Split(buildOutputStr, "\n")
@@ -290,8 +279,6 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 		
 		var line string = lines[lineNo]
 		
-		fmt.Println(line)  // debug
-			
 		switch state {
 			
 		case 1: // Looking for next step
@@ -362,7 +349,6 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 		}
 	}
 	output.ErrorMessage = "Did not find a final image Id"
-	fmt.Println("ParseBuildCommandOutput: Z")  // debug
 	return output, util.ConstructError(output.ErrorMessage)
 }
 
@@ -374,9 +360,7 @@ func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
 	
 	var outputstr string
 	var err error
-	fmt.Println("ParseBuildRESTOutput: A")  // debug
 	outputstr, err = extractBuildOutputFromRESTResponse(restResponse)
-	fmt.Println("ParseBuildRESTOutput: B")  // debug
 	if err != nil { return nil, err }
 	return ParseBuildCommandOutput(outputstr)
 }
@@ -401,9 +385,7 @@ func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
  */
 func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	
-	fmt.Println("extractBuildOutputFromRESTResponse: A; restResponse=" + restResponse)  // debug
 	var reader = bufio.NewReader(strings.NewReader(restResponse))
-	fmt.Println("extractBuildOutputFromRESTResponse: B")  // debug
 	
 	var output = ""
 	for {
@@ -414,7 +396,6 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		if err == io.EOF { break }
 		if err != nil { return "", err }
 		if isPrefix { fmt.Println("Warning - only part of string was read") }
-		fmt.Println("extractBuildOutputFromRESTResponse: C; lineBytes=" + string(lineBytes))  // debug
 		
 		var obj interface{}
 		err = json.Unmarshal(lineBytes, &obj)
@@ -433,11 +414,9 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 			"Unexpected type in json field value: " + reflect.TypeOf(obj).String())
 		}
 
-		fmt.Println("extractBuildOutputFromRESTResponse: D; stream=" + value)  // debug
 		output = output + value
 	}
 	
-	fmt.Println("extractBuildOutputFromRESTResponse: Z")  // debug
 	return output, nil
 }
 

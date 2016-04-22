@@ -233,19 +233,10 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	tarFileRelDir, err = saveImageAsTars(clairContext.ClairService.ImageTarBaseDir, imageName)
 	defer func() {
 		fmt.Println("Removing all files at " + clairContext.ClairService.ImageTarBaseDir + tarFileRelDir)
-//		os.RemoveAll(tarFileRelDir)
+		os.RemoveAll(tarFileRelDir)
 	}()
 	if err != nil { return nil, util.PrintError(err) }
 	var fullPath = clairContext.ClairService.ImageTarBaseDir + "/" + tarFileRelDir
-
-	// debug
-	fmt.Println("Image layers saved to " + fullPath + ":")
-	var layerFileInfos []os.FileInfo
-	layerFileInfos, err = ioutil.ReadDir(fullPath)
-	for _, fileInfo := range layerFileInfos {
-		fmt.Println("\t" + fileInfo.Name())
-	}
-	// end debug
 
 	var tarDirURL = "http://" + clairContext.imageRetrievalIP + ":" +
 		strconv.Itoa(clairContext.imageRetrievalPort) + "/" + tarFileRelDir
@@ -261,15 +252,6 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	if err != nil || len(layerIds) == 0 {
 		return nil, util.ConstructError("- Could not get image's history: " + err.Error())
 	}
-	
-	// debug
-	fmt.Println("Layer Ids:")
-	for _, id := range layerIds {
-		fmt.Println("\t" + id)
-	}
-	// end debug
-	
-	
 	
 	// Analyze layers
 	fmt.Printf("Analyzing %d layers\n", len(layerIds))
@@ -439,12 +421,6 @@ func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
 	
 	fullPath, err := ioutil.TempDir(imageTarBaseDir, "layers")
 		if err != nil { return "", err }
-
-		
-	// debug
-	fmt.Println("Created temp dir " + fullPath)
-	// end debug
-		
 		
 	var stderr bytes.Buffer
 	save := exec.Command("docker", "save", imageName)
@@ -469,17 +445,6 @@ func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
 	
 	err = extract.Wait()
 		if err != nil { return "", util.ConstructError(stderr.String()) }
-
-		
-	// debug
-	var layerFileInfos []os.FileInfo
-	layerFileInfos, err = ioutil.ReadDir(fullPath)
-	for _, fileInfo := range layerFileInfos {
-		fmt.Println("\t" + fileInfo.Name())
-	}
-	// end debug
-		
-		
 		
 	return path.Base(fullPath), nil
 }
