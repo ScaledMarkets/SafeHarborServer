@@ -330,7 +330,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var dockerBuildOutput *docker.DockerBuildOutput
 	dockerBuildOutput, err = docker.ParseBuildRESTOutput(outputStr)
 	fmt.Println("buildDockerfile: H")  // debug
-	fmt.Println("dockerBuildOutput=" + dockerBuildOutput.String()) // debug
+	fmt.Println("dockerBuildOutput=" + outputStr) // debug
 	fmt.Println("buildDockerfile: H1")  // debug
 	if err != nil { return nil, err }
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
