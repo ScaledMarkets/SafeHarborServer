@@ -408,8 +408,7 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	if err != nil { return "", err }
 	
 	type Message struct {
-		name string
-		value string
+		stream string
 	}
 
 	var output = ""
@@ -418,7 +417,7 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		err = dec.Decode(&message)
 		if err == io.EOF { break }
 		if err != nil { return "", err }
-		output = output + message.value
+		output = output + message.stream
 	}
 	
 	fmt.Println("extractBuildOutputFromRESTResponse: C")  // debug
