@@ -410,13 +410,15 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	var output = ""
 	var message Message
 	for {
+		fmt.Println("extractBuildOutputFromRESTResponse: C")  // debug
 		var err = dec.Decode(&message)
 		if err == io.EOF { break }
 		if err != nil { return "", err }
+		fmt.Println("extractBuildOutputFromRESTResponse: D; stream=" + message.stream)  // debug
 		output = output + message.stream
 	}
 	
-	fmt.Println("extractBuildOutputFromRESTResponse: C")  // debug
+	fmt.Println("extractBuildOutputFromRESTResponse: Z")  // debug
 	return output, nil
 }
 
