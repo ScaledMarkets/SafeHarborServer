@@ -399,13 +399,9 @@ func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
  */
 func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	
-	var obj interface{}
-	var err error
 	fmt.Println("extractBuildOutputFromRESTResponse: A")  // debug
 	var dec *json.Decoder = json.NewDecoder(strings.NewReader(restResponse))
 	fmt.Println("extractBuildOutputFromRESTResponse: B")  // debug
-	err = dec.Decode(&obj)
-	if err != nil { return "", err }
 	
 	type Message struct {
 		stream string
@@ -414,7 +410,7 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	var output = ""
 	var message Message
 	for {
-		err = dec.Decode(&message)
+		var err = dec.Decode(&message)
 		if err == io.EOF { break }
 		if err != nil { return "", err }
 		output = output + message.stream
