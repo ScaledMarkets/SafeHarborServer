@@ -419,7 +419,7 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		if isPrefix { fmt.Println("Warning - only part of string was read") }
 		fmt.Println("extractBuildOutputFromRESTResponse: C; lineBytes=" + string(lineBytes))  // debug
 		
-		var message Message
+		var message *Message
 		err = json.Unmarshal(lineBytes, &message)
 		if err != nil { return "", err }
 		
