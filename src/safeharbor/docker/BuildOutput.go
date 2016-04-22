@@ -16,6 +16,9 @@ type DockerBuildOutput struct {
 
 func NewDockerBuildOutput() *DockerBuildOutput {
 	return &DockerBuildOutput{
+		ErrorMessage: "",
+		FinalDockerImageId: "",
+		Steps: make([]*DockerBuildStep, 0),
 	}
 }
 
