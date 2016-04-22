@@ -324,6 +324,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	outputStr, err = dbClient.getServer().DockerServices.BuildDockerfile(
 		dockerfile.getExternalFilePath(), dockerfile.getName(), realm.getName(),
 		repo.getName(), imageName)
+	fmt.Println("dockerBuildOutput=" + outputStr) // debug
 	fmt.Println("buildDockerfile: G")  // debug
 	if err != nil { return nil, err }
 	
@@ -332,7 +333,6 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	fmt.Println("buildDockerfile: H")  // debug
 	if err != nil { return nil, err }
 	fmt.Println("buildDockerfile: H1")  // debug
-	fmt.Println("dockerBuildOutput=" + outputStr) // debug
 	fmt.Println("buildDockerfile: H2")  // debug
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
 	

@@ -169,18 +169,15 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (stri
 	var response *http.Response
 	response, err = engine.SendBasicStreamPost(
 		fmt.Sprintf("build?t=%s", imageFullName), headers, tarReader)
+	defer response.Body.Close()
 	if err != nil { return "", err }
 	if response.StatusCode != 200 { return "", errors.New(response.Status) }
 	
-	var n int
-	var buf []byte = make([]byte, 100)
-	var responseStr = ""
-	for {
-		n, err = response.Body.Read(buf)
-		if err != nil { break }
-		responseStr = responseStr + string(buf[0:n])
-		if n < len(buf) { break }
-	}
+	var bytes []byte
+	bytes, err = ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	if err != nil { return "", err }
+	var responseStr = string(bytes)
 	
 	fmt.Println("BuildImage: H")  // debug
 	return responseStr, nil
