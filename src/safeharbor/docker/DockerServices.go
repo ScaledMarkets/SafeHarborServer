@@ -285,6 +285,8 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 		}
 		
 		var line string = lines[lineNo]
+		
+		fmt.Println(line)  // debug
 			
 		switch state {
 			
@@ -363,21 +365,6 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 /*******************************************************************************
  * Parse the string that is returned by the docker daemon REST build function.
  * Partial results are returned, but with an error.
- *
- * Parse algorithm:
- * 
- * Sample output:
-	{"stream": "Step 1..."}
-	{"stream": "..."}
-	{"error": "Error...", "errorDetail": {"code": 123, "message": "Error..."}}
-	
- * Another sample:
-	{"stream":"Step 1 : FROM centos\n"}
-	{"stream":" ---\u003e 968790001270\n"}
-	{"stream":"Step 2 : RUN touch newfile\n"}
-	{"stream":" ---\u003e Using cache\n"}
-	{"stream":" ---\u003e b0c79ad65744\n"}
-	{
  */
 func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
 	
@@ -392,8 +379,21 @@ func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
 
 /*******************************************************************************
  * The docker daemon build function - a REST function - returns a series of
- * JSON objects that encode the output of the build operation. We need to parse
- * the JSON and extract/decode the build operation output.
+ * JSON objects that encode the output stream of the build operation. We need to
+ * parse the JSON and extract/decode the build operation output stream.
+ *
+ * Sample REST response:
+	{"stream": "Step 1..."}
+	{"stream": "..."}
+	{"error": "Error...", "errorDetail": {"code": 123, "message": "Error..."}}
+	
+ * Another sample:
+	{"stream":"Step 1 : FROM centos\n"}
+	{"stream":" ---\u003e 968790001270\n"}
+	{"stream":"Step 2 : RUN touch newfile\n"}
+	{"stream":" ---\u003e Using cache\n"}
+	{"stream":" ---\u003e b0c79ad65744\n"}
+	{
  */
 func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	
