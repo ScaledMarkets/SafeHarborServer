@@ -14,6 +14,7 @@ import (
 	//"os/exec"
 	//"errors"
 	"regexp"
+	"reflect"
 	
 	// SafeHarbor packages:
 	"safeharbor/util"
@@ -404,10 +405,6 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	var reader = bufio.NewReader(strings.NewReader(restResponse))
 	fmt.Println("extractBuildOutputFromRESTResponse: B")  // debug
 	
-	type Message struct {
-		stream string
-	}
-
 	var output = ""
 	for {
 		var lineBytes []byte
@@ -419,12 +416,25 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		if isPrefix { fmt.Println("Warning - only part of string was read") }
 		fmt.Println("extractBuildOutputFromRESTResponse: C; lineBytes=" + string(lineBytes))  // debug
 		
-		var message *Message
-		err = json.Unmarshal(lineBytes, &message)
+		var obj interface{}
+		err = json.Unmarshal(lineBytes, &obj)
 		if err != nil { return "", err }
 		
-		fmt.Println("extractBuildOutputFromRESTResponse: D; stream=" + message.stream)  // debug
-		output = output + message.stream
+		var isType bool
+		var msgMap map[string]interface{}
+		msgMap, isType = obj.(map[string]interface{})
+		if ! isType { return "", util.ConstructError(
+			"Unexpected format for json build output: " + string(lineBytes))
+		}
+		obj = msgMap["stream"]
+		var value string
+		value, isType = obj.(string)
+		if ! isType { return "", util.ConstructError(
+			"Unexpected type in json field value: " + reflect.TypeOf(obj).String())
+		}
+
+		fmt.Println("extractBuildOutputFromRESTResponse: D; stream=" + value)  // debug
+		output = output + value
 	}
 	
 	fmt.Println("extractBuildOutputFromRESTResponse: Z")  // debug
