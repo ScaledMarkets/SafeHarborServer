@@ -8,6 +8,7 @@ import (
 	"os"
 	"io"
 	"io/ioutil"
+	"bufio"
 	"strings"
 	"encoding/json"
 	//"os/exec"
@@ -392,15 +393,15 @@ func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
  * Another sample:
 	{"stream":"Step 1 : FROM centos\n"}
 	{"stream":" ---\u003e 968790001270\n"}
-	{"stream":"Step 2 : RUN touch newfile\n"}
+	{"stream":"Step 2 : RUN echo moo \u003e oink\n"}
 	{"stream":" ---\u003e Using cache\n"}
-	{"stream":" ---\u003e b0c79ad65744\n"}
-	{
+	{"stream":" ---\u003e cb0948362f97\n"}
+	{"stream":"Successfully built cb0948362f97\n"}
  */
 func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	
 	fmt.Println("extractBuildOutputFromRESTResponse: A; restResponse=" + restResponse)  // debug
-	var dec *json.Decoder = json.NewDecoder(strings.NewReader(restResponse))
+	var reader = bufio.NewReader(strings.NewReader(restResponse))
 	fmt.Println("extractBuildOutputFromRESTResponse: B")  // debug
 	
 	type Message struct {
@@ -408,12 +409,18 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	}
 
 	var output = ""
-	var message Message
 	for {
-		fmt.Println("extractBuildOutputFromRESTResponse: C")  // debug
-		var err = dec.Decode(&message)
+		var lineBytes []byte
+		var isPrefix bool
+		var err error
+		lineBytes, isPrefix, err = reader.ReadLine()
 		if err == io.EOF { break }
 		if err != nil { return "", err }
+		if isPrefix { fmt.Println("Warning - only part of string was read") }
+		
+		var message Message
+		json.Unmarshal(lineBytes, &message)
+		
 		fmt.Println("extractBuildOutputFromRESTResponse: D; stream=" + message.stream)  // debug
 		output = output + message.stream
 	}
