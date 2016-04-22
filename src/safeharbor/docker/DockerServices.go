@@ -420,7 +420,8 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		fmt.Println("extractBuildOutputFromRESTResponse: C; lineBytes=" + string(lineBytes))  // debug
 		
 		var message Message
-		json.Unmarshal(lineBytes, &message)
+		err = json.Unmarshal(lineBytes, &message)
+		if err != nil { return "", err }
 		
 		fmt.Println("extractBuildOutputFromRESTResponse: D; stream=" + message.stream)  // debug
 		output = output + message.stream
