@@ -272,6 +272,8 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 	
 	fmt.Println("ParseBuildCommandOutput: A")  // debug
+	fmt.Println("buildOutputStr=" + buildOutputStr)  // debug
+	
 	var output *DockerBuildOutput = NewDockerBuildOutput()
 	
 	var lines = strings.Split(buildOutputStr, "\n")
