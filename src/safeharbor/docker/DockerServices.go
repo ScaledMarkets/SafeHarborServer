@@ -399,7 +399,7 @@ func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
  */
 func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	
-	fmt.Println("extractBuildOutputFromRESTResponse: A")  // debug
+	fmt.Println("extractBuildOutputFromRESTResponse: A; restResponse=" + restResponse)  // debug
 	var dec *json.Decoder = json.NewDecoder(strings.NewReader(restResponse))
 	fmt.Println("extractBuildOutputFromRESTResponse: B")  // debug
 	
