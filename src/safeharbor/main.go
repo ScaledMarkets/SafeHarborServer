@@ -26,6 +26,7 @@ func main() {
 		os.Exit(2)
 	}
 	os.Stdout = logfile
+	os.Stderr = logfile
 	
 	var debug *bool = flag.Bool("debug", false, "Run in debug mode: this enables the clearAll REST method.")
 	var nocache *bool = flag.Bool("nocache", false, "Always refresh objects from the database.")
