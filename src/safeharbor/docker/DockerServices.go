@@ -271,6 +271,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
  */
 func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 	
+	fmt.Println("ParseBuildCommandOutput: A")  // debug
 	var output *DockerBuildOutput = NewDockerBuildOutput()
 	
 	var lines = strings.Split(buildOutputStr, "\n")
@@ -355,6 +356,7 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 		}
 	}
 	output.ErrorMessage = "Did not find a final image Id"
+	fmt.Println("ParseBuildCommandOutput: Z")  // debug
 	return output, util.ConstructError(output.ErrorMessage)
 }
 
@@ -381,7 +383,9 @@ func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
 	
 	var outputstr string
 	var err error
+	fmt.Println("ParseBuildRESTOutput: A")  // debug
 	outputstr, err = extractBuildOutputFromRESTResponse(restResponse)
+	fmt.Println("ParseBuildRESTOutput: B")  // debug
 	if err != nil { return nil, err }
 	return ParseBuildCommandOutput(outputstr)
 }
@@ -395,7 +399,9 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	
 	var obj interface{}
 	var err error
+	fmt.Println("extractBuildOutputFromRESTResponse: A")  // debug
 	var dec *json.Decoder = json.NewDecoder(strings.NewReader(restResponse))
+	fmt.Println("extractBuildOutputFromRESTResponse: B")  // debug
 	err = dec.Decode(&obj)
 	if err != nil { return "", err }
 	
@@ -413,6 +419,7 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		output = output + message.value
 	}
 	
+	fmt.Println("extractBuildOutputFromRESTResponse: C")  // debug
 	return output, nil
 }
 
