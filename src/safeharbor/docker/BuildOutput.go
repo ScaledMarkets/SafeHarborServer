@@ -34,6 +34,15 @@ func (buildOutput *DockerBuildOutput) GetFinalDockerImageId() string {
 	return buildOutput.FinalDockerImageId
 }
 
+func (buildOutput *DockerBuildOutput) String() string {
+	
+	var s = ""
+	for _, step := range buildOutput.Steps {
+		s = s + step.String()
+	}
+	return s
+}
+
 func (buildOutput *DockerBuildOutput) AsJSON() string {
 	
 	var s = fmt.Sprintf("{\"ErrorMessage\": \"%s\", \"FinalDockerImageId\": \"%s\", \"Steps\": [",
