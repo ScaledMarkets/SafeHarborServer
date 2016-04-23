@@ -108,6 +108,7 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (stri
 	// https://github.com/docker/docker/blob/7fd53f7c711474791ce4292326e0b1dc7d4d6b0f/vendor/src/github.com/docker/engine-api/client/image_build.go
 	
 	// Create a temporary tar file of the build directory contents.
+	fmt.Println("BuildImage: A")  // debug
 	var tarFile *os.File
 	var err error
 	var tempDirPath string
@@ -115,21 +116,27 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (stri
 	if err != nil { return "", err }
 	defer os.RemoveAll(tempDirPath)
 	tarFile, err = ioutil.TempFile(tempDirPath, "")
+	fmt.Println("BuildImage: B")  // debug
 	if err != nil { return "", errors.New(fmt.Sprintf(
 		"When creating temp file '%s': %s", tarFile.Name(), err.Error()))
 	}
 	
 	// Walk the build directory and add each file to the tar.
 	var tarWriter = tar.NewWriter(tarFile)
+	fmt.Println("BuildImage: C")  // debug
 	err = filepath.Walk(buildDirPath,
 		func(path string, info os.FileInfo, err error) error {
 		
+			fmt.Println("BuildImage: A.A")  // debug
 			// Open the file to be written to the tar.
 			if info.Mode().IsDir() { return nil }
+			fmt.Println("BuildImage: A.B")  // debug
 			var new_path = path[len(buildDirPath):]
 			if len(new_path) == 0 { return nil }
+			fmt.Println("BuildImage: A.C")  // debug
 			var file *os.File
 			file, err = os.Open(path)
+			fmt.Println("BuildImage: A.D")  // debug
 			if err != nil { return err }
 			defer file.Close()
 			
@@ -139,11 +146,14 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (stri
 			if err != nil { return err }
 			header.Name = new_path
 			err = tarWriter.WriteHeader(header)
+			fmt.Println("BuildImage: A.E")  // debug
 			if err != nil { return err }
 			
 			// Write the file contents to the tar.
 			_, err = io.Copy(tarWriter, file)
+			fmt.Println("BuildImage: A.F")  // debug
 			if err != nil { return err }
+			fmt.Println("BuildImage: A.G")  // debug
 			
 			return nil  // success - file was written to tar.
 		})
@@ -154,6 +164,7 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (stri
 	// Send the request to the docker engine, with the tar file as the body content.
 	var tarReader io.ReadCloser
 	tarReader, err = os.Open(tarFile.Name())
+	fmt.Println("BuildImage: D")  // debug
 	defer tarReader.Close()
 	if err != nil { return "", err }
 	var headers = make(map[string]string)
@@ -162,15 +173,18 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (stri
 	var response *http.Response
 	response, err = engine.SendBasicStreamPost(
 		fmt.Sprintf("build?t=%s", imageFullName), headers, tarReader)
+	fmt.Println("BuildImage: E")  // debug
 	defer response.Body.Close()
 	if err != nil { return "", err }
 	if response.StatusCode != 200 { return "", errors.New(response.Status) }
 	
 	var bytes []byte
 	bytes, err = ioutil.ReadAll(response.Body)
+	fmt.Println("BuildImage: F")  // debug
 	response.Body.Close()
 	if err != nil { return "", err }
 	var responseStr = string(bytes)
+	fmt.Println("BuildImage: Z")  // debug
 	
 	return responseStr, nil
 }
