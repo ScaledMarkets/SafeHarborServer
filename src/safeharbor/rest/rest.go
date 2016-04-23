@@ -162,9 +162,10 @@ func (restContext *RestContext) SendBasicFilePost(reqName string, names []string
 func (restContext *RestContext) SendBasicStreamPost(reqName string, 
 	headers map[string]string, content io.Reader) (*http.Response, error) {
 	
+	var url string = restContext.getURL(reqName)
 	var request *http.Request
 	var err error
-	request, err = http.NewRequest("POST", restContext.getURL(reqName), content)
+	request, err = http.NewRequest("POST", url, content)
 	if err != nil { return nil, err }
 	
 	if headers != nil {
@@ -175,7 +176,9 @@ func (restContext *RestContext) SendBasicStreamPost(reqName string,
 	
 	// Submit the request
 	var response *http.Response
+	fmt.Println("SendBasicStreamPost: url='" + url + "'")
 	response, err = restContext.httpClient.Do(request)
+	fmt.Println("SendBasicStreamPost: response Status='" + response.Status + "'")
 	if err != nil { return nil, err }
 
 	return response, nil
