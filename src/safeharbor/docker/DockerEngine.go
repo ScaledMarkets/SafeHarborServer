@@ -97,7 +97,8 @@ func (engine *DockerEngine) GetImages() ([]map[string]interface{}, error) {
  * of the build directory, which presumably contains a dockerfile. The textual
  * response from the docker engine is returned.
  */
-func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (string, error) {
+func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string,
+	dockerfileName string) (string, error) {
 
 	// https://docs.docker.com/engine/reference/api/docker_remote_api_v1.23/#build-image-from-a-dockerfile
 	// POST /build HTTP/1.1
@@ -172,7 +173,7 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (stri
 	headers["X-Registry-Config"] = base64.URLEncoding.EncodeToString([]byte("{}"))
 	var response *http.Response
 	response, err = engine.SendBasicStreamPost(
-		fmt.Sprintf("build?t=%s", imageFullName), headers, tarReader)
+		fmt.Sprintf("build?t=%s&dockerfile=%s", imageFullName, dockerfileName), headers, tarReader)
 	fmt.Println("BuildImage: E")  // debug
 	defer response.Body.Close()
 	if err != nil { return "", err }

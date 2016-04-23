@@ -134,7 +134,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	var imageFullName string = realmName + "/" + repoName + ":" + imageName
 	
 	var outputStr string
-	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName)
+	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName, dockerfileName)
 	fmt.Println("BuildDockerfile: G")  // debug
 	
 		/* Obsolete: -----------------
