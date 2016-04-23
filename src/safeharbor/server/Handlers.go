@@ -2515,25 +2515,33 @@ func remFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values 
 func remDockerImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
+	fmt.Println("remDockerImage: A")  // debug
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	fmt.Println("remDockerImage: B")  // debug
 
 	var err error
 	var imageId string
 	imageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageId")
+	fmt.Println("remDockerImage: C")  // debug
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.DeleteMask,
 		imageId, "remDockerImage"); failMsg != nil { return failMsg }
+	fmt.Println("remDockerImage: D")  // debug
 	
 	var image DockerImage
 	image, err = dbClient.getDockerImage(imageId)
+	fmt.Println("remDockerImage: E")  // debug
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(image.getRepoId())
+	fmt.Println("remDockerImage: F")  // debug
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	
 	err = repo.deleteDockerImage(dbClient, image)
+	fmt.Println("remDockerImage: G")  // debug
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	fmt.Println("remDockerImage: Z")  // debug
 	return apitypes.NewResult(200, "Docker image removed")
 }

@@ -58,7 +58,6 @@ func NewDockerServices(registry *DockerRegistry, engine *DockerEngine) *DockerSe
 func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	dockerfileName, realmName, repoName, imageName string) (string, error) {
 	
-	fmt.Println("BuildDockerfile: A")  // debug
 	if ! localDockerImageNameIsValid(imageName) {
 		return "", util.ConstructError(fmt.Sprintf("Image name '%s' is not valid - must be " +
 			"of format <name>[:<tag>]", imageName))
@@ -71,7 +70,6 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	if dockerSvcs.Registry != nil {
 		exists, err = dockerSvcs.Registry.ImageExists(realmName + "/" + repoName, imageName)
 	}
-	fmt.Println("BuildDockerfile: B")  // debug
 	if exists {
 		return "", util.ConstructError(
 			"Image with name " + realmName + "/" + repoName + ":" + imageName + " already exists.")
@@ -90,15 +88,12 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 		------------------------------- */
 	
 	// Verify that the image name conforms to Docker's requirements.
-	fmt.Println("BuildDockerfile: C")  // debug
 	err = NameConformsToDockerRules(imageName)
-	fmt.Println("BuildDockerfile: D")  // debug
 	if err != nil { return "", err }
 	
 	// Create a temporary directory to serve as the build context.
 	var tempDirPath string
 	tempDirPath, err = ioutil.TempDir("", "")
-	fmt.Println("BuildDockerfile: E")  // debug
 	//....TO DO: Is the above a security problem? Do we need to use a private
 	// directory? I think so.
 	defer func() {
@@ -110,7 +105,6 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	// Copy dockerfile to that directory.
 	var in, out *os.File
 	in, err = os.Open(dockerfileExternalFilePath)
-	fmt.Println("BuildDockerfile: F")  // debug
 	if err != nil { return "", err }
 	var dockerfileCopyPath string = tempDirPath + "/" + dockerfileName
 	out, err = os.Create(dockerfileCopyPath)
@@ -135,7 +129,6 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	
 	var outputStr string
 	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName, dockerfileName)
-	fmt.Println("BuildDockerfile: G")  // debug
 	
 		/* Obsolete: -----------------
 	
