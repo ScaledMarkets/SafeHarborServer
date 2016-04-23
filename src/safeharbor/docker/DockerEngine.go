@@ -176,6 +176,7 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string) (stri
 	fmt.Println("BuildImage: E")  // debug
 	defer response.Body.Close()
 	if err != nil { return "", err }
+	fmt.Println("BuildImage: E1")  // debug
 	if response.StatusCode != 200 { return "", errors.New(response.Status) }
 	
 	var bytes []byte
