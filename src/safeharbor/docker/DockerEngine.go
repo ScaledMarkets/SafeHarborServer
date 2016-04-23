@@ -178,3 +178,34 @@ func (engine *DockerEngine) BuildImage(buildDirPath, imageFullName string,
 	
 	return responseStr, nil
 }
+
+/*******************************************************************************
+ * 
+ */
+func (engine *DockerEngine) TagImage(imageName string) error {
+	....
+}
+
+
+/*******************************************************************************
+ * 
+ */
+func (engine *DockerEngine) PushImage(imageName string) error {
+	....
+}
+
+/*******************************************************************************
+ * 
+ */
+func (engine *DockerEngine) DeleteImage(imageName string) error {
+	
+	var uri = "/images/" + imageName
+	var response *http.Response
+	var err error
+	response, err = engine.SendBasicDelete(uri)
+	if err != nil { return err }
+	if response.StatusCode != 200 {
+		return util.ConstructError(response.Status)
+	}
+	return nil
+}

@@ -301,6 +301,35 @@ func (registry *DockerRegistry) DeleteImage(name, tag string) error {
 /*******************************************************************************
  * 
  */
+func (registry *DockerRegistry) PushImage(imageFilePath, digestString string) error {
+	
+	var uri = fmt.Sprintf("/v2/%s/blobs/uploads/?digest=%s", name, digestString)
+	
+	var reader io.ReadCloser
+	var err error
+	imageReader, err = os.Open(imageFilePath)
+	if err != nil { return false, err }
+	var fileInfo os.FileInfo
+	fileInfo, err = imageReader.Stat()
+	if err != nil { return false, err }
+	var fileSize int64 = fileInfo.Size()
+	var response *http.Response
+	var headers = make(headers map[string]string) {
+		"Content-Length": fmt.Sprintf("%d", fileSize),
+		"Content-Type": "application/octet-stream",
+	}
+	response, err = registry.SendBasicStreamPost(uri, headers, imageReader)
+	if err != nil { return false, err }
+	if response.StatusCode == 200 {
+		return nil
+	} else {
+		return errors.New(fmt.Sprintf("ImageExists returned status: %s", response.Status))
+	}
+}
+
+/*******************************************************************************
+ * 
+ */
 func parseLayerDescriptions(body io.ReadCloser) ([]map[string]interface{}, error) {
 	
 	var responseMap map[string]interface{}

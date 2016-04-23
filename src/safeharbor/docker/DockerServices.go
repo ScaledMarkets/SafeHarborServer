@@ -129,36 +129,16 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	
 	var outputStr string
 	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName, dockerfileName)
+	if err != nil { return outputStr, err }
 	
-		/* Obsolete: -----------------
-	
-		var cmd *exec.Cmd
-		var output []byte
-		cmd = exec.Command("docker", "build", 
-			"--file", tempDirPath + "/" + dockerfileName,
-			"--tag", imageFullName, tempDirPath)
-		
-			// https://docs.docker.com/engine/reference/api/docker_remote_api_v1.23/#build-image-from-a-dockerfile
-			// POST /build HTTP/1.1
-			//
-			// {{ TAR STREAM }} (this is the contents of the "build context")
-			
-		// Execute the command in the temporary directory.
-		// This initiates processing of the dockerfile.
-		output, err = cmd.CombinedOutput()
-		outputStr = string(output)
-		fmt.Println("...finished processing dockerfile.")
-		fmt.Println("Output from docker build command:")
-		fmt.Println(outputStr)
-		fmt.Println()
-		fmt.Println("End of output from docker build command.")
-		
-		fmt.Println("Files in " + tempDirPath + ":")
-		dirfiles, _ := ioutil.ReadDir(tempDirPath)
-		for _, f := range dirfiles {
-			fmt.Println("\t" + f.Name())
-		}
-		------------------------------- */
+	// Push new image to registry. Use the engine's push image feature.
+	err = dockerSvcs.Engine.TagImage(....tag with registry url)
+	if err != nil { return outputStr, err }
+	err = dockerSvcs.Engine.PushImage(imageRegistryTag)
+	//if dockerSvcs.Registry != nil {
+	//	err = dockerSvcs.Registry.PushImage(....imageFilePath, digestString string)
+	//	if err != nil { return outputStr, err }
+	//}
 	
 	return outputStr, err
 }
@@ -421,9 +401,12 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 }
 
 /*******************************************************************************
- * 
+ * Retrieve the specified image from the registry and store it in a file.
+ * Return the file path.
  */
 func (dockerSvcs *DockerServices) SaveImage(imageNamespace, imageName, tag string) (string, error) {
+	
+	if dockerSvcs.Registry == nil { return "", util.ConstructError("No registry") }
 	
 	fmt.Println("Creating temp file to save the image to...")
 	var tempFile *os.File
@@ -440,10 +423,6 @@ func (dockerSvcs *DockerServices) SaveImage(imageNamespace, imageName, tag strin
 		imageFullName = imageNamespace + "/" + imageName
 	}
 	err = dockerSvcs.Registry.GetImage(imageFullName, tag, tempFilePath)
-	//var cmd *exec.Cmd = exec.Command("docker", "save", "-o", tempFilePath, imageFullName)
-	// need to use registry API
-	//fmt.Println(fmt.Sprintf("Running docker save -o%s %s", tempFilePath, imageFullName))
-	//err = cmd.Run()
 	if err != nil { return "", err }
 	return tempFilePath, nil
 }
@@ -460,11 +439,15 @@ func GetDigest(imageId string) ([]byte, error) {
  */
 func (dockerSvcs *DockerServices) RemoveDockerImage(imageName, tag string) error {
 	
-	return dockerSvcs.Registry.DeleteImage(imageName, tag)
-	//var cmd *exec.Cmd = exec.Command("docker", "rmi", imageFullName)
-	// DELETE /images/test HTTP/1.1
-	//fmt.Println(fmt.Sprintf("Running docker rmi %s", imageFullName))
-	//return cmd.Run()
+	// Delete from registry.
+	if dockerSvcs.Registry != nil {
+		err = dockerSvcs.Registry.DeleteImage(imageName, tag)
+	}
+	if err != nil { return err }
+	
+	// Delete local engine copy as well, if it exists.
+	err = dockerSvcs.Engine.DeleteImage(imageName)
+	return err
 }
 
 /*******************************************************************************
