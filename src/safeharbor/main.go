@@ -10,23 +10,10 @@ import (
 	"os"
 	"flag"
 	
-	//"safeharbor/apitypes"
 	"safeharbor/server"
 )
 
 func main() {
-	
-	var oldStdout *os.File = os.Stdout
-	var logfile *os.File
-	var err error
-	logfile, err = os.OpenFile("safeharbor.log", os.O_RDWR | os.O_APPEND | os.O_CREATE, 0660)   
-	if err != nil {          
-		fmt.Println("While opening log file:")
-		fmt.Println(err.Error())     
-		os.Exit(2)
-	}
-	os.Stdout = logfile
-	os.Stderr = logfile
 	
 	var debug *bool = flag.Bool("debug", false, "Run in debug mode: this enables the clearAll REST method.")
 	var nocache *bool = flag.Bool("nocache", false, "Always refresh objects from the database.")
@@ -39,45 +26,56 @@ func main() {
 	var secretSalt *string = flag.String("secretkey", "", "Secret value to make session hashes unpredictable.")
 	var inMemoryOnly *bool = flag.Bool("inmem", false, "Do not persist the data")
 	var noRegistry *bool = flag.Bool("noregistry", false, "Do not use docker registry - use local docker instead")
-	
+	var logfilepath *string = flag.String("logfile", "", "Write all stdout and stderr to file instead of console")
+
 	flag.Parse()
 	
 	if flag.NArg() > 0 {
 		usage()
-		logfile.Close()
 		os.Exit(2)
 	}
 	
 	if *help {
 		usage()
-		logfile.Close()
 		os.Exit(0)
 	}
 	
 	if *secretSalt == "" {
 		fmt.Println("Must specify a random value for -secretkey")
-		logfile.Close()
 		os.Exit(2)
 	}
 	
 	fmt.Println("Creating SafeHarbor server...")
 	var svr *server.Server
+	var err error
 	svr, err = server.NewServer(*debug, *nocache, *stubScanners, *noauthor,
 		*publicHostname, *port, *adapter, *secretSalt, *inMemoryOnly, *noRegistry)
 	if err != nil {
 		fmt.Println(err.Error())
-		logfile.Close()
 		os.Exit(1)
 	}
 	if svr == nil {
-		logfile.Close()
 		os.Exit(1)
 	}
 
-	svr.Start()
+	if *logfilepath != "" {
+		var logfile *os.File
+		var err error
+		logfile, err = os.OpenFile(*logfilepath, os.O_RDWR | os.O_APPEND | os.O_CREATE, 0660)   
+		if err != nil {          
+			fmt.Println("While opening log file:")
+			fmt.Println(err.Error())     
+			os.Exit(2)
+		}
+		
+		fmt.Println("Logging to " + *logfilepath)
+		os.Stdout = logfile
+		os.Stderr = logfile
+		
+		defer logfile.Close()
+	}
 	
-	logfile.Close()
-	os.Stdout = oldStdout
+	svr.Start()
 }
 
 func usage() {

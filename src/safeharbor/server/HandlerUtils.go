@@ -295,38 +295,49 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	values url.Values) (DockerImage, error) {
 
+	fmt.Println("buildDockerfile: A")  // debug
 	var repo Repo
 	var err error
 	repo, err = dockerfile.getRepo(dbClient)
+	fmt.Println("buildDockerfile: B")  // debug
 	if err != nil { return nil, err }
 	var realm Realm
 	realm, err = repo.getRealm(dbClient)
+	fmt.Println("buildDockerfile: C")  // debug
 	if err != nil { return nil, err }
 	
 	var user User
 	user, err = getCurrentUser(dbClient, sessionToken)
+	fmt.Println("buildDockerfile: D")  // debug
 	if err != nil { return nil, err }
 
 	var imageName string
 	imageName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageName")
+	fmt.Println("buildDockerfile: E")  // debug
 	if err != nil { return nil, err }
 	if imageName == "" { return nil, util.ConstructError("No HTTP parameter found for ImageName") }
+	fmt.Println("buildDockerfile: F")  // debug
 	
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
+	fmt.Println("buildDockerfile: G")  // debug
 	if err != nil { return nil, err }
 	outputStr, err = dbClient.getServer().DockerServices.BuildDockerfile(
 		dockerfile.getExternalFilePath(), dockerfile.getName(), realm.getName(),
 		repo.getName(), imageName)
+	fmt.Println("buildDockerfile: H")  // debug
 	if err != nil { return nil, err }
 	
 	var dockerBuildOutput *docker.DockerBuildOutput
 	dockerBuildOutput, err = docker.ParseBuildRESTOutput(outputStr)
+	fmt.Println("buildDockerfile: I")  // debug
 	if err != nil { return nil, err }
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
+	fmt.Println("buildDockerfile: J")  // debug
 	
 	var digest []byte
 	digest, err = docker.GetDigest(dockerImageId)
+	fmt.Println("buildDockerfile: K")  // debug
 	if err != nil { return nil, err }
 	
 	// Add a record for the image to the database.
@@ -338,6 +349,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	
 	// Create an event to record that this happened.
 	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), image.getId(), user.getId())
+	fmt.Println("buildDockerfile: Z")  // debug
 	
 	return image, err
 }
