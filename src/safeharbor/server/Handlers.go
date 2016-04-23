@@ -2539,6 +2539,7 @@ func remDockerImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	fmt.Println("remDockerImage: F")  // debug
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
 	fmt.Println("remDockerImage: F1")  // debug
+	if repo == nil { return apitypes.NewFailureDesc("Internal error - repo is nil") }
 	
 	err = repo.deleteDockerImage(dbClient, image)
 	fmt.Println("remDockerImage: G")  // debug
