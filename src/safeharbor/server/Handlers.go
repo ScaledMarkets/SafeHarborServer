@@ -2538,6 +2538,7 @@ func remDockerImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	repo, err = dbClient.getRepo(image.getRepoId())
 	fmt.Println("remDockerImage: F")  // debug
 	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	fmt.Println("remDockerImage: F1")  // debug
 	
 	err = repo.deleteDockerImage(dbClient, image)
 	fmt.Println("remDockerImage: G")  // debug
