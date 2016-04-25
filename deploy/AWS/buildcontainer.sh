@@ -1,4 +1,4 @@
-source env.sh
+source ~/SafeHarborServer/deploy/AWS/env.sh
 
 # MANUAL STEP:
 # Log into AWS container registry:
@@ -7,15 +7,18 @@ source env.sh
 
 # BUILD CONTAINER IMAGE---------------------------------------------------------
 
+pushd ~/SafeHarborServer
+
 # Build the safeharborserver executable.
-cd ~/SafeHarborServer
 sudo git pull
 sudo make compile
 
 # Build safeharborserver image:
-sudo mv bin/safeharbor build/Centos7
+sudo cp bin/safeharbor build/Centos7
 cd build/Centos7
 sudo docker build --tag=$SafeHarborImageName .
 
 # Push safeharborserver image to AWS registry:
 sudo docker push $SafeHarborImageName
+
+popd

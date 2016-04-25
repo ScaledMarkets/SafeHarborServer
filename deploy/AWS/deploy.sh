@@ -8,7 +8,7 @@
 # We can eventually automate the above by installing the AWS command tools on
 # the deployment machine and then running "sudo `aws ecr get-login`
 
-source env.sh
+source ~/SafeHarborServer/deploy/AWS/env.sh
 
 # Start docker engine (needed by SafeHarborServer).
 sudo service docker start

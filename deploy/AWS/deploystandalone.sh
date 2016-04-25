@@ -10,7 +10,7 @@
 
 # DEPLOY SAFE HARBOR SERVER AND ITS COMPONENTS----------------------------------
 
-source env.sh
+source ~/SafeHarborServer/deploy/AWS/env.sh
 
 # Get images:
 sudo docker pull $SafeHarborImageName
