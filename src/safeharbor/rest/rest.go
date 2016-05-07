@@ -34,7 +34,8 @@ func CreateTCPRestContext(scheme, hostname string, port int, userId string, pass
 
 	return &RestContext{
 		httpClient: &http.Client{
-			Transport: &http.Transport{},
+			//Transport: &http.Transport{},
+			//CheckRedirect: func(req *http.Request, via []*http.Request) error { return nil },
 		},
 		scheme: scheme,
 		hostname: hostname,
@@ -90,10 +91,27 @@ func (restContext *RestContext) getPassword() string { return restContext.Passwo
  */
 func (restContext *RestContext) SendBasicGet(reqName string) (*http.Response, error) {
 	
-	var urlstr string = restContext.getURL(reqName)
+	var urlstr string = restContext.getURL(true, reqName)
+	
+	fmt.Println("SendBasicGet: Sending URL: " + urlstr)  // debug
+	
 	var resp *http.Response
 	var err error
 	resp, err = restContext.httpClient.Get(urlstr)
+	//resp, err = http.Get(urlstr)
+	//var request *http.Request
+	//request, err = http.NewRequest("GET", urlstr, nil)
+	//if err != nil { return nil, err }
+	//request.SetBasicAuth(restContext.UserId, restContext.Password)
+	//resp, err = restContext.httpClient.Do(request)
+	if err != nil { return nil, err }
+	
+	// debug
+	if err != nil {
+		fmt.Println("SendBasicGet: received error: " + err.Error())
+	} 
+	// end debug
+	
 	if err != nil { return nil, err }
 	return resp, nil
 }
@@ -104,7 +122,7 @@ func (restContext *RestContext) SendBasicGet(reqName string) (*http.Response, er
  */
 func (restContext *RestContext) SendBasicHead(reqName string) (*http.Response, error) {
 	
-	var urlstr string = restContext.getURL(reqName)
+	var urlstr string = restContext.getURL(true, reqName)
 	var resp *http.Response
 	var err error
 	resp, err = restContext.httpClient.Head(urlstr)
@@ -118,7 +136,7 @@ func (restContext *RestContext) SendBasicHead(reqName string) (*http.Response, e
  */
 func (restContext *RestContext) SendBasicDelete(reqName string) (*http.Response, error) {
 	
-	var urlstr string = restContext.getURL(reqName)
+	var urlstr string = restContext.getURL(true, reqName)
 	var resp *http.Response
 	var request *http.Request
 	var err error
@@ -136,14 +154,85 @@ func (restContext *RestContext) SendBasicDelete(reqName string) (*http.Response,
 func (restContext *RestContext) SendBasicFormPost(reqName string, names []string,
 	values []string) (*http.Response, error) {
 	
-	var urlstr string = restContext.getURL(reqName)
+	var urlstr string = restContext.getURL(true, reqName)
 	var data = make(map[string][]string)
 	for i, value := range values { data[names[i]] = []string{value} }
 	var resp *http.Response
 	var err error
-	resp, err = restContext.httpClient.PostForm(urlstr, data)
-	if err != nil { return nil, err }
+	var i = 0
+	for {
+		i++
+		if i > 10 { return nil, errors.New("Too many redirects") }
+		resp, err = restContext.httpClient.PostForm(urlstr, data)
+		if err != nil { return nil, err }
+		switch resp.StatusCode {
+			case 200,201: return resp, nil
+			case 301,302,303,307,308: 
+				var newLocation = resp.Header["Location"][0]
+				if newLocation == "" { return nil, errors.New("Empty location on redirect") }
+				fmt.Println("Redirecting to " + newLocation)
+				urlstr = newLocation
+			default: return nil, errors.New(resp.Status)
+		}
+	}
 	return resp, nil
+}
+
+/*******************************************************************************
+ * Same as SendBasicFormPost, but called may specify custom request headers.
+ */
+func (restContext *RestContext) SendBasicFormPostWithHeaders(reqName string, names []string,
+	values []string, headers map[string]string) (*http.Response, error) {
+	
+	fmt.Println("SendBasicFormPostWithHeaders: " + reqName)  // debug
+
+	
+	if len(names) != len(values) { return nil, errors.New(
+		"Number of names != number of values")
+	}
+	
+	fmt.Println("SendBasicFormPostWithHeaders: A")  // debug
+
+	
+	// Encode form name/values as an HTTP content stream.
+	var data url.Values = make(map[string][]string)
+	for i, name := range names {
+		if len(name) == 0 { return nil, errors.New(
+			"Zero length form parameter name")
+		}
+		data.Add(name, values[i])
+	}
+	var encodedData = data.Encode()
+	fmt.Println("encoded data: " + encodedData)  // debug
+
+	var content io.Reader = strings.NewReader(encodedData)
+	fmt.Println("SendBasicFormPostWithHeaders: B")  // debug
+
+	// Define the HTTP request object.
+	var urlstr string = restContext.getURL(true, reqName)
+	var request *http.Request
+	var err error
+	request, err = http.NewRequest("POST", urlstr, content)
+	fmt.Println("SendBasicFormPostWithHeaders: C; urlstr=" + urlstr)  // debug
+	if err != nil { return nil, err }
+	
+	// Set HTTP headers on the request.
+	if headers != nil {
+		for name, value := range headers {
+			request.Header.Set(name, value)
+			fmt.Println(fmt.Sprintf("\theader: %s: %s", name, value))
+		}
+	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Close = false
+	fmt.Println("SendBasicFormPostWithHeaders: D")  // debug
+	
+	// Perform the request.
+	var response *http.Response
+	response, err = restContext.httpClient.Do(request)
+	if err != nil { return nil, err }
+	fmt.Println("SendBasicFormPostWithHeaders: Z")  // debug
+	return response, nil
 }
 
 /*******************************************************************************
@@ -156,16 +245,34 @@ func (restContext *RestContext) SendBasicFilePost(reqName string, names []string
 }
 
 /*******************************************************************************
- * Send a POST request with a body of an arbitrary content type.
- * The headers parameter may be nil.
+ * 
  */
 func (restContext *RestContext) SendBasicStreamPost(reqName string, 
 	headers map[string]string, content io.Reader) (*http.Response, error) {
+
+	return restContext.SendBasicStreamReq("POST", reqName, headers, content)
+}
+
+/*******************************************************************************
+ * 
+ */
+func (restContext *RestContext) SendBasicStreamPut(reqName string, 
+	headers map[string]string, content io.Reader) (*http.Response, error) {
+
+	return restContext.SendBasicStreamReq("PUT", reqName, headers, content)
+}
+
+/*******************************************************************************
+ * Send a POST request with a body of an arbitrary content type.
+ * The headers parameter may be nil.
+ */
+func (restContext *RestContext) SendBasicStreamReq(method string, reqName string, 
+	headers map[string]string, content io.Reader) (*http.Response, error) {
 	
-	var url string = restContext.getURL(reqName)
+	var url string = restContext.getURL(true, reqName)
 	var request *http.Request
 	var err error
-	request, err = http.NewRequest("POST", url, content)
+	request, err = http.NewRequest(method, url, content)
 	if err != nil { return nil, err }
 	
 	if headers != nil {
@@ -215,7 +322,7 @@ func (restContext *RestContext) sendSessionReq(sessionId string, reqMethod strin
 	reqName string, names []string, values []string) (*http.Response, error) {
 
 	// Send REST POST request to server.
-	var urlstr string = restContext.getURL(reqName)
+	var urlstr string = restContext.getURL(true, reqName)
 	var data url.Values = url.Values{}
 	if names != nil {
 		for index, each := range names {
@@ -256,7 +363,7 @@ func (restContext *RestContext) SendFilePost(sessionId string,
 	reqName string, names []string,
 	values []string, path string) (*http.Response, error) {
 
-	var urlstr string = restContext.getURL(reqName)
+	var urlstr string = restContext.getURL(true, reqName)
 
 	// Prepare a form that you will submit to that URL.
 	var b bytes.Buffer
@@ -433,10 +540,12 @@ func (restContext *RestContext) Verify200Response(resp *http.Response) bool {
 /*******************************************************************************
  * 
  */
-func (restContext *RestContext) getURL(reqName string) string {
+func (restContext *RestContext) getURL(basicAuth bool, reqName string) string {
 	var basicAuthCreds = ""
-	if restContext.UserId != "" {
-		basicAuthCreds = fmt.Sprintf("%s:%s@", restContext.UserId, restContext.Password)
+	if basicAuth {
+		if restContext.UserId != "" {
+			basicAuthCreds = fmt.Sprintf("%s:%s@", restContext.UserId, restContext.Password)
+		}
 	}
 	var portspec = ""
 	if restContext.port != 0 { portspec = fmt.Sprintf(":%d", restContext.port) }

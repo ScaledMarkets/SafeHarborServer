@@ -1,4 +1,4 @@
-source ~/SafeHarborServer/deploy/AWS/env.sh
+source $( dirname "${BASH_SOURCE[0]}" )/env.sh
 
 # ONE TIME: Dev env setup-------------------------------------------------------
 # Install development tools on centos7:

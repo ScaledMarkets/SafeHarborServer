@@ -14,7 +14,7 @@ import (
 	//"errors"
 	
 	"safeharbor/apitypes"
-	//"safeharbor/util"
+	//"safeharbor/utils"
 )
 
 /*******************************************************************************
@@ -275,7 +275,8 @@ func (dispatcher *Dispatcher) returnOkResponse(headers http.Header, writer http.
 	} else {
 		fmt.Println("Response:")
 		fmt.Println(jsonResponse)
-		writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		//writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		writer.WriteHeader(http.StatusOK)
 		io.WriteString(writer, jsonResponse)
 	}

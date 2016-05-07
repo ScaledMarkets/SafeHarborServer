@@ -188,6 +188,7 @@ type Resource interface {  // abstract
 	
 	removeACLEntryIdAt(index int)  // does not write to db
 	clearAllACLEntryIds()  // does not write to db
+	deleteAllChildResources(DBClient) error
 }
 
 type ResourceType int
@@ -259,6 +260,7 @@ type Realm interface {
 	addUser(DBClient, User) error
 	addRepo(DBClient, Repo) error
 	deleteGroup(DBClient, Group) error
+	deleteRepo(DBClient, Repo) error
 	asRealmDesc() *apitypes.RealmDesc
 }
 
@@ -277,6 +279,7 @@ type Repo interface {
 	deleteScanConfig(DBClient, ScanConfig) error
 	addFlag(DBClient, Flag) error
 	deleteFlag(DBClient, Flag) error
+	deleteDockerfile(DBClient, Dockerfile) error
 	deleteDockerImage(DBClient, DockerImage) error
 	getScanConfigByName(DBClient, string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
@@ -306,6 +309,8 @@ type DockerImage interface {
 	getFullNameParts(DBClient) (namespace, name, tag string, err error)
 	getScanEventIds() []string // ordered from oldest to newest
 	getMostRecentScanEventId() string
+	getImageCreationEventId() string
+	setImageCreationEventId(string)
 	asDockerImageDesc() *apitypes.DockerImageDesc
 	getSignature() []byte
 	//computeSignature() ([]byte, error)
@@ -343,8 +348,6 @@ type ScanConfig interface {
 	getScanEventIds() []string
 	deleteScanEventId(DBClient, string) error
 	asScanConfigDesc(DBClient) *apitypes.ScanConfigDesc
-
-
 }
 
 type Flag interface {
@@ -368,21 +371,27 @@ type Event interface {  // abstract
 type ScanEvent interface {
 	Event
 	getScore() string
-	getDockerImageId() string
-	getScanConfigId() string
+	getDockerImageId() string  // may be empty (if Dockerfile has been deleted).
+	getScanConfigId() string  // may be empty (if ScanConfig has been deleted).
 	getActualParameterValueIds() []string
 	deleteAllParameterValues(DBClient) error
 	asScanEventDesc(DBClient) *apitypes.ScanEventDesc
+	nullifyDockerImage(DBClient) error
+	nullifyScanConfig(DBClient) error
 }
 
 type ImageCreationEvent interface {  // abstract
 	Event
+	nullifyDockerImage(DBClient) error
 }
 
 type DockerfileExecEvent interface {
 	ImageCreationEvent
-	getDockerfileId() string
-	getDockerfileExternalObjId() string
+	getDockerfileId() string  // may be empty - if the Dockerfile has been deleted.
+	getDockerfileExternalObjId() string  // may be empty.
+	
+	/** Nullify all references to the dockerfile or its external representation. */
+	nullifyDockerfile(DBClient) error
 }
 
 type ImageUploadEvent interface {

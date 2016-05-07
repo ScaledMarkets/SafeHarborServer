@@ -1,4 +1,4 @@
-source ~/SafeHarborServer/deploy/AWS/env.sh
+source $( dirname "${BASH_SOURCE[0]}" )/env.sh
 
 # MANUAL STEP:
 # Log into AWS container registry:
@@ -7,7 +7,7 @@ source ~/SafeHarborServer/deploy/AWS/env.sh
 
 # BUILD CONTAINER IMAGE---------------------------------------------------------
 
-pushd ~/SafeHarborServer
+pushd $PROJECTROOT
 
 # Build the safeharborserver executable.
 sudo git pull

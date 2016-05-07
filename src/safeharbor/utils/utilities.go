@@ -2,7 +2,7 @@
  * General purpose utility functions.
  */
 
-package util
+package utils
 
 import (
 	"fmt"

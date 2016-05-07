@@ -60,7 +60,7 @@ import (
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
 	"safeharbor/rest"
-	"safeharbor/util"
+	"safeharbor/utils"
 )
 
 const (
@@ -84,16 +84,16 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 	var isType bool
 	
 	host, isType = params["Host"].(string)
-	if host == "" { return nil, util.ConstructError("Parameter 'Host' not specified") }
-	if ! isType { return nil, util.ConstructError("Parameter 'Host' is not a string") }
+	if host == "" { return nil, utils.ConstructError("Parameter 'Host' not specified") }
+	if ! isType { return nil, utils.ConstructError("Parameter 'Host' is not a string") }
 
 	portStr, isType = params["Port"].(string)
-	if portStr == "" { return nil, util.ConstructError("Parameter 'Port' not specified") }
-	if ! isType { return nil, util.ConstructError("Parameter 'Port' is not a string") }
+	if portStr == "" { return nil, utils.ConstructError("Parameter 'Port' not specified") }
+	if ! isType { return nil, utils.ConstructError("Parameter 'Port' is not a string") }
 
 	localIPAddress, isType = params["LocalIPAddress"].(string)
-	if localIPAddress == "" { return nil, util.ConstructError("Parameter 'localIPAddress' not specified") }
-	if ! isType { return nil, util.ConstructError("Parameter 'localIPAddress' is not a string") }
+	if localIPAddress == "" { return nil, utils.ConstructError("Parameter 'localIPAddress' not specified") }
+	if ! isType { return nil, utils.ConstructError("Parameter 'localIPAddress' is not a string") }
 	
 	var port int
 	var err error
@@ -151,7 +151,7 @@ func (clairSvc *ClairService) GetParameterDescriptions() map[string]string {
 
 func (clairSvc *ClairService) GetParameterDescription(name string) (string, error) {
 	var desc string = clairSvc.Params[name]
-	if desc == "" { return "", util.ConstructError("No parameter named '" + name + "'") }
+	if desc == "" { return "", utils.ConstructError("No parameter named '" + name + "'") }
 	return desc, nil
 }
 
@@ -167,7 +167,7 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 	// Determine the IP address.
 	var ipaddr = clairSvc.LocalIPAddress
 	if ipaddr == "" {
-		return nil, util.ConstructError(
+		return nil, utils.ConstructError(
 			"Did not find an IP4 address for clair to call back on")
 	}
 	
@@ -235,7 +235,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 		fmt.Println("Removing all files at " + clairContext.ClairService.ImageTarBaseDir + tarFileRelDir)
 		os.RemoveAll(tarFileRelDir)
 	}()
-	if err != nil { return nil, util.PrintError(err) }
+	if err != nil { return nil, utils.PrintError(err) }
 	var fullPath = clairContext.ClairService.ImageTarBaseDir + "/" + tarFileRelDir
 
 	var tarDirURL = "http://" + clairContext.imageRetrievalIP + ":" +
@@ -250,7 +250,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	}	
 	
 	if err != nil || len(layerIds) == 0 {
-		return nil, util.ConstructError("- Could not get image's history: " + err.Error())
+		return nil, utils.ConstructError("- Could not get image's history: " + err.Error())
 	}
 	
 	// Analyze layers
@@ -261,7 +261,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 		var layerURL = tarDirURL + "/" + layerId + "/layer.tar"
 		var err error
 		err = analyzeLayer(clairContext.getEndpoint(), layerURL, layerId, priorLayerId)
-		if err != nil { return nil, util.PrintError(err) }
+		if err != nil { return nil, utils.PrintError(err) }
 		priorLayerId = layerId
 	}
 
@@ -270,7 +270,7 @@ func (clairContext *ClairRestContext) ScanImage(imageName string) (*ScanResult, 
 	var vulnerabilities []Vulnerability
 	vulnerabilities, err = getVulnerabilities(
 		clairContext.getEndpoint(), layerIds[len(layerIds)-1], clairContext.MinimumVulnerabilityPriority)
-	if err != nil { return nil, util.PrintError(err) }
+	if err != nil { return nil, utils.PrintError(err) }
 	if len(vulnerabilities) == 0 {
 		fmt.Println("No vulnerabilities found for image")
 	}
@@ -315,9 +315,9 @@ func (clairContext *ClairRestContext) GetVersions() (apiVersion string, engineVe
 	if err != nil { return "", "", err }
 	var isType bool
 	apiVersion, isType = responseMap["APIVersion"].(string)
-	if ! isType { return "", "", util.ConstructError("Value returned for APIVersion is not a string") }
+	if ! isType { return "", "", utils.ConstructError("Value returned for APIVersion is not a string") }
 	engineVersion, isType = responseMap["EngineVersion"].(string)
-	if ! isType { return "", "", util.ConstructError("Value returned for EngineVersion is not a string") }
+	if ! isType { return "", "", utils.ConstructError("Value returned for EngineVersion is not a string") }
 	return apiVersion, engineVersion, nil
 }
 
@@ -435,16 +435,16 @@ func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
 	save.Stdout = pipe
 
 	err = extract.Start()  // does not block
-		if err != nil { return "", util.ConstructError(stderr.String()) }
+		if err != nil { return "", utils.ConstructError(stderr.String()) }
 	
 	err = save.Run()  // blocks until done
-		if err != nil { return "", util.ConstructError(stderr.String()) }
+		if err != nil { return "", utils.ConstructError(stderr.String()) }
 	
 	err = pipe.Close()
 		if err != nil { return "", err }
 	
 	err = extract.Wait()
-		if err != nil { return "", util.ConstructError(stderr.String()) }
+		if err != nil { return "", utils.ConstructError(stderr.String()) }
 		
 	return path.Base(fullPath), nil
 }
@@ -493,7 +493,7 @@ func historyFromCommand(imageName string) ([]string, error) {
 
 	err = cmd.Start()
 	if err != nil {
-		return []string{}, util.ConstructError(stderr.String())
+		return []string{}, utils.ConstructError(stderr.String())
 	}
 
 	var layers []string

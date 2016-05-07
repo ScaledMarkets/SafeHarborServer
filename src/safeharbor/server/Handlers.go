@@ -25,7 +25,7 @@ import (
 	"safeharbor/providers"
 	"safeharbor/apitypes"
 	//"safeharbor/docker"
-	//"safeharbor/util"
+	//"safeharbor/utils"
 )
 
 /*******************************************************************************
@@ -968,8 +968,28 @@ func deleteRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
-
-	return apitypes.NewFailureDesc("Not implemented yet: deleteRepo")
+	
+	var repoId string
+	var err error
+	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.DeleteMask, repoId,
+		"deleteRepo"); failMsg != nil { return failMsg }
+	
+	var repo Repo
+	repo, err = dbClient.getRepo(repoId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	var realmId = repo.getRealmId()
+	var realm Realm
+	realm, err = dbClient.getRealm(realmId)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	err = realm.deleteRepo(dbClient, repo)
+	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	
+	return apitypes.NewResult(200, "Repo deleted")
 }
 
 /*******************************************************************************

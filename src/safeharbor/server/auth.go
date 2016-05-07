@@ -17,7 +17,7 @@ import (
 	"hash"
 	
 	"safeharbor/apitypes"
-	"safeharbor/util"
+	"safeharbor/utils"
 )
 
 type AuthService struct {
@@ -174,7 +174,7 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 	var err error
 	user, err = dbClient.dbGetUserByUserId(userId)
 	if user == nil {
-		return false, util.ConstructError("user object cannot be identified from user id " + userId)
+		return false, utils.ConstructError("user object cannot be identified from user id " + userId)
 	}
 	
 	// Special case: Allow user all capabilities for their own user object.
@@ -185,7 +185,7 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 	for _, b := range actionMask {
 		if b {
 			if nTrue == 1 {
-				return false, util.ConstructError("More than one field in mask may not be true")
+				return false, utils.ConstructError("More than one field in mask may not be true")
 			}
 			nTrue++
 		}
@@ -198,7 +198,7 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 	resource, err = dbClient.getResource(resourceId)
 	if err != nil { return false, err }
 	if resource == nil {
-		return false, util.ConstructError("Resource with Id " + resourceId + " not found")
+		return false, utils.ConstructError("Resource with Id " + resourceId + " not found")
 	}
 	var groupIds []string = user.getGroupIds()
 	var groupIndex = -1
@@ -309,7 +309,7 @@ func (authSvc *AuthService) partyHasAccess(dbClient DBClient, party Party,
 	var action int = -1
 	for i, entry := range actionMask {
 		if entry {
-			if action != -1 { return false, util.ConstructError("More than one field set in action mask") }
+			if action != -1 { return false, utils.ConstructError("More than one field set in action mask") }
 			action = i
 		}
 	}

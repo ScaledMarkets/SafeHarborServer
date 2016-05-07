@@ -1,52 +1,110 @@
-# Makefile for building the Safe Harbor Server.
-# This does not deploy any servers: it merely complies and packages the code.
+# Makefile for building and deploying the Safe Harbor Server.
 # Testing is not done by this makefile - see separate project "TestSafeHarborServer".
 
 
-PRODUCTNAME=Safe Harbor Server
-ORG=Scaled Markets
-VERSION=1.0
-BUILD=1234
-PACKAGENAME=safeharbor
-EXECNAME=$(PACKAGENAME)
+# Names: -----------------------------------------------------------------------
+PRODUCTNAME := Safe Harbor Server
+ORG := Scaled Markets
+VERSION := 1.0
+BUILD := 1234
+PACKAGENAME := safeharbor
+EXECNAME := $(PACKAGENAME)
 
+
+# Locations: -------------------------------------------------------------------
+PROJECTROOT := $(shell pwd)
+DEPLOYSCRIPTDIR := $(PROJECTROOT)/deploy/AWS
+SRCDIR := $(PROJECTROOT)/src
+BUILDDIR := $(PROJECTROOT)/bin
+STATUSDIR := $(PROJECTROOT)/status
+
+
+# Tools: -----------------------------------------------------------------------
+SHELL := /bin/sh
+
+
+# Public Tasks: ----------------------------------------------------------------
+# All tasks assume that the docker daemon is running.
+.DEFAULT_GOAL: all
+.DEFAULT: compilego
+.PHONY: all createbuildenv compile build deploy deploystandalone clean stop undeploy info
+
+# Setup from scratch, build, and deploy.
+all: compile createbuildenv buildcontainer deploy
+
+# Install go and git, and clone the SafeHarborServer repo.
+createbuildenv: createbuildenv.sh
+
+# Compile the SafeHarborServer code.
+compile: compilego
+
+# Build the SafeHarborServer container image and push it to the project registry.
+build: buildcontainer.sh
+
+# Deploy a SafeHarborServer container, and all of the other containers that it needs.
+deploy: deploys.sh
+
+# Deploy a SafeHarborServer container, with options set so that no other containers are needed.
+deploystandalone: deploystandalone.sh
+
+# Remove compilation artifacts.
+clean: cleango
+
+# Steop all containers that were started by deploy.
+stop: stop.sh
+
+# Remove artifacts that were created by deploy. This deletes database state!!!!
+undeploy: undeploy.sh
+
+# Provide a description of this makefile.
+info: infotask
+
+
+# Internal Tasks: --------------------------------------------------------------
 .DELETE_ON_ERROR:
 .ONESHELL:
+.NOTPARALLEL:
 .SUFFIXES:
-.DEFAULT_GOAL: all
+.PHONY: compilego docs cleango infotask
 
-SHELL = /bin/sh
+$(BUILDDIR):
+	mkdir $(BUILDDIR)
 
-CURDIR=$(shell pwd)
-
-.PHONY: all compile authcert vm deploy clean info
-.DEFAULT: all
-
-src_dir = $(CURDIR)/src
-
-build_dir = $(CURDIR)/bin
-
-all: compile
-
-$(build_dir):
-	mkdir $(build_dir)
-
-$(build_dir)/$(EXECNAME): $(build_dir) $(src_dir)
-
-# 'make compile' builds the executable, which is placed in <build_dir>.
-compile: $(build_dir)/$(PACKAGENAME)
-
-$(build_dir)/$(PACKAGENAME): src/..
-	@GOPATH=$(CURDIR) go install $(PACKAGENAME)
+# 'make compilego' builds the executable, which is placed in <BUILDDIR>.
+compilego: $(BUILDDIR)
+	@GOPATH=$(PROJECTROOT) go install $(PACKAGENAME)
 
 # Generate REST docs.
 # http://apidocjs.com/
 # https://howtonode.org/introduction-to-npm
-docs:
+docs: compilego
+	
+createbuildenv.sh:
+	source $(DEPLOYSCRIPTDIR)/createbuildenv.sh
+	touch createbuildenv.sh
 
-clean:
-	rm -r -f $(build_dir)/$(PACKAGENAME)
+buildcontainer.sh: createbuildenv.sh compilego docs
+	source $(DEPLOYSCRIPTDIR)/buildcontainer.sh
+	touch buildcontainer.sh
 
-info:
+deploy.sh: buildcontainer.sh
+	source $(DEPLOYSCRIPTDIR)/deploy.sh
+	touch deploy.sh
+
+deploystandalone.sh: buildcontainer.sh
+	source deploystandalone.sh
+	touch deploystandalone.sh
+
+cleango:
+	rm -r -f $(BUILDDIR)/$(PACKAGENAME)
+
+stop.sh:
+	source stop.sh
+	touch stop.sh
+
+undeploy.sh:
+	source undeploy.sh
+	touch undeploy.sh
+
+infotask:
 	@echo "Makefile for $(PRODUCTNAME)"
-

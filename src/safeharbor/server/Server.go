@@ -28,7 +28,7 @@ import (
 	"safeharbor/apitypes"
 	"safeharbor/docker"
 	"safeharbor/providers"
-	"safeharbor/util"
+	"safeharbor/utils"
 )
 
 /*******************************************************************************
@@ -78,7 +78,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	if publicHostname != "" { config.PublicHostname = publicHostname }
 	
 	// Determine the IP address.
-	config.ipaddr, err = util.DetermineIPAddress(config.netIntfName)
+	config.ipaddr, err = utils.DetermineIPAddress(config.netIntfName)
 	if err != nil { return nil, err }
 	if config.ipaddr == "" {
 		fmt.Println("Did not find an IP4 address for network interface " + config.netIntfName)
@@ -141,11 +141,11 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	_, err = NewPersistence(server, redisClient)
 	if err != nil { AbortStartup(err.Error()) }
 	
-	var engine *docker.DockerEngine
+	var engine docker.DockerEngine
 	engine, err = docker.OpenDockerEngineConnection()
 	if err != nil { AbortStartup("When connecting to docker engine: " + err.Error()) }
 	
-	var registry *docker.DockerRegistry
+	var registry docker.DockerRegistry
 	if ! server.NoRegistry {
 		if config.RegistryHost == "" { AbortStartup("REGISTRY_HOST not set in configuration") }
 		if config.RegistryPort == 0 { AbortStartup("REGISTRY_PORT not set in configuration") }
