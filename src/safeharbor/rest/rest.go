@@ -515,8 +515,9 @@ func ParseResponseBodyToPayloadMaps(body io.ReadCloser) ([]map[string]interface{
 func PrintMap(m map[string]interface{}) {
 	fmt.Println("Map:")
 	for k, v := range m {
-		fmt.Println(k, v)
+		fmt.Println(fmt.Sprintf("\"%s\": %x", k, v))
 	}
+	fmt.Println("End of map.")
 }
 
 /*******************************************************************************
