@@ -325,7 +325,7 @@ func (engine *DockerEngineImpl) DeleteImage(imageName string) error {
 				fmt.Print(fmt.Sprintf("%s: ", k))
 				for i, a := range v {
 					if i > 0 { fmt.Print(";") }
-					fmt.Print(fmt.Sprintf("%x", a))
+					fmt.Print(fmt.Sprintf("%s", a))
 				}
 				fmt.Println()
 			}
