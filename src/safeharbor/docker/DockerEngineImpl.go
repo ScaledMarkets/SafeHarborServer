@@ -316,6 +316,7 @@ func (engine *DockerEngineImpl) DeleteImage(imageName string) error {
 	response, err = engine.SendBasicDelete(uri)
 	if err != nil { return err }
 	if response.StatusCode != 200 {
+		fmt.Println("DockerEngineImpl.DeleteImage: A")  // debug
 		return utils.ConstructError(response.Status)
 	}
 	return nil
