@@ -473,6 +473,7 @@ func (dockerSvcs *DockerServices) RemoveDockerImage(imageName, tag string) error
 	var err error
 	if dockerSvcs.Registry != nil {
 		err = dockerSvcs.Registry.DeleteImage(imageName, tag)
+		fmt.Println("DockerServices.RemoveDockerImage: A")  // debug
 	}
 	if err != nil { return err }
 	
