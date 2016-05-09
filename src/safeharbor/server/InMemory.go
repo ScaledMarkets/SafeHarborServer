@@ -3707,9 +3707,7 @@ func (client *InMemClient) NewInMemImageCreationEvent(userObjId,
 }
 
 func (event *InMemImageCreationEvent) nullifyDockerImage(dbClient DBClient) error {
-	event.ImageId = ""
-	fmt.Println("InMemImageCreationEvent.nullifyDockerImage: A")  // debug
-	return dbClient.writeBack(event)  //.....
+	panic("Abstract method called")
 }
 
 func (event *InMemImageCreationEvent) imageCreationEventFieldsAsJSON() string {
@@ -3804,6 +3802,11 @@ func (execEvent *InMemDockerfileExecEvent) getDockerfileExternalObjId() string {
 func (execEvent *InMemDockerfileExecEvent) nullifyDockerfile(dbClient DBClient) error {
 	execEvent.DockerfileId = ""
 	execEvent.DockerfileExternalObjId = ""
+	return dbClient.writeBack(execEvent)
+}
+
+func (execEvent *InMemDockerfileExecEvent) nullifyDockerImage(dbClient DBClient) error {
+	execEvent.ImageId = ""
 	return dbClient.writeBack(execEvent)
 }
 
