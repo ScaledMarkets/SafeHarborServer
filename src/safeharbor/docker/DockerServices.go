@@ -19,6 +19,7 @@ import (
 	
 	// SafeHarbor packages:
 	"safeharbor/utils"
+	"safeharbor/rest"
 )
 
 /* Replace with REST calls.
@@ -146,8 +147,10 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	var digestString string
 	var isType bool
 	digestString, isType = digest.(string)
-	if digest == nil { return outputStr, utils.ConstructError(
-		"Digest is nil; response to BuildImage was: " + outputStr) }
+	if digest == nil {
+		fmt.Println("Digest is nil; map returned from GetImageInfo:")
+		rest.PrintMap(info)
+		return outputStr, utils.ConstructError("Digest is nil") }
 	if ! isType { return outputStr, utils.ConstructError(
 		"checksum is not a string: it is a " + reflect.TypeOf(digest).String())
 	}
