@@ -143,7 +143,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	var info map[string]interface{}
 	info, err = dockerSvcs.Engine.GetImageInfo(imageFullName)
 	if err != nil { return outputStr, err }
-	var digest = info["checksum"]
+	var digest = info["Id"]
 	var digestString string
 	var isType bool
 	digestString, isType = digest.(string)
