@@ -2239,6 +2239,7 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 			reflect.TypeOf(event).String())
 	}
 	fmt.Println("deleteDockerImage: C.1")  // debug
+	if imageCreationEvent == nil { fmt.Println("imageCreationEvent is nil") }
 	err = imageCreationEvent.nullifyDockerImage(dbClient)
 	fmt.Println("deleteDockerImage: D")  // debug
 	if err != nil { return err }
