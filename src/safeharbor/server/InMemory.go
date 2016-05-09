@@ -2231,7 +2231,7 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 	var isType bool
 	if event == nil { return utils.ConstructError("Event is nil") }
 	imageCreationEvent, isType = event.(ImageCreationEvent)
-	if isType { return utils.ConstructError(
+	if ! isType { return utils.ConstructError(
 		"Internal error: Expected event to be an ImageCreationEvent: it is a " +
 			reflect.TypeOf(event).String())
 	}
@@ -3729,8 +3729,6 @@ type InMemDockerfileExecEvent struct {
 }
 
 var _ DockerfileExecEvent = &InMemDockerfileExecEvent{}
-
-var _ ImageCreationEvent = &InMemDockerfileExecEvent{}
 
 func (client *InMemClient) NewInMemDockerfileExecEvent(dockerfileId, imageId,
 	userObjId string) (*InMemDockerfileExecEvent, error) {
