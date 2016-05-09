@@ -75,6 +75,8 @@ func (restContext *RestContext) Print() {
 	fmt.Println(fmt.Sprintf("\tport: %d", restContext.port))
 }
 
+func (restContext *RestContext) GetHttpClient() *http.Client { return restContext.httpClient }
+
 func (restContext *RestContext) GetScheme() string { return restContext.scheme }
 
 func (restContext *RestContext) GetHostname() string { return restContext.hostname }
