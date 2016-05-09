@@ -2209,6 +2209,7 @@ func (repo *InMemRepo) deleteDockerfile(dbClient DBClient, dockerfile Dockerfile
 
 func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) error {
 	
+	fmt.Println("deleteDockerImage: A")  // debug
 	// Nullify Image in ScanEvents.
 	for _, scanEventId := range image.getScanEventIds() {
 		
@@ -2220,12 +2221,14 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 		err = scanEvent.nullifyDockerImage(dbClient)
 		if err != nil { return err }
 	}
+	fmt.Println("deleteDockerImage: B")  // debug
 	
 	// Nullify Image in ImageCreationEvent.
 	var imageCreationEventId string = image.getImageCreationEventId()
 	var event Event
 	var err error
 	event, err = dbClient.getEvent(imageCreationEventId)
+	fmt.Println("deleteDockerImage: C")  // debug
 	if err != nil { return err }
 	var imageCreationEvent ImageCreationEvent
 	var isType bool
@@ -2236,15 +2239,18 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 			reflect.TypeOf(event).String())
 	}
 	err = imageCreationEvent.nullifyDockerImage(dbClient)
+	fmt.Println("deleteDockerImage: D")  // debug
 	if err != nil { return err }
 	
 	// Remove ACL entries.
 	err = dbClient.deleteAllAccessToResource(image)
+	fmt.Println("deleteDockerImage: E")  // debug
 	if err != nil { return err }
 	
 	// Remove from docker.
 	var imageFullName, namespace, imageName, tag string
 	namespace, imageName, tag, err = image.getFullNameParts(dbClient)
+	fmt.Println("deleteDockerImage: F")  // debug
 	if err != nil { return err }
 	if namespace == "" {
 		imageFullName = imageName
@@ -2252,13 +2258,16 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 		imageFullName = namespace + "/" + imageName
 	}
 	err = dbClient.getServer().DockerServices.RemoveDockerImage(imageFullName, tag)
+	fmt.Println("deleteDockerImage: G")  // debug
 	if err != nil { return err }
 	
 	// Remove from repo.
 	repo.DockerImageIds = apitypes.RemoveFrom(image.getId(), repo.DockerImageIds)
+	fmt.Println("deleteDockerImage: H")  // debug
 	
 	// Remove from database.
 	err = dbClient.deleteObject(image)
+	fmt.Println("deleteDockerImage: I")  // debug
 	if err != nil { return err }
 	return dbClient.writeBack(repo)
 }
