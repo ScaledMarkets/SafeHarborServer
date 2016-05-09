@@ -318,6 +318,7 @@ func (engine *DockerEngineImpl) DeleteImage(imageName string) error {
 	if response.StatusCode != 200 {
 		fmt.Println("DockerEngineImpl.DeleteImage: A")  // debug
 		if response.StatusCode == 301 {
+			fmt.Println("imageName=" + imageName)
 			fmt.Println("Redirect to: " + response.Header["Location"][0])
 		}
 		return utils.ConstructError(response.Status)
