@@ -147,7 +147,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	var isType bool
 	digestString, isType = digest.(string)
 	if ! isType { return outputStr, utils.ConstructError(
-		"checksum is not a string")
+		"checksum is not a string: it is a " + reflect.TypeOf(digest).String())
 	}
 	if digestString == "" { return outputStr, utils.ConstructError(
 		"No checksum field found for image")
