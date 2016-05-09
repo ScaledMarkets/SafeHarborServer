@@ -146,7 +146,8 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	var digestString string
 	var isType bool
 	digestString, isType = digest.(string)
-	if digest == nil { return outputStr, utils.ConstructError("Digest is nil") }
+	if digest == nil { return outputStr, utils.ConstructError(
+		"Digest is nil; response to BuildImage was: " + outputStr) }
 	if ! isType { return outputStr, utils.ConstructError(
 		"checksum is not a string: it is a " + reflect.TypeOf(digest).String())
 	}
