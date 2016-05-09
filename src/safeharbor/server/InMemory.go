@@ -154,6 +154,7 @@ func (client *InMemClient) writeBack(obj PersistObj) error {
 	fmt.Println("client.writeBack: A")  // debug
 	client.objectsCache[obj.getId()] = obj  // update cache
 	fmt.Println("client.writeBack: B")  // debug
+	if obj == nil { fmt.Println("obj is nil") }
 	return obj.writeBack(client)  // update database
 }
 
