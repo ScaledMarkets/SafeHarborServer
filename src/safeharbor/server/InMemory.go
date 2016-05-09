@@ -154,7 +154,8 @@ func (client *InMemClient) writeBack(obj PersistObj) error {
 	fmt.Println("client.writeBack: A")  // debug
 	client.objectsCache[obj.getId()] = obj  // update cache
 	fmt.Println("client.writeBack: B")  // debug
-	if obj == nil { fmt.Println("obj is nil") }
+	if obj == nil { fmt.Println("obj is nil") } else {  // debug
+		fmt.Println("obj is a " + reflect.TypeOf(obj).String()) }  // debug
 	return obj.writeBack(client)  // update database
 }
 
@@ -3706,7 +3707,7 @@ func (client *InMemClient) NewInMemImageCreationEvent(userObjId,
 
 func (event *InMemImageCreationEvent) nullifyDockerImage(dbClient DBClient) error {
 	event.ImageId = ""
-	fmt.Println("nullifyDockerImage: A")  // debug
+	fmt.Println("InMemImageCreationEvent.nullifyDockerImage: A")  // debug
 	return dbClient.writeBack(event)
 }
 
