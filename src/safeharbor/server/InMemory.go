@@ -2238,6 +2238,7 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 		"Internal error: Expected event to be an ImageCreationEvent: it is a " +
 			reflect.TypeOf(event).String())
 	}
+	fmt.Println("deleteDockerImage: C.1")  // debug
 	err = imageCreationEvent.nullifyDockerImage(dbClient)
 	fmt.Println("deleteDockerImage: D")  // debug
 	if err != nil { return err }
