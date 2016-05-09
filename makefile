@@ -33,28 +33,28 @@ SHELL := /bin/sh
 all: compile createbuildenv buildcontainer deploy
 
 # Install go and git, and clone the SafeHarborServer repo.
-createbuildenv: createbuildenv.sh
+createbuildenv: $(DEPLOYSCRIPTDIR)/createbuildenv.sh
 
 # Compile the SafeHarborServer code.
 compile: compilego
 
 # Build the SafeHarborServer container image and push it to the project registry.
-build: buildcontainer.sh
+build: $(DEPLOYSCRIPTDIR)/buildcontainer.sh
 
 # Deploy a SafeHarborServer container, and all of the other containers that it needs.
-deploy: deploys.sh
+deploy: $(DEPLOYSCRIPTDIR)/deploys.sh
 
 # Deploy a SafeHarborServer container, with options set so that no other containers are needed.
-deploystandalone: deploystandalone.sh
+deploystandalone: $(DEPLOYSCRIPTDIR)/deploystandalone.sh
 
 # Remove compilation artifacts.
 clean: cleango
 
 # Steop all containers that were started by deploy.
-stop: stop.sh
+stop: $(DEPLOYSCRIPTDIR)/stop.sh
 
 # Remove artifacts that were created by deploy. This deletes database state!!!!
-undeploy: undeploy.sh
+undeploy: $(DEPLOYSCRIPTDIR)/undeploy.sh
 
 # Provide a description of this makefile.
 info: infotask
@@ -79,32 +79,32 @@ compilego: $(BUILDDIR)
 # https://howtonode.org/introduction-to-npm
 docs: compilego
 	
-createbuildenv.sh:
+$(DEPLOYSCRIPTDIR)/createbuildenv.sh:
 	source $(DEPLOYSCRIPTDIR)/createbuildenv.sh
-	touch createbuildenv.sh
+	touch $(DEPLOYSCRIPTDIR)/createbuildenv.sh
 
-buildcontainer.sh: createbuildenv.sh compilego docs
+$(DEPLOYSCRIPTDIR)/buildcontainer.sh: createbuildenv.sh compilego docs
 	source $(DEPLOYSCRIPTDIR)/buildcontainer.sh
-	touch buildcontainer.sh
+	touch $(DEPLOYSCRIPTDIR)/buildcontainer.sh
 
-deploy.sh: buildcontainer.sh
+$(DEPLOYSCRIPTDIR)/deploy.sh: buildcontainer.sh
 	source $(DEPLOYSCRIPTDIR)/deploy.sh
-	touch deploy.sh
+	touch $(DEPLOYSCRIPTDIR)/deploy.sh
 
-deploystandalone.sh: buildcontainer.sh
-	source deploystandalone.sh
-	touch deploystandalone.sh
+$(DEPLOYSCRIPTDIR)/deploystandalone.sh: buildcontainer.sh
+	source $(DEPLOYSCRIPTDIR)/deploystandalone.sh
+	touch $(DEPLOYSCRIPTDIR)/deploystandalone.sh
 
 cleango:
 	rm -r -f $(BUILDDIR)/$(PACKAGENAME)
 
-stop.sh:
-	source stop.sh
-	touch stop.sh
+$(DEPLOYSCRIPTDIR)/stop.sh:
+	source $(DEPLOYSCRIPTDIR)/stop.sh
+	touch $(DEPLOYSCRIPTDIR)/stop.sh
 
-undeploy.sh:
-	source undeploy.sh
-	touch undeploy.sh
+$(DEPLOYSCRIPTDIR)/undeploy.sh:
+	source $(DEPLOYSCRIPTDIR)/undeploy.sh
+	touch $(DEPLOYSCRIPTDIR)/undeploy.sh
 
 infotask:
 	@echo "Makefile for $(PRODUCTNAME)"
