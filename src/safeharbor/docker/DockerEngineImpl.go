@@ -310,7 +310,7 @@ func (engine *DockerEngineImpl) PushImage(repoFullName, tag, regUserId, regPass,
  */
 func (engine *DockerEngineImpl) DeleteImage(imageName string) error {
 	
-	var uri = "/images/" + imageName
+	var uri = "images/" + imageName
 	var response *http.Response
 	var err error
 	response, err = engine.SendBasicDelete(uri)
