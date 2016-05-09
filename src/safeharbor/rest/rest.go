@@ -418,12 +418,12 @@ func ParseResponseBodyToMap(body io.ReadCloser) (map[string]interface{}, error) 
 	var err error
 	value, err = ioutil.ReadAll(body)
 	if err != nil { return nil, err }
-	//var value []byte = ReadResponseBody(body)
 	var obj map[string]interface{}
 	err = json.Unmarshal(value, &obj)
-	//var dec *json.Decoder = json.NewDecoder(body)
-	//err := dec.Decode(&obj)
 	if err != nil { return nil, err }
+	
+	fmt.Println("ParseResponseBodyToMap Map:" + string(value))
+	fmt.Println("endof map")
 	
 	return obj, nil
 }
