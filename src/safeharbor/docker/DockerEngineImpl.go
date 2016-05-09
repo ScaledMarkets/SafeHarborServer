@@ -319,9 +319,27 @@ func (engine *DockerEngineImpl) DeleteImage(imageName string) error {
 		fmt.Println("DockerEngineImpl.DeleteImage: A")  // debug
 		if response.StatusCode == 301 {
 			fmt.Println("uri=" + uri)
+			
+			// print all headers.
+			for k, v := range response.Header {
+				fmt.Print(fmt.Sprintf("%s: ", k))
+				for i, a := range v {
+					if i > 0 { fmt.Print(";") }
+					fmt.Print(fmt.Sprintf("%x", a))
+				}
+				fmt.Println()
+			}
+			// print response body.
+			var bytes []byte
+			bytes, err = ioutil.ReadAll(response.Body)
+			if err != nil { return err }
+			var responseTxt = string(bytes)
+			fmt.Println("Body:")
+			fmt.Println(responseTxt)
+			fmt.Println("End of body")
+			
 			var redirectURL = response.Header["Location"][0]
 			fmt.Println("Redirect to: " + redirectURL)
-			redirectURL = "unix:" + redirectURL
 			var request2 *http.Request
 			request2, err = http.NewRequest("DELETE", redirectURL, nil)
 			if err != nil { return err }
