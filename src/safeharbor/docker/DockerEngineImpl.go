@@ -330,6 +330,7 @@ func (engine *DockerEngineImpl) DeleteImage(imageName string) error {
 				fmt.Println("DockerEngineImpl.DeleteImage: B")  // debug
 				return utils.ConstructError(response2.Status)
 			}
+			fmt.Println("response2 status: " + response2.Status)
 		}
 		return utils.ConstructError(response.Status)
 	}
