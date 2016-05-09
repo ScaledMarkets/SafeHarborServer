@@ -282,6 +282,8 @@ type InMemACL struct {  // abstract
 	ACLEntryIds []string
 }
 
+var _ ACL = &InMemACL{}
+
 func (client *InMemClient) NewInMemACL() (*InMemACL, error) {
 	var persistobj *InMemPersistObj
 	var err error
@@ -352,6 +354,8 @@ type InMemResource struct {  // abstract
 	ParentId string
 	CreationTime time.Time
 }
+
+var _ Resource = &InMemResource{}
 
 func (client *InMemClient) NewInMemResource(name string, desc string,
 	parentId string) (*InMemResource, error) {
@@ -730,6 +734,8 @@ type InMemParty struct {  // abstract
 	ACLEntryIds []string
 }
 
+var _ Party = &InMemParty{}
+
 func (client *InMemClient) NewInMemParty(name string, realmId string) (*InMemParty, error) {
 	var pers *InMemPersistObj
 	var err error
@@ -873,6 +879,8 @@ type InMemGroup struct {
 	Description string
 	UserObjIds []string
 }
+
+var _ Group = &InMemGroup{}
 
 func (client *InMemClient) NewInMemGroup(realmId string, name string,
 	desc string) (*InMemGroup, error) {
@@ -1046,6 +1054,8 @@ type InMemUser struct {
 	MostRecentLoginAttempts []string
 	EventIds []string
 }
+
+var _ User = &InMemUser{}
 
 func (client *InMemClient) NewInMemUser(userId string, name string,
 	email string, pswd string, realmId string) (*InMemUser, error) {
@@ -1336,6 +1346,8 @@ type InMemACLEntry struct {
 	PermissionMask []bool
 }
 
+var _ ACLEntry = &InMemACLEntry{}
+
 func (client *InMemClient) NewInMemACLEntry(resourceId string, partyId string,
 	permissionMask []bool) (*InMemACLEntry, error) {
 	
@@ -1485,6 +1497,8 @@ type InMemRealm struct {
 	RepoIds []string
 	FileDirectory string  // where this realm's files are stored
 }
+
+var _ Realm = &InMemRealm{}
 
 func (client *InMemClient) NewInMemRealm(realmInfo *apitypes.RealmInfo, adminUserId string) (*InMemRealm, error) {
 	var resource *InMemResource
@@ -1989,6 +2003,8 @@ type InMemRepo struct {
 	FileDirectory string  // where this repo's files are stored
 }
 
+var _ Repo = &InMemRepo{}
+
 func (client *InMemClient) NewInMemRepo(realmId, name, desc string) (*InMemRepo, error) {
 	var resource *InMemResource
 	var err error
@@ -2381,6 +2397,8 @@ type InMemDockerfile struct {
 	DockerfileExecEventIds []string
 }
 
+var _ Dockerfile = &InMemDockerfile{}
+
 func (client *InMemClient) NewInMemDockerfile(repoId, name, desc,
 	filepath string) (*InMemDockerfile, error) {
 	
@@ -2529,6 +2547,8 @@ type InMemImage struct {  // abstract
 	InMemResource
 }
 
+var _ Image = &InMemImage{}
+
 func (client *InMemClient) NewInMemImage(name, desc, repoId string) (*InMemImage, error) {
 	var resource *InMemResource
 	var err error
@@ -2596,6 +2616,8 @@ type InMemDockerImage struct {
 	Signature []byte
 	OutputFromBuild string
 }
+
+var _ DockerImage = &InMemDockerImage{}
 
 func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string,
 	signature []byte, outputFromBuild string) (*InMemDockerImage, error) {
@@ -2821,6 +2843,8 @@ type InMemParameterValue struct {
 	ConfigId string
 }
 
+var _ ParameterValue = &InMemParameterValue{}
+
 func (client *InMemClient) NewInMemParameterValue(name, value, configId string) (*InMemParameterValue, error) {
 	var pers *InMemPersistObj
 	var err error
@@ -2928,6 +2952,8 @@ type InMemScanConfig struct {
 	FlagId string
 	ScanEventIds []string
 }
+
+var _ ScanConfig = &InMemScanConfig{}
 
 func (client *InMemClient) NewInMemScanConfig(name, desc, repoId,
 	providerName string, paramValueIds []string, successExpr string,
@@ -3238,6 +3264,8 @@ type InMemFlag struct {
 	UsedByScanConfigIds []string
 }
 
+var _ Flag = &InMemFlag{}
+
 func (client *InMemClient) NewInMemFlag(name, desc, repoId,
 	successImagePath string) (*InMemFlag, error) {
 	
@@ -3376,6 +3404,8 @@ type InMemEvent struct {  // abstract
 	UserObjId string
 }
 
+var _ Event = &InMemEvent{}
+
 func (client *InMemClient) NewInMemEvent(userObjId string) (*InMemEvent, error) {
 	var pers *InMemPersistObj
 	var err error
@@ -3409,7 +3439,7 @@ func (event *InMemEvent) getUserObjId() string {
 	return event.UserObjId
 }
 
-func (event *InMemEvent) asEventDesc() *apitypes.EventDescBase {
+func (event *InMemEvent) asEventDesc(dbClient DBClient) apitypes.EventDesc {
 	return apitypes.NewEventDesc(event.Id, event.When, event.UserObjId)
 }
 
@@ -3455,6 +3485,8 @@ type InMemScanEvent struct {
 	Score string
 	Result providers.ScanResult
 }
+
+var _ ScanEvent = &InMemScanEvent{}
 
 func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
 	providerName string, score string, result *providers.ScanResult,
@@ -3643,6 +3675,8 @@ type InMemImageCreationEvent struct {  // abstract
 	ImageId string
 }
 
+var _ ImageCreationEvent = &InMemImageCreationEvent{}
+
 func (client *InMemClient) NewInMemImageCreationEvent(userObjId, 
 	imageId string) (*InMemImageCreationEvent, error) {
 	var event *InMemEvent
@@ -3692,6 +3726,8 @@ type InMemDockerfileExecEvent struct {
 	DockerfileId string
 	DockerfileExternalObjId string
 }
+
+var _ DockerfileExecEvent = &InMemDockerfileExecEvent{}
 
 func (client *InMemClient) NewInMemDockerfileExecEvent(dockerfileId, imageId,
 	userObjId string) (*InMemDockerfileExecEvent, error) {
