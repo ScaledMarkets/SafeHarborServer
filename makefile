@@ -83,15 +83,15 @@ $(DEPLOYSCRIPTDIR)/createbuildenv.sh:
 	source $(DEPLOYSCRIPTDIR)/createbuildenv.sh
 	touch $(DEPLOYSCRIPTDIR)/createbuildenv.sh
 
-$(DEPLOYSCRIPTDIR)/buildcontainer.sh: createbuildenv.sh compilego docs
+$(DEPLOYSCRIPTDIR)/buildcontainer.sh: $(DEPLOYSCRIPTDIR)/createbuildenv.sh compilego docs
 	source $(DEPLOYSCRIPTDIR)/buildcontainer.sh
 	touch $(DEPLOYSCRIPTDIR)/buildcontainer.sh
 
-$(DEPLOYSCRIPTDIR)/deploy.sh: buildcontainer.sh
+$(DEPLOYSCRIPTDIR)/deploy.sh: $(DEPLOYSCRIPTDIR)/buildcontainer.sh
 	source $(DEPLOYSCRIPTDIR)/deploy.sh
 	touch $(DEPLOYSCRIPTDIR)/deploy.sh
 
-$(DEPLOYSCRIPTDIR)/deploystandalone.sh: buildcontainer.sh
+$(DEPLOYSCRIPTDIR)/deploystandalone.sh: $(DEPLOYSCRIPTDIR)/buildcontainer.sh
 	source $(DEPLOYSCRIPTDIR)/deploystandalone.sh
 	touch $(DEPLOYSCRIPTDIR)/deploystandalone.sh
 
