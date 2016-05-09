@@ -2244,6 +2244,7 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 	}
 	fmt.Println("deleteDockerImage: C.1")  // debug
 	if imageCreationEvent == nil { fmt.Println("imageCreationEvent is nil") }
+	fmt.Println("imageCreationEvent is a " + reflect.TypeOf(imageCreationEvent).String())  // debug
 	err = imageCreationEvent.nullifyDockerImage(dbClient)
 	fmt.Println("deleteDockerImage: D")  // debug
 	if err != nil { return err }
@@ -3708,7 +3709,7 @@ func (client *InMemClient) NewInMemImageCreationEvent(userObjId,
 func (event *InMemImageCreationEvent) nullifyDockerImage(dbClient DBClient) error {
 	event.ImageId = ""
 	fmt.Println("InMemImageCreationEvent.nullifyDockerImage: A")  // debug
-	return dbClient.writeBack(event)
+	return dbClient.writeBack(event)  //.....
 }
 
 func (event *InMemImageCreationEvent) imageCreationEventFieldsAsJSON() string {
