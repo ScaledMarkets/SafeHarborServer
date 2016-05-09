@@ -2264,6 +2264,7 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 	} else {
 		imageFullName = namespace + "/" + imageName
 	}
+	fmt.Println("deleteDockerImage: F.1")  // debug
 	err = dbClient.getServer().DockerServices.RemoveDockerImage(imageFullName, tag)
 	fmt.Println("deleteDockerImage: G")  // debug
 	if err != nil { return err }
