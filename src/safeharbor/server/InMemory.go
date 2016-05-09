@@ -3729,6 +3729,8 @@ type InMemDockerfileExecEvent struct {
 
 var _ DockerfileExecEvent = &InMemDockerfileExecEvent{}
 
+var _ ImageCreationEvent = &InMemDockerfileExecEvent{}
+
 func (client *InMemClient) NewInMemDockerfileExecEvent(dockerfileId, imageId,
 	userObjId string) (*InMemDockerfileExecEvent, error) {
 	
