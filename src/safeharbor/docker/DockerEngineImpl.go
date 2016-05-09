@@ -321,6 +321,7 @@ func (engine *DockerEngineImpl) DeleteImage(imageName string) error {
 			fmt.Println("uri=" + uri)
 			var redirectURL = response.Header["Location"][0]
 			fmt.Println("Redirect to: " + redirectURL)
+			redirectURL = "unix:" + redirectURL
 			var request2 *http.Request
 			request2, err = http.NewRequest("DELETE", redirectURL, nil)
 			if err != nil { return err }
