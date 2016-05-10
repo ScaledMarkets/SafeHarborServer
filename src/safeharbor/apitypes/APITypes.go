@@ -142,13 +142,35 @@ type FailureDesc struct {
 	BaseType
 }
 
-func NewFailureDesc(reason string) *FailureDesc {
+func NewFailureDesc(httpErrorCode int, reason string) *FailureDesc {
 	fmt.Println("Creating FailureDesc; reason=" + reason +
 		". Stack trace follows, but the error might be 'normal'")
 	debug.PrintStack()  // debug
 	return &FailureDesc{
-		BaseType: *NewBaseType(500, reason), // see https://golang.org/pkg/net/http/#pkg-constants
+		BaseType: *NewBaseType(httpErrorCode, reason), // see https://golang.org/pkg/net/http/#pkg-constants
 	}
+}
+
+func NewFailureDescFromError(err error) *FailureDesc {
+	if err == nil { panic("err is nil") }
+	if utils.IsUserErr(err) {
+		return NewFailureDesc(http.StatusBadRequest, err.Error())
+	}
+	return NewFailureDesc(http.StatusInternalServerError, err.Error())
+}
+
+func (failureDesc *FailureDesc) GetErrorKind() int {
+	return failureDesc.HTTPStatusCode
+}
+
+func (failureDesc *FailureDesc) IsClientError() bool {
+	return (
+		(failureDesc.HTTPStatusCode >= http.StatusBadRequest) &&
+		(failureDesc.HTTPStatusCode < http.StatusInternalServerError))
+}
+
+func (failureDesc *FailureDesc) IsServerError() bool {
+	return (failureDesc.HTTPStatusCode >= http.StatusInternalServerError)
 }
 
 func (failureDesc *FailureDesc) AsJSON() string {
@@ -433,8 +455,8 @@ type RealmInfo struct {
 }
 
 func NewRealmInfo(realmName string, orgName string, desc string) (*RealmInfo, error) {
-	if realmName == "" { return nil, utils.ConstructError("realmName is empty") }
-	if orgName == "" { return nil, utils.ConstructError("orgName is empty") }
+	if realmName == "" { return nil, utils.ConstructUserError("realmName is empty") }
+	if orgName == "" { return nil, utils.ConstructUserError("orgName is empty") }
 	return &RealmInfo{
 		BaseType: *NewBaseType(200, "OK"),
 		RealmName: realmName,
@@ -1121,7 +1143,7 @@ func GetRequiredHTTPParameterValue(sanitize bool, values url.Values, name string
 	var err error
 	value, err = GetHTTPParameterValue(sanitize, values, name)
 	if err != nil { return "", err }
-	if value == "" { return "", utils.ConstructError(fmt.Sprintf("POST field not found: %s", name)) }
+	if value == "" { return "", utils.ConstructUserError(fmt.Sprintf("POST field not found: %s", name)) }
 	return value, nil
 }
 
@@ -1140,7 +1162,7 @@ func (mask *PermissionMask) ToStringArray() []string {
  * 
  */
 func ToBoolAr(mask []string) ([]bool, error) {
-	if len(mask) != 5 { return nil, utils.ConstructError("Length of mask != 5") }
+	if len(mask) != 5 { return nil, utils.ConstructUserError("Length of mask != 5") }
 	var boolAr []bool = make([]bool, 5)
 	for i, val := range mask {
 		if val == "true" { boolAr[i] = true } else { boolAr[i] = false }
@@ -1204,7 +1226,7 @@ func Sanitize(value string) (string, error) {
 	
 	var allowed string = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-@:/"
 	if len(strings.TrimLeft(value, allowed)) == 0 { return value, nil }
-	return "", utils.ConstructError("Value '" + value + "' may only have letters, numbers, and .-_@:/")
+	return "", utils.ConstructUserError("Value '" + value + "' may only have letters, numbers, and .-_@:/")
 }
 
 /*******************************************************************************

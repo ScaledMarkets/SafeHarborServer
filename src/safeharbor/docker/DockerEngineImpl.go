@@ -69,7 +69,7 @@ func (engine *DockerEngineImpl) Ping() error {
 	response, err = engine.SendBasicGet(uri)
 	if err != nil { return err }
 	if response.StatusCode != 200 {
-		return utils.ConstructError(fmt.Sprintf("Ping returned status: %s", response.Status))
+		return utils.ConstructServerError(fmt.Sprintf("Ping returned status: %s", response.Status))
 	}
 	return nil
 }
@@ -84,9 +84,8 @@ func (engine *DockerEngineImpl) GetImages() ([]map[string]interface{}, error) {
 	var err error
 	response, err = engine.SendBasicGet(uri)
 	if err != nil { return nil, err }
-	if response.StatusCode != 200 {
-		return nil, utils.ConstructError(fmt.Sprintf("GetImages returned status: %s", response.Status))
-	}
+	err = utils.GenerateError(response.StatusCode, response.Status)
+	if err != nil { return nil, err }
 	var imageMaps []map[string]interface{}
 	imageMaps, err = rest.ParseResponseBodyToMaps(response.Body)
 	if err != nil { return nil, err }
@@ -104,10 +103,8 @@ func (engine *DockerEngineImpl) GetImageInfo(imageName string) (map[string]inter
 	var err error
 	response, err = engine.SendBasicGet(uri)
 	if err != nil { return nil, err }
-	if response.StatusCode != 200 {
-		return nil, utils.ConstructError(fmt.Sprintf(
-			"GetImageInfo returned status: %s", response.Status))
-	}
+	err = utils.GenerateError(response.StatusCode, response.Status)
+	if err != nil { return nil, err }
 	var imageMap map[string]interface{}
 	imageMap, err = rest.ParseResponseBodyToMap(response.Body)
 	if err != nil { return nil, err }
@@ -125,33 +122,31 @@ func (engine *DockerEngineImpl) GetImage(repoNameAndTag, filepath string) error 
 	var err error
 	response, err = engine.SendBasicGet(uri)
 	if err != nil { return err }
-	if response.StatusCode != 200 {
-		return utils.ConstructError(fmt.Sprintf(
-			"GetImage returned status: %s", response.Status))
-	}
+	err = utils.GenerateError(response.StatusCode, response.Status)
+	if err != nil { return err }
 	
 	// Open the destination file to write the image to.
 	defer response.Body.Close()
 	var imageFile *os.File
 	imageFile, err = os.OpenFile(filepath, os.O_WRONLY, 0600)
-	if err != nil { return utils.ConstructError(fmt.Sprintf(
+	if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 		"When opening file '%s': %s", filepath, err.Error()))
 	}
 	
 	// Copy the response body to the destination image file.
 	var reader io.ReadCloser = response.Body
 	_, err = io.Copy(imageFile, reader)
-	if err != nil { return utils.ConstructError(fmt.Sprintf(
+	if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 		"When writing layer file '%s': %s", imageFile.Name(), err.Error()))
 	}
 	
 	// Verify that content was actually copied.
 	var fileInfo os.FileInfo
 	fileInfo, err = imageFile.Stat()
-	if err != nil { return utils.ConstructError(fmt.Sprintf(
+	if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 		"When getting status of layer file '%s': %s", imageFile.Name(), err.Error()))
 	}
-	if fileInfo.Size() == 0 { return utils.ConstructError(fmt.Sprintf(
+	if fileInfo.Size() == 0 { return utils.ConstructServerError(fmt.Sprintf(
 		"Layer file that was written, '%s', has zero size", imageFile.Name()))
 	}
 	return nil
@@ -181,7 +176,7 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 	if err != nil { return "", err }
 	defer os.RemoveAll(tempDirPath)
 	tarFile, err = ioutil.TempFile(tempDirPath, "")
-	if err != nil { return "", utils.ConstructError(fmt.Sprintf(
+	if err != nil { return "", utils.ConstructServerError(fmt.Sprintf(
 		"When creating temp file '%s': %s", tarFile.Name(), err.Error()))
 	}
 	
@@ -230,10 +225,8 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 		fmt.Sprintf("build?t=%s&dockerfile=%s", imageFullName, dockerfileName), headers, tarReader)
 	defer response.Body.Close()
 	if err != nil { return "", err }
-	if response.StatusCode != 200 {
-		fmt.Println("Response message: " + response.Status)
-		return "", utils.ConstructError(response.Status)
-	}
+	err = utils.GenerateError(response.StatusCode, response.Status)
+	if err != nil { return "", err }
 	
 	var bytes []byte
 	bytes, err = ioutil.ReadAll(response.Body)
@@ -256,10 +249,7 @@ func (engine *DockerEngineImpl) TagImage(imageName, hostAndRepoName, tag string)
 	var values = []string{ hostAndRepoName, tag }
 	response, err = engine.SendBasicFormPost(uri, names, values)
 	if err != nil { return err }
-	if response.StatusCode != 201 {
-		return utils.ConstructError(response.Status)
-	}
-	return nil
+	return utils.GenerateError(response.StatusCode, response.Status)
 }
 
 
@@ -290,19 +280,14 @@ func (engine *DockerEngineImpl) PushImage(repoFullName, tag, regUserId, regPass,
 	var err error
 	response, err = engine.SendBasicFormPostWithHeaders(uri, parmNames, parmValues, headers)
 	if err != nil { return err }
-	if response.StatusCode != 200 {
-		return utils.ConstructError(response.Status)
-	}
-
 	
+	return utils.GenerateError(response.StatusCode, response.Status)
 	
 	// Apr 25 20:46:25 ip-172-31-41-187.us-west-2.compute.internal docker[1092]:
 	// time="2016-04-25T20:46:25.066856155Z" level=error
 	// msg="Handler for POST /images/:0/localhost:5000/myimage:alpha/push returned error:
 	// Error parsing reference: ":0/localhost:5000/myimage:alpha"
 	// is not a valid repository/tag"
-
-	return nil
 }
 
 /*******************************************************************************
@@ -315,43 +300,5 @@ func (engine *DockerEngineImpl) DeleteImage(imageName string) error {
 	var err error
 	response, err = engine.SendBasicDelete(uri)
 	if err != nil { return err }
-	if response.StatusCode != 200 {
-		fmt.Println("DockerEngineImpl.DeleteImage: A")  // debug
-		if response.StatusCode == 301 {
-			fmt.Println("uri=" + uri)
-			
-			// print all headers.
-			for k, v := range response.Header {
-				fmt.Print(fmt.Sprintf("%s: ", k))
-				for i, a := range v {
-					if i > 0 { fmt.Print(";") }
-					fmt.Print(fmt.Sprintf("%s", a))
-				}
-				fmt.Println()
-			}
-			// print response body.
-			var bytes []byte
-			bytes, err = ioutil.ReadAll(response.Body)
-			if err != nil { return err }
-			var responseTxt = string(bytes)
-			fmt.Println("Body:")
-			fmt.Println(responseTxt)
-			fmt.Println("End of body")
-			
-			var redirectURL = response.Header["Location"][0]
-			fmt.Println("Redirect to: " + redirectURL)
-			var request2 *http.Request
-			request2, err = http.NewRequest("DELETE", redirectURL, nil)
-			if err != nil { return err }
-			var response2 *http.Response
-			response2, err = engine.GetHttpClient().Do(request2)
-			if response2.StatusCode != 200 {
-				fmt.Println("DockerEngineImpl.DeleteImage: B")  // debug
-				return utils.ConstructError(response2.Status)
-			}
-			fmt.Println("response2 status: " + response2.Status)
-		}
-		return utils.ConstructError(response.Status)
-	}
-	return nil
+	return utils.GenerateError(response.StatusCode, response.Status)
 }

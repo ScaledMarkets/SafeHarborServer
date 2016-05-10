@@ -6,28 +6,13 @@ package utils
 
 import (
 	"fmt"
-	"errors"
+	//"errors"
 	"net"
 	"strings"
-	"runtime/debug"	
+	//"runtime/debug"	
 	
 	// SafeHarbor packages:
 )
-
-func ConstructError(msg string) error {
-	fmt.Println(msg)
-	debug.PrintStack()
-	return errors.New(msg)
-}
-
-/*******************************************************************************
- * 
- */
-func PrintError(err error) error {
-	fmt.Println(err.Error())
-	debug.PrintStack()
-	return err
-}
 
 /*******************************************************************************
  * Determine the IP address of the host on which this function is executed.

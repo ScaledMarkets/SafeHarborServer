@@ -36,12 +36,12 @@ func retrieveTypeName(json string) (typeName string, remainder string, err error
 	if j == -1 {
 		debug.PrintStack()
 		fmt.Println("json=" + json)
-		return "", "", utils.ConstructError(
+		return "", "", utils.ConstructServerError(
 		fmt.Sprintf("Ill-formatted json: no \" found after pos %d", i)) }
 	var s3 = s2[:j]
 	
 	var k = strings.Index(s2[j:], ":")
-	if k == -1 { return "", "", utils.ConstructError(
+	if k == -1 { return "", "", utils.ConstructServerError(
 		fmt.Sprintf("Ill-formatted json: no : found after position %d", j)) }
 	
 	return s3, s2[j+k+1:], nil
@@ -180,7 +180,7 @@ func parseJSON_field_name(json string, pos *int) (string, error) {
 
 	// Find trailing double-quote.
 	var dblQuotePos = strings.Index(json[*pos:], "\"")
-	if dblQuotePos == -1 { return "", utils.ConstructError(
+	if dblQuotePos == -1 { return "", utils.ConstructServerError(
 		fmt.Sprintf("Terminating double quote not found for field name, after pos %d", *pos)) }
 	
 	// ....to do: recognize escapes, etc.
@@ -451,7 +451,7 @@ func parseJSON_pushTokenBack(token string, pos *int) {
 }
 
 func parseJSON_syntaxError(json string, pos *int, msg string) error {
-	var err = utils.ConstructError(fmt.Sprintf("%s: at char no. %d, json=%s",
+	var err = utils.ConstructServerError(fmt.Sprintf("%s: at char no. %d, json=%s",
 		msg, (*pos + 1), json))
 	fmt.Println(err.Error())
 	debug.PrintStack()
@@ -460,7 +460,7 @@ func parseJSON_syntaxError(json string, pos *int, msg string) error {
 
 func parseJSON_tokenError(token string, json string, pos *int, msg string) error {
 	parseJSON_pushTokenBack(token, pos)
-	var err = utils.ConstructError(fmt.Sprintf("Syntax error at char no. %d: %s %s, json=%s",
+	var err = utils.ConstructServerError(fmt.Sprintf("Syntax error at char no. %d: %s %s, json=%s",
 		(*pos + 1), token, msg, json))
 	fmt.Println(err.Error())
 	debug.PrintStack()

@@ -101,7 +101,7 @@ func (registry *DockerRegistryImpl) Ping() error {
 	response, err = registry.SendBasicGet(uri)
 	if err != nil { return err }
 	if response.StatusCode != 200 {
-		return utils.ConstructError(fmt.Sprintf("Ping returned status: %s", response.Status))
+		return utils.ConstructServerError(fmt.Sprintf("Ping returned status: %s", response.Status))
 	}
 	return nil
 }
@@ -119,7 +119,6 @@ func (registry *DockerRegistryImpl) ImageExists(repoName string, tag string) (bo
 	// Make HEAD request to registry.
 	var response *http.Response
 	var err error
-	fmt.Println("Sending uri: " + uri) // debug
 	response, err = registry.SendBasicHead(uri)
 	if err != nil { return false, err }
 	if response.StatusCode == 200 {
@@ -127,7 +126,7 @@ func (registry *DockerRegistryImpl) ImageExists(repoName string, tag string) (bo
 	} else if response.StatusCode == 404 { // Not Found
 		return false, nil
 	} else {
-		return false, utils.ConstructError(fmt.Sprintf("ImageExists returned status: %s", response.Status))
+		return false, utils.ConstructServerError(fmt.Sprintf("ImageExists returned status: %s", response.Status))
 	}
 }
 
@@ -139,7 +138,6 @@ func (registry *DockerRegistryImpl) LayerExistsInRepo(repoName, digest string) (
 	var uri = fmt.Sprintf("v2/%s/blobs/%s", repoName, digest)
 	var response *http.Response
 	var err error
-	fmt.Println("Sending uri: " + uri) // debug
 	response, err = registry.SendBasicHead(uri)
 	if err != nil { return false, err }
 	if response.StatusCode == 200 {
@@ -147,7 +145,7 @@ func (registry *DockerRegistryImpl) LayerExistsInRepo(repoName, digest string) (
 	} else if response.StatusCode == 404 { // Not Found
 		return false, nil
 	} else {
-		return false, utils.ConstructError(fmt.Sprintf("ImageExists returned status: %s", response.Status))
+		return false, utils.ConstructServerError(fmt.Sprintf("ImageExists returned status: %s", response.Status))
 	}
 }
 
@@ -164,9 +162,9 @@ func (registry *DockerRegistryImpl) GetImageInfo(repoName string, tag string) (d
 	resp, err = registry.SendBasicGet(uri)
 	if err != nil { return "", nil, err }
 	if resp.StatusCode == 404 {
-		return "", nil, utils.ConstructError("Not found")
+		return "", nil, utils.ConstructUserError("Not found")
 	} else if resp.StatusCode != 200 {
-		return "", nil, utils.ConstructError(fmt.Sprintf("ImageExists returned status: %s", resp.Status))
+		return "", nil, utils.ConstructServerError(fmt.Sprintf("ImageExists returned status: %s", resp.Status))
 	}
 	
 	// Parse description of each layer.
@@ -196,9 +194,9 @@ func (registry *DockerRegistryImpl) GetImage(repoName string, tag string, filepa
 	resp, err = registry.SendBasicGet(uri)
 	if err != nil { return err }
 	if resp.StatusCode == 404 {
-		return utils.ConstructError("Not found")
+		return utils.ConstructUserError("Not found")
 	} else if resp.StatusCode != 200 {
-		return utils.ConstructError(fmt.Sprintf("ImageExists returned status: %s", resp.Status))
+		return utils.ConstructServerError(fmt.Sprintf("ImageExists returned status: %s", resp.Status))
 	}
 	
 	// Parse description of each layer.
@@ -210,13 +208,13 @@ func (registry *DockerRegistryImpl) GetImage(repoName string, tag string, filepa
 	// Retrieve layers, and add each to a tar archive.
 	var tarFile *os.File
 	tarFile, err = os.Create(filepath)
-	if err != nil { return utils.ConstructError(fmt.Sprintf(
+	if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 		"When creating image file '%s': %s", filepath, err.Error()))
 	}
 	var tarWriter = tar.NewWriter(tarFile)
 	var tempDirPath string
 	tempDirPath, err = ioutil.TempDir("", "")
-	if err != nil { return utils.ConstructError(fmt.Sprintf(
+	if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 		"When creating temp directory for writing layer files: %s", err.Error()))
 	}
 	defer os.RemoveAll(tempDirPath)
@@ -224,46 +222,51 @@ func (registry *DockerRegistryImpl) GetImage(repoName string, tag string, filepa
 		
 		var layerDigest = layerDesc["blobSum"]
 		if layerDigest == nil {
-			return utils.ConstructError("Did not find blobSum field in response for layer")
+			return utils.ConstructServerError("Did not find blobSum field in response for layer")
 		}
 		var digest string
 		var isType bool
 		digest, isType = layerDigest.(string)
-		if ! isType { return utils.ConstructError("blogSum field is not a string - it is a " +
+		if ! isType { return utils.ConstructServerError("blogSum field is not a string - it is a " +
 			reflect.TypeOf(layerDigest).String())
 		}
 		uri = "v2/" + repoName + "/blobs/" + digest
 		resp, err = registry.SendBasicGet(uri)
-		if err != nil { return utils.ConstructError(fmt.Sprintf(
-			"When requesting uri: '%s' - %s", uri, err.Error()))
-		}
+		if err != nil { return err }
 		defer resp.Body.Close()
-		if resp.StatusCode != 200 { return utils.ConstructError(fmt.Sprintf(
-			"Response code %d, when requesting uri: '%s'", resp.StatusCode, uri))
+		if resp.StatusCode >= 500 {
+			return utils.ConstructServerError(fmt.Sprintf(
+				"Response code %d, when requesting uri: '%s'", resp.StatusCode, uri))
+		} else if resp.StatusCode >= 400 {
+			return utils.ConstructUserError(fmt.Sprintf(
+				"Response code %d, when requesting uri: '%s'", resp.StatusCode, uri))
+		} else  if resp.StatusCode >= 300 {
+			return utils.ConstructServerError(fmt.Sprintf(
+				"Response code %d, when requesting uri: '%s'", resp.StatusCode, uri))
 		}
 
 		// Create temporary file in which to write layer.
 		var layerFile *os.File
 		layerFile, err = ioutil.TempFile(tempDirPath, digest)
-		if err != nil { return utils.ConstructError(fmt.Sprintf(
+		if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 			"When creating layer file: %s", err.Error()))
 		}
 		
 		var reader io.ReadCloser = resp.Body
 		layerFile, err = os.OpenFile(layerFile.Name(), os.O_WRONLY, 0600)
-		if err != nil { return utils.ConstructError(fmt.Sprintf(
+		if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 			"When opening layer file '%s': %s", layerFile.Name(), err.Error()))
 		}
 		_, err = io.Copy(layerFile, reader)
-		if err != nil { return utils.ConstructError(fmt.Sprintf(
+		if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 			"When writing layer file '%s': %s", layerFile.Name(), err.Error()))
 		}
 		var fileInfo os.FileInfo
 		fileInfo, err = layerFile.Stat()
-		if err != nil { return utils.ConstructError(fmt.Sprintf(
+		if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 			"When getting status of layer file '%s': %s", layerFile.Name(), err.Error()))
 		}
-		if fileInfo.Size() == 0 { return utils.ConstructError(fmt.Sprintf(
+		if fileInfo.Size() == 0 { return utils.ConstructServerError(fmt.Sprintf(
 			"Layer file that was written, '%s', has zero size", layerFile.Name()))
 		}
 		
@@ -274,22 +277,22 @@ func (registry *DockerRegistryImpl) GetImage(repoName string, tag string, filepa
 			Size: int64(fileInfo.Size()),
 		}
 		err = tarWriter.WriteHeader(tarHeader)
-		if err != nil {	return utils.ConstructError(fmt.Sprintf(
+		if err != nil {	return utils.ConstructServerError(fmt.Sprintf(
 			"While writing layer header to tar archive: , %s", err.Error()))
 		}
 		
 		layerFile, err = os.Open(layerFile.Name())
-		if err != nil {	return utils.ConstructError(fmt.Sprintf(
+		if err != nil {	return utils.ConstructServerError(fmt.Sprintf(
 			"While opening layer file '%s': , %s", layerFile.Name(), err.Error()))
 		}
 		_, err := io.Copy(tarWriter, layerFile)
-		if err != nil {	return utils.ConstructError(fmt.Sprintf(
+		if err != nil {	return utils.ConstructServerError(fmt.Sprintf(
 			"While writing layer content to tar archive: , %s", err.Error()))
 		}
 	}
 	
 	err = tarWriter.Close()
-	if err != nil {	return utils.ConstructError(fmt.Sprintf(
+	if err != nil {	return utils.ConstructServerError(fmt.Sprintf(
 		"While closing tar archive: , %s", err.Error()))
 	}
 	
@@ -313,9 +316,9 @@ func (registry *DockerRegistryImpl) DeleteImage(repoName, tag string) error {
 	if err != nil { return err }
 	resp.Body.Close()
 	if resp.StatusCode == 404 {
-		return utils.ConstructError("Not found")
+		return utils.ConstructUserError("Not found")
 	} else if resp.StatusCode != 200 {
-		return utils.ConstructError(fmt.Sprintf("DeleteImage returned status: %s", resp.Status))
+		return utils.ConstructServerError(fmt.Sprintf("DeleteImage returned status: %s", resp.Status))
 	}
 	
 	// Parse description of each layer.
@@ -328,12 +331,12 @@ func (registry *DockerRegistryImpl) DeleteImage(repoName, tag string) error {
 		
 		var layerDigest = layerDesc["blobSum"]
 		if layerDigest == nil {
-			return utils.ConstructError("Did not find blobSum field in response for layer")
+			return utils.ConstructServerError("Did not find blobSum field in response for layer")
 		}
 		var digest string
 		var isType bool
 		digest, isType = layerDigest.(string)
-		if ! isType { return utils.ConstructError("blogSum field is not a string - it is a " +
+		if ! isType { return utils.ConstructServerError("blogSum field is not a string - it is a " +
 			reflect.TypeOf(layerDigest).String())
 		}
 		
@@ -345,9 +348,9 @@ func (registry *DockerRegistryImpl) DeleteImage(repoName, tag string) error {
 		if response.StatusCode == 200 {
 			return nil
 		} else if response.StatusCode == 404 { // Not Found
-			return utils.ConstructError(fmt.Sprintf("DeleteImage - image not found: %s", response.Status))
+			return utils.ConstructUserError(fmt.Sprintf("DeleteImage - image not found: %s", response.Status))
 		} else {
-			return utils.ConstructError(fmt.Sprintf("DeleteImage returned status: %s", response.Status))
+			return utils.ConstructServerError(fmt.Sprintf("DeleteImage returned status: %s", response.Status))
 		}
 	}
 	
@@ -388,7 +391,6 @@ func (registry *DockerRegistryImpl) PushImage(repoName, tag, imageFilePath strin
 			var dirname = tempDirPath + "/" + header.Name
 			err = os.Mkdir(dirname, 0770)
 			if err != nil { return err }
-			fmt.Println("Created directory " + dirname)  // debug
 			
 		} else if (header.Name == "repositories") ||
 				strings.HasSuffix(header.Name, "/layer.tar") {
@@ -401,11 +403,10 @@ func (registry *DockerRegistryImpl) PushImage(repoName, tag, imageFilePath strin
 			if err != nil { return err }
 			nWritten, err = io.Copy(outfile, tarReader)
 			if err != nil { return err }
-			if nWritten == 0 { return utils.ConstructError(
+			if nWritten == 0 { return utils.ConstructServerError(
 				"No data written to " + filename)
 			}
 			outfile.Close()
-			fmt.Println("Wrote " + filename)  // debug
 		}
 	}
 	
@@ -426,13 +427,13 @@ func (registry *DockerRegistryImpl) PushImage(repoName, tag, imageFilePath strin
 	var repositoriesMap map[string]interface{}
 	var isType bool
 	repositoriesMap, isType = obj.(map[string]interface{})
-	if ! isType { return utils.ConstructError(
+	if ! isType { return utils.ConstructServerError(
 		"repositories file json does not translate to a map[string]interface")
 	}
-	if len(repositoriesMap) == 0 { return utils.ConstructError(
+	if len(repositoriesMap) == 0 { return utils.ConstructServerError(
 		"No entries found in repository map for image")
 	}
-	if len(repositoriesMap) > 1 { return utils.ConstructError(
+	if len(repositoriesMap) > 1 { return utils.ConstructServerError(
 		"More than one entry found in repository map for image")
 	}
 	
@@ -443,26 +444,25 @@ func (registry *DockerRegistryImpl) PushImage(repoName, tag, imageFilePath strin
 		//oldRepoName = rName
 		var tagMap map[string]interface{}
 		tagMap, isType = tagObj.(map[string]interface{})
-		if ! isType { return utils.ConstructError(
+		if ! isType { return utils.ConstructServerError(
 			"repository json does not translate to a map[string]interface")
 		}
-		if len(tagMap) == 0 { return utils.ConstructError(
+		if len(tagMap) == 0 { return utils.ConstructServerError(
 			"No entries found in tag map for repo")
 		}
-		if len(tagMap) > 1 { return utils.ConstructError(
+		if len(tagMap) > 1 { return utils.ConstructServerError(
 			"More than one entry found in tag map for repo")
 		}
 		for _, tagDigestObj := range tagMap {
 			//oldTag = t
 			var tagDigest string
 			tagDigest, isType = tagDigestObj.(string)
-			if ! isType { return utils.ConstructError(
+			if ! isType { return utils.ConstructServerError(
 				"Digest is not a string")
 			}
 			imageDigest = tagDigest
 		}
 	}
-	fmt.Println("Finished parsing repositories file")  // debug
 	
 	// Obtain digest strings and layer paths.
 	var scratchDir *os.File
@@ -473,22 +473,18 @@ func (registry *DockerRegistryImpl) PushImage(repoName, tag, imageFilePath strin
 	if err != nil { return err }
 
 	// Send each layer to the registry.
-	fmt.Println("Sending each layer to registry...")  // debug
 	for _, layerDigest := range layerFilenames {  // layer files are named by their digest
 		var exists bool
 		exists, err = registry.LayerExistsInRepo(repoName, layerDigest)
 		if err != nil { return err }
 		if exists { continue }
-		fmt.Println("Layer does not exist in registry")  // debug
 		
 		var layerFilePath = tempDirPath + "/" + layerDigest + "/layer.tar"
-		fmt.Println("Pushing layer " + layerFilePath)  // debug
 		err = registry.PushLayer(layerFilePath, repoName, layerDigest)
 		if err != nil { return err }
 	}
 	
 	// Send a manifest to the registry.
-	fmt.Println("Sending manifest to registry...")  // debug
 	err = registry.PushManifest(repoName, tag, imageDigest, layerFilenames)
 	if err != nil { return err }
 	
@@ -506,20 +502,17 @@ func (registry *DockerRegistryImpl) PushLayer(layerFilePath, repoName, digestStr
 	
 	var response *http.Response
 	var err error
-	fmt.Println("uri=" + uri)  // debug
-	fmt.Println("Starting upload...")  // debug
 	response, err = registry.SendBasicFormPost(uri, []string{}, []string{})
 	if err != nil { return err }
 	if response.StatusCode != 202 {
-		return utils.ConstructError(fmt.Sprintf(
+		return utils.ConstructServerError(fmt.Sprintf(
 			"Posting to start upload of layer returned status: %s", response.Status))
 	}
-	fmt.Println("Started upload")  // debug
 	
 	// Get Location header.
 	var locations []string = response.Header["Location"]
-	if locations == nil { return utils.ConstructError("No Location header") }
-	if len(locations) != 1 { return utils.ConstructError("Unexpected Location header") }
+	if locations == nil { return utils.ConstructServerError("No Location header") }
+	if len(locations) != 1 { return utils.ConstructServerError("Unexpected Location header") }
 	var location string = locations[0]
 	
 	var layerFile *os.File
@@ -539,10 +532,9 @@ func (registry *DockerRegistryImpl) PushLayer(layerFilePath, repoName, digestStr
 	response, err = registry.SendBasicStreamPut(uri, headers, layerFile)
 	if err != nil { return err }
 	if response.StatusCode != 201 {
-		return utils.ConstructError(fmt.Sprintf(
+		return utils.ConstructServerError(fmt.Sprintf(
 			"Posting layer returned status: %s", response.Status))
 	}
-	fmt.Println("Completed upload")  // debug
 	
 	return nil
 }
@@ -569,12 +561,11 @@ func (registry *DockerRegistryImpl) PushLayerSinglePost(layerFilePath, repoName,
 	}
 	
 	var uri = fmt.Sprintf("v2/%s/blobs/uploads/?digest=%s", repoName, digestString)
-	fmt.Println("uri: " + uri)  // debug
 	
 	response, err = registry.SendBasicStreamPost(uri, headers, layerFile)
 	if err != nil { return err }
 	if response.StatusCode != 202 {
-		return utils.ConstructError(fmt.Sprintf("Posting layer returned status: %s", response.Status))
+		return utils.ConstructServerError(fmt.Sprintf("Posting layer returned status: %s", response.Status))
 	}
 	
 	return nil
@@ -610,7 +601,7 @@ func (registry *DockerRegistryImpl) PushManifest(repoName, tag, imageDigestStrin
 	response, err = registry.SendBasicStreamPut(uri, headers, stringReader)
 	if err != nil { return err }
 	if response.StatusCode != 201 {
-		return utils.ConstructError(fmt.Sprintf("Putting manifest returned status: %s", response.Status))
+		return utils.ConstructServerError(fmt.Sprintf("Putting manifest returned status: %s", response.Status))
 	}
 	
 	return nil
@@ -629,19 +620,19 @@ func parseManifest(body io.ReadCloser) ([]map[string]interface{}, error) {
 	body.Close()
 	var layersObj = responseMap["fsLayers"]
 	if layersObj == nil {
-		return nil, utils.ConstructError("Did not find fsLayers field in body")
+		return nil, utils.ConstructServerError("Did not find fsLayers field in body")
 	}
 	var isType bool
 	var layerArObj []interface{}
 	layerArObj, isType = layersObj.([]interface{})
-	if ! isType { return nil, utils.ConstructError(
+	if ! isType { return nil, utils.ConstructServerError(
 		"Type of layer description is " + reflect.TypeOf(layersObj).String())
 	}
 	var layerAr = make([]map[string]interface{}, 0)
 	for _, obj := range layerArObj {
 		var m map[string]interface{}
 		m, isType = obj.(map[string]interface{})
-		if ! isType { return nil, utils.ConstructError(
+		if ! isType { return nil, utils.ConstructServerError(
 			"Type of layer object is " + reflect.TypeOf(obj).String())
 		}
 		layerAr = append(layerAr, m)

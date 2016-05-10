@@ -95,8 +95,6 @@ func (restContext *RestContext) SendBasicGet(reqName string) (*http.Response, er
 	
 	var urlstr string = restContext.getURL(true, reqName)
 	
-	fmt.Println("SendBasicGet: Sending URL: " + urlstr)  // debug
-	
 	var resp *http.Response
 	var err error
 	resp, err = restContext.httpClient.Get(urlstr)
@@ -107,12 +105,6 @@ func (restContext *RestContext) SendBasicGet(reqName string) (*http.Response, er
 	//request.SetBasicAuth(restContext.UserId, restContext.Password)
 	//resp, err = restContext.httpClient.Do(request)
 	if err != nil { return nil, err }
-	
-	// debug
-	if err != nil {
-		fmt.Println("SendBasicGet: received error: " + err.Error())
-	} 
-	// end debug
 	
 	if err != nil { return nil, err }
 	return resp, nil
@@ -186,15 +178,9 @@ func (restContext *RestContext) SendBasicFormPost(reqName string, names []string
 func (restContext *RestContext) SendBasicFormPostWithHeaders(reqName string, names []string,
 	values []string, headers map[string]string) (*http.Response, error) {
 	
-	fmt.Println("SendBasicFormPostWithHeaders: " + reqName)  // debug
-
-	
 	if len(names) != len(values) { return nil, errors.New(
 		"Number of names != number of values")
 	}
-	
-	fmt.Println("SendBasicFormPostWithHeaders: A")  // debug
-
 	
 	// Encode form name/values as an HTTP content stream.
 	var data url.Values = make(map[string][]string)
@@ -205,17 +191,14 @@ func (restContext *RestContext) SendBasicFormPostWithHeaders(reqName string, nam
 		data.Add(name, values[i])
 	}
 	var encodedData = data.Encode()
-	fmt.Println("encoded data: " + encodedData)  // debug
 
 	var content io.Reader = strings.NewReader(encodedData)
-	fmt.Println("SendBasicFormPostWithHeaders: B")  // debug
 
 	// Define the HTTP request object.
 	var urlstr string = restContext.getURL(true, reqName)
 	var request *http.Request
 	var err error
 	request, err = http.NewRequest("POST", urlstr, content)
-	fmt.Println("SendBasicFormPostWithHeaders: C; urlstr=" + urlstr)  // debug
 	if err != nil { return nil, err }
 	
 	// Set HTTP headers on the request.
@@ -227,13 +210,11 @@ func (restContext *RestContext) SendBasicFormPostWithHeaders(reqName string, nam
 	}
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	request.Close = false
-	fmt.Println("SendBasicFormPostWithHeaders: D")  // debug
 	
 	// Perform the request.
 	var response *http.Response
 	response, err = restContext.httpClient.Do(request)
 	if err != nil { return nil, err }
-	fmt.Println("SendBasicFormPostWithHeaders: Z")  // debug
 	return response, nil
 }
 

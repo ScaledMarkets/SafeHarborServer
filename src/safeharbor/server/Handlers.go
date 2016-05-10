@@ -13,6 +13,7 @@ package server
 
 import (
 	"net/url"
+	"net/http"
 	"mime/multipart"
 	"fmt"
 	"os/exec"
@@ -49,7 +50,7 @@ func clearAll(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values
 	fmt.Println("clearAll")
 	
 	if ! dbClient.Server.Debug {
-		return apitypes.NewFailureDesc(
+		return apitypes.NewFailureDesc(http.StatusForbidden,
 			"Not in debug mode - returning from clearAll")
 	}
 	
@@ -61,7 +62,7 @@ func clearAll(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values
 	output, _ = cmd.CombinedOutput()
 	var containers string = string(output)
 	if strings.HasPrefix(containers, "Error") {
-		return apitypes.NewFailureDesc(containers)
+		return apitypes.NewFailureDesc(http.StatusInternalServerError, containers)
 	}
 	fmt.Println("Containers are:")
 	fmt.Println(containers)
@@ -87,25 +88,25 @@ func clearAll(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values
 	var realmIds []string
 	var err error
 	realmIds, err = dbClient.dbGetAllRealmIds()
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	for _, realmId := range realmIds {
 		var realm Realm
 		var err error
 		realm, err = dbClient.getRealm(realmId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		fmt.Println("For realm " + realm.getName() + ":")
 		
 		for _, repoId := range realm.getRepoIds() {
 			var repo Repo
 			repo, err = dbClient.getRepo(repoId)
-			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+			if err != nil { return apitypes.NewFailureDescFromError(err) }
 			fmt.Println("\tFor repo " + repo.getName() + ":")
 			
 			for _, imageId := range repo.getDockerImageIds() {
 				
 				var image DockerImage
 				image, err = dbClient.getDockerImage(imageId)
-				if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+				if err != nil { return apitypes.NewFailureDescFromError(err) }
 				var imageName string = image.getName()
 				fmt.Println("\t\tRemoving image " + imageName + ":")
 				
@@ -144,7 +145,8 @@ func printDatabase(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	fmt.Println("printDatabase")
 	
 	if ! dbClient.Server.Debug {
-		return apitypes.NewFailureDesc("Not in debug mode - returning from printDatabase")
+		return apitypes.NewFailureDesc(http.StatusForbidden,
+			"Not in debug mode - returning from printDatabase")
 	}
 	
 	dbClient.Persistence.printDatabase()
@@ -162,30 +164,31 @@ func authenticate(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	var creds *apitypes.Credentials
 	var err error
 	creds, err = apitypes.GetCredentials(values)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	// Verify credentials.
 	var user User
 	user, err = dbClient.dbGetUserByUserId(creds.UserId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if user == nil {
-		return apitypes.NewFailureDesc("User not found in the database")
+		return apitypes.NewFailureDesc(http.StatusBadRequest, "User not found in the database")
 	}
 	
-	if ! user.isActive() { return apitypes.NewFailureDesc("User is not active") }
+	if ! user.isActive() { return apitypes.NewFailureDesc(http.StatusUnauthorized,
+		"User is not active") }
 	
 	// Check against brute force password attack.
 	var attempts []string = user.getMostRecentLoginAttempts()
 	if len(attempts) >= dbClient.Server.MaxLoginAttemptsToRetain &&
 		apitypes.AreAllWithinTimePeriod(attempts, 600) {
 		dbClient.Server.LoginAlert(creds.UserId)
-		return apitypes.NewFailureDesc("Too many login attempts")
+		return apitypes.NewFailureDesc(http.StatusUnauthorized, "Too many login attempts")
 	}
 	user.addLoginAttempt(dbClient)
 	
 	// Verify password.
 	if ! user.validatePassword(dbClient, creds.Password) {
-		return apitypes.NewFailureDesc("Invalid password")
+		return apitypes.NewFailureDesc(http.StatusBadRequest, "Invalid password")
 	}
 	
 	// Create new user session.
@@ -200,10 +203,10 @@ func authenticate(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	// Flag whether the user has Write access to the realm.
 	var realm Realm
 	realm, err = dbClient.getRealm(user.getRealmId())
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var entry ACLEntry
 	entry, err = realm.getACLEntryForPartyId(dbClient, user.getId())
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if entry != nil {
 		newSessionToken.SetIsAdminUser(entry.getPermissionMask()[apitypes.CanWrite])
 	}
@@ -236,7 +239,7 @@ func createUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	var err error
 	var userInfo *apitypes.UserInfo
 	userInfo, err = apitypes.GetUserInfo(values)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.CreateInMask, userInfo.RealmId,
 		"createUser"); failMsg != nil { return failMsg }
@@ -261,7 +264,7 @@ func createUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	var pswd string = userInfo.Password
 	var newUser User
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, realmId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return newUser.asUserDesc(dbClient)
 }
@@ -278,11 +281,11 @@ func disableUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var userObjId string
 	var err error
 	userObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserObjId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var user User
 	user, err = dbClient.getUser(userObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask,
 		user.getRealmId(), "disableUser"); failMsg != nil { return failMsg }
@@ -303,16 +306,17 @@ func reenableUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	var userObjId string
 	var err error
 	userObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserObjId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var user User
 	user, err = dbClient.getUser(userObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask,
 		user.getRealmId(), "reenableUser"); failMsg != nil { return failMsg }
 	
-	if user.isActive() { return apitypes.NewFailureDesc("User " + user.getUserId() + " is already active") }
+	if user.isActive() { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"User " + user.getUserId() + " is already active") }
 	
 	// Enable the user to authenticate.
 	dbClient.setActive(user, true)
@@ -332,35 +336,36 @@ func changePassword(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	var userId string
 	var err error
 	userId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	// Check that the userId is for the user who is currently logged in.
 	if sessionToken.AuthenticatedUserid != userId {
-		return apitypes.NewFailureDesc("Only an account owner may change their own password")
+		return apitypes.NewFailureDesc(http.StatusForbidden,
+			"Only an account owner may change their own password")
 	}
 	
 	var user User
 	user, err = dbClient.dbGetUserByUserId(userId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if user == nil { return apitypes.NewFailureDesc("User unidentified") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if user == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError, "User unidentified") }
 	
 	var oldPswd string
 	oldPswd, err = apitypes.GetRequiredHTTPParameterValue(true, values, "OldPassword")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if ! user.validatePassword(dbClient,oldPswd) {
-		return apitypes.NewFailureDesc("Invalid password")
+		return apitypes.NewFailureDesc(http.StatusBadRequest, "Invalid password")
 	}
 	
 	var newPswd string
 	newPswd, err = apitypes.GetRequiredHTTPParameterValue(true, values, "NewPassword")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask,
 		user.getId(), "changePassword"); failMsg != nil { return failMsg }
 	
 	err = user.setPassword(dbClient, newPswd)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return apitypes.NewResult(200, "Password changed")
 }
@@ -377,19 +382,19 @@ func createGroup(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var err error
 	var realmId string
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var groupName string
 	groupName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Name")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	var groupDescription string
 	groupDescription, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var addMeStr string
 	addMeStr, err = apitypes.GetHTTPParameterValue(true, values, "AddMe")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var addMe bool = false
 	if addMeStr == "true" { addMe = true }
 	fmt.Println(fmt.Sprintf("AddMe=%s", addMeStr))
@@ -399,15 +404,15 @@ func createGroup(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	
 	var group Group
 	group, err = dbClient.dbCreateGroup(realmId, groupName, groupDescription)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if addMe {
 		var userId string = sessionToken.AuthenticatedUserid
 		var user User
 		user, err = dbClient.dbGetUserByUserId(userId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		err = group.addUserId(dbClient, user.getId())
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 	}
 	
 	return group.asGroupDesc()
@@ -425,11 +430,11 @@ func deleteGroup(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var groupId string
 	var err error
 	groupId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "GroupId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var group Group
 	group, err = dbClient.getGroup(groupId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask,
 		group.getRealmId(), "deleteGroup"); failMsg != nil { return failMsg }
@@ -437,9 +442,9 @@ func deleteGroup(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var groupName string = group.getName()
 	var realm Realm
 	realm, err = group.getRealm(dbClient)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	err = realm.deleteGroup(dbClient, group)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return apitypes.NewResult(200, "Group '" + groupName + "' deleted")
 }
 
@@ -455,13 +460,13 @@ func getGroupUsers(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var err error
 	var groupId string
 	groupId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "GroupId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var group Group
 	group, err = dbClient.getGroup(groupId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if group == nil { return apitypes.NewFailureDesc(fmt.Sprintf(
-		"No group with Id %s", groupId))
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if group == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		fmt.Sprintf("No group with Id %s", groupId))
 	}
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
@@ -472,9 +477,9 @@ func getGroupUsers(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	for _, id := range userObjIds {
 		var user User
 		user, err = dbClient.getUser(id)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-		if user == nil { return apitypes.NewFailureDesc(fmt.Sprintf(
-			"Internal error: No user with Id %s", id))
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if user == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			fmt.Sprintf("Internal error: No user with Id %s", id))
 		}
 		var userDesc *apitypes.UserDesc = user.asUserDesc(dbClient)
 		userDescs = append(userDescs, userDesc)
@@ -495,31 +500,32 @@ func addGroupUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	var err error
 	var groupId string
 	groupId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "GroupId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var userObjId string
 	userObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserObjId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var group Group
 	group, err = dbClient.getGroup(groupId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if group == nil { return apitypes.NewFailureDesc(fmt.Sprintf(
-		"No group with Id %s", groupId))
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if group == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		fmt.Sprintf("No group with Id %s", groupId))
 	}
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask,
 		group.getRealmId(), "addGroupUser"); failMsg != nil { return failMsg }
 	
 	err = group.addUserId(dbClient, userObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var user User
 	user, err = dbClient.getUser(userObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if user == nil { return apitypes.NewFailureDesc("User with Id " + userObjId + " unidentified") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if user == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"User with Id " + userObjId + " unidentified") }
 	user.addGroupId(dbClient, groupId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return apitypes.NewResult(200, "User added to group")
 }
@@ -536,24 +542,24 @@ func remGroupUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	var err error
 	var groupId string
 	groupId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "GroupId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var userObjId string
 	userObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserObjId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var group Group
 	group, err = dbClient.getGroup(groupId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask,
 		group.getRealmId(), "remGroupUser"); failMsg != nil { return failMsg }
 	
 	var user User
 	user, err = dbClient.getUser(userObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	err = group.removeUser(dbClient, user)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return apitypes.NewResult(200, "User " + user.getName() + " removed from group " + group.getName())
 }
@@ -569,7 +575,7 @@ func createRealmAnon(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	var err error
 	var userInfo *apitypes.UserInfo
 	userInfo, err = apitypes.GetUserInfo(values)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var newUserId string = userInfo.UserId
 	var newUserName string = userInfo.UserName
 	//var realmId string = userInfo.RealmId  // ignored
@@ -579,17 +585,17 @@ func createRealmAnon(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	// Create a realm.
 	var newRealmInfo *apitypes.RealmInfo
 	newRealmInfo, err = apitypes.GetRealmInfo(values)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println("Creating realm", newRealmInfo.RealmName)
 	var newRealm Realm
 	newRealm, err = dbClient.dbCreateRealm(newRealmInfo, newUserId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println("Created realm", newRealmInfo.RealmName)
 	
 	// Create a user
 	var newUser User
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, newRealm.getId())
-	if err != nil { return apitypes.NewFailureDesc("Unable to create user: " + err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	// Add ACL entry to enable the current user (if any) to access what he/she just created.
 	var curUser User
@@ -598,15 +604,15 @@ func createRealmAnon(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	if (curUser != nil) && (sessionError == nil) {
 		_, err = dbClient.dbCreateACLEntry(newRealm.getId(), curUser.getId(),
 			[]bool{ true, true, true, true, true } )
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 	}
 	
 	// Add ACL entry to enable the new user to access what was just created.
 	_, err = dbClient.dbCreateACLEntry(newRealm.getId(), newUser.getId(),
 		[]bool{ true, true, true, true, true } )
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	if sessionError != nil { return apitypes.NewFailureDesc(sessionError.Error()) }
+	if sessionError != nil { return apitypes.NewFailureDescFromError(sessionError) }
 	return newUser.asUserDesc(dbClient)
 }
 
@@ -622,15 +628,16 @@ func getRealmDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	var err error
 	var realmId string
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, realmId,
 		"getRealmDesc"); failMsg != nil { return failMsg }
 	
 	var realm Realm
 	realm, err = dbClient.getRealm(realmId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if realm == nil { return apitypes.NewFailureDesc("Cound not find realm with Id " + realmId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if realm == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Cound not find realm with Id " + realmId) }
 	
 	return realm.asRealmDesc()
 }
@@ -647,21 +654,21 @@ func createRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var err error
 	var realmInfo *apitypes.RealmInfo
 	realmInfo, err = apitypes.GetRealmInfo(values)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var user User
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println("Creating realm", realmInfo.RealmName)
 	var realm Realm
 	realm, err = dbClient.dbCreateRealm(realmInfo, user.getId())
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println("Created realm", realmInfo.RealmName)
 
 	// Add ACL entry to enable the current user to access what he/she just created.
 	_, err = dbClient.dbCreateACLEntry(realm.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return realm.asRealmDesc()
 }
@@ -678,13 +685,13 @@ func deactivateRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	var realmId string
 	var err error
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.DeleteMask, realmId,
 		"deactivateRealm"); failMsg != nil { return failMsg }
 
 	err = dbClient.dbDeactivateRealm(realmId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	return apitypes.NewResult(200, "Realm deactivated")
 }
@@ -702,36 +709,37 @@ func moveUserToRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	var realmId string
 	var userObjId string
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	userObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserObjId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask, realmId,
 		"moveUserToRealm"); failMsg != nil { return failMsg }
 	
 	var destRealm Realm
 	destRealm, err = dbClient.getRealm(realmId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if destRealm == nil { return apitypes.NewFailureDesc("Cound not find realm with Id " + realmId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if destRealm == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Cound not find realm with Id " + realmId) }
 	
 	var user User
 	user, err = dbClient.getUser(userObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var origRealm Realm
 	origRealm, err = dbClient.getRealm(user.getRealmId())
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if origRealm.getId() == destRealm.getId() {
-		return apitypes.NewFailureDesc("The user is already in the destination realm")
+		return apitypes.NewFailureDesc(http.StatusBadRequest, "The user is already in the destination realm")
 	}
 	
 	fmt.Println("Removing user Id " + userObjId + " from realm Id " + origRealm.getId())
 	_, err = origRealm.removeUserId(dbClient, userObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println("Adding user Id " + userObjId + " to realm Id " + destRealm.getId())
 	err = destRealm.addUserId(dbClient, userObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return apitypes.NewResult(200, "User moved to realm")
 }
@@ -748,17 +756,17 @@ func getUserDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var err error
 	var userId string
 	userId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var user User
 	user, err = dbClient.dbGetUserByUserId(userId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if user == nil { return apitypes.NewFailureDesc("User with user id " + userId +
-		" not found.") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if user == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"User with user id " + userId + " not found.") }
 	
 	var realm Realm
 	realm, err = user.getRealm(dbClient)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, realm.getId(),
 		"getUserDesc"); failMsg != nil { return failMsg }
@@ -778,22 +786,24 @@ func getRealmUsers(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var realmId string
 	var err error
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, realmId,
 		"getRealmUsers"); failMsg != nil { return failMsg }
 		
 	var realm Realm
 	realm, err = dbClient.getRealm(realmId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if realm == nil { return apitypes.NewFailureDesc("Realm with Id " + realmId + " not found") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if realm == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Realm with Id " + realmId + " not found") }
 	var userObjIds []string = realm.getUserObjIds()
 	var userDescs apitypes.UserDescs = make([]*apitypes.UserDesc, 0)
 	for _, userObjId := range userObjIds {
 		var user User
 		user, err = dbClient.getUser(userObjId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-		if user == nil { return apitypes.NewFailureDesc("User with obj Id " + userObjId + " not found") }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if user == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"User with obj Id " + userObjId + " not found") }
 		var userDesc *apitypes.UserDesc = user.asUserDesc(dbClient)
 		userDescs = append(userDescs, userDesc)
 	}
@@ -813,20 +823,21 @@ func getRealmGroups(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	var realmId string
 	var err error
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, realmId,
 		"getRealmGroups"); failMsg != nil { return failMsg }
 	
 	var realm Realm
 	realm, err = dbClient.getRealm(realmId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if realm == nil { return apitypes.NewFailureDesc("Realm with Id " + realmId + " not found") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if realm == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Realm with Id " + realmId + " not found") }
 	var groupIds []string = realm.getGroupIds()
 	for _, groupId := range groupIds {
 		var group Group
 		group, err = dbClient.getGroup(groupId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		if group == nil {
 			fmt.Println("Internal error: group with Id " + groupId + " not found")
 			continue
@@ -848,15 +859,16 @@ func getRealmRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var err error
 	var realmId string
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, realmId,
 		"getRealmRepos"); failMsg != nil { return failMsg }
 	
 	var realm Realm
 	realm, err = dbClient.getRealm(realmId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if realm == nil { return apitypes.NewFailureDesc("Cound not find realm with Id " + realmId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if realm == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Cound not find realm with Id " + realmId) }
 	
 	var repoIds []string = realm.getRepoIds()
 	
@@ -865,9 +877,9 @@ func getRealmRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 		
 		var repo Repo
 		repo, err = dbClient.getRepo(id)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-		if repo == nil { return apitypes.NewFailureDesc(fmt.Sprintf(
-			"Internal error: no Repo found for Id %s", id))
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if repo == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			fmt.Sprintf("Internal error: no Repo found for Id %s", id))
 		}
 		var desc *apitypes.RepoDesc = repo.asRepoDesc()
 		// Add to result
@@ -889,7 +901,7 @@ func getAllRealms(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	var realmIds []string
 	var err error
 	realmIds, err = dbClient.dbGetAllRealmIds()
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var result apitypes.RealmDescs = make([]*apitypes.RealmDesc, 0)
 	for _, realmId := range realmIds {
@@ -897,9 +909,9 @@ func getAllRealms(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 		var realm Realm
 		var err error
 		realm, err = dbClient.getRealm(realmId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-		if realm == nil { return apitypes.NewFailureDesc(fmt.Sprintf(
-			"Internal error: no Realm found for Id %s", realmId))
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if realm == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			fmt.Sprintf("Internal error: no Realm found for Id %s", realmId))
 		}
 		var desc *apitypes.RealmDesc = realm.asRealmDesc()
 		result = append(result, desc)
@@ -921,15 +933,15 @@ func createRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	var err error
 	var realmId string
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	var repoName string
 	repoName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Name")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	var repoDesc string
 	repoDesc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.CreateInMask, realmId,
 		"createRepo"); failMsg != nil { return failMsg }
@@ -937,24 +949,24 @@ func createRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	fmt.Println("Creating repo", repoName)
 	var repo Repo
 	repo, err = dbClient.dbCreateRepo(realmId, repoName, repoDesc)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	// Add ACL entry to enable the current user to access what he/she just created.
 	var user User
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	_, err = dbClient.dbCreateACLEntry(repo.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var name string
 	var filepath string
 	name, filepath, err = captureFile(repo, files)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if filepath != "" { // a file was attached - presume that it is a dockerfile
 		_, err = createDockerfile(sessionToken, dbClient, repo,
 			name, filepath, repo.getDescription())
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 	}
 	
 	return repo.asRepoDesc()
@@ -972,22 +984,22 @@ func deleteRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	var repoId string
 	var err error
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.DeleteMask, repoId,
 		"deleteRepo"); failMsg != nil { return failMsg }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var realmId = repo.getRealmId()
 	var realm Realm
 	realm, err = dbClient.getRealm(realmId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	err = realm.deleteRepo(dbClient, repo)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return apitypes.NewResult(200, "Repo deleted")
 }
@@ -1004,16 +1016,16 @@ func getDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	var err error
 	var repoId string
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, repoId,
 		"getDockerfiles"); failMsg != nil { return failMsg }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if repo == nil { return apitypes.NewFailureDesc(fmt.Sprintf(
-		"Repo with Id %s not found", repoId)) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		fmt.Sprintf("Repo with Id %s not found", repoId)) }
 	
 	var dockerfileIds []string = repo.getDockerfileIds()	
 	var result apitypes.DockerfileDescs = make([]*apitypes.DockerfileDesc, 0)
@@ -1021,9 +1033,9 @@ func getDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 		
 		var dockerfile Dockerfile
 		dockerfile, err = dbClient.getDockerfile(id)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-		if dockerfile == nil { return apitypes.NewFailureDesc(fmt.Sprintf(
-			"Internal error: no Dockerfile found for Id %s", id))
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if dockerfile == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			fmt.Sprintf("Internal error: no Dockerfile found for Id %s", id))
 		}
 		var desc *apitypes.DockerfileDesc = dockerfile.asDockerfileDesc()
 		// Add to result
@@ -1045,16 +1057,16 @@ func getDockerImages(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	var err error
 	var repoId string
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, repoId,
 		"getDockerImages"); failMsg != nil { return failMsg }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if repo == nil { return apitypes.NewFailureDesc(fmt.Sprintf(
-		"Repo with Id %s not found", repoId)) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		fmt.Sprintf("Repo with Id %s not found", repoId)) }
 	
 	var imageIds []string = repo.getDockerImageIds()
 	var result apitypes.DockerImageDescs = make([]*apitypes.DockerImageDesc, 0)
@@ -1062,9 +1074,9 @@ func getDockerImages(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 		
 		var dockerImage DockerImage
 		dockerImage, err = dbClient.getDockerImage(id)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-		if dockerImage == nil { return apitypes.NewFailureDesc(fmt.Sprintf(
-			"Internal error: no DockerImage found for Id %s", id))
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if dockerImage == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+				fmt.Sprintf("Internal error: no DockerImage found for Id %s", id))
 		}
 		var imageDesc *apitypes.DockerImageDesc = dockerImage.asDockerImageDesc()
 		result = append(result, imageDesc)
@@ -1089,30 +1101,30 @@ func addDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var repoId string
 	var err error
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.CreateInMask, repoId,
 		"addDockerfile"); failMsg != nil { return failMsg }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if repo == nil { return apitypes.NewFailureDesc("Repo does not exist") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "Repo does not exist") }
 	
 	var name string
 	var filepath string
 	name, filepath, err = captureFile(repo, files)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if filepath == "" { return apitypes.NewFailureDesc("No file was found") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if filepath == "" { return apitypes.NewFailureDesc(http.StatusBadRequest, "No file was found") }
 	
 	var dockerfile Dockerfile
 	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, name, filepath, desc)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if dockerfile == nil { return apitypes.NewFailureDesc("No dockerfile was attached") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if dockerfile == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "No dockerfile was attached") }
 	
 	return dockerfile.asDockerfileDesc()
 }
@@ -1130,11 +1142,11 @@ func getGroupDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	var groupId string
 	var err error
 	groupId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "GroupId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var group Group
 	group, err = dbClient.getGroup(groupId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return group.asGroupDesc()
 }
 
@@ -1151,11 +1163,11 @@ func getRepoDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var repoId string
 	var err error
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return repo.asRepoDesc()
 }
 
@@ -1172,11 +1184,11 @@ func getDockerImageDesc(dbClient *InMemClient, sessionToken *apitypes.SessionTok
 	var imageId string
 	var err error
 	imageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerImageId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var image DockerImage
 	image, err = dbClient.getDockerImage(imageId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return image.asDockerImageDesc()
 }
 
@@ -1193,11 +1205,11 @@ func getDockerfileDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 	var dockerfileId string
 	var err error
 	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerfileId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var dockerfile Dockerfile
 	dockerfile, err = dbClient.getDockerfile(dockerfileId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return dockerfile.asDockerfileDesc()
 }
 
@@ -1214,27 +1226,27 @@ func replaceDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 	var desc string
 	var err error
 	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerfileId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	desc, err = apitypes.GetHTTPParameterValue(true, values, "Description")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var dockerfile Dockerfile
 	dockerfile, err = dbClient.getDockerfile(dockerfileId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask,
 		dockerfileId, "replaceDockerfile"); failMsg != nil { return failMsg }
 	
 	var repo Repo
 	repo, err = dockerfile.getRepo(dbClient)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var filepath string
 	_, filepath, err = captureFile(repo, files)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if filepath == "" { return apitypes.NewFailureDesc("No file was found") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if filepath == "" { return apitypes.NewFailureDesc(http.StatusBadRequest, "No file was found") }
 	
 	err = dockerfile.replaceDockerfileFile(filepath, desc)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return apitypes.NewResult(200, "Dockerfile file replaced")
 }
 
@@ -1253,20 +1265,21 @@ func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	var err error
 	var dockerfileId string
 	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerfileId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if dockerfileId == "" { return apitypes.NewFailureDesc("No HTTP parameter found for DockerfileId") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if dockerfileId == "" { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"No HTTP parameter found for DockerfileId") }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ExecuteMask, dockerfileId,
 		"execDockerfile"); failMsg != nil { return failMsg }
 	
 	var dockerfile Dockerfile
 	dockerfile, err = dbClient.getDockerfile(dockerfileId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println("Dockerfile name =", dockerfile.getName())
 	
 	var image DockerImage
 	image, err = buildDockerfile(dbClient, dockerfile, sessionToken, values)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return image.asDockerImageDesc()
 }
@@ -1287,34 +1300,35 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	var repoId string
 	var err error
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask, repoId,
 		"addAndExecDockerfile"); failMsg != nil { return failMsg }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if repo == nil { return apitypes.NewFailureDesc("Repo does not exist") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "Repo does not exist") }
 	
 	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	var name string
 	var filepath string
 	name, filepath, err = captureFile(repo, files)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if filepath == "" { return apitypes.NewFailureDesc("No file was found") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if filepath == "" { return apitypes.NewFailureDesc(http.StatusBadRequest, "No file was found") }
 	
 	var dockerfile Dockerfile
 	dockerfile, err = createDockerfile(sessionToken, dbClient, repo, name, filepath, desc)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if dockerfile == nil { return apitypes.NewFailureDesc("No dockerfile was attached") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if dockerfile == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"No dockerfile was attached") }
 	
 	var image DockerImage
 	image, err = buildDockerfile(dbClient, dockerfile, sessionToken, values)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return image.asDockerImageDesc()
 }
@@ -1331,19 +1345,22 @@ func downloadImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var imageObjId string
 	var err error
 	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var resource Resource
 	resource, err = dbClient.getResource(imageObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if resource == nil { return apitypes.NewFailureDesc("Unable to identify resource with Id " + imageObjId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if resource == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Unable to identify resource with Id " + imageObjId) }
 	var image Image
 	var isType bool
 	image, isType = resource.(Image)
-	if ! isType { return apitypes.NewFailureDesc("Resource with Id " + imageObjId + " is not an Image") }
+	if ! isType { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Resource with Id " + imageObjId + " is not an Image") }
 	var dockerImage DockerImage
 	dockerImage, isType = image.(DockerImage)
-	if ! isType { return apitypes.NewFailureDesc("Image is not a docker image") }
+	if ! isType { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Image is not a docker image") }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, imageObjId,
 		"downloadImage"); failMsg != nil { return failMsg }
@@ -1353,9 +1370,9 @@ func downloadImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	//imageFullName, err = dockerImage.getFullName(dbClient)
 	var namespace, imageName, tag string
 	namespace, imageName, tag, err = dockerImage.getFullNameParts(dbClient)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	tempFilePath, err = dbClient.getServer().DockerServices.SaveImage(namespace, imageName, tag)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return apitypes.NewFileResponse(200, tempFilePath, true)
 }
@@ -1373,25 +1390,25 @@ func setPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var partyId string
 	var err error
 	partyId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "PartyId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var resourceId string
 	resourceId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ResourceId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var smask []string = make([]string, 5)
 	smask[0], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanCreateIn")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	smask[1], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanRead")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	smask[2], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanWrite")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	smask[3], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanExecute")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	smask[4], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanDelete")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var mask []bool
 	mask, err = apitypes.ToBoolAr(smask)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask, resourceId,
 		"setPermission"); failMsg != nil { return failMsg }
@@ -1399,19 +1416,21 @@ func setPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	// Identify the Resource.
 	var resource Resource
 	resource, err = dbClient.getResource(resourceId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if resource == nil { return apitypes.NewFailureDesc("Unable to identify resource with Id " + resourceId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if resource == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Unable to identify resource with Id " + resourceId) }
 	
 	// Identify the Party.
 	var party Party
 	party, err = dbClient.getParty(partyId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if party == nil { return apitypes.NewFailureDesc("Unable to identify party with Id " + partyId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if party == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Unable to identify party with Id " + partyId) }
 	
 	// Get the current ACLEntry, if there is one.
 	var aclEntry ACLEntry
 	aclEntry, err = dbClient.setAccess(resource, party, mask)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return aclEntry.asPermissionDesc()
 }
@@ -1429,25 +1448,25 @@ func addPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var partyId string
 	var err error
 	partyId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "PartyId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var resourceId string
 	var smask []string = make([]string, 5)
 	resourceId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ResourceId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	smask[0], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanCreateIn")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	smask[1], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanRead")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	smask[2], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanWrite")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	smask[3], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanExecute")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	smask[4], err = apitypes.GetRequiredHTTPParameterValue(true, values, "CanDelete")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var mask []bool
 	mask, err = apitypes.ToBoolAr(smask)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask, resourceId,
 		"addPermission"); failMsg != nil { return failMsg }
@@ -1455,19 +1474,21 @@ func addPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	// Identify the Resource.
 	var resource Resource
 	resource, err = dbClient.getResource(resourceId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if resource == nil { return apitypes.NewFailureDesc("Unable to identify resource with Id " + resourceId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if resource == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Unable to identify resource with Id " + resourceId) }
 	
 	// Identify the Party.
 	var party Party
 	party, err = dbClient.getParty(partyId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if party == nil { return apitypes.NewFailureDesc("Unable to identify party with Id " + partyId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if party == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Unable to identify party with Id " + partyId) }
 	
 	// Get the current ACLEntry, if there is one.
 	var aclEntry ACLEntry
 	aclEntry, err = dbClient.addAccess(resource, party, mask)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return aclEntry.asPermissionDesc()
 }
@@ -1485,11 +1506,11 @@ func remPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var partyId string
 	var err error
 	partyId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "PartyId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var resourceId string
 	resourceId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ResourceId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask, resourceId,
 		"remPermission"); failMsg != nil { return failMsg }
@@ -1497,19 +1518,20 @@ func remPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	// Identify the Resource.
 	var resource Resource
 	resource, err = dbClient.getResource(resourceId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if resource == nil { return apitypes.NewFailureDesc(
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if resource == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"Unable to identify resource with Id " + resourceId) }
 	
 	// Identify the Party.
 	var party Party
 	party, err = dbClient.getParty(partyId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if party == nil { return apitypes.NewFailureDesc("Unable to identify party with Id " + partyId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if party == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Unable to identify party with Id " + partyId) }
 	
 	// Get the current ACLEntry, if there is one.
 	err = dbClient.deleteAccess(resource, party)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return apitypes.NewResult(200, "All permission removed")
 }
@@ -1526,10 +1548,10 @@ func getPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var partyId string
 	var err error
 	partyId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "PartyId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var resourceId string
 	resourceId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ResourceId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, resourceId,
 		"getPermission"); failMsg != nil { return failMsg }
@@ -1541,13 +1563,14 @@ func getPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	// Identify the Party.
 	var party Party
 	party, err = dbClient.getParty(partyId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if party == nil { return apitypes.NewFailureDesc("Unable to identify party with Id " + partyId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if party == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Unable to identify party with Id " + partyId) }
 	
 	// Return the ACLEntry.
 	var aclEntry ACLEntry
 	aclEntry, err = party.getACLEntryForResourceId(dbClient, resourceId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var mask []bool
 	var aclEntryId string = ""
 	if aclEntry == nil {
@@ -1567,7 +1590,8 @@ func getMyDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
-	if sessionToken == nil { return apitypes.NewFailureDesc("User not authenticated") }
+	if sessionToken == nil { return apitypes.NewFailureDesc(
+		http.StatusUnauthorized, "User not authenticated") }
 	
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
@@ -1575,9 +1599,10 @@ func getMyDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(userId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if user == nil {
-		return apitypes.NewFailureDesc("user object cannot be identified from user id " + userId)
+		return apitypes.NewFailureDesc(http.StatusBadRequest,
+			"user object cannot be identified from user id " + userId)
 	}
 
 	return user.asUserDesc(dbClient)
@@ -1596,13 +1621,13 @@ func getMyGroups(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var groupIds []string = user.getGroupIds()
 	for _, groupId := range groupIds {
 		var group Group
 		var err error
 		group, err = dbClient.getGroup(groupId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		if group == nil {
 			fmt.Println("Internal error: group with Id " + groupId + " could not be found")
 			continue
@@ -1626,7 +1651,7 @@ func getMyRealms(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var aclEntrieIds []string = user.getACLEntryIds()
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
@@ -1634,11 +1659,11 @@ func getMyRealms(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 		var err error
 		var aclEntry ACLEntry
 		aclEntry, err = dbClient.getACLEntry(aclEntryId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		var resourceId string = aclEntry.getResourceId()
 		var resource Resource
 		resource, err = dbClient.getResource(resourceId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		switch v := resource.(type) {
 			case Realm: realms[v.getId()] = v
 				fmt.Println("\t\ta Realm")
@@ -1673,7 +1698,7 @@ func getMyRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var aclEntrieIds []string = user.getACLEntryIds()
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
@@ -1681,11 +1706,11 @@ func getMyRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 		var err error
 		var aclEntry ACLEntry
 		aclEntry, err = dbClient.getACLEntry(aclEntryId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		var resourceId string = aclEntry.getResourceId()
 		var resource Resource
 		resource, err = dbClient.getResource(resourceId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		switch v := resource.(type) {
 			case Realm: realms[v.getId()] = v
 				fmt.Println("\t\ta Realm")
@@ -1702,8 +1727,9 @@ func getMyRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 			var r Repo
 			var err error
 			r, err = dbClient.getRepo(repoId)
-			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-			if r == nil { return apitypes.NewFailureDesc("Internal error: No repo found for Id " + repoId) }
+			if err != nil { return apitypes.NewFailureDescFromError(err) }
+			if r == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+				"Internal error: No repo found for Id " + repoId) }
 			repos[repoId] = r
 		}
 	}
@@ -1729,11 +1755,11 @@ func getMyDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var leaves map[string]Resource
 	leaves, err = getLeafResources(dbClient, user, ADockerfile)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	fmt.Println("Creating result...")
 	var dockerfileDescs apitypes.DockerfileDescs = make([]*apitypes.DockerfileDesc, 0)
@@ -1742,7 +1768,8 @@ func getMyDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 		var dockerfile Dockerfile
 		var isType bool
 		dockerfile, isType = leaf.(Dockerfile)
-		if ! isType { return apitypes.NewFailureDesc("Internal error: type of resource is unexpected") }
+		if ! isType { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Internal error: type of resource is unexpected") }
 		dockerfileDescs = append(dockerfileDescs, dockerfile.asDockerfileDesc())
 	}
 	return dockerfileDescs
@@ -1760,11 +1787,11 @@ func getMyDockerImages(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var leaves map[string]Resource
 	leaves, err = getLeafResources(dbClient, user, ADockerImage)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	fmt.Println("Creating result...")
 	var dockerImageDescs apitypes.DockerImageDescs = make([]*apitypes.DockerImageDesc, 0)
@@ -1773,7 +1800,8 @@ func getMyDockerImages(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 		var dockerImage DockerImage
 		var isType bool
 		dockerImage, isType = leaf.(DockerImage)
-		if ! isType { return apitypes.NewFailureDesc("Internal error: type of resource is unexpected") }
+		if ! isType { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Internal error: type of resource is unexpected") }
 		dockerImageDescs = append(dockerImageDescs, dockerImage.asDockerImageDesc())
 	}
 	return dockerImageDescs
@@ -1791,11 +1819,11 @@ func getMyScanConfigs(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var leaves map[string]Resource
 	leaves, err = getLeafResources(dbClient, user, AScanConfig)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	fmt.Println("Creating result...")
 	var dcanConfigDescs apitypes.ScanConfigDescs = make([]*apitypes.ScanConfigDesc, 0)
@@ -1804,7 +1832,8 @@ func getMyScanConfigs(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 		var dcanConfig ScanConfig
 		var isType bool
 		dcanConfig, isType = leaf.(ScanConfig)
-		if ! isType { return apitypes.NewFailureDesc("Internal error: type of resource is unexpected") }
+		if ! isType { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Internal error: type of resource is unexpected") }
 		dcanConfigDescs = append(dcanConfigDescs, dcanConfig.asScanConfigDesc(dbClient))
 	}
 	return dcanConfigDescs
@@ -1822,11 +1851,11 @@ func getMyFlags(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var leaves map[string]Resource
 	leaves, err = getLeafResources(dbClient, user, AFlag)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	fmt.Println("Creating result...")
 	var flagDescs apitypes.FlagDescs = make([]*apitypes.FlagDesc, 0)
@@ -1835,7 +1864,8 @@ func getMyFlags(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 		var flag Flag
 		var isType bool
 		flag, isType = leaf.(Flag)
-		if ! isType { return apitypes.NewFailureDesc("Internal error: type of resource is unexpected") }
+		if ! isType { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Internal error: type of resource is unexpected") }
 		flagDescs = append(flagDescs, flag.asFlagDesc())
 	}
 	return flagDescs
@@ -1871,55 +1901,55 @@ func defineScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	var err error
 	var providerName string
 	providerName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ProviderName")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var scanService providers.ScanService
 	scanService = dbClient.Server.GetScanService(providerName)
-	if scanService == nil { return apitypes.NewFailureDesc(
+	if scanService == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"Unable to identify a scan service named '" + providerName + "'")
 	}
 	
 	var name string
 	name, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Name")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var repoId string
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask, repoId,
 		"defineScanConfig"); failMsg != nil { return failMsg }
 	
 	var successExpr string = ""
 	successExpr, err = apitypes.GetHTTPParameterValue(true, values, "SuccessExpression")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var scanConfig ScanConfig
 	var paramValueIds []string = make([]string, 0)
 	scanConfig, err = dbClient.dbCreateScanConfig(name, desc, repoId,
 		providerName, paramValueIds, successExpr, "")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	// Retrieve and set the provider parameters.
 	for key, valueAr := range values {
 		if strings.HasPrefix(key, "scan.") {
-			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
+			if len(valueAr) != 1 { return apitypes.NewFailureDesc(http.StatusBadRequest,
 				"Parameter " + key + " is ill-formatted")
 			}
 			var paramName string = strings.TrimPrefix(key, "scan.")
 			// See if the parameter is known by the scanner.
 			_, err = scanService.GetParameterDescription(paramName)
-			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+			if err != nil { return apitypes.NewFailureDescFromError(err) }
 			// Create a ParameterValue and attach it to the ScanConfig.
-			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
+			if len(valueAr) != 1 { return apitypes.NewFailureDesc(http.StatusBadRequest,
 				"Value for scan parameter '" + paramName + "' is ill-formed") }
 			var value string = valueAr[0]
 			_, err = scanConfig.setParameterValue(dbClient, paramName, value)
-			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+			if err != nil { return apitypes.NewFailureDescFromError(err) }
 		}
 	}
 	
@@ -1927,33 +1957,34 @@ func defineScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	var userId string = sessionToken.AuthenticatedUserid
 	var user User
 	user, err = dbClient.dbGetUserByUserId(userId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if user == nil { return apitypes.NewFailureDesc(
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if user == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
 		"Internal error - could not identify user after use has been authenticated") }
 
 	_, err = dbClient.dbCreateACLEntry(scanConfig.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	// Add success image, if one was attached.
 	var imageFilepath string
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	_, imageFilepath, err = captureFile(repo, files)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if imageFilepath != "" { // a file was attached - presume that it is an image
 		fmt.Println("file attached...")
 		var flag Flag
 		flag, err = dbClient.dbCreateFlag(name, desc, repoId, imageFilepath)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		err = scanConfig.setFlagId(dbClient, flag.getId())
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-		if scanConfig.getFlagId() == "" { return apitypes.NewFailureDesc("Flag set failed") }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if scanConfig.getFlagId() == "" { return apitypes.NewFailureDesc(
+			http.StatusInternalServerError, "Flag set failed") }
 		// Add ACL entry.
 		_, err = dbClient.dbCreateACLEntry(flag.getId(), user.getId(),
 			[]bool{ true, true, true, true, true } )
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 	}
 	
 	return scanConfig.asScanConfigDesc(dbClient)
@@ -1973,60 +2004,60 @@ func updateScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 
 	var scanConfigId string
 	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var scanConfig ScanConfig
 	scanConfig, err = dbClient.getScanConfig(scanConfigId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask,
 		scanConfig.getRepoId(), "defineScanConfig"); failMsg != nil { return failMsg }
 	
 	var name string
 	name, err = apitypes.GetHTTPParameterValue(true, values, "Name")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if name != "" { scanConfig.setNameDeferredUpdate(name) }
 	
 	var desc string
 	desc, err = apitypes.GetHTTPParameterValue(true, values, "Description")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if desc != "" { scanConfig.setDescriptionDeferredUpdate(desc) }
 	
 	var providerName string
 	providerName, err = apitypes.GetHTTPParameterValue(true, values, "ProviderName")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if providerName != "" { scanConfig.setProviderNameDeferredUpdate(providerName) }
 	
 	var successExpr string = ""
 	successExpr, err = apitypes.GetHTTPParameterValue(true, values, "SuccessExpression")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if successExpr != "" { scanConfig.setSuccessExpressionDeferredUpdate(successExpr) }
 	
 	var scanService providers.ScanService
 	scanService = dbClient.Server.GetScanService(scanConfig.getProviderName())
-	if scanService == nil { return apitypes.NewFailureDesc(
+	if scanService == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"Unable to identify a scan service named '" + providerName + "'")
 	}
 	
 	err = dbClient.writeBack(scanConfig)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	// Retrieve and set the provider parameters.
 	for key, valueAr := range values {
 		if strings.HasPrefix(key, "scan.") {
-			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
+			if len(valueAr) != 1 { return apitypes.NewFailureDesc(http.StatusBadRequest,
 				"Parameter " + key + " is ill-formatted")
 			}
 			var paramName string = strings.TrimPrefix(key, "scan.")
 			// See if the parameter is known by the scanner.
 			_, err = scanService.GetParameterDescription(paramName)
-			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+			if err != nil { return apitypes.NewFailureDescFromError(err) }
 			// Create a ParameterValue and attach it to the ScanConfig.
-			if len(valueAr) != 1 { return apitypes.NewFailureDesc(
+			if len(valueAr) != 1 { return apitypes.NewFailureDesc(http.StatusBadRequest,
 				"Value for scan parameter '" + paramName + "' is ill-formed") }
 			var value string = valueAr[0]
 			_, err = scanConfig.setParameterValue(dbClient, paramName, value)
-			if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+			if err != nil { return apitypes.NewFailureDescFromError(err) }
 		}
 	}
 	
@@ -2034,26 +2065,26 @@ func updateScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	var userId string = sessionToken.AuthenticatedUserid
 	var user User
 	user, err = dbClient.dbGetUserByUserId(userId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if user == nil { return apitypes.NewFailureDesc(
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if user == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
 		"Internal error - could not identify user after use has been authenticated") }
 	var imageFilepath string
 	var repo Repo
 	repo, err = dbClient.getRepo(scanConfig.getRepoId())
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	_, imageFilepath, err = captureFile(repo, files)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if imageFilepath != "" { // a file was attached - presume that it is an image
 		fmt.Println("file attached...")
 		var flag Flag
 		flag, err = dbClient.dbCreateFlag(name, desc, repo.getId(), imageFilepath)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		err = scanConfig.setFlagId(dbClient, flag.getId())
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		// Add ACL entry.
 		_, err = dbClient.dbCreateACLEntry(flag.getId(), user.getId(),
 			[]bool{ true, true, true, true, true } )
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 	}
 	
 	return scanConfig.asScanConfigDesc(dbClient)
@@ -2071,11 +2102,11 @@ func getFlagImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	var flagId string
 	var err error
 	flagId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "FlagId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var flag Flag
 	flag, err = dbClient.getFlag(flagId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, flagId,
 		"getFlagImage"); failMsg != nil { return failMsg }
@@ -2097,31 +2128,32 @@ func defineFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	var repoId string
 	var err error
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var name string
 	name, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Name")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var successImagePath string
 	_, successImagePath, err = captureFile(repo, files)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if successImagePath == "" { return apitypes.NewFailureDesc("No file attached") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if successImagePath == "" { return apitypes.NewFailureDesc(
+		http.StatusBadRequest, "No file attached") }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.CreateInMask, repoId,
 		"defineFlag"); failMsg != nil { return failMsg }
 
 	var flag Flag
 	flag, err = dbClient.dbCreateFlag(name, desc, repoId, successImagePath)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return flag.asFlagDesc()
 }
@@ -2138,9 +2170,9 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	var scanConfigId, imageObjId string
 	var err error
 	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println(scanConfigId)
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, imageObjId,
@@ -2150,16 +2182,18 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	
 	var dockerImage DockerImage
 	dockerImage, err = dbClient.getDockerImage(imageObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if dockerImage == nil {
-		return apitypes.NewFailureDesc("Docker image with object Id " + imageObjId + " not found")
+		return apitypes.NewFailureDesc(http.StatusBadRequest,
+			"Docker image with object Id " + imageObjId + " not found")
 	}
 	
 	var scanConfig ScanConfig
 	scanConfig, err = dbClient.getScanConfig(scanConfigId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if scanConfig == nil {
-		return apitypes.NewFailureDesc("Scan Config with object Id " + scanConfigId + " not found")
+		return apitypes.NewFailureDesc(http.StatusBadRequest,
+			"Scan Config with object Id " + scanConfigId + " not found")
 	}
 
 	fmt.Println("Getting scan parameters from configuration")
@@ -2168,7 +2202,7 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	for _, id := range paramValueIds {
 		var paramValue ParameterValue
 		paramValue, err = dbClient.getParameterValue(id)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		params[paramValue.getName()] = paramValue.getStringValue()
 	}
 
@@ -2181,21 +2215,21 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	fmt.Println("Getting scan service...")
 	var scanService providers.ScanService
 	scanService = dbClient.Server.GetScanService(scanProviderName)
-	if scanService == nil { return apitypes.NewFailureDesc(
+	if scanService == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"Unable to identify a scan service named '" + scanProviderName + "'")
 	}
 	var scanContext providers.ScanContext
 	scanContext, err = scanService.CreateScanContext(params)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var imageName string
 	imageName, err = dockerImage.getFullName(dbClient)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var result *providers.ScanResult
 	fmt.Println("Contacting scan service...")
 	
 	// Perform scan.
 	result, err = scanContext.ScanImage(imageName)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println("Scanner service completed")
 	
 	score = fmt.Sprintf("%d", len(result.Vulnerabilities))
@@ -2206,12 +2240,13 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	var userId string = sessionToken.AuthenticatedUserid
 	var user User
 	user, err = dbClient.dbGetUserByUserId(userId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if user == nil { return apitypes.NewFailureDesc("User with Id " + userId + " not found") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if user == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"User with Id " + userId + " not found") }
 	var scanEvent ScanEvent
 	scanEvent, err = dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
 		user.getId(), score, result)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return scanEvent.asScanEventDesc(dbClient)
 }
@@ -2228,11 +2263,11 @@ func getDockerImageStatus(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	var imageObjId string
 	var err error
 	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var image DockerImage
 	image, err = dbClient.getDockerImage(imageObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, imageObjId,
 		"getDockerImageStatus"); failMsg != nil { return failMsg }
@@ -2244,7 +2279,7 @@ func getDockerImageStatus(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	} else {
 		var event ScanEvent
 		event, err = dbClient.getScanEvent(eventId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		return event.asScanEventDesc(dbClient)
 	}
 }
@@ -2261,11 +2296,11 @@ func getScanConfigDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 	var scanConfigId string
 	var err error
 	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var scanConfig ScanConfig
 	scanConfig, err = dbClient.getScanConfig(scanConfigId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, scanConfigId,
 		"getScanConfigDesc"); failMsg != nil { return failMsg }
@@ -2285,11 +2320,11 @@ func getFlagDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var flagId string
 	var err error
 	flagId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "FlagId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var flag Flag
 	flag, err = dbClient.getFlag(flagId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, flagId,
 		"getFlagDesc"); failMsg != nil { return failMsg }
@@ -2310,8 +2345,9 @@ func getUserEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(userId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	if user == nil { return apitypes.NewFailureDesc("Unidentified user, " + userId) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if user == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Unidentified user, " + userId) }
 	var eventIds []string = user.getEventIds()
 	
 	var eventDescs apitypes.EventDescs = make([]apitypes.EventDesc, 0)
@@ -2319,7 +2355,7 @@ func getUserEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 		var event Event
 		var err error
 		event, err = dbClient.getEvent(eventId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		eventDescs = append(eventDescs, event.asEventDesc(dbClient))
 	}
 	
@@ -2338,21 +2374,21 @@ func getDockerImageEvents(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	var imageObjId string
 	var err error
 	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
 		imageObjId, "getDockerImageEvents"); failMsg != nil { return failMsg }
 	
 	var image DockerImage
 	image, err = dbClient.getDockerImage(imageObjId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var eventIds []string = image.getScanEventIds()
 	var eventDescs apitypes.EventDescs = make([]apitypes.EventDesc, 0)
 	for _, eventId := range eventIds {
 		var event Event
 		event, err = dbClient.getEvent(eventId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		eventDescs = append(eventDescs, event.asEventDesc(dbClient))
 	}
 	
@@ -2371,21 +2407,21 @@ func getDockerfileEvents(dbClient *InMemClient, sessionToken *apitypes.SessionTo
 	var dockerfileId string
 	var err error
 	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerfileId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
 		dockerfileId, "getDockerfileEvents"); failMsg != nil { return failMsg }
 	
 	var dockerfile Dockerfile
 	dockerfile, err = dbClient.getDockerfile(dockerfileId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var eventIds []string = dockerfile.getDockerfileExecEventIds()
 	var eventDescs apitypes.EventDescs = make([]apitypes.EventDesc, 0)
 	for _, eventId := range eventIds {
 		var event Event
 		event, err = dbClient.getEvent(eventId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		eventDescs = append(eventDescs, event.asEventDesc(dbClient))
 	}
 	
@@ -2404,29 +2440,29 @@ func getScanConfigDescByName(dbClient *InMemClient, sessionToken *apitypes.Sessi
 	var err error
 	var repoId string
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var configName string
 	configName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigName")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
 		repoId, "getScanConfigDescByName"); failMsg != nil { return failMsg }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	for _, scanConfigId := range repo.getScanConfigIds() {
 		var scanConfig ScanConfig
 		scanConfig, err = dbClient.getScanConfig(scanConfigId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		if scanConfig.getName() == configName {
 			return scanConfig.asScanConfigDesc(dbClient)
 		}
 	}
 	
-	return apitypes.NewFailureDesc("ScanConfig with name " + configName +
+	return apitypes.NewFailureDesc(http.StatusBadRequest, "ScanConfig with name " + configName +
 		" not found in repo " + repo.getName())
 }
 
@@ -2442,21 +2478,21 @@ func remScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	var err error
 	var scanConfigId string
 	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.DeleteMask,
 		scanConfigId, "remScanConfig"); failMsg != nil { return failMsg }
 	
 	var scanConfig ScanConfig
 	scanConfig, err = dbClient.getScanConfig(scanConfigId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(scanConfig.getRepoId())
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 		
 	err = repo.deleteScanConfig(dbClient, scanConfig)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return apitypes.NewResult(200, "Scan config removed")
 }
 
@@ -2472,29 +2508,29 @@ func getFlagDescByName(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 	var err error
 	var repoId string
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var flagName string
 	flagName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "FlagName")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
 		repoId, "getFlagDescByName"); failMsg != nil { return failMsg }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	for _, flagId := range repo.getFlagIds() {
 		var flag Flag
 		flag, err = dbClient.getFlag(flagId)
-		if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		if flag.getName() == flagName {
 			return flag.asFlagDesc()
 		}
 	}
 	
-	return apitypes.NewFailureDesc("Flag with name " + flagName +
+	return apitypes.NewFailureDesc(http.StatusBadRequest, "Flag with name " + flagName +
 		" not found in repo " + repo.getName())
 }
 
@@ -2510,21 +2546,21 @@ func remFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values 
 	var err error
 	var flagId string
 	flagId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "FlagId")
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.DeleteMask,
 		flagId, "remFlag"); failMsg != nil { return failMsg }
 	
 	var flag Flag
 	flag, err = dbClient.getFlag(flagId)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(flag.getRepoId())
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	err = repo.deleteFlag(dbClient, flag)
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return apitypes.NewResult(200, "Flag removed")
 }
 
@@ -2535,35 +2571,27 @@ func remFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values 
 func remDockerImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	fmt.Println("remDockerImage: A")  // debug
 	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
-	fmt.Println("remDockerImage: B")  // debug
 
 	var err error
 	var imageId string
 	imageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageId")
-	fmt.Println("remDockerImage: C")  // debug
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.DeleteMask,
 		imageId, "remDockerImage"); failMsg != nil { return failMsg }
-	fmt.Println("remDockerImage: D")  // debug
 	
 	var image DockerImage
 	image, err = dbClient.getDockerImage(imageId)
-	fmt.Println("remDockerImage: E")  // debug
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var repo Repo
 	repo, err = dbClient.getRepo(image.getRepoId())
-	fmt.Println("remDockerImage: F")  // debug
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("remDockerImage: F1")  // debug
-	if repo == nil { return apitypes.NewFailureDesc("Internal error - repo is nil") }
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if repo == nil { return apitypes.NewFailureDesc(
+		http.StatusInternalServerError, "Internal error - repo is nil") }
 	
 	err = repo.deleteDockerImage(dbClient, image)
-	fmt.Println("remDockerImage: G")  // debug
-	if err != nil { return apitypes.NewFailureDesc(err.Error()) }
-	fmt.Println("remDockerImage: Z")  // debug
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return apitypes.NewResult(200, "Docker image removed")
 }
