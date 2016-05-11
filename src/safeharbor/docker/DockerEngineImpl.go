@@ -172,7 +172,7 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 	var tarFile *os.File
 	var err error
 	var tempDirPath string
-	tempDirPath, err = ioutil.TempDir("", "")
+	tempDirPath, err = utils.MakeTempDir()
 	if err != nil { return "", err }
 	defer os.RemoveAll(tempDirPath)
 	tarFile, err = ioutil.TempFile(tempDirPath, "")

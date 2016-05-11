@@ -213,7 +213,7 @@ func (registry *DockerRegistryImpl) GetImage(repoName string, tag string, filepa
 	}
 	var tarWriter = tar.NewWriter(tarFile)
 	var tempDirPath string
-	tempDirPath, err = ioutil.TempDir("", "")
+	tempDirPath, err = utils.MakeTempDir()
 	if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 		"When creating temp directory for writing layer files: %s", err.Error()))
 	}
@@ -370,7 +370,7 @@ func (registry *DockerRegistryImpl) PushImage(repoName, tag, imageFilePath strin
 	// Create a scratch directory.
 	var tempDirPath string
 	var err error
-	tempDirPath, err = ioutil.TempDir("", "")
+	tempDirPath, err = utils.MakeTempDir()
 	if err != nil { return err }
 	//defer os.RemoveAll(tempDirPath)
 	

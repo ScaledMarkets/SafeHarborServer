@@ -101,7 +101,8 @@ func CreateClairService(params map[string]interface{}) (ScanService, error) {
 	if err != nil { return nil, err }
 	
 	var tempDir string
-	tempDir, err = ioutil.TempDir("", "image-tars-for-clair")
+	tempDir, err = utils.MakeTempDir()
+	//tempDir, err = ioutil.TempDir("", "image-tars-for-clair")
 	if err != nil { return nil, err }
 	fmt.Println("Using dir " + tempDir + " for saving image layers")
 	
@@ -419,7 +420,8 @@ func setClairSessionId(req *http.Request, sessionId string) {
  */
 func saveImageAsTars(imageTarBaseDir, imageName string) (string, error) {
 	
-	fullPath, err := ioutil.TempDir(imageTarBaseDir, "layers")
+	fullPath, err := utils.MakeTempDir()
+	//fullPath, err := ioutil.TempDir(imageTarBaseDir, "layers")
 		if err != nil { return "", err }
 		
 	var stderr bytes.Buffer
