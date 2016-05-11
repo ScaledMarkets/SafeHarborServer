@@ -6,6 +6,7 @@ package utils
 
 import (
 	"io/ioutil"
+	"runtime/debug"
 	
 	// SafeHarbor packages:
 )
@@ -15,5 +16,6 @@ import (
  */
 func MakeTempDir() (string, error) {
 	
+	debug.PrintStack()
 	return ioutil.TempDir("", "safeharbor_")
 }
