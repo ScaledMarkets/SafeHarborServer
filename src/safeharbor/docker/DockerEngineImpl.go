@@ -175,7 +175,7 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 	tempDirPath, err = utils.MakeTempDir()
 	if err != nil { return "", err }
 	defer os.RemoveAll(tempDirPath)
-	tarFile, err = ioutil.TempFile(tempDirPath, "")
+	tarFile, err = utils.MakeTempFile(tempDirPath, "")
 	if err != nil { return "", utils.ConstructServerError(fmt.Sprintf(
 		"When creating temp file '%s': %s", tarFile.Name(), err.Error()))
 	}

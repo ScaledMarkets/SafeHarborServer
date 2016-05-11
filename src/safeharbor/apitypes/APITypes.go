@@ -271,7 +271,7 @@ func NewGroupDesc(groupId, realmId, groupName, desc string, creationDate time.Ti
 }
 
 func (groupDesc *GroupDesc) AsJSON() string {
-	return fmt.Sprintf(" {%s, \"RealmId\": \"%s\", \"GroupName\": \"%s\", \"CreationDate\": %s, \"GroupId\": \"%s\", \"Description\": \"%s\"}",
+	return fmt.Sprintf(" {%s, \"RealmId\": \"%s\", \"Name\": \"%s\", \"CreationDate\": %s, \"Id\": \"%s\", \"Description\": \"%s\"}",
 		groupDesc.baseTypeFieldsAsJSON(),
 		groupDesc.RealmId, groupDesc.GroupName, groupDesc.CreationDate, groupDesc.GroupId, groupDesc.Description)
 }
@@ -371,7 +371,7 @@ func NewUserDesc(id, userId, userName, realmId string, canModRealms []string) *U
 }
 
 func (userDesc *UserDesc) AsJSON() string {
-	var response string = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"UserId\": \"%s\", \"UserName\": \"%s\", \"RealmId\": \"%s\", \"CanModifyTheseRealms\": [",
+	var response string = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"UserId\": \"%s\", \"Name\": \"%s\", \"RealmId\": \"%s\", \"CanModifyTheseRealms\": [",
 		userDesc.baseTypeFieldsAsJSON(),
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId)
 	for i, adminRealmId := range userDesc.CanModifyTheseRealms {
@@ -421,7 +421,7 @@ func NewRealmDesc(id string, name string, orgName string, adminUserId string) *R
 }
 
 func (realmDesc *RealmDesc) AsJSON() string {
-	return fmt.Sprintf(" {%s, \"Id\": \"%s\", \"RealmName\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
+	return fmt.Sprintf(" {%s, \"Id\": \"%s\", \"Name\": \"%s\", \"OrgFullName\": \"%s\", \"AdminUserId\": \"%s\"}",
 		realmDesc.baseTypeFieldsAsJSON(),
 		realmDesc.Id, realmDesc.RealmName, realmDesc.OrgFullName, realmDesc.AdminUserId)
 }
@@ -511,7 +511,7 @@ func NewRepoDesc(id string, realmId string, name string, desc string,
 
 func (repoDesc *RepoDesc) AsJSON() string {
 	var resp string = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"RealmId\": \"%s\", " +
-		"\"RepoName\": \"%s\", \"Description\": \"%s\", \"CreationDate\": %s, " +
+		"\"Name\": \"%s\", \"Description\": \"%s\", \"CreationDate\": %s, " +
 		"\"DockerfileIds\": [",
 		repoDesc.baseTypeFieldsAsJSON(),
 		repoDesc.Id, repoDesc.RealmId, repoDesc.RepoName, repoDesc.Description,
@@ -563,7 +563,7 @@ func NewDockerfileDesc(id string, repoId string, name string, desc string) *Dock
 }
 
 func (dockerfileDesc *DockerfileDesc) AsJSON() string {
-	return fmt.Sprintf(" {%s, \"Id\": \"%s\", \"RepoId\": \"%s\", \"DockerfileName\": \"%s\", \"Description\": \"%s\"}",
+	return fmt.Sprintf(" {%s, \"Id\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", \"Description\": \"%s\"}",
 		dockerfileDesc.baseTypeFieldsAsJSON(),
 		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.DockerfileName, dockerfileDesc.Description)
 }
@@ -772,7 +772,7 @@ func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc 
 }
 
 func (scanProviderDesc *ScanProviderDesc) AsJSON() string {
-	var response string = fmt.Sprintf(" {%s, \"ProviderName\": \"%s\", \"Parameters\": [",
+	var response string = fmt.Sprintf(" {%s, \"Name\": \"%s\", \"Parameters\": [",
 		scanProviderDesc.baseTypeFieldsAsJSON(), scanProviderDesc.ProviderName)
 	var firstTime bool = true
 	for _, paramInfo := range scanProviderDesc.Parameters {

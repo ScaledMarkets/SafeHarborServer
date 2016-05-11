@@ -5,9 +5,10 @@
 package utils
 
 import (
-	"fmt"
+	//"fmt"
 	"io/ioutil"
-	"runtime/debug"
+	"os"
+	//"runtime/debug"
 	
 	// SafeHarbor packages:
 )
@@ -17,7 +18,9 @@ import (
  */
 func MakeTempDir() (string, error) {
 	
-	fmt.Println("MakeTempDir----------------------")
-	debug.PrintStack()
 	return ioutil.TempDir("", "safeharbor_")
+}
+
+func MakeTempFile(dirpath, prefix string) (*os.File, error) {
+	return ioutil.TempFile(dirpath, prefix)
 }

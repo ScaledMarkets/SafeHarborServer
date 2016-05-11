@@ -247,7 +247,7 @@ func (registry *DockerRegistryImpl) GetImage(repoName string, tag string, filepa
 
 		// Create temporary file in which to write layer.
 		var layerFile *os.File
-		layerFile, err = ioutil.TempFile(tempDirPath, digest)
+		layerFile, err = utils.MakeTempFile(tempDirPath, digest)
 		if err != nil { return utils.ConstructServerError(fmt.Sprintf(
 			"When creating layer file: %s", err.Error()))
 		}

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 	"io"
-	"io/ioutil"
+	//"io/ioutil"
 	"bufio"
 	"strings"
 	"encoding/json"
@@ -136,7 +136,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	if err != nil { return outputStr, err }
 	defer os.RemoveAll(tempDirPath2)
 	var imageFile *os.File
-	imageFile, err = ioutil.TempFile(tempDirPath2, "")
+	imageFile, err = utils.MakeTempFile(tempDirPath2, "")
 	if err != nil { return outputStr, err }
 	var imageFilePath = imageFile.Name()
 	err = dockerSvcs.Engine.GetImage(imageFullName, imageFilePath)
@@ -444,7 +444,7 @@ func (dockerSvcs *DockerServices) SaveImage(imageNamespace, imageName, tag strin
 	fmt.Println("Creating temp file to save the image to...")
 	var tempFile *os.File
 	var err error
-	tempFile, err = ioutil.TempFile("", "")
+	tempFile, err = utils.MakeTempFile("", "")
 	// TO DO: Is the above a security issue?
 	if err != nil { return "", err }
 	var tempFilePath = tempFile.Name()
