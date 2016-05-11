@@ -477,7 +477,7 @@ func (dockerSvcs *DockerServices) RemoveDockerImage(imageName, tag string) error
 	if err != nil { return err }
 	
 	// Delete local engine copy as well, if it exists.
-	err = dockerSvcs.Engine.DeleteImage(imageName)
+	err = dockerSvcs.Engine.DeleteImage(imageName + ":" + tag)
 	return err
 }
 
