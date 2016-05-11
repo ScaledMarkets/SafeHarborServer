@@ -8,5 +8,5 @@ type DockerEngine interface {
 	BuildImage(buildDirPath, imageFullName string, dockerfileName string) (string, error)
 	TagImage(imageName, hostAndRepoName, tag string) error
 	PushImage(repoFullName, tag, regUserId, regPass, regEmail string) error
-	DeleteImage(imageName string) error
+	DeleteImage(repoName, tag string) error
 }

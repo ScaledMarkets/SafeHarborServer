@@ -467,17 +467,17 @@ func GetDigest(imageId string) ([]byte, error) {
 /*******************************************************************************
  * 
  */
-func (dockerSvcs *DockerServices) RemoveDockerImage(imageName, tag string) error {
+func (dockerSvcs *DockerServices) RemoveDockerImage(repoName, tag string) error {
 	
 	// Delete from registry.
 	var err error
 	if dockerSvcs.Registry != nil {
-		err = dockerSvcs.Registry.DeleteImage(imageName, tag)
+		err = dockerSvcs.Registry.DeleteImage(repoName, tag)
 	}
 	if err != nil { return err }
 	
 	// Delete local engine copy as well, if it exists.
-	err = dockerSvcs.Engine.DeleteImage(imageName + ":" + tag)
+	err = dockerSvcs.Engine.DeleteImage(repoName, tag)
 	return err
 }
 

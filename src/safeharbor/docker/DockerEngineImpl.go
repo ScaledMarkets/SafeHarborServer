@@ -293,9 +293,10 @@ func (engine *DockerEngineImpl) PushImage(repoFullName, tag, regUserId, regPass,
 /*******************************************************************************
  * 
  */
-func (engine *DockerEngineImpl) DeleteImage(imageName string) error {
+func (engine *DockerEngineImpl) DeleteImage(repoName, tag string) error {
 	
-	var uri = "images/" + imageName
+	var uri = "images/" + repoName
+	if tag != "" { uri = uri + ":" + tag }
 	var response *http.Response
 	var err error
 	response, err = engine.SendBasicDelete(uri)
