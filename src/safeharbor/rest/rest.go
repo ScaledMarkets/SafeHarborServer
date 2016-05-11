@@ -134,6 +134,7 @@ func (restContext *RestContext) SendBasicDelete(reqName string) (*http.Response,
 	var resp *http.Response
 	var request *http.Request
 	var err error
+	fmt.Println("SendBasicDelete: urlstr=" + urlstr)  // debug
 	request, err = http.NewRequest("DELETE", urlstr, nil)
 	if err != nil { return nil, err }
 	resp, err = restContext.httpClient.Do(request)
