@@ -298,6 +298,7 @@ func (engine *DockerEngineImpl) DeleteImage(imageName string) error {
 	var uri = "images/" + imageName
 	var response *http.Response
 	var err error
+	fmt.Println("DeleteImage: uri=" + uri)  // debug
 	response, err = engine.SendBasicDelete(uri)
 	if err != nil { return err }
 	return utils.GenerateError(response.StatusCode, response.Status)
