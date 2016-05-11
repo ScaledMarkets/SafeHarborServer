@@ -87,6 +87,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	// Create a temporary directory to serve as the build context.
 	var tempDirPath string
 	tempDirPath, err = utils.MakeTempDir()
+	if err != nil { return "", err }
 	//....TO DO: Is the above a security problem? Do we need to use a private
 	// directory? I think so.
 	defer func() {
@@ -132,6 +133,8 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	// Obtain image as a file.
 	var tempDirPath2 string
 	tempDirPath2, err = utils.MakeTempDir()
+	if err != nil { return outputStr, err }
+	defer os.RemoveAll(tempDirPath2)
 	var imageFile *os.File
 	imageFile, err = ioutil.TempFile(tempDirPath2, "")
 	if err != nil { return outputStr, err }
