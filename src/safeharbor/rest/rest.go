@@ -85,7 +85,7 @@ func (restContext *RestContext) GetPort() int { return restContext.port }
 
 func (restContext *RestContext) GetUserId() string { return restContext.UserId }
 
-func (restContext *RestContext) getPassword() string { return restContext.Password }
+func (restContext *RestContext) GetPassword() string { return restContext.Password }
 
 /*******************************************************************************
  * Send a GET request to the SafeHarborServer, at the specified REST endpoint method
@@ -160,7 +160,7 @@ func (restContext *RestContext) SendBasicFormPost(reqName string, names []string
 		resp, err = restContext.httpClient.PostForm(urlstr, data)
 		if err != nil { return nil, err }
 		switch resp.StatusCode {
-			case 200,201: return resp, nil
+			case 200,201,202: return resp, nil
 			case 301,302,303,307,308: 
 				var newLocation = resp.Header["Location"][0]
 				if newLocation == "" { return nil, errors.New("Empty location on redirect") }
@@ -266,9 +266,9 @@ func (restContext *RestContext) SendBasicStreamReq(method string, reqName string
 	
 	// Submit the request
 	var response *http.Response
-	fmt.Println("SendBasicStreamPost: url='" + url + "'")
+	fmt.Println("SendBasicStreamReq: url='" + url + "'")
 	response, err = restContext.httpClient.Do(request)
-	fmt.Println("SendBasicStreamPost: response Status='" + response.Status + "'")
+	fmt.Println("SendBasicStreamReq: response Status='" + response.Status + "'")
 	if err != nil { return nil, err }
 
 	return response, nil

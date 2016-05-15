@@ -10,6 +10,6 @@ type DockerRegistry interface {
 	GetImage(repoName, tag, filepath string) error
 	DeleteImage(repoName, tag string) error
 	PushImage(repoName, tag, imageFilePath string) error
-	PushLayer(layerFilePath, repoName, digestString string) error
+	PushLayer(layerFilePath, repoName string) (string, error)
 	PushManifest(repoName, tag, imageDigestString string, layerDigestStrings []string) error
 }
