@@ -15,6 +15,7 @@ import (
 	//"errors"
 	"crypto/sha512"
 	"hash"
+	"encoding/hex"
 	
 	"safeharbor/apitypes"
 	"safeharbor/utils"
@@ -53,7 +54,14 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
  * is used.
  */
 func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
-	return authSvc.computeHash(pswd).Sum([]byte{})
+	
+	var h []byte = authSvc.computeHash(pswd).Sum([]byte{})
+
+	
+	fmt.Println("CreatePasswordHash: pswd=" + pswd + ", hash=" + hex.EncodeToString(h))  // debug
+	
+	
+	return h
 }
 
 /*******************************************************************************
