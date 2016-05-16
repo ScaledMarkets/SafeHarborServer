@@ -105,8 +105,8 @@ func (persist *Persistence) NewTxnContext() (TxnContext, error) {
 }
 
 /*******************************************************************************
- * Delete all persistent data - but do not delete data that is in another repository
- * such as a docker registry.
+ * Delete all persistent data - but do not delete in-memory data or data that is
+ * in another repository such as a docker registry.
  */
 func (persist *Persistence) resetPersistentState() error {
 	
@@ -125,8 +125,10 @@ func (persist *Persistence) resetPersistentState() error {
 	os.Mkdir(persist.Server.Config.FileRepoRootPath, 0770)
 	
 	// Clear redis.
-	err = persist.clearDatabase()
-	if err != nil { return err }
+	if ! persist.InMemoryOnly {
+		err = persist.clearDatabase()
+		if err != nil { return err }
+	}
 
 	fmt.Println("Repository initialized")
 	return nil
@@ -421,14 +423,6 @@ func (persist *Persistence) addUser(txn TxnContext, user User) error {
 	}
 }
 
-
-
-/*******************************************************************************
-								Internal methods
-*******************************************************************************/
-
-
-
 /*******************************************************************************
  * Initilize the client object. This can be called later to reset the client''s
  * state (i.e., to erase all objects).
@@ -437,8 +431,10 @@ func (persist *Persistence) init() error {
 	
 	persist.resetInMemoryState()
 	
-	var err = persist.loadCoreData()
-	if err != nil { return utils.ConstructServerError("Unable to load database state: " + err.Error()) }
+	if persist.InMemoryOnly {
+		var err = persist.loadCoreData()
+		if err != nil { return utils.ConstructServerError("Unable to load database state: " + err.Error()) }
+	}
 	
 	/*
 	if persist.Server.Debug {
@@ -452,6 +448,14 @@ func (persist *Persistence) init() error {
 	
 	return nil
 }
+
+
+
+/*******************************************************************************
+								Internal methods
+*******************************************************************************/
+
+
 
 /*******************************************************************************
  * Load core database state.
