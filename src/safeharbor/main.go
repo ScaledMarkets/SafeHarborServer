@@ -15,17 +15,17 @@ import (
 
 func main() {
 	
+	var help *bool = flag.Bool("help", false, "Provide help instructions.")
 	var debug *bool = flag.Bool("debug", false, "Run in debug mode: this enables the clearAll REST method.")
 	var nocache *bool = flag.Bool("nocache", false, "Always refresh objects from the database.")
 	var stubScanners *bool = flag.Bool("stubs", false, "Use stubs for scanners.")
 	var noauthor *bool = flag.Bool("noauthorization", false, "Disable authorization: access control lists are ignored.")
-	var help *bool = flag.Bool("help", false, "Provide help instructions.")
-	var publicHostname *string = flag.String("host", "", "The public host name or IP address of the server")
+	var publicHostname *string = flag.String("host", "", "The public host name or IP address of the server or load balancer, for reaching SafeHarborServer across the Internet.")
 	var port *int = flag.Int("port", 0, "The TCP port on which the SafeHarborServer should listen. If not set, then the value is taken from the conf.json file.")
-	var adapter *string = flag.String("adapter", "", "Network adapter to use (e.g., eth0)")
+	var adapter *string = flag.String("adapter", "", "Network adapter to use (e.g., eth0). If not set, then the value is taken from the conf.json file.")
 	var secretSalt *string = flag.String("secretkey", "", "Secret value to make session hashes unpredictable.")
 	var inMemoryOnly *bool = flag.Bool("inmem", false, "Do not persist the data")
-	var noRegistry *bool = flag.Bool("noregistry", false, "Do not use docker registry - use local docker instead")
+	var noRegistry *bool = flag.Bool("noregistry", false, "Do not use docker registry for managing images - use docker daemon instead.")
 	var logfilepath *string = flag.String("logfile", "", "Write all stdout and stderr to file instead of console")
 
 	flag.Parse()

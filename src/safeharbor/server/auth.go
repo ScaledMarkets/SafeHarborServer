@@ -7,7 +7,7 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"os"
+	//"os"
 	"strings"
 	//"crypto/tls"
 	"crypto/x509"

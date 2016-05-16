@@ -699,7 +699,8 @@ func (registry *DockerRegistryImpl) PushManifest(repoName, tag, imageDigestStrin
 	// Info on JSON Web Tokens:
 	// https://jwt.io/introduction/
 	// https://tools.ietf.org/html/rfc7515
-	
+	// Issue posted to github docker/distribution project:
+	// https://github.com/docker/distribution/pull/1702#issuecomment-219178800
 	
 	
 	for i, layerDigestString := range layerDigestStrings {

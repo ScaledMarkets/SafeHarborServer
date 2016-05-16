@@ -67,14 +67,21 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	fmt.Println("Image name =", imageName)
 	
 	// Check if an image with that name already exists.
+	var dockerImageName, tag string
+	dockerImageName, tag = dockerSvcs.ConstructDockerImageName(realmName, repoName, imageName)
 	var exists bool = false
 	var err error = nil
-	if dockerSvcs.Registry != nil {
-		var dockerImageName, tag string
-		dockerImageName, tag = dockerSvcs.ConstructDockerImageName(realmName, repoName, imageName)
+	if dockerSvcs.Registry == nil {  // no registry
+		// Check if image exists in engine.
+		var fullName = dockerImageName
+		if imageName != "" { fullName = fullName + ":" + imageName }
+		_, err = dockerSvcs.Engine.GetImageInfo(imageName)
+		if err == nil { exists = true }
+	} else {
 		exists, err = dockerSvcs.Registry.ImageExists(dockerImageName, tag)
 		//exists, err = dockerSvcs.Registry.ImageExists(realmName + "/" + repoName, imageName)
 	}
+	
 	if exists {
 		return "", utils.ConstructUserError(
 			"Image with name " + realmName + "/" + repoName + ":" + imageName + " already exists.")
@@ -125,51 +132,51 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName, dockerfileName)
 	if err != nil { return outputStr, err }
 	
-	// Push new image to registry. Use the engine's push image feature.
-	// Have not been able to get the engine push command to work. The docker client
-	// end up reporting "Pull session cancelled".
-	//err = dockerSvcs.Engine.PushImage(imageRegistryTag)
-	
-	// Obtain image as a file.
-	var tempDirPath2 string
-	tempDirPath2, err = utils.MakeTempDir()
-	if err != nil { return outputStr, err }
-	defer os.RemoveAll(tempDirPath2)
-	var imageFile *os.File
-	imageFile, err = utils.MakeTempFile(tempDirPath2, "")
-	if err != nil { return outputStr, err }
-	var imageFilePath = imageFile.Name()
-	err = dockerSvcs.Engine.GetImage(imageFullName, imageFilePath)
-	if err != nil { return outputStr, err }
-	
-	// Obtain the image digest.
-	var info map[string]interface{}
-	info, err = dockerSvcs.Engine.GetImageInfo(imageFullName)
-	if err != nil { return outputStr, err }
-	var digest = info["Id"]
-	var digestString string
-	var isType bool
-	digestString, isType = digest.(string)
-	if digest == nil {
-		fmt.Println("Digest is nil; map returned from GetImageInfo:")
-		rest.PrintMap(info)
-		return outputStr, utils.ConstructServerError("Digest is nil") }
-	if ! isType { return outputStr, utils.ConstructServerError(
-		"checksum is not a string: it is a " + reflect.TypeOf(digest).String())
-	}
-	if digestString == "" { return outputStr, utils.ConstructServerError(
-		"No checksum field found for image")
-	}
-	
-	// Push image to registry - all layers and manifest.
-	if dockerSvcs.Registry != nil {
+	if dockerSvcs.Registry != nil {  // no registry
+		// Push new image to registry. Use the engine's push image feature.
+		// Have not been able to get the engine push command to work. The docker client
+		// end up reporting "Pull session cancelled".
+		//err = dockerSvcs.Engine.PushImage(imageRegistryTag)
+		
+		// Obtain image as a file.
+		var tempDirPath2 string
+		tempDirPath2, err = utils.MakeTempDir()
+		if err != nil { return outputStr, err }
+		defer os.RemoveAll(tempDirPath2)
+		var imageFile *os.File
+		imageFile, err = utils.MakeTempFile(tempDirPath2, "")
+		if err != nil { return outputStr, err }
+		var imageFilePath = imageFile.Name()
+		err = dockerSvcs.Engine.GetImage(imageFullName, imageFilePath)
+		if err != nil { return outputStr, err }
+		
+		// Obtain the image digest.
+		var info map[string]interface{}
+		info, err = dockerSvcs.Engine.GetImageInfo(imageFullName)
+		if err != nil { return outputStr, err }
+		var digest = info["Id"]
+		var digestString string
+		var isType bool
+		digestString, isType = digest.(string)
+		if digest == nil {
+			fmt.Println("Digest is nil; map returned from GetImageInfo:")
+			rest.PrintMap(info)
+			return outputStr, utils.ConstructServerError("Digest is nil") }
+		if ! isType { return outputStr, utils.ConstructServerError(
+			"checksum is not a string: it is a " + reflect.TypeOf(digest).String())
+		}
+		if digestString == "" { return outputStr, utils.ConstructServerError(
+			"No checksum field found for image")
+		}
+		
+		// Push image to registry - all layers and manifest.
 		var dockerImageName, tag string
 		dockerImageName, tag = dockerSvcs.ConstructDockerImageName(realmName, repoName, imageName)
 		err = dockerSvcs.Registry.PushImage(dockerImageName, tag, imageFilePath)
 		if err != nil { return outputStr, err }
 		
 		// Tag the uploaded image with its name.
-//		err = dockerSvcs.Registry.TagImage(digestString, ....repoName, ....tag)
+		//err = dockerSvcs.Registry.TagImage(digestString, ....repoName, ....tag)
 		if err != nil { return outputStr, err }
 	}
 	
@@ -379,6 +386,116 @@ func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
 }
 
 /*******************************************************************************
+ * Retrieve the specified image from the registry and store it in a file.
+ * Return the file path.
+ */
+func (dockerSvcs *DockerServices) SaveImage(imageNamespace, imageName, tag string) (string, error) {
+
+	fmt.Println("Creating temp file to save the image to...")
+	var tempFile *os.File
+	var err error
+	tempFile, err = utils.MakeTempFile("", "")
+	// TO DO: Is the above a security issue?
+	if err != nil { return "", err }
+	var tempFilePath = tempFile.Name()
+	
+	var imageFullName string
+	if imageNamespace == "" {
+		imageFullName = imageName
+	} else {
+		imageFullName = imageNamespace + "/" + imageName
+	}
+
+	if dockerSvcs.Registry == nil {  // no registry
+		
+		var repoNameAndTag = imageFullName
+		if tag != "" { repoNameAndTag = repoNameAndTag + ":" + tag }
+		err = dockerSvcs.Engine.GetImage(repoNameAndTag, tempFilePath)
+		if err != nil { return "", err }
+		
+	} else {
+	
+		err = dockerSvcs.Registry.GetImage(imageFullName, tag, tempFilePath)
+		if err != nil { return "", err }
+	}
+	
+	return tempFilePath, nil
+}
+
+/*******************************************************************************
+ * Return the hash of the specified Docker image, as computed by the file''s registry.
+ */
+func GetDigest(imageId string) ([]byte, error) {
+	return []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func (dockerSvcs *DockerServices) RemoveDockerImage(repoName, tag string) error {
+	
+	// Delete from registry.
+	var err error
+	err = dockerSvcs.Engine.DeleteImage(repoName, tag)
+	if dockerSvcs.Registry != nil {
+		err = dockerSvcs.Registry.DeleteImage(repoName, tag)
+	}
+	if err != nil { return err }
+	
+	// Delete local engine copy as well, if it exists.
+	return nil
+}
+
+/*******************************************************************************
+ * Check that repository name component matches "[a-z0-9]+(?:[._-][a-z0-9]+)*".
+ * I.e., first char is a-z or 0-9, and remaining chars (if any) are those or
+ * a period, underscore, or dash. If rules are satisfied, return nil; otherwise,
+ * return an error.
+ */
+func NameConformsToDockerRules(name string) error {
+	var a = strings.TrimLeft(name, "abcdefghijklmnopqrstuvwxyz0123456789")
+	var b = strings.TrimRight(a, "abcdefghijklmnopqrstuvwxyz0123456789._-")
+	if len(b) == 0 { return nil }
+	return utils.ConstructUserError("Name '" + name + "' does not conform to docker name rules: " +
+		"[a-z0-9]+(?:[._-][a-z0-9]+)*  Offending fragment: '" + b + "'")
+}
+
+/*******************************************************************************
+ * 
+ */
+func (dockerSvcs *DockerServices) ConstructDockerImageName(shRealmName,
+	shRepoName, shImageName string) (imageName, tag string) {
+
+	return (shRealmName + "/" + shRepoName), shImageName
+}
+
+
+
+/*******************************************************************************
+								Internal methods
+*******************************************************************************/
+
+
+
+/*******************************************************************************
+ * Verify that the specified image name is valid, for an image stored within
+ * the SafeHarborServer repository. Local images must be of the form,
+     NAME[:TAG]
+ */
+func localDockerImageNameIsValid(name string) bool {
+	var parts [] string = strings.Split(name, ":")
+	if len(parts) > 2 { return false }
+	
+	for _, part := range parts {
+		matched, err := regexp.MatchString("^[a-zA-Z0-9\\-_]*$", part)
+		if err != nil { panic(utils.ConstructServerError("Unexpected internal error")) }
+		if ! matched { return false }
+	}
+	
+	return true
+}
+
+/*******************************************************************************
  * The docker daemon build function - a REST function - returns a series of
  * JSON objects that encode the output stream of the build operation. We need to
  * parse the JSON and extract/decode the build operation output stream.
@@ -431,96 +548,4 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	}
 	
 	return output, nil
-}
-
-/*******************************************************************************
- * Retrieve the specified image from the registry and store it in a file.
- * Return the file path.
- */
-func (dockerSvcs *DockerServices) SaveImage(imageNamespace, imageName, tag string) (string, error) {
-	
-	if dockerSvcs.Registry == nil { return "", utils.ConstructServerError("No registry") }
-	
-	fmt.Println("Creating temp file to save the image to...")
-	var tempFile *os.File
-	var err error
-	tempFile, err = utils.MakeTempFile("", "")
-	// TO DO: Is the above a security issue?
-	if err != nil { return "", err }
-	var tempFilePath = tempFile.Name()
-	
-	var imageFullName string
-	if imageNamespace == "" {
-		imageFullName = imageName
-	} else {
-		imageFullName = imageNamespace + "/" + imageName
-	}
-	err = dockerSvcs.Registry.GetImage(imageFullName, tag, tempFilePath)
-	if err != nil { return "", err }
-	return tempFilePath, nil
-}
-
-/*******************************************************************************
- * Return the hash of the specified Docker image, as computed by the file''s registry.
- */
-func GetDigest(imageId string) ([]byte, error) {
-	return []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nil
-}
-
-/*******************************************************************************
- * 
- */
-func (dockerSvcs *DockerServices) RemoveDockerImage(repoName, tag string) error {
-	
-	// Delete from registry.
-	var err error
-	if dockerSvcs.Registry != nil {
-		err = dockerSvcs.Registry.DeleteImage(repoName, tag)
-	}
-	if err != nil { return err }
-	
-	// Delete local engine copy as well, if it exists.
-	err = dockerSvcs.Engine.DeleteImage(repoName, tag)
-	return err
-}
-
-/*******************************************************************************
- * Check that repository name component matches "[a-z0-9]+(?:[._-][a-z0-9]+)*".
- * I.e., first char is a-z or 0-9, and remaining chars (if any) are those or
- * a period, underscore, or dash. If rules are satisfied, return nil; otherwise,
- * return an error.
- */
-func NameConformsToDockerRules(name string) error {
-	var a = strings.TrimLeft(name, "abcdefghijklmnopqrstuvwxyz0123456789")
-	var b = strings.TrimRight(a, "abcdefghijklmnopqrstuvwxyz0123456789._-")
-	if len(b) == 0 { return nil }
-	return utils.ConstructUserError("Name '" + name + "' does not conform to docker name rules: " +
-		"[a-z0-9]+(?:[._-][a-z0-9]+)*  Offending fragment: '" + b + "'")
-}
-
-/*******************************************************************************
- * 
- */
-func (dockerSvcs *DockerServices) ConstructDockerImageName(shRealmName,
-	shRepoName, shImageName string) (imageName, tag string) {
-
-	return (shRealmName + "/" + shRepoName), shImageName
-}
-
-/*******************************************************************************
- * Verify that the specified image name is valid, for an image stored within
- * the SafeHarborServer repository. Local images must be of the form,
-     NAME[:TAG]
- */
-func localDockerImageNameIsValid(name string) bool {
-	var parts [] string = strings.Split(name, ":")
-	if len(parts) > 2 { return false }
-	
-	for _, part := range parts {
-		matched, err := regexp.MatchString("^[a-zA-Z0-9\\-_]*$", part)
-		if err != nil { panic(utils.ConstructServerError("Unexpected internal error")) }
-		if ! matched { return false }
-	}
-	
-	return true
 }
