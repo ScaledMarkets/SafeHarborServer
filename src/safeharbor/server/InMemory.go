@@ -29,7 +29,7 @@ import (
 	"time"
 	"strings"
 	"runtime/debug"	
-	"encoding/hex"
+	//"encoding/hex"
 	
 	//"goredis"
 	
@@ -1122,11 +1122,6 @@ func (user *InMemUser) validatePassword(dbClient DBClient, pswd string) bool {
 	var empty = []byte{}
 	var authService = dbClient.getServer().authService
 	var prospectiveHash []byte = authService.computeHash(pswd).Sum(empty)
-	
-	
-	fmt.Println("validatePassword: pswd=" + pswd + ", hash=" + hex.EncodeToString(prospectiveHash))  // debug
-	
-	
 	return authService.compareHashValues(prospectiveHash, user.PasswordHash)
 }
 

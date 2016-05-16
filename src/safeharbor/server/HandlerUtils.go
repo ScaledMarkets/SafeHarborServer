@@ -333,7 +333,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
 	
 	var digest []byte
-	digest, err = docker.GetDigest(dockerImageId)
+	digest, err = docker.GetSignature(dockerImageId)
 	if err != nil { return nil, err }
 	
 	// Add a record for the image to the database.

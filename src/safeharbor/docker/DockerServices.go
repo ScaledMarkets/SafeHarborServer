@@ -425,7 +425,7 @@ func (dockerSvcs *DockerServices) SaveImage(imageNamespace, imageName, tag strin
 /*******************************************************************************
  * Return the hash of the specified Docker image, as computed by the file''s registry.
  */
-func GetDigest(imageId string) ([]byte, error) {
+func GetSignature(imageId string) ([]byte, error) {
 	return []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nil
 }
 

@@ -10,7 +10,7 @@ source $( dirname "${BASH_SOURCE[0]}" )/env.sh
 #sudo docker run --name=postgres -e POSTGRES_PASSWORD=4word2day -d postgres
 #sudo docker run --link postgres -p 6060:6060 -p 6061:6061 -v /home/centos:/config:ro quay.io/coreos/clair:latest --config=/config/clairconfig.yaml
 #sudo nohup bin/safeharbor -debug -stubs -inmem -secretkey=jafakeu9s3ls -noregistry -host=52.38.155.244 < /dev/null &
-#sudo bin/safeharbor -debug -stubs -inmem -secretkey=jafakeu9s3ls -noregistry -host=52.39.197.94
+sudo nohup bin/safeharbor -debug -stubs -secretkey=jafakeu9s3ls -noregistry -host=52.11.24.124 > log.out 2> log.err < /dev/null &
 
 sudo docker run -i -t --net=host -p $SafeHarborPort:$SafeHarborPort \
 	-v $DataVolMountPoint:/safeharbor/data \
