@@ -327,8 +327,8 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var paramNames = make([]string, len(paramPairs))
 	var paramValues = make([]string, len(paramPairs))
 	for i, paramPair := range paramPairs {
-		var parts = strings.Split(paramPair)
-		if len(parts) != 2 { return nil, utils.ConstructError("Ill-formed param string") }
+		var parts = strings.Split(paramPair, ":")
+		if len(parts) != 2 { return nil, utils.ConstructUserError("Ill-formed param string") }
 		paramNames[i] = parts[0]
 		paramValues[i] = parts[1]
 	}

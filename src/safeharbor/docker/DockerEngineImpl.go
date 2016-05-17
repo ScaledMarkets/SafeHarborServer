@@ -161,7 +161,7 @@ func (engine *DockerEngineImpl) GetImage(repoNameAndTag, filepath string) error 
 func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 	dockerfileName string, paramNames, paramValues []string) (string, error) {
 
-	if len(paramNames) != len(paramValues) { return "", utils.ConstructError(
+	if len(paramNames) != len(paramValues) { return "", utils.ConstructServerError(
 		"Mismatch in number of param names and values") }
 	
 	// https://docs.docker.com/engine/reference/api/docker_remote_api_v1.23/#build-image-from-a-dockerfile
