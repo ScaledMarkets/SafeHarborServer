@@ -159,8 +159,11 @@ func (engine *DockerEngineImpl) GetImage(repoNameAndTag, filepath string) error 
  * response from the docker engine is returned.
  */
 func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
-	dockerfileName string) (string, error) {
+	dockerfileName string, paramNames, paramValues []string) (string, error) {
 
+	if len(paramNames) != len(paramValues) { return "", utils.ConstructError(
+		"Mismatch in number of param names and values") }
+	
 	// https://docs.docker.com/engine/reference/api/docker_remote_api_v1.23/#build-image-from-a-dockerfile
 	// POST /build HTTP/1.1
 	//
@@ -168,6 +171,9 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 	
 	// See also the docker command line code, in docker/vendor/src/github.com/docker/engine-api/client/image_build.go:
 	// https://github.com/docker/docker/blob/7fd53f7c711474791ce4292326e0b1dc7d4d6b0f/vendor/src/github.com/docker/engine-api/client/image_build.go
+	
+	// For SSH key injection, see https://github.com/mdsol/docker-ssh-exec
+	// See also http://elasticcompute.io/2016/01/22/build-time-secrets-with-docker-containers/
 	
 	// Create a temporary tar file of the build directory contents.
 	var tarFile *os.File
@@ -221,9 +227,23 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 	var headers = make(map[string]string)
 	headers["Content-Type"] = "application/tar"
 	headers["X-Registry-Config"] = base64.URLEncoding.EncodeToString([]byte("{}"))
+	var queryParamString = fmt.Sprintf("build?t=%s&dockerfile=%s", imageFullName, dockerfileName)
+	if len(paramNames) > 0 {
+		// Disable cache if there are build params, because they might be secret values
+		// and they would be maintained in the cache.
+		queryParamString = queryParamString + "&" + "nocache"
+		
+		// Add params to request. See
+		// https://github.com/docker/docker/blob/master/docs/reference/api/docker_remote_api_v1.24.md#build-image-from-a-dockerfile
+		queryParamString = queryParamString + "&buildargs={"
+		for i, paramName := range paramNames {
+			if i > 0 { queryParamString = queryParamString + ", " }
+			queryParamString = queryParamString + fmt.Sprintf("\"%s\": \"%s\"", paramName, paramValues[i])
+		}
+		queryParamString = queryParamString + "}"
+	}
 	var response *http.Response
-	response, err = engine.SendBasicStreamPost(
-		fmt.Sprintf("build?t=%s&dockerfile=%s", imageFullName, dockerfileName), headers, tarReader)
+	response, err = engine.SendBasicStreamPost(queryParamString, headers, tarReader)
 	defer response.Body.Close()
 	if err != nil { return "", err }
 	err = utils.GenerateError(response.StatusCode, response.Status)

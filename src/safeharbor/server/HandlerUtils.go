@@ -319,12 +319,26 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	if err != nil { return nil, err }
 	if imageName == "" { return nil, utils.ConstructUserError("No HTTP parameter found for ImageName") }
 	
+	// Retrieve dockerfile build parameters.
+	var paramString string
+	paramString, err = apitypes.GetHTTPParameterValue(true, values, "Params")
+	if err != nil { return nil, err }
+	var paramPairs []string = strings.Split(paramString, ";")
+	var paramNames = make([]string, len(paramPairs))
+	var paramValues = make([]string, len(paramPairs))
+	for i, paramPair := range paramPairs {
+		var parts = strings.Split(paramPair)
+		if len(parts) != 2 { return nil, utils.ConstructError("Ill-formed param string") }
+		paramNames[i] = parts[0]
+		paramValues[i] = parts[1]
+	}
+	
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
 	if err != nil { return nil, err }
 	outputStr, err = dbClient.getServer().DockerServices.BuildDockerfile(
 		dockerfile.getExternalFilePath(), dockerfile.getName(), realm.getName(),
-		repo.getName(), imageName)
+		repo.getName(), imageName, paramNames, paramValues)
 	if err != nil { return nil, err }
 	
 	var dockerBuildOutput *docker.DockerBuildOutput

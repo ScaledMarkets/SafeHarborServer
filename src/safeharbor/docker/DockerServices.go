@@ -24,6 +24,8 @@ import (
 
 /* Replace with REST calls.
 Registry 2.0:
+https://github.com/docker/distribution/tree/master/docs
+https://github.com/docker/distribution/tree/master/docs/spec
 https://github.com/docker/distribution/blob/master/docs/spec/api.md
 
 SSL config:
@@ -58,7 +60,8 @@ func NewDockerServices(registry DockerRegistry, engine DockerEngine) *DockerServ
  * 
  */
 func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
-	dockerfileName, realmName, repoName, imageName string) (string, error) {
+	dockerfileName, realmName, repoName, imageName string,
+	paramNames, paramValues []string) (string, error) {
 	
 	if ! localDockerImageNameIsValid(imageName) {
 		return "", utils.ConstructUserError(fmt.Sprintf("Image name '%s' is not valid - must be " +
@@ -129,7 +132,8 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	var imageFullName string = realmName + "/" + repoName + ":" + imageName
 	
 	var outputStr string
-	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName, dockerfileName)
+	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName, 
+		dockerfileName, paramNames, paramValues)
 	if err != nil { return outputStr, err }
 	
 	if dockerSvcs.Registry != nil {  // no registry
