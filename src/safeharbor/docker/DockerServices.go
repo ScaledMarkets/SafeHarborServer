@@ -561,11 +561,17 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		value, isType = obj.(string)
 		fmt.Println("extractBuildOutputFromRESTResponse: E")  // debug
 		if obj == nil {
-			fmt.Println("obj is nil; line:")
-			fmt.Println(string(lineBytes))
-			fmt.Println("restResponse:")
-			fmt.Println(restResponse)
-			fmt.Println("End of restResponse")
+			obj = msgMap["errorDetail"]
+			if obj == nil {
+				return "", utils.ConstructServerError(
+					"Unexpected JSON field: " + string(lineBytes))
+			}
+			var errMsgJSON string
+			errMsgJSON, isType = obj.(string)
+			if ! isType { return "", utils.ConstructServerError(
+				"Unexpected type in json field value: " + reflect.TypeOf(obj).String())
+			}
+			return "", utils.ConstructUserError(errMsgJSON)
 		}
 		if ! isType { return "", utils.ConstructServerError(
 			"Unexpected type in json field value: " + reflect.TypeOf(obj).String())
