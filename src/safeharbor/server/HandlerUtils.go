@@ -352,11 +352,15 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	
 	var dockerBuildOutput *docker.DockerBuildOutput
 	dockerBuildOutput, err = docker.ParseBuildRESTOutput(outputStr)
+	fmt.Println("buildDockerfile: D.1")  // debug
 	if err != nil { return nil, err }
+	fmt.Println("buildDockerfile: D.2")  // debug
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
+	fmt.Println("buildDockerfile: D.3")  // debug
 	
 	var digest []byte
 	digest, err = docker.GetSignature(dockerImageId)
+	fmt.Println("buildDockerfile: D.4")  // debug
 	if err != nil { return nil, err }
 	fmt.Println("buildDockerfile: E")  // debug
 	
