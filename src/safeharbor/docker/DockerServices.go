@@ -134,9 +134,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	var outputStr string
 	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName, 
 		dockerfileName, paramNames, paramValues)
-	fmt.Println("BuildDockerfile: A")  // debug
 	if err != nil { return outputStr, err }
-	fmt.Println("BuildDockerfile: B")  // debug
 	
 	if dockerSvcs.Registry != nil {  // no registry
 		// Push new image to registry. Use the engine's push image feature.
@@ -185,7 +183,6 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 		//err = dockerSvcs.Registry.TagImage(digestString, ....repoName, ....tag)
 		if err != nil { return outputStr, err }
 	}
-	fmt.Println("BuildDockerfile: C")  // debug
 	
 	return outputStr, err
 }
