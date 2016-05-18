@@ -560,6 +560,7 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		var value string
 		value, isType = obj.(string)
 		fmt.Println("extractBuildOutputFromRESTResponse: E")  // debug
+		if obj == nil { fmt.Println("obj is nil") }
 		if ! isType { return "", utils.ConstructServerError(
 			"Unexpected type in json field value: " + reflect.TypeOf(obj).String())
 		}
