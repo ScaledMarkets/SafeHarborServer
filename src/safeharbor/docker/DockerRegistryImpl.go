@@ -2,6 +2,8 @@ package docker
 
 /* Interface for interacting with a Docker Registry version 2.
 
+	https://github.com/docker/distribution/blob/master/docs/insecure.md
+	
 	What a docker "name" is:
 
 		(From: https://github.com/docker/distribution/blob/master/docs/spec/api.md)
