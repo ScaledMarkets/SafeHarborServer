@@ -530,6 +530,7 @@ func localDockerImageNameIsValid(name string) bool {
  */
 func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	
+	fmt.Println("extractBuildOutputFromRESTResponse: A")  // debug
 	var reader = bufio.NewReader(strings.NewReader(restResponse))
 	
 	var output = ""
@@ -539,28 +540,34 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		var err error
 		lineBytes, isPrefix, err = reader.ReadLine()
 		if err == io.EOF { break }
+		fmt.Println("extractBuildOutputFromRESTResponse: B")  // debug
 		if err != nil { return "", err }
 		if isPrefix { fmt.Println("Warning - only part of string was read") }
 		
 		var obj interface{}
 		err = json.Unmarshal(lineBytes, &obj)
+		fmt.Println("extractBuildOutputFromRESTResponse: C")  // debug
 		if err != nil { return "", err }
 		
 		var isType bool
 		var msgMap map[string]interface{}
 		msgMap, isType = obj.(map[string]interface{})
+		fmt.Println("extractBuildOutputFromRESTResponse: D")  // debug
 		if ! isType { return "", utils.ConstructServerError(
 			"Unexpected format for json build output: " + string(lineBytes))
 		}
 		obj = msgMap["stream"]
 		var value string
 		value, isType = obj.(string)
+		fmt.Println("extractBuildOutputFromRESTResponse: E")  // debug
 		if ! isType { return "", utils.ConstructServerError(
 			"Unexpected type in json field value: " + reflect.TypeOf(obj).String())
 		}
+		fmt.Println("extractBuildOutputFromRESTResponse: F")  // debug
 
 		output = output + value
 	}
 	
+	fmt.Println("extractBuildOutputFromRESTResponse: Z")  // debug
 	return output, nil
 }
