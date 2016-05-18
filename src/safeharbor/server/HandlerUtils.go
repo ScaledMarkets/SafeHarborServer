@@ -320,18 +320,22 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	if imageName == "" { return nil, utils.ConstructUserError("No HTTP parameter found for ImageName") }
 	
 	// Retrieve dockerfile build parameters.
+	var paramNames = make([]string, 0)
+	var paramValues = make([]string, 0)
 	var paramString string
 	paramString, err = apitypes.GetHTTPParameterValue(true, values, "Params")
 	if err != nil { return nil, err }
 	var paramPairs []string = strings.Split(paramString, ";")
-	var paramNames = make([]string, len(paramPairs))
-	var paramValues = make([]string, len(paramPairs))
-	for i, paramPair := range paramPairs {
-		var parts = strings.Split(paramPair, ":")
-		if len(parts) != 2 { return nil, utils.ConstructUserError(
-			"Ill-formed param string: '" + paramString + "'") }
-		paramNames[i] = parts[0]
-		paramValues[i] = parts[1]
+	if len(paramPairs) >= 2 {
+		paramNames = make([]string, len(paramPairs))
+		paramValues = make([]string, len(paramPairs))
+		for i, paramPair := range paramPairs {
+			var parts = strings.Split(paramPair, ":")
+			if len(parts) != 2 { return nil, utils.ConstructUserError(
+				"Ill-formed param string: '" + paramString + "'") }
+			paramNames[i] = parts[0]
+			paramValues[i] = parts[1]
+		}
 	}
 	
 	var outputStr string
