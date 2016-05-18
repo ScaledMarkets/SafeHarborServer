@@ -281,6 +281,9 @@ type Repo interface {
 	deleteFlag(DBClient, Flag) error
 	deleteDockerfile(DBClient, Dockerfile) error
 	deleteDockerImage(DBClient, DockerImage) error
+	getDockerfileByName(DBClient, string) (Dockerfile, error)
+	getFlagByName(DBClient, string) (Flag, error)
+	getDockerImageByName(DBClient, string) (DockerImage, error)
 	getScanConfigByName(DBClient, string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
 }

@@ -189,6 +189,16 @@ func (client *InMemClient) dbGetAllRealmIds() ([]string, error) {
 }
 
 func (client *InMemClient) addRealm(newRealm Realm) error {
+	
+	// Check if realm with same name already exists.
+	var rid string
+	var err error
+	rid, err = client.Persistence.GetRealmObjIdByRealmName(client.txn, newRealm.getName())
+	if err != nil { return err }
+	if rid != "" { return utils.ConstructUserError(
+		"A realm with name " + newRealm.getName() + " already exists")
+	}
+	
 	var cachedRealm Realm = client.realmMapCache[newRealm.getId()]
 	if cachedRealm != nil { return utils.ConstructUserError("Realm already exists") }
 	client.realmMapCache[newRealm.getId()] = newRealm  // Add the realm to the cache.
@@ -197,6 +207,7 @@ func (client *InMemClient) addRealm(newRealm Realm) error {
 }
 
 func (client *InMemClient) addUser(user User) error {
+	
 	var cachedUser User = client.usersCache[user.getId()]
 	if cachedUser != nil { return utils.ConstructUserError("User already exists") }
 	client.usersCache[user.getId()] = user  // Add the user to the cache.
@@ -1696,6 +1707,15 @@ func (realm *InMemRealm) addUserId(dbClient DBClient, userObjId string) error {
 	if user.getRealmId() != "" {
 		return utils.ConstructUserError("User with obj Id " + userObjId + " belongs to another realm")
 	}
+	
+	// Check if user with same name already exists within the realm.
+	var u User
+	u, err = realm.getUserByName(dbClient, user.getName())
+	if err != nil { return err }
+	if u != nil { return utils.ConstructUserError(
+		"A user with name " + user.getName() + " already exists in realm " + realm.getName())
+	}
+	
 	realm.UserObjIds = append(realm.UserObjIds, userObjId)
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = realm.getId()
@@ -1741,6 +1761,16 @@ func (realm *InMemRealm) getGroupIds() []string {
 }
 
 func (realm *InMemRealm) addUser(dbClient DBClient, user User) error {
+	
+	// Check if user with same name already exists.
+	var u User
+	var err error
+	u, err = realm.getUserByName(dbClient, user.getName())
+	if err != nil { return err }
+	if u != nil { return utils.ConstructUserError(
+		"A user with name " + user.getName() + " already exists in realm " + realm.getName())
+	}
+	
 	realm.UserObjIds = append(realm.UserObjIds, user.getId())
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = realm.getId()
@@ -1748,11 +1778,31 @@ func (realm *InMemRealm) addUser(dbClient DBClient, user User) error {
 }
 
 func (realm *InMemRealm) addGroup(dbClient DBClient, group Group) error {
+	
+	// Check if group with same name already exists in this realm.
+	var g Group
+	var err error
+	g, err = realm.getGroupByName(dbClient, group.getName())
+	if err != nil { return err }
+	if g != nil { return utils.ConstructUserError(
+		"A group with name " + group.getName() + " already exists in realm " + realm.getName())
+	}
+	
 	realm.GroupIds = append(realm.GroupIds, group.getId())
 	return dbClient.writeBack(realm)
 }
 
 func (realm *InMemRealm) addRepo(dbClient DBClient, repo Repo) error {
+	
+	// Check if repo with same name already exists.
+	var r Repo
+	var err error
+	r, err = realm.getRepoByName(dbClient, repo.getName())
+	if err != nil { return err }
+	if r != nil { return utils.ConstructUserError(
+		"A repo with name " + repo.getName() + " already exists in realm " + realm.getName())
+	}
+	
 	realm.RepoIds = append(realm.RepoIds, repo.getId())
 	return dbClient.writeBack(realm)
 }
@@ -2097,16 +2147,46 @@ func (repo *InMemRepo) getFlagIds() []string {
 }
 
 func (repo *InMemRepo) addDockerfile(dbClient DBClient, dockerfile Dockerfile) error {
+	
+	// Check if dockerfile with same name already exists in the repo.
+	var d Dockerfile
+	var err error
+	d, err = repo.getDockerfileByName(dbClient, dockerfile.getName())
+	if err != nil { return err }
+	if d != nil { return utils.ConstructUserError(
+		"A dockerfile with name " + d.getName() + " already exists in repo " + repo.getName())
+	}
+	
 	repo.DockerfileIds = append(repo.DockerfileIds, dockerfile.getId())
 	return dbClient.writeBack(repo)
 }
 
 func (repo *InMemRepo) addDockerImage(dbClient DBClient, image DockerImage) error {
+	
+	// Check if docker image with same name already exists in the repo.
+	var d DockerImage
+	var err error
+	d, err = repo.getDockerImageByName(dbClient, image.getName())
+	if err != nil { return err }
+	if d != nil { return utils.ConstructUserError(
+		"A docker image with name " + d.getName() + " already exists in repo " + repo.getName())
+	}
+	
 	repo.DockerImageIds = append(repo.DockerImageIds, image.getId())
 	return dbClient.writeBack(repo)
 }
 
 func (repo *InMemRepo) addScanConfig(dbClient DBClient, config ScanConfig) error {
+	
+	// Check if scan config with same name already exists in this repo.
+	var s ScanConfig
+	var err error
+	s, err = repo.getScanConfigByName(dbClient, config.getName())
+	if err != nil { return err }
+	if s != nil { return utils.ConstructUserError(
+		"A scan config with name " + s.getName() + " already exists in repo " + repo.getName())
+	}
+	
 	repo.ScanConfigIds = append(repo.ScanConfigIds, config.getId())
 	return dbClient.writeBack(repo)
 }
@@ -2267,8 +2347,60 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 }
 
 func (repo *InMemRepo) addFlag(dbClient DBClient, flag Flag) error {
+	
+	// Check if flag with same name already exists in this repo.
+	var f Flag
+	var err error
+	f, err = repo.getFlagByName(dbClient, flag.getName())
+	if err != nil { return err }
+	if f != nil { return utils.ConstructUserError(
+		"A flag with name " + f.getName() + " already exists in repo " + repo.getName())
+	}
+	
 	repo.FlagIds = append(repo.FlagIds, flag.getId())
 	return dbClient.writeBack(repo)
+}
+
+func (repo *InMemRepo) getDockerfileByName(dbClient DBClient, name string) (Dockerfile, error) {
+	for _, dockerfileId := range repo.DockerfileIds {
+		var dockerfile Dockerfile
+		var err error
+		dockerfile, err = dbClient.getDockerfile(dockerfileId)
+		if err != nil { return nil, err }
+		if dockerfile == nil {
+			return nil, utils.ConstructServerError("Internal error: list DockerfileIds contains an invalid entry")
+		}
+		if dockerfile.getName() == name { return dockerfile, nil }
+	}
+	return nil, nil
+}
+
+func (repo *InMemRepo) getFlagByName(dbClient DBClient, name string) (Flag, error) {
+	for _, flagId := range repo.FlagIds {
+		var flag Flag
+		var err error
+		flag, err = dbClient.getFlag(flagId)
+		if err != nil { return nil, err }
+		if flag == nil {
+			return nil, utils.ConstructServerError("Internal error: list FlagIds contains an invalid entry")
+		}
+		if flag.getName() == name { return flag, nil }
+	}
+	return nil, nil
+}
+
+func (repo *InMemRepo) getDockerImageByName(dbClient DBClient, name string) (DockerImage, error) {
+	for _, dockerImageId := range repo.DockerImageIds {
+		var dockerImage DockerImage
+		var err error
+		dockerImage, err = dbClient.getDockerImage(dockerImageId)
+		if err != nil { return nil, err }
+		if dockerImage == nil {
+			return nil, utils.ConstructServerError("Internal error: list DockerImageIds contains an invalid entry")
+		}
+		if dockerImage.getName() == name { return dockerImage, nil }
+	}
+	return nil, nil
 }
 
 func (repo *InMemRepo) getScanConfigByName(dbClient DBClient, name string) (ScanConfig, error) {
@@ -2491,6 +2623,7 @@ func (dockerfile *InMemDockerfile) getDockerfileExecEventIds() []string {
 }
 
 func (dockerfile *InMemDockerfile) addEventId(dbClient DBClient, eventId string) error {
+	
 	dockerfile.DockerfileExecEventIds = append(dockerfile.DockerfileExecEventIds, eventId)
 	return dbClient.writeBack(dockerfile)
 }
@@ -2750,6 +2883,7 @@ func (image *InMemDockerImage) getScanEventIds() []string {
 }
 
 func (image *InMemDockerImage) addScanEventId(dbClient DBClient, id string) {
+	
 	image.ScanEventIds = append(image.ScanEventIds, id)
 	dbClient.writeBack(image)
 }
@@ -3065,6 +3199,7 @@ func (scanConfig *InMemScanConfig) getParameterValueIds() []string {
 }
 
 func (scanConfig *InMemScanConfig) addParameterValueId(dbClient DBClient, id string) {
+	
 	scanConfig.ParameterValueIds = append(scanConfig.ParameterValueIds, id)
 }
 
@@ -3176,6 +3311,7 @@ func (scanConfig *InMemScanConfig) getFlagId() string {
 }
 
 func (scanConfig *InMemScanConfig) addScanEventId(dbClient DBClient, id string) {
+	
 	scanConfig.ScanEventIds = append(scanConfig.ScanEventIds, id)
 	dbClient.writeBack(scanConfig)
 }
@@ -3337,7 +3473,6 @@ func (flag *InMemFlag) getSuccessImageURL() string {
 }
 
 func (flag *InMemFlag) addScanConfigRef(dbClient DBClient, scanConfigId string) error {
-	fmt.Println("addScanConfigRef:A")
 	flag.UsedByScanConfigIds = apitypes.AddUniquely(scanConfigId, flag.UsedByScanConfigIds)
 	return dbClient.writeBack(flag)
 }

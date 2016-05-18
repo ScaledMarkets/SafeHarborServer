@@ -344,6 +344,10 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
  */
 func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 	if persist.InMemoryOnly {
+		var r = persist.realmMap[newRealm.getName()]
+		if r != "" { return utils.ConstructUserError(
+			"A realm with name '" + newRealm.getName() + "' already exists")
+		}
 		persist.realmMap[newRealm.getName()] = newRealm.getId()
 		return persist.updateObject(txn, newRealm)
 	} else {
@@ -394,6 +398,11 @@ func (persist *Persistence) dbGetAllRealmIds(txn TxnContext) (map[string]string,
  */
 func (persist *Persistence) addUser(txn TxnContext, user User) error {
 	if persist.InMemoryOnly {
+		var u = persist.allUserIds[user.getUserId()]
+		if u != "" {
+			return utils.ConstructUserError(
+				"A user with user Id '" + user.getUserId() + "' already exists")
+		}
 		persist.allUserIds[user.getUserId()] = user.getId()
 		return persist.updateObject(txn, user)
 	} else {
