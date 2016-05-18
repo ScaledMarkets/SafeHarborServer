@@ -289,15 +289,18 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
  */
 func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 	
+	fmt.Println("ParseBuildCommandOutput: A")  // debug
 	var output *DockerBuildOutput = NewDockerBuildOutput()
 	
 	var lines = strings.Split(buildOutputStr, "\n")
 	var state int = 1
 	var step *DockerBuildStep
 	var lineNo int = 0
+	fmt.Println("ParseBuildCommandOutput: B")  // debug
 	for {
 		
 		if lineNo >= len(lines) {
+			fmt.Println("ParseBuildCommandOutput: C")  // debug
 			return output, utils.ConstructServerError("Incomplete")
 		}
 		
@@ -330,12 +333,14 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 			if len(therest) < len(line) {
 				var id = therest
 				output.setFinalImageId(id)
+				fmt.Println("ParseBuildCommandOutput: D")  // debug
 				return output, nil
 			}
 			
 			therest = strings.TrimPrefix(line, "Error")
 			if len(therest) < len(line) {
 				output.ErrorMessage = therest
+				fmt.Println("ParseBuildCommandOutput: E")  // debug
 				return output, utils.ConstructServerError(output.ErrorMessage)
 			}
 			
@@ -347,6 +352,7 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 			
 			if step == nil {
 				output.ErrorMessage = "Internal error: should not happen"
+				fmt.Println("ParseBuildCommandOutput: F")  // debug
 				return output, utils.ConstructServerError(output.ErrorMessage)
 			}
 
@@ -369,9 +375,11 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 			
 		default:
 			output.ErrorMessage = "Internal error: Unrecognized state"
+			fmt.Println("ParseBuildCommandOutput: G")  // debug
 			return output, utils.ConstructServerError(output.ErrorMessage)
 		}
 	}
+	fmt.Println("ParseBuildCommandOutput: H")  // debug
 	output.ErrorMessage = "Did not find a final image Id"
 	return output, utils.ConstructServerError(output.ErrorMessage)
 }
@@ -382,10 +390,13 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
  */
 func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
 	
+	fmt.Println("ParseBuildRESTOutput: A")  // debug
 	var outputstr string
 	var err error
 	outputstr, err = extractBuildOutputFromRESTResponse(restResponse)
+	fmt.Println("ParseBuildRESTOutput: B")  // debug
 	if err != nil { return nil, err }
+	fmt.Println("ParseBuildRESTOutput: C")  // debug
 	return ParseBuildCommandOutput(outputstr)
 }
 
