@@ -327,8 +327,8 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var paramString string
 	paramString, err = apitypes.GetHTTPParameterValue(true, values, "Params")
 	if err != nil { return nil, err }
-	var paramPairs []string = strings.Split(paramString, ";")
-	if len(paramPairs) >= 1 {
+	if len(paramString) > 0 {
+		var paramPairs []string = strings.Split(paramString, ";")
 		paramNames = make([]string, len(paramPairs))
 		paramValues = make([]string, len(paramPairs))
 		for i, paramPair := range paramPairs {
@@ -339,7 +339,6 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 			paramValues[i] = parts[1]
 		}
 	}
-	fmt.Println(fmt.Sprintf("buildDockerfile: C, #params=%d", len(paramPairs)))  // debug
 	
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
