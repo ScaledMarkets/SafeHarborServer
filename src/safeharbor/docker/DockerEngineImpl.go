@@ -242,6 +242,7 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 		}
 		queryParamString = queryParamString + "}"
 	}
+	queryParamString = base64.URLEncoding.EncodeToString([]byte(queryParamString))
 	var response *http.Response
 	response, err = engine.SendBasicStreamPost(queryParamString, headers, tarReader)
 	defer response.Body.Close()
