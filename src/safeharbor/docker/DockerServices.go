@@ -569,7 +569,7 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 			var errMsgJSON string
 			errMsgJSON, isType = obj.(string)
 			if ! isType { return "", utils.ConstructServerError(
-				"Unexpected type in json field value: " + reflect.TypeOf(obj).String())
+				"Unexpected data in json errorDetail value; line: " + string(lineBytes))
 			}
 			return "", utils.ConstructUserError(errMsgJSON)
 		}
