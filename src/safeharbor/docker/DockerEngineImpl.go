@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"archive/tar"
 	//"errors"
 	"path/filepath"
@@ -241,7 +242,7 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 			if i > 0 { buildArgs = buildArgs + ", " }
 			buildArgs = buildArgs + fmt.Sprintf("\"%s\": \"%s\"", paramName, paramValues[i])
 		}
-		buildArgs = base64.URLEncoding.EncodeToString([]byte(buildArgs))
+		buildArgs = url.QueryEscape(buildArgs)
 		queryParamString = queryParamString + buildArgs + "}"
 	}
 	var response *http.Response
