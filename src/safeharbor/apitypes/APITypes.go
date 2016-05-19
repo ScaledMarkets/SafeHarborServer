@@ -29,7 +29,7 @@ import (
 	"runtime/debug"
 	
 	// SafeHarbor packages:
-	//"safeharbor/rest"
+	"safeharbor/rest"
 	"safeharbor/docker"
 	"safeharbor/utils"
 )
@@ -78,7 +78,7 @@ func NewBaseType(statusCode int, reason string) *BaseType {
 
 func (b *BaseType) baseTypeFieldsAsJSON() string {
 	return fmt.Sprintf("\"HTTPStatusCode\": %d, \"HTTPReasonPhrase\": \"%s\"",
-		b.HTTPStatusCode, b.HTTPReasonPhrase)
+		b.HTTPStatusCode, rest.EncodeStringForJSON(b.HTTPReasonPhrase))
 }
 
 func (b *BaseType) AsJSON() string {
