@@ -328,7 +328,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	paramString, err = apitypes.GetHTTPParameterValue(true, values, "Params")
 	if err != nil { return nil, err }
 	var paramPairs []string = strings.Split(paramString, ";")
-	if len(paramPairs) >= 2 {
+	if len(paramPairs) >= 1 {
 		paramNames = make([]string, len(paramPairs))
 		paramValues = make([]string, len(paramPairs))
 		for i, paramPair := range paramPairs {
