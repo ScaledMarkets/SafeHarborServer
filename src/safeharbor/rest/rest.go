@@ -517,7 +517,8 @@ func (restContext *RestContext) Verify200Response(resp *http.Response) bool {
 		if err == nil { PrintMap(responseMap) }
 		//if restContext.stopOnFirstError { os.Exit(1) }
 	}
-	fmt.Println("Response code ", resp.StatusCode)
+	fmt.Println(fmt.Sprintf(
+		"Response code: %d; status: %s", resp.StatusCode, resp.Status))
 	return is200
 }
 

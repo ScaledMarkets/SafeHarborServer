@@ -339,7 +339,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 			paramValues[i] = parts[1]
 		}
 	}
-	fmt.Println("buildDockerfile: C")  // debug
+	fmt.Println(fmt.Sprintf("buildDockerfile: C, #params=%d", len(paramPairs)))  // debug
 	
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
