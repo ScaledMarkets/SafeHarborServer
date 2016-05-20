@@ -253,9 +253,11 @@ func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient,
  */
 func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, string, error) {
 
+	fmt.Println("captureFile: A")  // debug
 	var err error
 	var headers []*multipart.FileHeader = files["filename"]
 	if len(headers) == 0 { return "", "", nil }
+	fmt.Println("captureFile: B")  // debug
 	if len(headers) > 1 { return "", "", utils.ConstructUserError("Too many files posted") }
 	var header *multipart.FileHeader = headers[0]
 	var filename string = header.Filename	
@@ -263,12 +265,17 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 	
 	// Validate syntax of filename: must be a simple name - no slashes, and a valid file name
 	err = validateSimpleFileNameSyntax(filename)
+	fmt.Println("captureFile: C")  // debug
 	if err != nil { return "", "", utils.ConstructServerError(err.Error()) }
+	fmt.Println("captureFile: D")  // debug
 	
 	var file multipart.File
 	file, err = header.Open()
+	fmt.Println("captureFile: E")  // debug
 	if err != nil { return "", "", utils.ConstructServerError(err.Error()) }
+	fmt.Println("captureFile: F")  // debug
 	if file == nil { return "", "", utils.ConstructServerError("Internal Error") }	
+	fmt.Println("captureFile: G")  // debug
 	
 	// Create a filename for the new file.
 	var filepath = repo.getFileDirectory() + "/" + filename
@@ -279,20 +286,25 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 			return "", "", utils.ConstructServerError(err.Error())
 		}
 	}
+	fmt.Println("captureFile: H")  // debug
 	if fileExists(filepath) {
 		fmt.Println("********Internal error: file exists but it should not:" + filepath)
 		return "", "", utils.ConstructServerError("********Internal error: file exists but it should not:" + filepath)
 	}
+	fmt.Println("captureFile: I")  // debug
 	
 	// Save the file data to a permanent file.
 	var bytes []byte
 	bytes, err = ioutil.ReadAll(file)
+	fmt.Println("captureFile: J")  // debug
 	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
+	fmt.Println("captureFile: K")  // debug
 	if err != nil {
 		fmt.Println(err.Error())
 		return "", "", utils.ConstructServerError("While writing dockerfile, " + err.Error())
 	}
 	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
+	fmt.Println("captureFile: L")  // debug
 	return filename, filepath, nil
 }
 
@@ -302,7 +314,6 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	values url.Values) (DockerImage, error) {
 
-	fmt.Println("buildDockerfile: A")  // debug
 	var repo Repo
 	var err error
 	repo, err = dockerfile.getRepo(dbClient)
@@ -319,7 +330,6 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	imageName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageName")
 	if err != nil { return nil, err }
 	if imageName == "" { return nil, utils.ConstructUserError("No HTTP parameter found for ImageName") }
-	fmt.Println("buildDockerfile: B")  // debug
 	
 	// Retrieve dockerfile build parameters.
 	var paramNames = make([]string, 0)
@@ -347,21 +357,15 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		dockerfile.getExternalFilePath(), dockerfile.getName(), realm.getName(),
 		repo.getName(), imageName, paramNames, paramValues)
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: D")  // debug
 	
 	var dockerBuildOutput *docker.DockerBuildOutput
 	dockerBuildOutput, err = docker.ParseBuildRESTOutput(outputStr)
-	fmt.Println("buildDockerfile: D.1")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: D.2")  // debug
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
-	fmt.Println("buildDockerfile: D.3")  // debug
 	
 	var digest []byte
 	digest, err = docker.GetSignature(dockerImageId)
-	fmt.Println("buildDockerfile: D.4")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: E")  // debug
 	
 	// Add a record for the image to the database.
 	// (This automatically computes the signature.)
@@ -370,9 +374,13 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		imageName, dockerfile.getDescription(), digest, outputStr)
 	fmt.Println("Created docker image object.")
 	
+	
+	var paramVal ParameterValue
+	paramVal, err = dbClient.dbCreateParameterValue(name, value, configId string)
+	
 	// Create an event to record that this happened.
-	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), image.getId(), user.getId())
-	fmt.Println("buildDockerfile: Z")  // debug
+	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), 
+		paramNames, paramValues, image.getId(), user.getId())
 	
 	return image, err
 }

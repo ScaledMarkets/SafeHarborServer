@@ -1066,21 +1066,37 @@ func (vulnDesc *VulnerabilityDesc) AsJSON() string {
 type DockerfileExecEventDesc struct {
 	EventDescBase
 	DockerfileId string
+	ParameterValueDescs []*ParameterValueDesc
+	DockerfileContent string
 }
 
 func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
-	dockerfileId string) *DockerfileExecEventDesc {
+	dockerfileId string, paramValueDescs []*ParameterValueDesc,
+	dockerfileContent string) *DockerfileExecEventDesc {
+
 	return &DockerfileExecEventDesc{
 		EventDescBase: *NewEventDesc(objId, when, userId),
 		DockerfileId: dockerfileId,
+		ParameterValueDescs: paramValueDescs,
+		DockerfileContent: dockerfileContent,
 	}
 }
 
 func (eventDesc *DockerfileExecEventDesc) AsJSON() string {
-	return fmt.Sprintf(" {%s, \"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
-		"\"DockefileId\": \"%s\"}", eventDesc.baseTypeFieldsAsJSON(),
+	
+	var s = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
+		"\"DockefileId\": \"%s\"", eventDesc.baseTypeFieldsAsJSON(),
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
 		eventDesc.DockerfileId)
+	
+	s = s + ", \"ParameterValues\": ["
+	for i, valueDesc := range eventDesc.ParameterValueDescs {
+		if i > 0 { s = s + ", " }
+		s = s + valueDesc.AsJSON()
+	}
+	
+	s = s + "], DockerfileContent: \"" + rest.EncodeStringForJSON(eventDesc.DockerfileContent) + "\"}"
+	return s
 }
 
 

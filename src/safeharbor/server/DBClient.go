@@ -89,8 +89,10 @@ type DBClient interface {
 	dbCreateParameterValue(name, value, configId string) (ParameterValue, error)
 	dbCreateScanConfig(name, desc, repoId, providerName string, paramValueIds []string, successExpr, flagId string) (ScanConfig, error)
 	dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error)
-	dbCreateScanEvent(string, string, string, string, *providers.ScanResult) (ScanEvent, error)
-	dbCreateDockerfileExecEvent(dockerfileId, imageId, userObjId string) (DockerfileExecEvent, error)
+	dbCreateScanEvent(scanConfigId, providerName string, paramNames, paramValues []string, imageId,
+		userObjId, score string, result *providers.ScanResult) (ScanEvent, error)
+	dbCreateDockerfileExecEvent(dockerfileId string, paramNames, paramValues []string,
+		imageId, userObjId string, actParamValueIds []string) (DockerfileExecEvent, error)
 	dbDeactivateRealm(realmId string) error
 	getResource(string) (Resource, error)
 	getParty(string) (Party, error)
@@ -391,7 +393,10 @@ type ImageCreationEvent interface {  // abstract
 type DockerfileExecEvent interface {
 	ImageCreationEvent
 	getDockerfileId() string  // may be empty - if the Dockerfile has been deleted.
-	getDockerfileExternalObjId() string  // may be empty.
+	getActualParameterValueIds() []string
+	deleteAllParameterValues(DBClient) error
+	getDockerfileContent() string
+	//getDockerfileExternalObjId() string  // may be empty.
 	
 	/** Nullify all references to the dockerfile or its external representation. */
 	nullifyDockerfile(DBClient) error

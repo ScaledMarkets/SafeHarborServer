@@ -578,7 +578,6 @@ func (registry *DockerRegistryImpl) PushLayer(layerFilePath, repoName string) (s
 	location = ""
 	if len(locations) > 0 { location = locations[0] }
 	//response, err = registry.SendBasicStreamPut(uri, headers, layerFile)
-	//fmt.Println("PushLayer: F") // debug
 	//if err != nil { return err }
 	
 	err = utils.GenerateError(response.StatusCode, response.Status + "; while posting layer")
@@ -590,12 +589,7 @@ func (registry *DockerRegistryImpl) PushLayer(layerFilePath, repoName string) (s
 		if err2 != nil { fmt.Println(err2.Error()); return err }
 		fmt.Println(string(bytes))
 	}
-	
-	
-	if (response.StatusCode >= 300) && (response.StatusCode < 400) { // debug
-		var newURL string = response.Header["Location"][0] // debug
-		fmt.Println("Redirection to " + newURL) // debug
-	}
+
 	if err != nil { return err }
 	
 	*/

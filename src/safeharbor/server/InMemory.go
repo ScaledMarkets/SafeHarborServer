@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"reflect"
 	"os"
+	"io/ioutil"
 	"time"
 	"strings"
 	"runtime/debug"	
@@ -3647,31 +3648,27 @@ func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
 	return scanEvent, client.updateObject(scanEvent)
 }
 
-func (client *InMemClient) dbCreateScanEvent(scanConfigId, imageId,
+func (client *InMemClient) dbCreateScanEvent(scanConfigId, providerName string,
+	paramNames, paramValues []string, imageId,
 	userObjId, score string, result *providers.ScanResult) (ScanEvent, error) {
 	
-	// Create actual ParameterValues for the Event, using the current ParameterValues
-	// that exist for the ScanConfig.
-	var scanConfig ScanConfig
+	// Create actual ParameterValues for the Event.
 	var err error
-	scanConfig, err = client.getScanConfig(scanConfigId)
-	if err != nil { return nil, err }
 	var actParamValueIds []string = make([]string, 0)
-	for _, paramId := range scanConfig.getParameterValueIds() {
-		var param ParameterValue
-		param, err = client.getParameterValue(paramId)
-		if err != nil { return nil, err }
-		var name string = param.getName()
-		var value string = param.getStringValue()
+	for i, name := range paramNames {
 		var actParamValue *InMemParameterValue
-		actParamValue, err = client.NewInMemParameterValue(name, value, scanConfigId)
+		actParamValue, err = client.NewInMemParameterValue(name, paramValues[i], scanConfigId)
 		if err != nil { return nil, err }
 		actParamValueIds = append(actParamValueIds, actParamValue.getId())
 	}
 
+	var scanConfig ScanConfig
+	scanConfig, err = client.getScanConfig(scanConfigId)
+	if err != nil { return nil, err }
+
 	var scanEvent *InMemScanEvent
 	scanEvent, err = client.NewInMemScanEvent(scanConfigId, imageId, userObjId,
-		scanConfig.getProviderName(), score, result, actParamValueIds)
+		providerName, score, result, actParamValueIds)
 	if err != nil { return nil, err }
 	err = client.writeBack(scanEvent)
 	if err != nil { return nil, err }
@@ -3862,34 +3859,60 @@ func (client *InMemClient) ReconstituteImageCreationEvent(id string, when time.T
 type InMemDockerfileExecEvent struct {
 	InMemImageCreationEvent
 	DockerfileId string
-	DockerfileExternalObjId string
+	ActualParameterValueIds []string
+	DockerfileContent string
 }
 
 var _ DockerfileExecEvent = &InMemDockerfileExecEvent{}
 
 func (client *InMemClient) NewInMemDockerfileExecEvent(dockerfileId, imageId,
-	userObjId string) (*InMemDockerfileExecEvent, error) {
+	userObjId string, actParamValueIds []string) (*InMemDockerfileExecEvent, error) {
 	
 	var ev *InMemImageCreationEvent
 	var err error
 	ev, err = client.NewInMemImageCreationEvent(userObjId, imageId)
 	if err != nil { return nil, err }
+	
+	var dockerfile Dockerfile
+	dockerfile, err = client.getDockerfile(dockerfileId)
+	if err != nil { return nil, err }
+	
+	var file *os.File
+	file, err = os.Open(dockerfile.getExternalFilePath())
+	if err != nil { return nil, err }
+	var bytes []byte
+	bytes, err = ioutil.ReadAll(file)
+	if err != nil { return nil, err }
+	var isType bool
+	var dockerfileContent = string(bytes)
+	
 	var event = &InMemDockerfileExecEvent{
 		InMemImageCreationEvent: *ev,
 		DockerfileId: dockerfileId,
-		DockerfileExternalObjId: "",  // for when we add git
+		ActualParameterValueIds: actParamValueIds,
+		DockerfileContent: dockerfileContent,
 	}
 	return event, client.updateObject(event)
 }
 
-func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId, imageId,
-	userObjId string) (DockerfileExecEvent, error) {
+func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId string, 
+	paramNames, paramValues []string, imageId,
+	userObjId string, actParamValueIds []string) (DockerfileExecEvent, error) {
 	
-	//var id string = createUniqueDbObjectId()
+	// Create actual ParameterValues for the Event.
+	var err error
+	var actParamValueIds []string = make([]string, 0)
+	for i, name := range paramNames {
+		var actParamValue *InMemParameterValue
+		actParamValue, err = client.NewInMemParameterValue(name, paramValues[i], scanConfigId)
+		if err != nil { return nil, err }
+		actParamValueIds = append(actParamValueIds, actParamValue.getId())
+	}
+	
 	var newDockerfileExecEvent *InMemDockerfileExecEvent
 	var err error
 	newDockerfileExecEvent, err =
-		client.NewInMemDockerfileExecEvent(dockerfileId, imageId, userObjId)
+		client.NewInMemDockerfileExecEvent(dockerfileId, imageId, userObjId, actParamValueIds)
 	if err != nil { return nil, err }
 	
 	// Link with Image.
@@ -3917,13 +3940,33 @@ func (execEvent *InMemDockerfileExecEvent) getDockerfileId() string {
 	return execEvent.DockerfileId
 }
 
+func (execEvent *InMemDockerfileExecEvent) getActualParameterValueIds() []string {
+	return event.ActualParameterValueIds
+}
+
+func (execEvent *InMemDockerfileExecEvent) deleteAllParameterValues(DBClient) error {
+	for _, paramId := range execEvent.ActualParameterValueIds {
+		var param ParameterValue
+		var err error
+		param, err = dbClient.getParameterValue(paramId)
+		if err != nil { return err }
+		dbClient.deleteObject(param)
+	}
+	execEvent.ActualParameterValueIds = make([]string, 0)
+	return dbClient.writeBack(event)
+}
+
+func (execEvent *InMemDockerfileExecEvent) getDockerfileContent() string {
+	return DockerfileContent
+}
+
 func (execEvent *InMemDockerfileExecEvent) getDockerfileExternalObjId() string {
 	return execEvent.DockerfileExternalObjId
 }
 
 func (execEvent *InMemDockerfileExecEvent) nullifyDockerfile(dbClient DBClient) error {
 	execEvent.DockerfileId = ""
-	execEvent.DockerfileExternalObjId = ""
+	//execEvent.DockerfileExternalObjId = ""
 	return dbClient.writeBack(execEvent)
 }
 
@@ -3933,8 +3976,20 @@ func (execEvent *InMemDockerfileExecEvent) nullifyDockerImage(dbClient DBClient)
 }
 
 func (execEvent *InMemDockerfileExecEvent) asDockerfileExecEventDesc() *apitypes.DockerfileExecEventDesc {
+	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
+	for _, valueId := range execEvent.ActualParameterValueIds {
+		var value ParameterValue
+		var err error
+		value, err = dbClient.getParameterValue(valueId)
+		if err != nil {
+			fmt.Println("Internal error:", err.Error())
+			continue
+		}
+		paramValueDescs = append(paramValueDescs, value.asParameterValueDesc())
+	}
+	
 	return apitypes.NewDockerfileExecEventDesc(execEvent.getId(), execEvent.When,
-		execEvent.UserObjId, execEvent.DockerfileId)
+		execEvent.UserObjId, execEvent.DockerfileId, paramValueDescs, execEvent.DockerfileContent)
 }
 
 func (execEvent *InMemDockerfileExecEvent) asEventDesc(dbClient DBClient) apitypes.EventDesc {
@@ -3948,14 +4003,14 @@ func (execEvent *InMemDockerfileExecEvent) writeBack(dbClient DBClient) error {
 func (execEvent *InMemDockerfileExecEvent) asJSON() string {
 	
 	var json = "\"DockerfileExecEvent\": {" + execEvent.imageCreationEventFieldsAsJSON()
-	json = json + fmt.Sprintf(
-		", \"DockerfileId\": \"%s\", \"DockerfileExternalObjId\": \"%s\"}",
-		execEvent.DockerfileId, execEvent.DockerfileExternalObjId)
+	json = json + fmt.Sprintf(", \"DockerfileId\": \"%s\"", execEvent.DockerfileId)
+	json = json + fmt.Sprintf(", \"DockerfileContent\": \"%s\"}",
+		rest.EncodeStringForJSON(execEvent.DockerfileContent))
 	return json
 }
 
 func (client *InMemClient) ReconstituteDockerfileExecEvent(id string, when time.Time,
-	userObjId, imageId, dockerfileId, extObjId string) (DockerfileExecEvent, error) {
+	userObjId, imageId, dockerfileId, dockerfileContent string) (DockerfileExecEvent, error) {
 
 	var imgCrEvent *InMemImageCreationEvent
 	var err error
@@ -3965,7 +4020,7 @@ func (client *InMemClient) ReconstituteDockerfileExecEvent(id string, when time.
 	return &InMemDockerfileExecEvent{
 		InMemImageCreationEvent: *imgCrEvent,
 		DockerfileId: dockerfileId,
-		DockerfileExternalObjId: extObjId,
+		DockerfileContent: dockerfileContent,
 	}, nil
 }
 

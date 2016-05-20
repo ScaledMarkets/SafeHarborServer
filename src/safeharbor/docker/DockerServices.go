@@ -289,18 +289,15 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
  */
 func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) {
 	
-	fmt.Println("ParseBuildCommandOutput: A")  // debug
 	var output *DockerBuildOutput = NewDockerBuildOutput()
 	
 	var lines = strings.Split(buildOutputStr, "\n")
 	var state int = 1
 	var step *DockerBuildStep
 	var lineNo int = 0
-	fmt.Println("ParseBuildCommandOutput: B")  // debug
 	for {
 		
 		if lineNo >= len(lines) {
-			fmt.Println("ParseBuildCommandOutput: C")  // debug
 			return output, utils.ConstructServerError("Incomplete")
 		}
 		
@@ -333,14 +330,12 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 			if len(therest) < len(line) {
 				var id = therest
 				output.setFinalImageId(id)
-				fmt.Println("ParseBuildCommandOutput: D")  // debug
 				return output, nil
 			}
 			
 			therest = strings.TrimPrefix(line, "Error")
 			if len(therest) < len(line) {
 				output.ErrorMessage = therest
-				fmt.Println("ParseBuildCommandOutput: E")  // debug
 				return output, utils.ConstructServerError(output.ErrorMessage)
 			}
 			
@@ -352,7 +347,6 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 			
 			if step == nil {
 				output.ErrorMessage = "Internal error: should not happen"
-				fmt.Println("ParseBuildCommandOutput: F")  // debug
 				return output, utils.ConstructServerError(output.ErrorMessage)
 			}
 
@@ -375,11 +369,9 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 			
 		default:
 			output.ErrorMessage = "Internal error: Unrecognized state"
-			fmt.Println("ParseBuildCommandOutput: G")  // debug
 			return output, utils.ConstructServerError(output.ErrorMessage)
 		}
 	}
-	fmt.Println("ParseBuildCommandOutput: H")  // debug
 	output.ErrorMessage = "Did not find a final image Id"
 	return output, utils.ConstructServerError(output.ErrorMessage)
 }
@@ -390,13 +382,10 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
  */
 func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
 	
-	fmt.Println("ParseBuildRESTOutput: A")  // debug
 	var outputstr string
 	var err error
 	outputstr, err = extractBuildOutputFromRESTResponse(restResponse)
-	fmt.Println("ParseBuildRESTOutput: B")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("ParseBuildRESTOutput: C")  // debug
 	return ParseBuildCommandOutput(outputstr)
 }
 
@@ -530,7 +519,6 @@ func localDockerImageNameIsValid(name string) bool {
  */
 func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 	
-	fmt.Println("extractBuildOutputFromRESTResponse: A")  // debug
 	var reader = bufio.NewReader(strings.NewReader(restResponse))
 	
 	var output = ""
@@ -540,26 +528,22 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		var err error
 		lineBytes, isPrefix, err = reader.ReadLine()
 		if err == io.EOF { break }
-		fmt.Println("extractBuildOutputFromRESTResponse: B")  // debug
 		if err != nil { return "", err }
 		if isPrefix { fmt.Println("Warning - only part of string was read") }
 		
 		var obj interface{}
 		err = json.Unmarshal(lineBytes, &obj)
-		fmt.Println("extractBuildOutputFromRESTResponse: C")  // debug
 		if err != nil { return "", err }
 		
 		var isType bool
 		var msgMap map[string]interface{}
 		msgMap, isType = obj.(map[string]interface{})
-		fmt.Println("extractBuildOutputFromRESTResponse: D")  // debug
 		if ! isType { return "", utils.ConstructServerError(
 			"Unexpected format for json build output: " + string(lineBytes))
 		}
 		obj = msgMap["stream"]
 		var value string
 		value, isType = obj.(string)
-		fmt.Println("extractBuildOutputFromRESTResponse: E")  // debug
 		if obj == nil {
 			// Check for error message.
 			obj = msgMap["error"]
@@ -596,11 +580,9 @@ func extractBuildOutputFromRESTResponse(restResponse string) (string, error) {
 		if ! isType { return "", utils.ConstructServerError(
 			"Unexpected type in json field value: " + reflect.TypeOf(obj).String())
 		}
-		fmt.Println("extractBuildOutputFromRESTResponse: F")  // debug
 
 		output = output + value
 	}
 	
-	fmt.Println("extractBuildOutputFromRESTResponse: Z")  // debug
 	return output, nil
 }

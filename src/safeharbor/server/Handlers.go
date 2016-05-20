@@ -933,41 +933,59 @@ func createRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	var err error
 	var realmId string
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
+	fmt.Println("createRepo: A")  // debug
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
-
+	fmt.Println("createRepo: B")  // debug
+	
 	var repoName string
 	repoName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Name")
+	fmt.Println("createRepo: C")  // debug
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	fmt.Println("createRepo: D")  // debug
 
 	var repoDesc string
 	repoDesc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
+	fmt.Println("createRepo: E")  // debug
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	fmt.Println("createRepo: F")  // debug
 
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.CreateInMask, realmId,
 		"createRepo"); failMsg != nil { return failMsg }
+	fmt.Println("createRepo: G")  // debug
 	
 	fmt.Println("Creating repo", repoName)
 	var repo Repo
 	repo, err = dbClient.dbCreateRepo(realmId, repoName, repoDesc)
+	fmt.Println("createRepo: H")  // debug
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	fmt.Println("createRepo: I")  // debug
 
 	// Add ACL entry to enable the current user to access what he/she just created.
 	var user User
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
+	fmt.Println("createRepo: J")  // debug
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	fmt.Println("createRepo: K")  // debug
 	_, err = dbClient.dbCreateACLEntry(repo.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
+	fmt.Println("createRepo: L")  // debug
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	fmt.Println("createRepo: M")  // debug
 	
 	var name string
 	var filepath string
 	name, filepath, err = captureFile(repo, files)
+	fmt.Println("createRepo: N")  // debug
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	fmt.Println("createRepo: O")  // debug
 	if filepath != "" { // a file was attached - presume that it is a dockerfile
 		_, err = createDockerfile(sessionToken, dbClient, repo,
 			name, filepath, repo.getDescription())
+		fmt.Println("createRepo: P")  // debug
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		fmt.Println("createRepo: Q")  // debug
 	}
+	fmt.Println("createRepo: R")  // debug
 	
 	return repo.asRepoDesc()
 }
@@ -2236,6 +2254,14 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	
 	// TBD: Here we should use the scanConfig.SuccessExpression to compute the score.
 
+	// Construct arrays of param names and values, needed by dbCreateScanEvent.
+	var paramNames = make([]string, len(params))
+	var paramValues = make([]string, len(paramNames))
+	for i, name := range params {
+		paramNames[i] = name
+		paramValues[i] = params[name]
+	}
+	
 	// Create a scan event.
 	var userId string = sessionToken.AuthenticatedUserid
 	var user User
@@ -2244,8 +2270,8 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	if user == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"User with Id " + userId + " not found") }
 	var scanEvent ScanEvent
-	scanEvent, err = dbClient.dbCreateScanEvent(scanConfig.getId(), imageObjId,
-		user.getId(), score, result)
+	scanEvent, err = dbClient.dbCreateScanEvent(scanConfig.getId(), scanConfig.getProviderName(),
+		paramNames, paramValues, imageObjId, user.getId(), score, result)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return scanEvent.asScanEventDesc(dbClient)
