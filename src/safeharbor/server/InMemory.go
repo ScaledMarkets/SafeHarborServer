@@ -2974,17 +2974,15 @@ func (client *InMemClient) ReconstituteDockerImage(id string, aclEntryIds []stri
 /*******************************************************************************
  * 
  */
-type InMemParameterValue struct {
+type InMemParameterValue struct {  // abstract
 	InMemPersistObj
 	Name string
-	//TypeName string
 	StringValue string
-	ConfigId string
 }
 
 var _ ParameterValue = &InMemParameterValue{}
 
-func (client *InMemClient) NewInMemParameterValue(name, value, configId string) (*InMemParameterValue, error) {
+func (client *InMemClient) NewInMemParameterValue(name, value string) (*InMemParameterValue, error) {
 	var pers *InMemPersistObj
 	var err error
 	pers, err = client.NewInMemPersistObj()
@@ -2993,23 +2991,8 @@ func (client *InMemClient) NewInMemParameterValue(name, value, configId string) 
 		InMemPersistObj: *pers,
 		Name: name,
 		StringValue: value,
-		ConfigId: configId,
 	}
 	return paramValue, client.updateObject(paramValue)
-}
-
-func (client *InMemClient) dbCreateParameterValue(name, value, configId string) (ParameterValue, error) {
-	
-	var scanConfig ScanConfig
-	var err error
-	scanConfig, err = client.getScanConfig(configId)
-	if err != nil { return nil, err }
-	
-	var paramValue ParameterValue
-	paramValue, err = client.NewInMemParameterValue(name, value, configId)
-	if err != nil { return nil, err }
-	scanConfig.addParameterValueId(client, paramValue.getId())
-	return paramValue, nil
 }
 
 func (client *InMemClient) getParameterValue(id string) (ParameterValue, error) {
@@ -3023,6 +3006,10 @@ func (client *InMemClient) getParameterValue(id string) (ParameterValue, error) 
 	pv, isType = obj.(ParameterValue)
 	if ! isType { return nil, utils.ConstructServerError("Object with Id " + id + " is not a ParameterValue") }
 	return pv, nil
+}
+
+func (paramValue *InMemParameterValue) writeBack(dbClient DBClient) error {
+	panic("Abstract method should not be called")
 }
 
 func (paramValue *InMemParameterValue) getName() string {
@@ -3042,10 +3029,6 @@ func (paramValue *InMemParameterValue) setStringValue(dbClient DBClient, value s
 	return dbClient.writeBack(paramValue)
 }
 
-func (paramValue *InMemParameterValue) getConfigId() string {
-	return paramValue.ConfigId
-}
-
 func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.ParameterValueDesc {
 	return apitypes.NewParameterValueDesc(paramValue.Name, //paramValue.TypeName,
 		paramValue.StringValue)
@@ -3055,17 +3038,20 @@ func (paramValue *InMemParameterValue) writeBack(dbClient DBClient) error {
 	return dbClient.updateObject(paramValue)
 }
 
+func (paramValue *InMemDockerfileExecParameterValue) parameterValueFieldsAsJSON() string {
+	var json = "{" + paramValue.persistObjFieldsAsJSON()
+	json = json + fmt.Sprintf("\"Name\": \"%s\", \"StringValue\": \"%s\"",
+		paramValue.Name, paramValue.StringValue)
+	return json
+}
+
 func (paramValue *InMemParameterValue) asJSON() string {
-	
-	var json = "\"ParameterValue\": {" + paramValue.persistObjFieldsAsJSON()
-	json = json + fmt.Sprintf(
-		"\"Name\": \"%s\", \"StringValue\": \"%s\", \"ConfigId\": \"%s\"}",
-		paramValue.Name, paramValue.StringValue, paramValue.ConfigId)
+	panic("Call to method that should be abstract")
 	return json
 }
 
 func (client *InMemClient) ReconstituteParameterValue(id string,
-	name, strval, configId string) (ParameterValue, error) {
+	name, strval string) (ParameterValue, error) {
 
 	var persistObj *InMemPersistObj
 	var err error
@@ -3076,7 +3062,6 @@ func (client *InMemClient) ReconstituteParameterValue(id string,
 		InMemPersistObj: *persistObj,
 		Name: name,
 		StringValue: strval,
-		ConfigId: configId,
 	}, nil
 }
 
@@ -3399,6 +3384,94 @@ func (client *InMemClient) ReconstituteScanConfig(id string, aclEntryIds []strin
 /*******************************************************************************
  * 
  */
+type InMemScanParameterValue struct {
+	InMemParameterValue
+	ConfigId string
+}
+
+func (client *InMemClient) NewInMemScanParameterValue(name, value, configId string) (ScanParameterValue, error) {
+	
+	var pval *InMemScanParameterValue
+	var err error
+	paramValue, err = client.NewInMemParameterValue(name, value)
+	if err != nil { return nil, err }
+	var scanParamValue = &InMemScanParameterValue{
+		InMemParameterValue: *paramValue,
+		ConfigId: configId,
+	}
+	return scanParamValue, client.updateObject(scanParamValue)
+}
+
+func (client *InMemClient) dbCreateScanParameterValue(name, value, configId string) (ScanParameterValue, error) {
+	
+	var scanConfig ScanConfig
+	var err error
+	scanConfig, err = client.getScanConfig(configId)
+	if err != nil { return nil, err }
+	
+	var paramValue ScanParameterValue
+	paramValue, err = client.NewInMemScanParameterValue(name, value, configId)
+	if err != nil { return nil, err }
+	scanConfig.addParameterValueId(client, paramValue.getId())
+	return paramValue, nil
+}
+
+func (client *InMemClient) getScanParameterValue(id string) (ScanParameterValue, error) {
+	var pv ParameterValue
+	var err error
+	pv, err = client.getParameterValue(id)
+	if err != nil { return nil, err }
+	var scanpv ScanParameterValue
+	var isType bool
+	scanpv, isType = pv.(ScanParameterValue)
+	if ! isType { return nil, utils.ConstructServerError("ParameterValue is not a ScanParameterValue") }
+	return scanpv, nil
+}
+
+func (client *InMemClient) ReconstituteScanParameterValue(id,
+	name, strval, configId string)  (*InMemScanParameterValue, error) {
+
+	var paramValue *InMemParameterValue
+	var err error
+	paramValue, err = client.ReconstituteParameterValue(id, name, strval)
+	if err != nil { return nil, err }
+	
+	return &InMemScanParameterValue{
+		InMemParameterValue: *paramValue,
+		ConfigId: configId,
+	}, nil
+}
+
+func (client *InMemClient) asScanParameterValueDesc(paramValue ScanParameterValue) apitypes.ScanParameterValueDesc {
+	return paramValue.asScanParameterValueDesc(client)
+}
+
+func (paramValue *InMemScanParameterValue) writeBack(dbClient DBClient) error {
+	return dbClient.updateObject(paramValue)
+}
+
+func (paramValue *InMemScanParameterValue) asScanParameterValueDesc(dbClient DBClient) apitypes.ScanParameterValueDesc {
+	return apitypes.NewScanParameterValueDesc(paramValue.Name, paramValue.StringValue,
+		paramValue.ConfigId)
+}
+
+func (paramValue *InMemDockerfileExecParameterValue) scanParameterValueFieldsAsJSON() string {
+	var json = "{" + paramValue.parameterValueFieldsAsJSON()
+	json = json + fmt.Sprintf(", \"ConfigId\": \"%s\"}", paramValue.ConfigId)
+	return json
+}
+
+func (paramValue *InMemScanParameterValue) asJSON() string {
+	return "{" + paramValue.scanParameterValueFieldsAsJSON() + "}"
+}
+
+func (paramValue *InMemScanParameterValue) getConfigId() string {
+	return paramValue.ConfigId
+}
+
+/*******************************************************************************
+ * 
+ */
 type InMemFlag struct {
 	InMemResource
 	SuccessImagePath string
@@ -3577,6 +3650,10 @@ func (event *InMemEvent) getWhen() time.Time {
 
 func (event *InMemEvent) getUserObjId() string {
 	return event.UserObjId
+}
+
+func (event *InMemEvent) writeBack(dbClient DBClient) error {
+	panic("Abstract method should not be called")
 }
 
 func (event *InMemEvent) asEventDesc(dbClient DBClient) apitypes.EventDesc {
@@ -3897,7 +3974,7 @@ func (client *InMemClient) NewInMemDockerfileExecEvent(dockerfileId, imageId,
 
 func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId string, 
 	paramNames, paramValues []string, imageId,
-	userObjId string, actParamValueIds []string) (DockerfileExecEvent, error) {
+	userObjId string) (DockerfileExecEvent, error) {
 	
 	// Create actual ParameterValues for the Event.
 	var err error
@@ -3910,7 +3987,6 @@ func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId string,
 	}
 	
 	var newDockerfileExecEvent *InMemDockerfileExecEvent
-	var err error
 	newDockerfileExecEvent, err =
 		client.NewInMemDockerfileExecEvent(dockerfileId, imageId, userObjId, actParamValueIds)
 	if err != nil { return nil, err }
@@ -3941,10 +4017,10 @@ func (execEvent *InMemDockerfileExecEvent) getDockerfileId() string {
 }
 
 func (execEvent *InMemDockerfileExecEvent) getActualParameterValueIds() []string {
-	return event.ActualParameterValueIds
+	return execEvent.ActualParameterValueIds
 }
 
-func (execEvent *InMemDockerfileExecEvent) deleteAllParameterValues(DBClient) error {
+func (execEvent *InMemDockerfileExecEvent) deleteAllParameterValues(dbClient DBClient) error {
 	for _, paramId := range execEvent.ActualParameterValueIds {
 		var param ParameterValue
 		var err error
@@ -3953,16 +4029,16 @@ func (execEvent *InMemDockerfileExecEvent) deleteAllParameterValues(DBClient) er
 		dbClient.deleteObject(param)
 	}
 	execEvent.ActualParameterValueIds = make([]string, 0)
-	return dbClient.writeBack(event)
+	return dbClient.writeBack(execEvent)
 }
 
 func (execEvent *InMemDockerfileExecEvent) getDockerfileContent() string {
-	return DockerfileContent
+	return execEvent.DockerfileContent
 }
 
-func (execEvent *InMemDockerfileExecEvent) getDockerfileExternalObjId() string {
-	return execEvent.DockerfileExternalObjId
-}
+//func (execEvent *InMemDockerfileExecEvent) getDockerfileExternalObjId() string {
+//	return execEvent.DockerfileExternalObjId
+//}
 
 func (execEvent *InMemDockerfileExecEvent) nullifyDockerfile(dbClient DBClient) error {
 	execEvent.DockerfileId = ""
@@ -3975,7 +4051,7 @@ func (execEvent *InMemDockerfileExecEvent) nullifyDockerImage(dbClient DBClient)
 	return dbClient.writeBack(execEvent)
 }
 
-func (execEvent *InMemDockerfileExecEvent) asDockerfileExecEventDesc() *apitypes.DockerfileExecEventDesc {
+func (execEvent *InMemDockerfileExecEvent) asDockerfileExecEventDesc(dbClient DBClient) *apitypes.DockerfileExecEventDesc {
 	var paramValueDescs []*apitypes.ParameterValueDesc = make([]*apitypes.ParameterValueDesc, 0)
 	for _, valueId := range execEvent.ActualParameterValueIds {
 		var value ParameterValue
@@ -3993,7 +4069,7 @@ func (execEvent *InMemDockerfileExecEvent) asDockerfileExecEventDesc() *apitypes
 }
 
 func (execEvent *InMemDockerfileExecEvent) asEventDesc(dbClient DBClient) apitypes.EventDesc {
-	return execEvent.asDockerfileExecEventDesc()
+	return execEvent.asDockerfileExecEventDesc(dbClient)
 }
 
 func (execEvent *InMemDockerfileExecEvent) writeBack(dbClient DBClient) error {
@@ -4022,6 +4098,82 @@ func (client *InMemClient) ReconstituteDockerfileExecEvent(id string, when time.
 		DockerfileId: dockerfileId,
 		DockerfileContent: dockerfileContent,
 	}, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+type InMemDockerfileExecParameterValue struct {
+	InMemParameterValue
+}
+
+func (client *InMemClient) NewInMemDockerfileExecParameterValue(name, value string) (DockerfileExecParameterValue, error) {
+	
+	var pval *InMemScanParameterValue
+	var err error
+	paramValue, err = client.NewInMemParameterValue(name, value)
+	if err != nil { return nil, err }
+	var execParamValue = &InMemDockerfileExecParameterValue{
+		InMemParameterValue: *paramValue,
+		ConfigId: configId,
+	}
+	return execParamValue, client.updateObject(execParamValue)
+}
+
+func (client *InMemClient) dbCreateDockerfileExecParameterValue(name, value) (DockerfileExecParameterValue, error) {
+	
+	var paramValue DockerfileExecParameterValue
+	var err error
+	paramValue, err = client.NewInMemDockerfileExecParameterValue(name, value)
+	if err != nil { return nil, err }
+	scanConfig.addParameterValueId(client, paramValue.getId())
+	return paramValue, nil
+}
+
+func (client *InMemClient) getDockerfileExecParameterValue(id string) (DockerfileExecParameterValue, error) {
+	var pv ParameterValue
+	var err error
+	pv, err = client.getParameterValue(id)
+	if err != nil { return nil, err }
+	var depv DockerfileExecParameterValue
+	var isType bool
+	depv, isType = pv.(DockerfileExecParameterValue)
+	if ! isType { return nil, utils.ConstructServerError("ParameterValue is not a DockerfileExecParameterValue") }
+	return depv, nil
+}
+
+func (client *InMemClient) ReconstituteDockerfileExecParameterValue(id,
+	name, strval string)  (*InMemDockerfileExecParameterValue, error) {
+	
+	var paramValue *InMemParameterValue
+	var err error
+	paramValue, err = client.ReconstituteParameterValue(id, name, strval)
+	if err != nil { return nil, err }
+	
+	return &InMemDockerfileExecParameterValue{
+		InMemParameterValue: *paramValue,
+	}, nil
+}
+
+func (client *InMemClient) asDockerfileExecParameterValueDesc(paramValue DockerfileExecParameterValue) apitypes.DockerfileExecParameterValueDesc {
+	return paramValue.asDockerfileExecParameterValueDesc(client)
+}
+
+func (paramValue *InMemDockerfileExecParameterValue) writeBack(dbClient DBClient) error {
+	return dbClient.updateObject(paramValue)
+}
+
+func (paramValue *InMemDockerfileExecParameterValue) asDockerfileExecParameterValueDesc(dbClient DBClient) apitypes.DockerfileExecParameterValueDesc {
+	return apitypes.NewDockerfileExecParameterValueDesc(paramValue.Name, paramValue.StringValue)
+}
+
+func (paramValue *InMemDockerfileExecParameterValue) dockerfileExecParameterValueFieldsAsJSON() string {
+	var json = paramValue.parameterValueFieldsAsJSON()
+	return json
+}
+
+func (paramValue *InMemDockerfileExecParameterValue) asJSON() string {
+	return "{" + paramValue.dockerfileExecParameterValueFieldsAsJSON() + "}"
 }
 
 /*******************************************************************************

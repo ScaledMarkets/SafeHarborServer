@@ -374,10 +374,6 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		imageName, dockerfile.getDescription(), digest, outputStr)
 	fmt.Println("Created docker image object.")
 	
-	
-	var paramVal ParameterValue
-	paramVal, err = dbClient.dbCreateParameterValue(name, value, configId string)
-	
 	// Create an event to record that this happened.
 	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), 
 		paramNames, paramValues, image.getId(), user.getId())

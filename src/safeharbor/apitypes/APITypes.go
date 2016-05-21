@@ -805,7 +805,6 @@ func (providerDescs ScanProviderDescs) SendFile() (string, bool) {
  */
 type ParameterValueDesc struct {
 	Name string
-	//Type string
 	StringValue string
 }
 
@@ -815,11 +814,6 @@ func NewParameterValueDesc(name string, strValue string) *ParameterValueDesc {
 		//Type: tp,
 		StringValue: strValue,
 	}
-}
-
-func (desc *ParameterValueDesc) AsJSON() string {
-	return fmt.Sprintf(" {\"Name\": \"%s\", \"Value\": \"%s\"}",
-		desc.Name, desc.StringValue)
 }
 
 /*******************************************************************************
@@ -873,6 +867,46 @@ func (scanConfigDescs ScanConfigDescs) AsJSON() string {
 
 func (scanConfigDescs ScanConfigDescs) SendFile() (string, bool) {
 	return "", false
+}
+
+/*******************************************************************************
+ * 
+ */
+type ScanParameterValueDesc struct {
+	ParameterValudDesc
+	ConfigId string
+}
+
+func NewScanParameterValueDesc(name, strValue, configId string) *ScanParameterValueDesc {
+	var paramValudDesc = NewParameterValudDesc(name, strValue)
+	return &ScanParameterValueDesc{
+		ParameterValudDesc: *paramValueDesc,
+		ConfigId: configId,
+	}
+}
+
+func (desc *ParameterValueDesc) AsJSON() string {
+	return fmt.Sprintf(" {\"Name\": \"%s\", \"Value\": \"%s\", \"ConfigId\": \"%s\"}",
+		desc.Name, desc.StringValue, desc.ConfigId)
+}
+
+/*******************************************************************************
+ * 
+ */
+type DockerfileExecParameterValueDesc struct {
+	ParameterValueDesc
+}
+
+func NewDockerfileExecParameterValueDesc(name string, strValue string) *DockerfileExecParameterValueDesc {
+	var paramValudDesc = NewParameterValudDesc(name, strValue)
+	return &DockerfileExecParameterValueDesc{
+		ParameterValudDesc: *paramValueDesc,
+	}
+}
+
+func (desc *ParameterValueDesc) AsJSON() string {
+	return fmt.Sprintf(" {\"Name\": \"%s\", \"Value\": \"%s\"}",
+		desc.Name, desc.StringValue)
 }
 
 /*******************************************************************************

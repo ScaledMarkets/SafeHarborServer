@@ -86,13 +86,14 @@ type DBClient interface {
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string, string, []byte, string) (DockerImage, error)
-	dbCreateParameterValue(name, value, configId string) (ParameterValue, error)
 	dbCreateScanConfig(name, desc, repoId, providerName string, paramValueIds []string, successExpr, flagId string) (ScanConfig, error)
+	dbCreateScanParameterValue(name, value, configId string) (ScanParameterValue, error)
 	dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error)
 	dbCreateScanEvent(scanConfigId, providerName string, paramNames, paramValues []string, imageId,
 		userObjId, score string, result *providers.ScanResult) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId string, paramNames, paramValues []string,
-		imageId, userObjId string, actParamValueIds []string) (DockerfileExecEvent, error)
+		imageId, userObjId string) (DockerfileExecEvent, error)
+	dbCreateDockerfileExecParameterValue(name, value) (DockerfileExecParameterValue, error)
 	dbDeactivateRealm(realmId string) error
 	getResource(string) (Resource, error)
 	getParty(string) (Party, error)
@@ -105,6 +106,8 @@ type DBClient interface {
 	getDockerImage(string) (DockerImage, error)
 	getScanConfig(string) (ScanConfig, error)
 	getParameterValue(string) (ParameterValue, error)
+	getScanParameterValue(string) (ScanParameterValue, error)
+	getDockerfileExecParameterValue(string) (DockerfileExecParameterValue, error)
 	getFlag(string) (Flag, error)
 	getEvent(string) (Event, error)
 	getScanEvent(string) (ScanEvent, error)
@@ -328,7 +331,6 @@ type ParameterValue interface {
 	getName() string
 	getStringValue() string
 	setStringValue(DBClient, string) error
-	getConfigId() string
 	asParameterValueDesc() *apitypes.ParameterValueDesc
 }
 
@@ -353,6 +355,11 @@ type ScanConfig interface {
 	getScanEventIds() []string
 	deleteScanEventId(DBClient, string) error
 	asScanConfigDesc(DBClient) *apitypes.ScanConfigDesc
+}
+
+type ScanParameterValue interface {
+	ParameterValue
+	getConfigId() string
 }
 
 type Flag interface {
@@ -383,6 +390,7 @@ type ScanEvent interface {
 	asScanEventDesc(DBClient) *apitypes.ScanEventDesc
 	nullifyDockerImage(DBClient) error
 	nullifyScanConfig(DBClient) error
+	asDockerfileExecEventDesc(DBClient) *apitypes.DockerfileExecEventDesc
 }
 
 type ImageCreationEvent interface {  // abstract
@@ -400,6 +408,10 @@ type DockerfileExecEvent interface {
 	
 	/** Nullify all references to the dockerfile or its external representation. */
 	nullifyDockerfile(DBClient) error
+}
+
+type DockerfileExecParameterValue interface {
+	ParameterValue
 }
 
 type ImageUploadEvent interface {
