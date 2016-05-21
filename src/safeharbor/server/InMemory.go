@@ -3038,7 +3038,7 @@ func (paramValue *InMemParameterValue) writeBack(dbClient DBClient) error {
 	return dbClient.updateObject(paramValue)
 }
 
-func (paramValue *InMemDockerfileExecParameterValue) parameterValueFieldsAsJSON() string {
+func (paramValue *InMemParameterValue) parameterValueFieldsAsJSON() string {
 	var json = "{" + paramValue.persistObjFieldsAsJSON()
 	json = json + fmt.Sprintf("\"Name\": \"%s\", \"StringValue\": \"%s\"",
 		paramValue.Name, paramValue.StringValue)
@@ -3047,7 +3047,6 @@ func (paramValue *InMemDockerfileExecParameterValue) parameterValueFieldsAsJSON(
 
 func (paramValue *InMemParameterValue) asJSON() string {
 	panic("Call to method that should be abstract")
-	return json
 }
 
 func (client *InMemClient) ReconstituteParameterValue(id string,
@@ -3389,6 +3388,8 @@ type InMemScanParameterValue struct {
 	ConfigId string
 }
 
+var _ ScanParameterValue = &InMemScanParameterValue{}
+
 func (client *InMemClient) NewInMemScanParameterValue(name, value, configId string) (ScanParameterValue, error) {
 	
 	var pval *InMemScanParameterValue
@@ -3442,7 +3443,7 @@ func (client *InMemClient) ReconstituteScanParameterValue(id,
 	}, nil
 }
 
-func (client *InMemClient) asScanParameterValueDesc(paramValue ScanParameterValue) apitypes.ScanParameterValueDesc {
+func (client *InMemClient) asScanParameterValueDesc(paramValue ScanParameterValue) *apitypes.ScanParameterValueDesc {
 	return paramValue.asScanParameterValueDesc(client)
 }
 
@@ -3450,12 +3451,12 @@ func (paramValue *InMemScanParameterValue) writeBack(dbClient DBClient) error {
 	return dbClient.updateObject(paramValue)
 }
 
-func (paramValue *InMemScanParameterValue) asScanParameterValueDesc(dbClient DBClient) apitypes.ScanParameterValueDesc {
+func (paramValue *InMemScanParameterValue) asScanParameterValueDesc(dbClient DBClient) *apitypes.ScanParameterValueDesc {
 	return apitypes.NewScanParameterValueDesc(paramValue.Name, paramValue.StringValue,
 		paramValue.ConfigId)
 }
 
-func (paramValue *InMemDockerfileExecParameterValue) scanParameterValueFieldsAsJSON() string {
+func (paramValue *InMemScanParameterValue) scanParameterValueFieldsAsJSON() string {
 	var json = "{" + paramValue.parameterValueFieldsAsJSON()
 	json = json + fmt.Sprintf(", \"ConfigId\": \"%s\"}", paramValue.ConfigId)
 	return json
@@ -4107,6 +4108,8 @@ type InMemDockerfileExecParameterValue struct {
 	InMemParameterValue
 }
 
+var _ DockerfileExecParameterValue = &InMemDockerfileExecParameterValue{}
+
 func (client *InMemClient) NewInMemDockerfileExecParameterValue(name, value string) (DockerfileExecParameterValue, error) {
 	
 	var pval *InMemScanParameterValue
@@ -4120,7 +4123,7 @@ func (client *InMemClient) NewInMemDockerfileExecParameterValue(name, value stri
 	return execParamValue, client.updateObject(execParamValue)
 }
 
-func (client *InMemClient) dbCreateDockerfileExecParameterValue(name, value) (DockerfileExecParameterValue, error) {
+func (client *InMemClient) dbCreateDockerfileExecParameterValue(name, value string) (DockerfileExecParameterValue, error) {
 	
 	var paramValue DockerfileExecParameterValue
 	var err error
@@ -4155,7 +4158,7 @@ func (client *InMemClient) ReconstituteDockerfileExecParameterValue(id,
 	}, nil
 }
 
-func (client *InMemClient) asDockerfileExecParameterValueDesc(paramValue DockerfileExecParameterValue) apitypes.DockerfileExecParameterValueDesc {
+func (client *InMemClient) asDockerfileExecParameterValueDesc(paramValue DockerfileExecParameterValue) *apitypes.DockerfileExecParameterValueDesc {
 	return paramValue.asDockerfileExecParameterValueDesc(client)
 }
 
@@ -4163,7 +4166,7 @@ func (paramValue *InMemDockerfileExecParameterValue) writeBack(dbClient DBClient
 	return dbClient.updateObject(paramValue)
 }
 
-func (paramValue *InMemDockerfileExecParameterValue) asDockerfileExecParameterValueDesc(dbClient DBClient) apitypes.DockerfileExecParameterValueDesc {
+func (paramValue *InMemDockerfileExecParameterValue) asDockerfileExecParameterValueDesc(dbClient DBClient) *apitypes.DockerfileExecParameterValueDesc {
 	return apitypes.NewDockerfileExecParameterValueDesc(paramValue.Name, paramValue.StringValue)
 }
 

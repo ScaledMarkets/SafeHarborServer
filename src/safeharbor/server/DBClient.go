@@ -93,7 +93,7 @@ type DBClient interface {
 		userObjId, score string, result *providers.ScanResult) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId string, paramNames, paramValues []string,
 		imageId, userObjId string) (DockerfileExecEvent, error)
-	dbCreateDockerfileExecParameterValue(name, value) (DockerfileExecParameterValue, error)
+	dbCreateDockerfileExecParameterValue(name, value string) (DockerfileExecParameterValue, error)
 	dbDeactivateRealm(realmId string) error
 	getResource(string) (Resource, error)
 	getParty(string) (Party, error)
@@ -360,6 +360,8 @@ type ScanConfig interface {
 type ScanParameterValue interface {
 	ParameterValue
 	getConfigId() string
+	asScanParameterValueDesc(DBClient) *apitypes.ScanParameterValueDesc
+	scanParameterValueFieldsAsJSON() string
 }
 
 type Flag interface {
@@ -412,6 +414,8 @@ type DockerfileExecEvent interface {
 
 type DockerfileExecParameterValue interface {
 	ParameterValue
+	asDockerfileExecParameterValueDesc(DBClient) *apitypes.DockerfileExecParameterValueDesc
+	dockerfileExecParameterValueFieldsAsJSON() string
 }
 
 type ImageUploadEvent interface {

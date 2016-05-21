@@ -2257,9 +2257,11 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	// Construct arrays of param names and values, needed by dbCreateScanEvent.
 	var paramNames = make([]string, len(params))
 	var paramValues = make([]string, len(paramNames))
-	for i, name := range params {
+	var i = 0
+	for name, value := range params {
 		paramNames[i] = name
-		paramValues[i] = params[name]
+		paramValues[i] = value
+		i++
 	}
 	
 	// Create a scan event.
