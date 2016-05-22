@@ -1129,7 +1129,7 @@ func (eventDesc *DockerfileExecEventDesc) AsJSON() string {
 		s = s + valueDesc.AsJSON()
 	}
 	
-	s = s + "], DockerfileContent: \"" + rest.EncodeStringForJSON(eventDesc.DockerfileContent) + "\"}"
+	s = s + "], \"DockerfileContent\": \"" + rest.EncodeStringForJSON(eventDesc.DockerfileContent) + "\"}"
 	return s
 }
 

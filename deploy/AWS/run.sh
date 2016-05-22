@@ -16,7 +16,7 @@ source $( dirname "${BASH_SOURCE[0]}" )/env.sh
 sudo nohup bin/safeharbor -debug -stubs -secretkey=jafakeu9s3ls -noregistry -host=52.11.24.124 > log.out 2> log.err < /dev/null &
 
 # For my testing:
-sudo bin/safeharbor -debug -stubs -secretkey=jafakeu9s3ls -noregistry -inmem -host=52.40.48.84
+sudo bin/safeharbor -debug -stubs -secretkey=jafakeu9s3ls -noregistry -inmem -host=52.40.36.127
 
 # Containerized:
 sudo docker run -i -t --net=host -p $SafeHarborPort:$SafeHarborPort \
