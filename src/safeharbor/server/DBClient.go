@@ -392,7 +392,6 @@ type ScanEvent interface {
 	asScanEventDesc(DBClient) *apitypes.ScanEventDesc
 	nullifyDockerImage(DBClient) error
 	nullifyScanConfig(DBClient) error
-	asDockerfileExecEventDesc(DBClient) *apitypes.DockerfileExecEventDesc
 }
 
 type ImageCreationEvent interface {  // abstract
@@ -407,6 +406,7 @@ type DockerfileExecEvent interface {
 	deleteAllParameterValues(DBClient) error
 	getDockerfileContent() string
 	//getDockerfileExternalObjId() string  // may be empty.
+	asDockerfileExecEventDesc(DBClient) *apitypes.DockerfileExecEventDesc
 	
 	/** Nullify all references to the dockerfile or its external representation. */
 	nullifyDockerfile(DBClient) error

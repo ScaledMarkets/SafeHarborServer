@@ -1042,7 +1042,7 @@ func (group *InMemGroup) asJSON() string {
 
 func (client *InMemClient) ReconstituteGroup(id string, isActive bool,
 		name string, creationTime time.Time, realmId string, aclEntryIds []string,
-		desc string, userObjIds []string) (Group, error) {
+		desc string, userObjIds []string) (*InMemGroup, error) {
 	
 	var party *InMemParty
 	var err error
@@ -1332,7 +1332,7 @@ func (user *InMemUser) asJSON() string {
 func (client *InMemClient) ReconstituteUser(id string, isActive bool,
 		name string, creationTime time.Time, realmId string, aclEntryIds []string,
 		userId, emailAddr string, pswdHash []byte, groupIds []string,
-		loginAttmpts []string, eventIds []string) (User, error) {
+		loginAttmpts []string, eventIds []string) (*InMemUser, error) {
 	
 	var party *InMemParty
 	var err error
@@ -1484,7 +1484,7 @@ func (entry *InMemACLEntry) asJSON() string {
 }
 
 func (client *InMemClient) ReconstituteACLEntry(id, resourceId, partyId string,
-	permMask []bool) (ACLEntry, error) {
+	permMask []bool) (*InMemACLEntry, error) {
 
 	var persistObj *InMemPersistObj
 	var err error
@@ -2025,7 +2025,7 @@ func (realm *InMemRealm) asJSON() string {
 func (client *InMemClient) ReconstituteRealm(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
 	adminUserId string, orgFullName string,
-	userObjIds, groupIds, repoIds []string, fileDir string) (Realm, error) {
+	userObjIds, groupIds, repoIds []string, fileDir string) (*InMemRealm, error) {
 
 	var resource *InMemResource
 	var err error
@@ -2507,7 +2507,7 @@ func (repo *InMemRepo) asJSON() string {
 
 func (client *InMemClient) ReconstituteRepo(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
-	dockerfileIds, imageIds, configIds, flagIds []string, fileDir string) (Repo, error) {
+	dockerfileIds, imageIds, configIds, flagIds []string, fileDir string) (*InMemRepo, error) {
 
 	var resource *InMemResource
 	var err error
@@ -2663,7 +2663,7 @@ func (dockerfile *InMemDockerfile) asJSON() string {
 
 func (client *InMemClient) ReconstituteDockerfile(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
-	filePath string, eventIds []string) (Dockerfile, error) {
+	filePath string, eventIds []string) (*InMemDockerfile, error) {
 
 	var resource *InMemResource
 	var err error
@@ -2955,7 +2955,7 @@ func (image *InMemDockerImage) asJSON() string {
 
 func (client *InMemClient) ReconstituteDockerImage(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
-	eventIds []string, sig []byte, outFromBld string) (DockerImage, error) {
+	eventIds []string, sig []byte, outFromBld string) (*InMemDockerImage, error) {
 
 	var image *InMemImage
 	var err error
@@ -3034,10 +3034,6 @@ func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.Paramete
 		paramValue.StringValue)
 }
 
-func (paramValue *InMemParameterValue) writeBack(dbClient DBClient) error {
-	return dbClient.updateObject(paramValue)
-}
-
 func (paramValue *InMemParameterValue) parameterValueFieldsAsJSON() string {
 	var json = "{" + paramValue.persistObjFieldsAsJSON()
 	json = json + fmt.Sprintf("\"Name\": \"%s\", \"StringValue\": \"%s\"",
@@ -3050,7 +3046,7 @@ func (paramValue *InMemParameterValue) asJSON() string {
 }
 
 func (client *InMemClient) ReconstituteParameterValue(id string,
-	name, strval string) (ParameterValue, error) {
+	name, strval string) (*InMemParameterValue, error) {
 
 	var persistObj *InMemPersistObj
 	var err error
@@ -3220,7 +3216,7 @@ func (scanConfig *InMemScanConfig) setParameterValueDeferredUpdate(dbClient DBCl
 	// Did not find a value for a parameter of that name - create a new ParameterValue.
 	var paramValue ParameterValue
 	var err error
-	paramValue, err = dbClient.dbCreateParameterValue(name, strValue, scanConfig.getId())
+	paramValue, err = dbClient.dbCreateScanParameterValue(name, strValue, scanConfig.getId())
 	if err != nil { return nil, err }
 	return paramValue, nil
 }
@@ -3362,7 +3358,7 @@ func (scanConfig *InMemScanConfig) asJSON() string {
 func (client *InMemClient) ReconstituteScanConfig(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
 	successExpr string, providerName string, paramValueIds []string,
-	flagId string, scanEventIds []string) (ScanConfig, error) {
+	flagId string, scanEventIds []string) (*InMemScanConfig, error) {
 
 	var resource *InMemResource
 	var err error
@@ -3390,9 +3386,9 @@ type InMemScanParameterValue struct {
 
 var _ ScanParameterValue = &InMemScanParameterValue{}
 
-func (client *InMemClient) NewInMemScanParameterValue(name, value, configId string) (ScanParameterValue, error) {
+func (client *InMemClient) NewInMemScanParameterValue(name, value, configId string) (*InMemScanParameterValue, error) {
 	
-	var pval *InMemScanParameterValue
+	var paramValue *InMemParameterValue
 	var err error
 	paramValue, err = client.NewInMemParameterValue(name, value)
 	if err != nil { return nil, err }
@@ -3594,7 +3590,7 @@ func (flag *InMemFlag) asJSON() string {
 
 func (client *InMemClient) ReconstituteFlag(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
-	successImagePath string, usedByScanConfigIds []string) (Flag, error) {
+	successImagePath string, usedByScanConfigIds []string) (*InMemFlag, error) {
 
 	var resource *InMemResource
 	var err error
@@ -3734,8 +3730,8 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, providerName string,
 	var err error
 	var actParamValueIds []string = make([]string, 0)
 	for i, name := range paramNames {
-		var actParamValue *InMemParameterValue
-		actParamValue, err = client.NewInMemParameterValue(name, paramValues[i], scanConfigId)
+		var actParamValue *InMemScanParameterValue
+		actParamValue, err = client.NewInMemScanParameterValue(name, paramValues[i], scanConfigId)
 		if err != nil { return nil, err }
 		actParamValueIds = append(actParamValueIds, actParamValue.getId())
 	}
@@ -3864,7 +3860,7 @@ func (event *InMemScanEvent) asJSON() string {
 
 func (client *InMemClient) ReconstituteScanEvent(id string, when time.Time,
 	userObjId string, scanConfigId, dockerImageId, providerName string,
-	actParamValueIds []string, score string) (ScanEvent, error) {
+	actParamValueIds []string, score string) (*InMemScanEvent, error) {
 
 	var event *InMemEvent
 	var err error
@@ -3961,7 +3957,6 @@ func (client *InMemClient) NewInMemDockerfileExecEvent(dockerfileId, imageId,
 	var bytes []byte
 	bytes, err = ioutil.ReadAll(file)
 	if err != nil { return nil, err }
-	var isType bool
 	var dockerfileContent = string(bytes)
 	
 	var event = &InMemDockerfileExecEvent{
@@ -3981,8 +3976,8 @@ func (client *InMemClient) dbCreateDockerfileExecEvent(dockerfileId string,
 	var err error
 	var actParamValueIds []string = make([]string, 0)
 	for i, name := range paramNames {
-		var actParamValue *InMemParameterValue
-		actParamValue, err = client.NewInMemParameterValue(name, paramValues[i], scanConfigId)
+		var actParamValue *InMemDockerfileExecParameterValue
+		actParamValue, err = client.NewInMemDockerfileExecParameterValue(name, paramValues[i])
 		if err != nil { return nil, err }
 		actParamValueIds = append(actParamValueIds, actParamValue.getId())
 	}
@@ -4087,7 +4082,7 @@ func (execEvent *InMemDockerfileExecEvent) asJSON() string {
 }
 
 func (client *InMemClient) ReconstituteDockerfileExecEvent(id string, when time.Time,
-	userObjId, imageId, dockerfileId, dockerfileContent string) (DockerfileExecEvent, error) {
+	userObjId, imageId, dockerfileId, dockerfileContent string) (*InMemDockerfileExecEvent, error) {
 
 	var imgCrEvent *InMemImageCreationEvent
 	var err error
@@ -4110,15 +4105,14 @@ type InMemDockerfileExecParameterValue struct {
 
 var _ DockerfileExecParameterValue = &InMemDockerfileExecParameterValue{}
 
-func (client *InMemClient) NewInMemDockerfileExecParameterValue(name, value string) (DockerfileExecParameterValue, error) {
+func (client *InMemClient) NewInMemDockerfileExecParameterValue(name, value string) (*InMemDockerfileExecParameterValue, error) {
 	
-	var pval *InMemScanParameterValue
+	var paramValue *InMemParameterValue
 	var err error
 	paramValue, err = client.NewInMemParameterValue(name, value)
 	if err != nil { return nil, err }
 	var execParamValue = &InMemDockerfileExecParameterValue{
 		InMemParameterValue: *paramValue,
-		ConfigId: configId,
 	}
 	return execParamValue, client.updateObject(execParamValue)
 }
@@ -4129,7 +4123,6 @@ func (client *InMemClient) dbCreateDockerfileExecParameterValue(name, value stri
 	var err error
 	paramValue, err = client.NewInMemDockerfileExecParameterValue(name, value)
 	if err != nil { return nil, err }
-	scanConfig.addParameterValueId(client, paramValue.getId())
 	return paramValue, nil
 }
 
