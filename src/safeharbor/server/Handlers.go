@@ -633,7 +633,8 @@ func getRealmDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 
 	fmt.Println("getRealmDesc: A")  // debug
 	var failMsg apitypes.RespIntfTp
-	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
+	if failMsg != nil { return failMsg }
 	fmt.Println("getRealmDesc: B")  // debug
 	
 	var err error
