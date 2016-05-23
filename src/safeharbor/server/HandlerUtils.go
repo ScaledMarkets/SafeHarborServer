@@ -129,9 +129,7 @@ func AssertErrIsNil(err error, msg string) bool {
 func authenticateSession(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	values url.Values) (*apitypes.SessionToken, apitypes.RespIntfTp) {
 	
-	fmt.Println("authenticateSession: A")  // debug
 	if sessionToken == nil {
-		fmt.Println("authenticateSession: B")  // debug
 
 		// no session Id found; see if it was sent as an HTTP parameter.
 		// We do this because the client is likely to invoke this method directly
@@ -155,26 +153,21 @@ func authenticateSession(dbClient *InMemClient, sessionToken *apitypes.SessionTo
 			http.StatusUnauthorized, "Unauthenticated - session Id is invalid") }
 	}
 
-	fmt.Println("authenticateSession: C")  // debug
 	if ! dbClient.getServer().authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
 		return nil, apitypes.NewFailureDesc(http.StatusUnauthorized, "Invalid session Id")
 	}
-	fmt.Println("authenticateSession: D")  // debug
 	
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
-	fmt.Println("authenticateSession: E")  // debug
 	fmt.Println("userid=", userId)
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(userId)
-	fmt.Println("authenticateSession: F")  // debug
 	if err != nil { return nil, apitypes.NewFailureDescFromError(err) }
 	if user == nil {
 		return nil, apitypes.NewFailureDesc(
 			http.StatusUnauthorized, "user object cannot be identified from user id " + userId)
 	}
-	fmt.Println("authenticateSession: G")  // debug
 	
 	return sessionToken, nil
 }
@@ -206,41 +199,25 @@ func getCurrentUser(dbClient DBClient, sessionToken *apitypes.SessionToken) (Use
  * Authorize the request, based on the authenticated identity.
  */
 func authorizeHandlerAction(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
-	mask []bool, resourceId, attemptedAction string) *apitypes.FailureDesc {
+	mask []bool, resourceId, attemptedAction string) apitypes.RespIntfTp {
 	
-	fmt.Println("authorizeHandlerAction: A")  // debug
 	if dbClient.getServer().Authorize {
 		
-		fmt.Println("authorizeHandlerAction: B")  // debug
-		if sessionToken == nil { fmt.Println("sessionToken is nil") } // debug
-		if dbClient == nil { fmt.Println("dbClient is nil") } // debug
-		if dbClient.getServer() == nil { fmt.Println("dbClient.getServer() is nil") } // debug
-		if dbClient.getServer().authService == nil { fmt.Println("dbClient.getServer().authService is nil") } // debug
 		isAuthorized, err := dbClient.getServer().authService.authorized(dbClient,
 			sessionToken, mask, resourceId)
-		fmt.Println("authorizeHandlerAction: C")  // debug
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
-		fmt.Println("authorizeHandlerAction: D")  // debug
 		if ! isAuthorized {
-			fmt.Println("authorizeHandlerAction: E")  // debug
 			var resource Resource
 			resource, err = dbClient.getResource(resourceId)
-			fmt.Println("authorizeHandlerAction: F")  // debug
 			if err != nil { return apitypes.NewFailureDescFromError(err) }
-			fmt.Println("authorizeHandlerAction: G")  // debug
-			
 			if resource == nil {
-				fmt.Println("authorizeHandlerAction: H")  // debug
 				return apitypes.NewFailureDesc(http.StatusBadRequest,
 					"Unable to identify resource with Id " + resourceId)
 			}
-			fmt.Println("authorizeHandlerAction: I")  // debug
 			return apitypes.NewFailureDesc(http.StatusForbidden, fmt.Sprintf(
 				"Unauthorized: cannot perform %s on %s", attemptedAction, resource.getName()))
 		}
-		fmt.Println("authorizeHandlerAction: J")  // debug
 	}
-	fmt.Println("authorizeHandlerAction: K")  // debug
 	
 	return nil
 }
@@ -275,11 +252,9 @@ func createDockerfile(sessionToken *apitypes.SessionToken, dbClient DBClient,
  */
 func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, string, error) {
 
-	fmt.Println("captureFile: A")  // debug
 	var err error
 	var headers []*multipart.FileHeader = files["filename"]
 	if len(headers) == 0 { return "", "", nil }
-	fmt.Println("captureFile: B")  // debug
 	if len(headers) > 1 { return "", "", utils.ConstructUserError("Too many files posted") }
 	var header *multipart.FileHeader = headers[0]
 	var filename string = header.Filename	
@@ -287,17 +262,12 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 	
 	// Validate syntax of filename: must be a simple name - no slashes, and a valid file name
 	err = validateSimpleFileNameSyntax(filename)
-	fmt.Println("captureFile: C")  // debug
 	if err != nil { return "", "", utils.ConstructServerError(err.Error()) }
-	fmt.Println("captureFile: D")  // debug
 	
 	var file multipart.File
 	file, err = header.Open()
-	fmt.Println("captureFile: E")  // debug
 	if err != nil { return "", "", utils.ConstructServerError(err.Error()) }
-	fmt.Println("captureFile: F")  // debug
 	if file == nil { return "", "", utils.ConstructServerError("Internal Error") }	
-	fmt.Println("captureFile: G")  // debug
 	
 	// Create a filename for the new file.
 	var filepath = repo.getFileDirectory() + "/" + filename
@@ -308,25 +278,20 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 			return "", "", utils.ConstructServerError(err.Error())
 		}
 	}
-	fmt.Println("captureFile: H")  // debug
 	if fileExists(filepath) {
 		fmt.Println("********Internal error: file exists but it should not:" + filepath)
 		return "", "", utils.ConstructServerError("********Internal error: file exists but it should not:" + filepath)
 	}
-	fmt.Println("captureFile: I")  // debug
 	
 	// Save the file data to a permanent file.
 	var bytes []byte
 	bytes, err = ioutil.ReadAll(file)
-	fmt.Println("captureFile: J")  // debug
 	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
-	fmt.Println("captureFile: K")  // debug
 	if err != nil {
 		fmt.Println(err.Error())
 		return "", "", utils.ConstructServerError("While writing dockerfile, " + err.Error())
 	}
 	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
-	fmt.Println("captureFile: L")  // debug
 	return filename, filepath, nil
 }
 
