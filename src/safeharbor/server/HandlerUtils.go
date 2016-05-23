@@ -129,7 +129,9 @@ func AssertErrIsNil(err error, msg string) bool {
 func authenticateSession(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	values url.Values) (*apitypes.SessionToken, *apitypes.FailureDesc) {
 	
+	fmt.Println("authenticateSession: A")  // debug
 	if sessionToken == nil {
+		fmt.Println("authenticateSession: B")  // debug
 
 		// no session Id found; see if it was sent as an HTTP parameter.
 		// We do this because the client is likely to invoke this method directly
@@ -153,21 +155,26 @@ func authenticateSession(dbClient *InMemClient, sessionToken *apitypes.SessionTo
 			http.StatusUnauthorized, "Unauthenticated - session Id is invalid") }
 	}
 
+	fmt.Println("authenticateSession: C")  // debug
 	if ! dbClient.getServer().authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
 		return nil, apitypes.NewFailureDesc(http.StatusUnauthorized, "Invalid session Id")
 	}
+	fmt.Println("authenticateSession: D")  // debug
 	
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
+	fmt.Println("authenticateSession: E")  // debug
 	fmt.Println("userid=", userId)
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(userId)
+	fmt.Println("authenticateSession: F")  // debug
 	if err != nil { return nil, apitypes.NewFailureDescFromError(err) }
 	if user == nil {
 		return nil, apitypes.NewFailureDesc(
 			http.StatusUnauthorized, "user object cannot be identified from user id " + userId)
 	}
+	fmt.Println("authenticateSession: G")  // debug
 	
 	return sessionToken, nil
 }
