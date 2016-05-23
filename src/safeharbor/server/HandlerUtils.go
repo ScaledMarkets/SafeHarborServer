@@ -201,24 +201,35 @@ func getCurrentUser(dbClient DBClient, sessionToken *apitypes.SessionToken) (Use
 func authorizeHandlerAction(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	mask []bool, resourceId, attemptedAction string) *apitypes.FailureDesc {
 	
+	fmt.Println("authorizeHandlerAction: A")  // debug
 	if dbClient.getServer().Authorize {
 		
+		fmt.Println("authorizeHandlerAction: B")  // debug
 		isAuthorized, err := dbClient.getServer().authService.authorized(dbClient,
 			sessionToken, mask, resourceId)
+		fmt.Println("authorizeHandlerAction: C")  // debug
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		fmt.Println("authorizeHandlerAction: D")  // debug
 		if ! isAuthorized {
+			fmt.Println("authorizeHandlerAction: E")  // debug
 			var resource Resource
 			resource, err = dbClient.getResource(resourceId)
+			fmt.Println("authorizeHandlerAction: F")  // debug
 			if err != nil { return apitypes.NewFailureDescFromError(err) }
+			fmt.Println("authorizeHandlerAction: G")  // debug
 			
 			if resource == nil {
+				fmt.Println("authorizeHandlerAction: H")  // debug
 				return apitypes.NewFailureDesc(http.StatusBadRequest,
 					"Unable to identify resource with Id " + resourceId)
 			}
+			fmt.Println("authorizeHandlerAction: I")  // debug
 			return apitypes.NewFailureDesc(http.StatusForbidden, fmt.Sprintf(
 				"Unauthorized: cannot perform %s on %s", attemptedAction, resource.getName()))
 		}
+		fmt.Println("authorizeHandlerAction: J")  // debug
 	}
+	fmt.Println("authorizeHandlerAction: K")  // debug
 	
 	return nil
 }
