@@ -631,22 +631,30 @@ func createRealmAnon(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 func getRealmDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
+	fmt.Println("getRealmDesc: A")  // debug
 	var failMsg apitypes.RespIntfTp
 	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	fmt.Println("getRealmDesc: B")  // debug
 	
 	var err error
 	var realmId string
 	realmId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmId")
+	fmt.Println("getRealmDesc: C")  // debug
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	fmt.Println("getRealmDesc: D")  // debug
 	
 	if failMsg := authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, realmId,
 		"getRealmDesc"); failMsg != nil { return failMsg }
+	fmt.Println("getRealmDesc: E")  // debug
 	
 	var realm Realm
 	realm, err = dbClient.getRealm(realmId)
+	fmt.Println("getRealmDesc: F")  // debug
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	fmt.Println("getRealmDesc: G")  // debug
 	if realm == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"Cound not find realm with Id " + realmId) }
+	fmt.Println("getRealmDesc: H")  // debug
 	
 	return realm.asRealmDesc()
 }
