@@ -175,11 +175,9 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	var jsonResponse string = result.AsJSON()
 	fmt.Println("handleRequest: B")  // debug
 	if jsonResponse != "" { fmt.Println("Returning result:", jsonResponse) }
-	fmt.Println("handleRequest: C")  // debug
 	
 	// Detect whether an error occurred.
 	failureDesc, isType := result.(*apitypes.FailureDesc)
-	fmt.Println("handleRequest: D")  // debug
 	if isType {
 		fmt.Printf("Error:", failureDesc.HTTPReasonPhrase)
 		http.Error(w, failureDesc.AsJSON(), failureDesc.HTTPStatusCode)

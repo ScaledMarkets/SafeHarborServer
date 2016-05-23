@@ -635,6 +635,15 @@ func getRealmDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	var failMsg apitypes.RespIntfTp
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	fmt.Println("getRealmDesc: A.1")  // debug
+	
+	if failMsg == nil { fmt.Println("failMsg is nil") } else { fmt.Println("failMsg is not nil") } // debug
+	var fd *apitypes.FailureDesc // debug
+	var isType bool // debug
+	fd, isType = failMsg.(*apitypes.FailureDesc)
+	if isType {fmt.Println("isType") } else { fmt.Println("not isType") } // debug
+	if fd == nil { fmt.Println("fd is nil") } else { fmt.Println("fd is not nil") } // debug
+	
+	
 	if failMsg != nil { return failMsg }
 	fmt.Println("getRealmDesc: B")  // debug
 	
