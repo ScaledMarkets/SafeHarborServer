@@ -234,7 +234,8 @@ func logout(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values u
 func createUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var err error
 	var userInfo *apitypes.UserInfo
@@ -276,7 +277,8 @@ func createUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 func disableUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var userObjId string
 	var err error
@@ -331,7 +333,8 @@ func reenableUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 func changePassword(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var userId string
 	var err error
@@ -377,7 +380,8 @@ func changePassword(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 func createGroup(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -425,7 +429,8 @@ func createGroup(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 func deleteGroup(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var groupId string
 	var err error
@@ -455,7 +460,8 @@ func deleteGroup(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 func getGroupUsers(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var groupId string
@@ -495,7 +501,8 @@ func getGroupUsers(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func addGroupUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var groupId string
@@ -537,7 +544,8 @@ func addGroupUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 func remGroupUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var groupId string
@@ -623,7 +631,8 @@ func createRealmAnon(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 func getRealmDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var err error
 	var realmId string
@@ -649,7 +658,8 @@ func getRealmDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 func createRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var realmInfo *apitypes.RealmInfo
@@ -680,7 +690,8 @@ func createRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 func deactivateRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var realmId string
 	var err error
@@ -703,7 +714,8 @@ func deactivateRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 func moveUserToRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -751,7 +763,8 @@ func moveUserToRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 func getUserDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var userId string
@@ -781,7 +794,8 @@ func getUserDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 func getRealmUsers(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var realmId string
 	var err error
@@ -817,7 +831,8 @@ func getRealmUsers(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func getRealmGroups(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var groupDescs apitypes.GroupDescs = make([]*apitypes.GroupDesc, 0)
 	var realmId string
@@ -854,7 +869,8 @@ func getRealmGroups(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 func getRealmRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var realmId string
@@ -896,7 +912,8 @@ func getRealmRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func getAllRealms(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var realmIds []string
 	var err error
@@ -927,7 +944,8 @@ func getAllRealms(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 func createRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	fmt.Println("Creating repo...")
 	var err error
@@ -997,7 +1015,8 @@ func createRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 func deleteRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var repoId string
 	var err error
@@ -1029,7 +1048,8 @@ func deleteRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 func getDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var repoId string
@@ -1070,7 +1090,8 @@ func getDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 func getDockerImages(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var repoId string
@@ -1113,7 +1134,8 @@ func getDockerImages(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 func addDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the repo.
 	var repoId string
@@ -1154,7 +1176,8 @@ func addDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func getGroupDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the group.
 	var groupId string
@@ -1175,7 +1198,8 @@ func getGroupDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 func getRepoDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the repo.
 	var repoId string
@@ -1196,7 +1220,8 @@ func getRepoDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 func getDockerImageDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the repo.
 	var imageId string
@@ -1217,7 +1242,8 @@ func getDockerImageDesc(dbClient *InMemClient, sessionToken *apitypes.SessionTok
 func getDockerfileDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the dockerfile.
 	var dockerfileId string
@@ -1238,7 +1264,8 @@ func getDockerfileDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 func replaceDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var dockerfileId string
 	var desc string
@@ -1277,7 +1304,8 @@ func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 
 	fmt.Println("Entered execDockerfile")
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Identify the Dockerfile.
 	var err error
@@ -1358,7 +1386,8 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 func downloadImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var imageObjId string
 	var err error
@@ -1402,7 +1431,8 @@ func downloadImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func setPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Get the mask that we will use to overwrite the current mask.
 	var partyId string
@@ -1460,7 +1490,8 @@ func setPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func addPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Get the mask that we will be adding to the current mask.
 	var partyId string
@@ -1518,7 +1549,8 @@ func addPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func remPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	// Get the mask that we will be subracting from the current mask.
 	var partyId string
@@ -1561,7 +1593,8 @@ func remPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func getPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var partyId string
 	var err error
@@ -1607,7 +1640,8 @@ func getPermission(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func getMyDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	if sessionToken == nil { return apitypes.NewFailureDesc(
 		http.StatusUnauthorized, "User not authenticated") }
 	
@@ -1633,7 +1667,8 @@ func getMyDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 func getMyGroups(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var groupDescs apitypes.GroupDescs = make([]*apitypes.GroupDesc, 0)
 	var user User
@@ -1662,7 +1697,8 @@ func getMyGroups(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 func getMyRealms(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var realms map[string]Realm = make(map[string]Realm)
 	
@@ -1704,7 +1740,8 @@ func getMyRealms(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 func getMyRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
 	// Traverse the user's ACL entries; form the union of the repos that the user
 	// has explicit access to, and the repos that belong to the realms that the user
@@ -1768,7 +1805,8 @@ func getMyRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 func getMyDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var user User
 	var err error
@@ -1800,7 +1838,8 @@ func getMyDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 func getMyDockerImages(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var user User
 	var err error
@@ -1832,7 +1871,8 @@ func getMyDockerImages(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 func getMyScanConfigs(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var user User
 	var err error
@@ -1864,7 +1904,8 @@ func getMyScanConfigs(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 func getMyFlags(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var user User
 	var err error
@@ -1896,7 +1937,8 @@ func getMyFlags(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 func getScanProviders(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var providerDescs apitypes.ScanProviderDescs = make([]*apitypes.ScanProviderDesc, 0)
 	var services []providers.ScanService = dbClient.Server.GetScanServices()
@@ -1914,7 +1956,8 @@ func getScanProviders(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 func defineScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var err error
 	var providerName string
@@ -2015,7 +2058,8 @@ func defineScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 func updateScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 		
 	// Update only the fields that are specified and that are not empty strings.
 	var err error
@@ -2115,7 +2159,8 @@ func updateScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 func getFlagImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var flagId string
 	var err error
@@ -2141,7 +2186,8 @@ func getFlagImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 func defineFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 	
 	var repoId string
 	var err error
@@ -2183,7 +2229,8 @@ func defineFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var scanConfigId, imageObjId string
 	var err error
@@ -2286,7 +2333,8 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 func getDockerImageStatus(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var imageObjId string
 	var err error
@@ -2319,7 +2367,8 @@ func getDockerImageStatus(dbClient *InMemClient, sessionToken *apitypes.SessionT
 func getScanConfigDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var scanConfigId string
 	var err error
@@ -2343,7 +2392,8 @@ func getScanConfigDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 func getFlagDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var flagId string
 	var err error
@@ -2367,7 +2417,8 @@ func getFlagDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 func getUserEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var userId string = sessionToken.AuthenticatedUserid
 	var user User
@@ -2397,7 +2448,8 @@ func getUserEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func getDockerImageEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var imageObjId string
 	var err error
@@ -2430,7 +2482,8 @@ func getDockerImageEvents(dbClient *InMemClient, sessionToken *apitypes.SessionT
 func getDockerfileEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var dockerfileId string
 	var err error
@@ -2463,7 +2516,8 @@ func getDockerfileEvents(dbClient *InMemClient, sessionToken *apitypes.SessionTo
 func getScanConfigDescByName(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var repoId string
@@ -2501,7 +2555,8 @@ func getScanConfigDescByName(dbClient *InMemClient, sessionToken *apitypes.Sessi
 func remScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var scanConfigId string
@@ -2531,7 +2586,8 @@ func remScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func getFlagDescByName(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var repoId string
@@ -2569,7 +2625,8 @@ func getFlagDescByName(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 func remFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var flagId string
@@ -2599,7 +2656,8 @@ func remFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values 
 func remDockerImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	if _, failMsg := authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
+	var failMsg apitypes.RespIntfTp
+	if sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values); failMsg != nil { return failMsg }
 
 	var err error
 	var imageId string

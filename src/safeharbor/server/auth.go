@@ -170,6 +170,8 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 	
 	*/
 	
+	if sessionToken == nil { return false, utils.ConstructServerError("No session token") }
+	
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
 	fmt.Println("userid=", userId)
