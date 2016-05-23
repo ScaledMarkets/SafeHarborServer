@@ -205,6 +205,10 @@ func authorizeHandlerAction(dbClient *InMemClient, sessionToken *apitypes.Sessio
 	if dbClient.getServer().Authorize {
 		
 		fmt.Println("authorizeHandlerAction: B")  // debug
+		if sessionToken == nil { fmt.Println("sessionToken is nil") } // debug
+		if dbClient == nil { fmt.Println("dbClient is nil") } // debug
+		if dbClient.getServer() == nil { fmt.Println("dbClient.getServer() is nil") } // debug
+		if dbClient.getServer().authService == nil { fmt.Println("dbClient.getServer().authService is nil") } // debug
 		isAuthorized, err := dbClient.getServer().authService.authorized(dbClient,
 			sessionToken, mask, resourceId)
 		fmt.Println("authorizeHandlerAction: C")  // debug
