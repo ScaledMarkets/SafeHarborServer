@@ -1358,7 +1358,7 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 
 	fmt.Println("Entered addAndExecDockerfile")
 	
-	var failMsg *apitypes.FailureDesc = nil
+	var failMsg apitypes.RespIntfTp = nil
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
 	

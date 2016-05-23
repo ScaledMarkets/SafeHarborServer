@@ -127,7 +127,7 @@ func AssertErrIsNil(err error, msg string) bool {
  * that provides a valid session Id.
  */
 func authenticateSession(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
-	values url.Values) (*apitypes.SessionToken, *apitypes.FailureDesc) {
+	values url.Values) (*apitypes.SessionToken, apitypes.RespIntfTp) {
 	
 	fmt.Println("authenticateSession: A")  // debug
 	if sessionToken == nil {
