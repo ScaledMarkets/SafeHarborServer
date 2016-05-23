@@ -171,11 +171,15 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	
 	var result apitypes.RespIntfTp = handler(inMemClients[0], sessionToken, values, files)
 	if result == nil { fmt.Println("result is nil") }
+	fmt.Println("handleRequest: A")  // debug
 	var jsonResponse string = result.AsJSON()
+	fmt.Println("handleRequest: B")  // debug
 	if jsonResponse != "" { fmt.Println("Returning result:", jsonResponse) }
+	fmt.Println("handleRequest: C")  // debug
 	
 	// Detect whether an error occurred.
 	failureDesc, isType := result.(*apitypes.FailureDesc)
+	fmt.Println("handleRequest: D")  // debug
 	if isType {
 		fmt.Printf("Error:", failureDesc.HTTPReasonPhrase)
 		http.Error(w, failureDesc.AsJSON(), failureDesc.HTTPStatusCode)
