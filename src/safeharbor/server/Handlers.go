@@ -1762,7 +1762,6 @@ func getMyRealms(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	var aclEntrieIds []string = user.getACLEntryIds()
 	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
-		fmt.Println("\taclEntryId:", aclEntryId)
 		var err error
 		var aclEntry ACLEntry
 		aclEntry, err = dbClient.getACLEntry(aclEntryId)
@@ -1809,9 +1808,7 @@ func getMyRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	user, err = dbClient.dbGetUserByUserId(sessionToken.AuthenticatedUserid)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var aclEntrieIds []string = user.getACLEntryIds()
-	fmt.Println("For each acl entry...")
 	for _, aclEntryId := range aclEntrieIds {
-		fmt.Println("\taclEntryId:", aclEntryId)
 		var err error
 		var aclEntry ACLEntry
 		aclEntry, err = dbClient.getACLEntry(aclEntryId)
@@ -1822,17 +1819,12 @@ func getMyRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		switch v := resource.(type) {
 			case Realm: realms[v.getId()] = v
-				fmt.Println("\t\ta Realm")
 			case Repo: repos[v.getId()] = v
-				fmt.Println("\t\ta Repo")
 		}
 	}
-	fmt.Println("For each realm...")
 	for _, realm := range realms {
-		fmt.Println("For each repo of realm id", realm.getId(), "...")
 		// Add all of the repos belonging to realm.
 		for _, repoId := range realm.getRepoIds() {
-			fmt.Println("\tadding repoId", repoId)
 			var r Repo
 			var err error
 			r, err = dbClient.getRepo(repoId)
@@ -1842,10 +1834,8 @@ func getMyRepos(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 			repos[repoId] = r
 		}
 	}
-	fmt.Println("Creating result...")
 	var repoDescs apitypes.RepoDescs = make([]*apitypes.RepoDesc, 0)
 	for _, repo := range repos {
-		fmt.Println("\tappending repo", repo.getName())
 		repoDescs = append(repoDescs, repo.asRepoDesc())
 	}
 	
@@ -2423,7 +2413,7 @@ func getDockerImageStatus(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	// Get the most recent ScanEvent, if any.
 	var eventId string = image.getMostRecentScanEventId()
 	if eventId == "" {
-		return apitypes.NewScanEventDesc("", time.Now(), "", "", "", nil, "", nil) // an empty ScanEventDesc
+		return apitypes.NewScanEventDesc("", time.Now(), "", imageObjId, "", "", nil, "", nil) // an empty ScanEventDesc
 	} else {
 		var event ScanEvent
 		event, err = dbClient.getScanEvent(eventId)

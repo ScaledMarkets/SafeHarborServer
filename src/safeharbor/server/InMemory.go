@@ -2817,35 +2817,6 @@ func (client *InMemClient) getDockerImage(id string) (DockerImage, error) {
 	return image, nil
 }
 
-func (image *InMemDockerImage) getSignature() []byte {
-	return image.Signature
-}
-
-/* ----- Not used anymore - we get the signature from the docker v2 registry -----
-func (image *InMemDockerImage) computeSignature() ([]byte, error) {
-	var err error
-	var tempFilePath string
-	var imageFullName
-	imageFullName, err = image.getFullName(dbClient)
-	tempFilePath, err = docker.SaveImage(imageFullName)
-	if err != nil { return nil, err }
-	defer func() {
-		fmt.Println("Removing all files at " + tempFilePath)
-		os.RemoveAll(tempFilePath)
-	}()
-	var file *os.File
-	file, _ = os.Open(tempFilePath)
-	var fileInfo os.FileInfo
-	fileInfo, _ = file.Stat()
-	fmt.Println(fmt.Sprintf("Size of file %s is %d", tempFilePath, fileInfo.Size()))
-	return image.Client.Server.authService.ComputeFileSignature(tempFilePath)
-}
-*/
-
-func (image *InMemDockerImage) getOutputFromBuild() string {
-	return image.OutputFromBuild
-}
-
 func (image *InMemDockerImage) getDockerImageTag() string {
 	return image.Name
 }
@@ -2879,33 +2850,6 @@ func (image *InMemDockerImage) getFullNameParts(dbClient DBClient) (
 	return realm.getName(), repo.getName(), image.Name, nil
 }
 
-func (image *InMemDockerImage) getScanEventIds() []string {
-	return image.ScanEventIds
-}
-
-func (image *InMemDockerImage) addScanEventId(dbClient DBClient, id string) {
-	
-	image.ScanEventIds = append(image.ScanEventIds, id)
-	dbClient.writeBack(image)
-}
-
-func (image *InMemDockerImage) getMostRecentScanEventId() string {
-	var numOfIds = len(image.ScanEventIds)
-	if numOfIds == 0 {
-		return ""
-	} else {
-		return image.ScanEventIds[numOfIds-1]
-	}
-}
-
-func (image *InMemDockerImage) getImageCreationEventId() string {
-	return image.ImageCreationEventId
-}
-
-func (image *InMemDockerImage) setImageCreationEventId(eventId string) {
-	image.ImageCreationEventId = eventId
-}
-
 func (image *InMemDockerImage) deleteAllChildResources(dbClient DBClient) error {
 	
 	var event Event
@@ -2926,7 +2870,7 @@ func (image *InMemDockerImage) deleteAllChildResources(dbClient DBClient) error 
 
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
 	return apitypes.NewDockerImageDesc(image.Id, image.getRepoId(), image.Name,
-		image.Description, image.CreationTime, image.Signature, image.OutputFromBuild)
+		image.Description, image.Signature, image.OutputFromBuild)
 }
 
 func (image *InMemDockerImage) isDockerImage() bool { return true }
@@ -2970,6 +2914,141 @@ func (client *InMemClient) ReconstituteDockerImage(id string, aclEntryIds []stri
 		OutputFromBuild: outFromBld,
 	}, nil
 }
+
+/*******************************************************************************
+ * 
+ */
+type InMemImageVersion struct {  // abstract
+	InMemPersistObj
+	Version string
+	ImageObjId string
+    CreationDate time.Time
+}
+
+var _ ImageVersion = &InMemImageVersion{}
+
+func (client *InMemClient) New....
+
+func (imageVersion *InMemImageVersion) imageVersionFieldsAsJSON() string ....
+
+func (image *InMemImage) asJSON() string {
+	panic("Call to method that should be abstract")
+}
+
+func (client *InMemClient) ReconstituteImage(....
+
+
+func (imageVersion *InMemImageVersion) getVersion() string
+func (imageVersion *InMemImageVersion) getImageObjId() string
+func (imageVersion *InMemImageVersion) getCreationDate() time.Time
+
+/*******************************************************************************
+ * 
+ */
+type InMemDockerImageVersion struct {
+	....
+	DockerBuildOutput string
+	....
+}
+
+var _ DockerImageVersion = &InMemDockerImageVersion{}
+
+func (client *InMemClient) New....
+
+func (client *InMemClient) dbCreate....
+
+func (client *InMemClient) get....
+
+func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc....
+
+func (imageVersion *InMemDockerImageVersion) writeBack(dbClient DBClient) error....
+
+func (imageVersion *InMemDockerImageVersion) asJSON() string ....
+
+func (client *InMemClient) ReconstituteDockerImageVersion....
+
+func (imageVersion *InMemDockerImageVersion) addScanEventId(dbClient DBClient, id string) {
+	
+	image.ScanEventIds = append(image.ScanEventIds, id)
+	dbClient.writeBack(image)
+}
+
+func (imageVersion *InMemDockerImageVersion) getScanEventIds() []string {
+	return imageVersion.ScanEventIds
+}
+
+func (imageVersion *InMemDockerImageVersion) getMostRecentScanEventId() string {
+	var numOfIds = len(imageVersion.ScanEventIds)
+	if numOfIds == 0 {
+		return ""
+	} else {
+		return imageVersion.ScanEventIds[numOfIds-1]
+	}
+}
+
+func (imageVersion *InMemDockerImageVersion) getImageCreationEventId() string {
+	return image.ImageCreationEventId
+}
+
+func (imageVersion *InMemDockerImageVersion) setImageCreationEventId(eventId string) {
+	image.ImageCreationEventId = eventId
+}
+
+func (imageVersion *InMemDockerImageVersion) getSignature() []byte {
+	return image.Signature
+}
+
+/* ----- Not used anymore - we get the signature from the docker v2 registry -----
+func (imageVersion *InMemDockerImageVersion) computeSignature() ([]byte, error) {
+	var err error
+	var tempFilePath string
+	var imageFullName
+	imageFullName, err = image.getFullName(dbClient)
+	tempFilePath, err = docker.SaveImage(imageFullName)
+	if err != nil { return nil, err }
+	defer func() {
+		fmt.Println("Removing all files at " + tempFilePath)
+		os.RemoveAll(tempFilePath)
+	}()
+	var file *os.File
+	file, _ = os.Open(tempFilePath)
+	var fileInfo os.FileInfo
+	fileInfo, _ = file.Stat()
+	fmt.Println(fmt.Sprintf("Size of file %s is %d", tempFilePath, fileInfo.Size()))
+	return image.Client.Server.authService.ComputeFileSignature(tempFilePath)
+}
+*/
+
+func (imageVersion *InMemDockerImageVersion) getDockerBuildOutput() string {
+	return image.DockerBuildOutput
+}
+
+/*******************************************************************************
+ * 
+ */
+type InMemDockerfileExecParameterValue struct {
+	....
+}
+
+var _ DockerfileExecParameterValue = &InMemDockerfileExecParameterValue{}
+
+func (client *InMemClient) New....
+
+func (client *InMemClient) dbCreate....
+
+func (client *InMemClient) get....
+
+func (paramValue *InMemDockerfileExecParameterValue) asDockerfileExecParameterValueDesc....
+
+func (paramValue *InMemDockerfileExecParameterValue) writeBack(dbClient DBClient) error....
+
+func (paramValue *InMemDockerfileExecParameterValue) asJSON() string ....
+
+func (client *InMemClient) ReconstituteDockerfileExecParameterValue....
+
+
+func (value *InMemDockerfileExecParameterValue) asDockerfileExecParameterValueDesc(DBClient) *apitypes.DockerfileExecParameterValueDesc
+func (value *InMemDockerfileExecParameterValue) dockerfileExecParameterValueFieldsAsJSON() string
 
 /*******************************************************************************
  * 
@@ -3831,7 +3910,7 @@ func (event *InMemScanEvent) asScanEventDesc(dbClient DBClient) *apitypes.ScanEv
 	}
 	
 	return apitypes.NewScanEventDesc(event.Id, event.When, event.UserObjId,
-		event.ScanConfigId, event.ProviderName, paramValueDescs,
+		event.DockerImageId, event.ScanConfigId, event.ProviderName, paramValueDescs,
 		event.Score, event.Result.Vulnerabilities)
 }
 
@@ -4061,7 +4140,7 @@ func (execEvent *InMemDockerfileExecEvent) asDockerfileExecEventDesc(dbClient DB
 	}
 	
 	return apitypes.NewDockerfileExecEventDesc(execEvent.getId(), execEvent.When,
-		execEvent.UserObjId, execEvent.DockerfileId, paramValueDescs, execEvent.DockerfileContent)
+		execEvent.UserObjId, execEvent.ImageId, execEvent.DockerfileId, paramValueDescs, execEvent.DockerfileContent)
 }
 
 func (execEvent *InMemDockerfileExecEvent) asEventDesc(dbClient DBClient) apitypes.EventDesc {

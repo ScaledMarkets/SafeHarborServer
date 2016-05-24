@@ -608,21 +608,57 @@ func NewImageDesc(objId, repoId, name, desc string, creationTime time.Time) *Ima
 	}
 }
 
+func (imageDesc *ImageDesc) imageDescFieldsAsJSON() string {
+	return fmt.Sprintf(
+		"%s, \"ObjId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", " +
+		"\"Description\": \"%s\", \"CreationDate\": %s",
+		imageDesc.baseTypeFieldsAsJSON(),
+		imageDesc.ObjId, imageDesc.RepoId, imageDesc.Name, imageDesc.Description,
+		imageDesc.CreationDate)
+}
+
+/*******************************************************************************
+ * 
+ */
+type ImageVersionDesc struct {
+	BaseType
+	ObjId string
+	Version string
+	ImageObjId string
+    CreationDate time.Time
+}
+
+func NewImageVersionDesc(objId, version, imageObjId string, creationTime time.Time) *ImageVersionDesc {
+	return &ImageVersionDesc{
+		BaseType: *NewBaseType(200, "OK"),
+		ObjId: objId,
+		Version: version,
+		ImageObjId: imageObjId,
+		CreationDate: creationTime,
+	}
+}
+
+func (versionDesc *ImageVersionDesc) imageVersionDescFieldsAsJSON() string {
+	return versionDesc.baseTypeFieldsAsJSON() + fmt.Sprintf(
+		", \"ObjId\": \"%s\", \"Version\": \"%s\", \"ImageObjId\": \"%s\", " +
+		"\"CreationDate\": %s",
+		versionDesc.ObjId, versionDesc.Version, versionDesc.ImageObjId, versionDesc.CreationDate)
+}
+
 /*******************************************************************************
  * 
  */
 type DockerImageDesc struct {
 	ImageDesc
-	Signature []byte
-	OutputFromBuild string
+	//Signature []byte
+	//OutputFromBuild string
 }
 
-func NewDockerImageDesc(objId, repoId, name, desc string, creationTime time.Time,
-	signature []byte, outputFromBuild string) *DockerImageDesc {
+func NewDockerImageDesc(objId, repoId, name, desc string, creationTime time.Time) *DockerImageDesc {
 	return &DockerImageDesc{
 		ImageDesc: *NewImageDesc(objId, repoId, name, desc, creationTime),
-		Signature: signature,
-		OutputFromBuild: outputFromBuild,
+		//Signature: signature,
+		//OutputFromBuild: outputFromBuild,
 	}
 }
 
@@ -631,21 +667,7 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 }
 
 func (imageDesc *DockerImageDesc) AsJSON() string {
-	
-	var dockerBuildOutput *docker.DockerBuildOutput
-	dockerBuildOutput, _ = docker.ParseBuildRESTOutput(imageDesc.OutputFromBuild)
-	
-	var s = fmt.Sprintf(" {%s, \"ObjId\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", " +
-		"\"Description\": \"%s\", \"CreationDate\": %s, " +
-		"\"Signature\": [", imageDesc.baseTypeFieldsAsJSON(),
-		imageDesc.ObjId, imageDesc.RepoId, imageDesc.Name, imageDesc.Description,
-		imageDesc.CreationDate)
-	for i, b := range imageDesc.Signature {
-		if i > 0 { s = s + ", " }
-		s = s + fmt.Sprintf("%d", b)
-	}
-	s = s + fmt.Sprintf("], \"DockerBuildOutput\": %s}", dockerBuildOutput.AsJSON())
-	return s
+	return "{" + imageDesc.imageDescFieldsAsJSON() + "}"
 }
 
 type DockerImageDescs []*DockerImageDesc
@@ -662,6 +684,61 @@ func (imageDescs DockerImageDescs) AsJSON() string {
 }
 
 func (imageDescs DockerImageDescs) SendFile() (string, bool) {
+	return "", false
+}
+
+/*******************************************************************************
+ * 
+ */
+type DockerImageVersionDesc struct {
+	ImageVersionDesc
+    Signature []byte
+    DockerBuildOutput string
+}
+
+func NewDockerImageVersionDesc(objId, version, imageObjId string, creationTime time.Time,
+	signature []byte, buildOutput string) *DockerImageVersionDesc {
+	return &DockerImageVersionDesc{
+		ImageVersionDesc: *NewImageVersionDesc(objId, version, imageObjId, creationTime),
+		Signature: signature,
+		DockerBuildOutput: buildOutput,
+	}
+}
+
+func (versionDesc *DockerImageVersionDesc) getSignature() []byte {
+	return versionDesc.Signature
+}
+
+func (versionDesc *DockerImageVersionDesc) getDockerBuildOutput() string {
+	return versionDesc.DockerBuildOutput
+}
+
+func (versionDesc *DockerImageVersionDesc) AsJSON() string {
+	
+	var json = fmt.Sprintf("{" + versionDesc.imageVersionDescFieldsAsJSON() + ", \"Signature\": ")
+	json = json + rest.ByteArrayAsJSON(versionDesc.Signature)
+
+	var dockerBuildOutput *docker.DockerBuildOutput
+	dockerBuildOutput, _ = docker.ParseBuildRESTOutput(versionDesc.DockerBuildOutput)
+	
+	json = json + fmt.Sprintf(", \"DockerBuildOutput\": %s}", dockerBuildOutput.AsJSON())
+	return json + "}"
+}
+
+type DockerImageVersionDescs []*DockerImageVersionDesc
+
+func (versionDescs DockerImageVersionDescs) AsJSON() string {
+	var response string = " {" + httpOKResponse() + ", \"payload\": [\n"
+	var firstTime bool = true
+	for _, desc := range versionDescs {
+		if firstTime { firstTime = false } else { response = response + ",\n" }
+		response = response + desc.AsJSON()
+	}
+	response = response + "]}"
+	return response
+}
+
+func (versionDescs DockerImageVersionDescs) SendFile() (string, bool) {
 	return "", false
 }
 
@@ -1027,6 +1104,7 @@ func (eventDescs EventDescs) SendFile() (string, bool) {
  */
 type ScanEventDesc struct {
 	EventDescBase
+	ImageObjId string
 	ScanConfigId string
 	ProviderName string
     ParameterValueDescs []*ParameterValueDesc
@@ -1035,11 +1113,12 @@ type ScanEventDesc struct {
 }
 
 func NewScanEventDesc(objId string, when time.Time, userObjId string,
-	scanConfigId, providerName string, paramValueDescs []*ParameterValueDesc,
+	imageObjId, scanConfigId, providerName string, paramValueDescs []*ParameterValueDesc,
 	score string, vulnDescs []*VulnerabilityDesc) *ScanEventDesc {
 
 	return &ScanEventDesc{
 		EventDescBase: *NewEventDesc(objId, when, userObjId),
+		ImageObjId: imageObjId,
 		ScanConfigId: scanConfigId,
 		ProviderName: providerName,
 		ParameterValueDescs: paramValueDescs,
@@ -1052,10 +1131,11 @@ type ScanEventDescs []*ScanEventDesc
 
 func (eventDesc *ScanEventDesc) AsJSON() string {
 	var s = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
+		"\"ImageObjId\": \"%s\", " +
 		"\"ScanConfigId\": \"%s\", \"ProviderName\": \"%s\", \"Score\": \"%s\", ",
 		eventDesc.baseTypeFieldsAsJSON(),
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
-		eventDesc.ScanConfigId, eventDesc.ProviderName, eventDesc.Score)
+		eventDesc.ImageObjId, eventDesc.ScanConfigId, eventDesc.ProviderName, eventDesc.Score)
 	
 	s = s + "\"VulnerabilityDescs\": ["
 	for i, vuln := range eventDesc.VulnerabilityDescs {
@@ -1099,17 +1179,19 @@ func (vulnDesc *VulnerabilityDesc) AsJSON() string {
  */
 type DockerfileExecEventDesc struct {
 	EventDescBase
+	ImageObjId string
 	DockerfileId string
 	ParameterValueDescs []*ParameterValueDesc
 	DockerfileContent string
 }
 
 func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
-	dockerfileId string, paramValueDescs []*ParameterValueDesc,
+	imageObjId, dockerfileId string, paramValueDescs []*ParameterValueDesc,
 	dockerfileContent string) *DockerfileExecEventDesc {
 
 	return &DockerfileExecEventDesc{
 		EventDescBase: *NewEventDesc(objId, when, userId),
+		ImageObjId: imageObjId,
 		DockerfileId: dockerfileId,
 		ParameterValueDescs: paramValueDescs,
 		DockerfileContent: dockerfileContent,
@@ -1119,9 +1201,10 @@ func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
 func (eventDesc *DockerfileExecEventDesc) AsJSON() string {
 	
 	var s = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
+		"\"ImageObjId\": \"%s\", " +
 		"\"DockefileId\": \"%s\"", eventDesc.baseTypeFieldsAsJSON(),
 		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
-		eventDesc.DockerfileId)
+		eventDesc.ImageObjId, eventDesc.DockerfileId)
 	
 	s = s + ", \"ParameterValues\": ["
 	for i, valueDesc := range eventDesc.ParameterValueDescs {

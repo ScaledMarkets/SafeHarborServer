@@ -385,7 +385,6 @@ func getLeafResources(dbClient DBClient, user User,
 	var aclEntrieIds []string = user.getACLEntryIds()
 	var err error
 	for _, aclEntryId := range aclEntrieIds {
-		fmt.Println("\taclEntryId:", aclEntryId)
 		var aclEntry ACLEntry
 		aclEntry, err = dbClient.getACLEntry(aclEntryId)
 		if err != nil { return nil, err }
@@ -395,9 +394,7 @@ func getLeafResources(dbClient DBClient, user User,
 		if err != nil { return nil, err }
 		switch v := resource.(type) {
 			case Realm: realms[v.getId()] = v
-				fmt.Println("\t\ta Realm")
 			case Repo: repos[v.getId()] = v
-				fmt.Println("\t\ta Repo")
 			case Dockerfile: if leafType == ADockerfile { leaves[v.getId()] = v }
 			case DockerImage: if leafType == ADockerImage { leaves[v.getId()] = v }
 			case ScanConfig: if leafType == AScanConfig { leaves[v.getId()] = v }
@@ -408,7 +405,6 @@ func getLeafResources(dbClient DBClient, user User,
 	// Create composite list of repos that the user has access to, either directly
 	// or as a result of having access to the owning realm.
 	for _, realm := range realms {
-		fmt.Println("For each repo of realm id", realm.getId(), "...")
 		// Add all of the repos belonging to realm.
 		for _, repoId := range realm.getRepoIds() {
 			fmt.Println("\tadding repoId", repoId)

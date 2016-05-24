@@ -582,3 +582,15 @@ func DecodeStringFromJSON(encodedValue string) string {
 	decodedValue = strings.Replace(decodedValue, "\\\"", "\"", -1)
 	return decodedValue
 }
+
+/*******************************************************************************
+ * Write the specified byte array in JSON format.
+ */
+func ByteArrayAsJSON(bytes []byte) string {
+	var s = "["
+	for i, b := range bytes {
+		if i > 0 { s = s + ", " }
+		s = s + fmt.Sprintf("%d", b)
+	}
+	return (s + "]")
+}

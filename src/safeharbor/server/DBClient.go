@@ -301,6 +301,7 @@ type Dockerfile interface {
 	getDockerfileExecEventIds() []string
 	addEventId(DBClient, string) error
 	replaceDockerfileFile(filepath, desc string) error
+	getParameterValueIds() string
 	asDockerfileDesc() *apitypes.DockerfileDesc
 }
 
@@ -308,6 +309,14 @@ type Image interface {  // abstract
 	Resource
 	getRepoId() string
 	getRepo(DBClient) (Repo, error)
+	getImageVersionIds() []string
+}
+
+type ImageVersion interface {  // abstract
+	PersistObj
+	getVersion() string
+	getImageObjId() string
+    getCreationDate() time.Time
 }
 
 type DockerImage interface {
@@ -315,15 +324,26 @@ type DockerImage interface {
 	getDockerImageTag() string  // Return same as getName().
 	getFullName(DBClient) (string, error)  // Return the fully qualified docker image path.
 	getFullNameParts(DBClient) (namespace, name, tag string, err error)
+	//addScanEventId(dbClient DBClient, id string)
+	//getScanEventIds() []string // ordered from oldest to newest
+	//getMostRecentScanEventId() string
+	//getImageCreationEventId() string
+	//setImageCreationEventId(string)
+	asDockerImageDesc() *apitypes.DockerImageDesc
+	//getSignature() []byte
+	//computeSignature() ([]byte, error)
+	//getOutputFromBuild() string
+}
+
+type DockerImageVersion interface {
+	ImageVersion
+	addScanEventId(dbClient DBClient, id string)
 	getScanEventIds() []string // ordered from oldest to newest
 	getMostRecentScanEventId() string
 	getImageCreationEventId() string
 	setImageCreationEventId(string)
-	asDockerImageDesc() *apitypes.DockerImageDesc
-	getSignature() []byte
-	//computeSignature() ([]byte, error)
-	getOutputFromBuild() string
-	addScanEventId(dbClient DBClient, id string)
+    getSignature() []byte
+    getDockerBuildOutput() string
 }
 
 type ParameterValue interface {
@@ -331,7 +351,8 @@ type ParameterValue interface {
 	getName() string
 	getStringValue() string
 	setStringValue(DBClient, string) error
-	asParameterValueDesc() *apitypes.ParameterValueDesc
+	parameterValueFieldsAsJSON() string
+	//asParameterValueDesc() *apitypes.ParameterValueDesc
 }
 
 type ScanConfig interface {
@@ -364,6 +385,13 @@ type ScanParameterValue interface {
 	scanParameterValueFieldsAsJSON() string
 }
 
+type DockerfileExecParameterValue {
+	ParameterValue
+	getDockerfileId() string
+	asDockerfileExecParameterValueDesc(DBClient) *apitypes.DockerfileExecParameterValueDesc
+	dockerfileExecParameterValueFieldsAsJSON() string
+}
+
 type Flag interface {
 	Resource
 	getRepoId() string
@@ -385,7 +413,8 @@ type Event interface {  // abstract
 type ScanEvent interface {
 	Event
 	getScore() string
-	getDockerImageId() string  // may be empty (if Dockerfile has been deleted).
+	//getDockerImageId() string  // may be empty (if Dockerfile has been deleted).
+	getDockerImageVersionId() string  // may be empty (if Dockerfile has been deleted).
 	getScanConfigId() string  // may be empty (if ScanConfig has been deleted).
 	getActualParameterValueIds() []string
 	deleteAllParameterValues(DBClient) error
@@ -396,7 +425,8 @@ type ScanEvent interface {
 
 type ImageCreationEvent interface {  // abstract
 	Event
-	nullifyDockerImage(DBClient) error
+	nullifyDockerImageVersion(DBClient) error
+	//nullifyDockerImage(DBClient) error
 }
 
 type DockerfileExecEvent interface {
