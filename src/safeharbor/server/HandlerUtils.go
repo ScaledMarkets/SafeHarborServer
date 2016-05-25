@@ -431,6 +431,9 @@ func getLeafResources(dbClient DBClient, user User,
 	return leaves, nil
 }
 
+/*******************************************************************************
+ * Populate a map of the Repo''s Dockerfiles, indexed by Dockerfile object Id.
+ */
 func mapRepoDockerfileIds(dbClient DBClient, repo Repo, leaves map[string]Resource) error {
 		
 	for _, dockerfileId := range repo.getDockerfileIds() {
@@ -444,6 +447,9 @@ func mapRepoDockerfileIds(dbClient DBClient, repo Repo, leaves map[string]Resour
 	return nil
 }
 
+/*******************************************************************************
+ * Populate a map of the Repo''s DockerImages, indexed by Image object Id.
+ */
 func mapRepoDockerImageIds(dbClient DBClient, repo Repo, leaves map[string]Resource) error {
 		
 	for _, id := range repo.getDockerImageIds() {
@@ -457,6 +463,9 @@ func mapRepoDockerImageIds(dbClient DBClient, repo Repo, leaves map[string]Resou
 	return nil
 }
 
+/*******************************************************************************
+ * Populate a map of the Repo''s ScanConfigs, indexed by ScanConfig object Id.
+ */
 func mapRepoScanConfigIds(dbClient DBClient, repo Repo, leaves map[string]Resource) error {
 		
 	for _, id := range repo.getScanConfigIds() {
@@ -470,6 +479,9 @@ func mapRepoScanConfigIds(dbClient DBClient, repo Repo, leaves map[string]Resour
 	return nil
 }
 
+/*******************************************************************************
+ * Populate a map of the Repo''s Flags, indexed by Flag object Id.
+ */
 func mapRepoFlagIds(dbClient DBClient, repo Repo, leaves map[string]Resource) error {
 		
 	for _, id := range repo.getFlagIds() {

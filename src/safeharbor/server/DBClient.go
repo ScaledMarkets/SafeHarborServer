@@ -86,6 +86,7 @@ type DBClient interface {
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string, string, []byte, string) (DockerImage, error)
+	dbCreateDockerImageVersion(....) (DockerImageVersion, error)
 	dbCreateScanConfig(name, desc, repoId, providerName string, paramValueIds []string, successExpr, flagId string) (ScanConfig, error)
 	dbCreateScanParameterValue(name, value, configId string) (ScanParameterValue, error)
 	dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error)
@@ -324,6 +325,8 @@ type DockerImage interface {
 	getDockerImageTag() string  // Return same as getName().
 	getFullName(DBClient) (string, error)  // Return the fully qualified docker image path.
 	getFullNameParts(DBClient) (namespace, name, tag string, err error)
+	getUniqueVersion() (string, error)
+	addVersionId(DBClient, string) error
 	//addScanEventId(dbClient DBClient, id string)
 	//getScanEventIds() []string // ordered from oldest to newest
 	//getMostRecentScanEventId() string

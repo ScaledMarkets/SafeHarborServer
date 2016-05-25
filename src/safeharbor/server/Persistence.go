@@ -29,8 +29,10 @@ import (
 
 const (
 	ObjectIdPrefix = "obj/"
+	ObjectScopeVersionNumbersPrefix = "objversions/"
 	RealmHashName = "realms"
 	UserHashName = "users"
+	GloballyUniqueId = "UniqueId"
 )
 
 /*******************************************************************************
@@ -228,13 +230,20 @@ func (persist *Persistence) printDatabase() {
  * object. The creation of the id must be done atomically.
  */
 func (persist *Persistence) createUniqueDbObjectId() (string, error) {
+	return persist.incrementDatabaseKey(GloballyUniqueId)
+}
+
+/*******************************************************************************
+ * Atomically increment the specified database key value.
+ */
+func (persist *Persistence) incrementDatabaseKey(keyname string) (string, error) {
 	
 	var id int64
 	if persist.InMemoryOnly {
 		id = atomic.AddInt64(&persist.uniqueId, 1)
 	} else {
 		var err error
-		id, err = persist.RedisClient.Incr("UniqueId")
+		id, err = persist.RedisClient.Incr(keyname)
 		if err != nil { return "", err }
 	}
 	
