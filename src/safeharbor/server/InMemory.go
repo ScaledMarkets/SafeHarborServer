@@ -8,14 +8,6 @@
  * 
  * For each concrete (non-abstract) type that has a writeBack() method, the New<type>
  * function writes the new instance to persistent storage.
- * 
- * Strategies for referential integrity:
- * -------------------------------------
- * 1. Persistent data is not cached in this layer - every handler action retrieves
- * data anew.
- * 2. Changes are not written to the database until it is known that there are no errors.
- * 3. If a consistency error is detected, a custom error type, DataError, is returned.
- * 4. For cases where consistency is important, an object level lock is used.
  */
 
 package server
@@ -2473,6 +2465,12 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 		repo.CreationTime, repo.getDockerfileIds())
 }
 
+func (repo *InMemRepo) asRepoPlusDockerfileDesc(newDockerfileId string) *apitypes.RepoPlusDockerfileDesc {
+	return apitypes.NewRepoPlusDockerfileDesc(repo.getId(), repo.getRealmId(),
+		repo.getName(), repo.getDescription(),
+		repo.getCreationTime(), repo.getDockerfileIds(), newDockerfileId)
+}
+
 func (repo *InMemRepo) writeBack(dbClient DBClient) error {
 	return dbClient.updateObject(repo)
 }
@@ -2683,6 +2681,7 @@ func (client *InMemClient) ReconstituteDockerfile(id string, aclEntryIds []strin
  */
 type InMemImage struct {  // abstract
 	InMemResource
+	VersionIds []string
 }
 
 var _ Image = &InMemImage{}
@@ -2720,6 +2719,24 @@ func (image *InMemImage) getRepo(dbClient DBClient) (Repo, error) {
 
 func (repo *InMemImage) deleteAllChildResources(dbClient DBClient) error {
 	panic("Call to method that should be abstract")
+}
+
+func (image *InMemImage) addVersionId(dbClient DBClient, dockerImageVersionObjId string) error {
+	
+	image.VersionIds = append(image.VersionIds, dockerImageVersionObjId)
+	return dbClient.writeBack(image)
+}
+
+func (image *InMemDockerImage) getMostRecentVersionId() (string, error) {
+	return image.VersionIds[len(image.VersionIds)-1]
+}
+
+func (image *InMemImage) getUniqueVersion() (string, error) {
+	
+	var version string
+	var err error
+	version, err = client.incrementDatabaseKey(ObjectScopeVersionNumbersPrefix + image.getId())
+	return version, err
 }
 
 func (image *InMemImage) imageFieldsAsJSON() string {
@@ -2761,25 +2778,17 @@ func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string) (*InMe
 
 	var newDockerImage = &InMemDockerImage{
 		InMemImage: *image,
-		ScanEventIds: []string{},
-		OutputFromBuild: outputFromBuild,
 	}
 	
 	return newDockerImage, client.updateObject(newDockerImage)
 }
 
-func (client *InMemClient) dbCreateDockerImage(repoId, imageName, desc string,
-	signature []byte, outputFromBuild string) (DockerImage, error) {
+func (client *InMemClient) dbCreateDockerImage(repoId, imageName, desc string) (DockerImage, error) {
 	
 	var repo Repo
-	var obj PersistObj
 	var err error
-	obj, err = client.getPersistentObject(repoId)
+	repo, err = client.getRepo(repoId)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Did not find obj with Id " + repoId) }
-	var isType bool
-	repo, isType = obj.(Repo)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
 	
 	var newDockerImage *InMemDockerImage
 	newDockerImage, err = client.NewInMemDockerImage(imageName, desc, repoId)
@@ -2803,69 +2812,6 @@ func (client *InMemClient) getDockerImage(id string) (DockerImage, error) {
 	image, isType = obj.(DockerImage)
 	if ! isType { return nil, utils.ConstructUserError("Object with Id " + id + " is not a DockerImage") }
 	return image, nil
-}
-
-func (image *InMemDockerImage) getDockerImageTag() string {
-	return image.Name
-}
-
-func (image *InMemDockerImage) getFullName(dbClient DBClient) (string, error) {
-	// See http://blog.thoward37.me/articles/where-are-docker-images-stored/
-	var repo Repo
-	var realm Realm
-	var err error
-	repo, err = dbClient.getRepo(image.getRepoId())
-	if err != nil { return "", err }
-	realm, err = dbClient.getRealm(repo.getRealmId())
-	if err != nil { return "", err }
-	
-	var dockerImageName, tag string
-	dockerImageName, tag = dbClient.getServer().DockerServices.ConstructDockerImageName(
-		realm.getName(), repo.getName(), image.Name)
-	return (dockerImageName + ":" + tag), nil
-}
-
-func (image *InMemDockerImage) getFullNameParts(dbClient DBClient) (
-	string, string, string, error) {
-
-	var repo Repo
-	var realm Realm
-	var err error
-	repo, err = dbClient.getRepo(image.getRepoId())
-	if err != nil { return "", "", "", err }
-	realm, err = dbClient.getRealm(repo.getRealmId())
-	if err != nil { return "", "", "", err }
-	return realm.getName(), repo.getName(), image.Name, nil
-}
-
-func (image *InMemDockerImage) deleteAllChildResources(dbClient DBClient) error {
-	
-	var event Event
-	var err error
-	event, err = dbClient.getEvent(image.ImageCreationEventId)
-	if err != nil { return err }
-
-	var dockerfileExecEvent DockerfileExecEvent
-	var isType bool
-	dockerfileExecEvent, isType = event.(DockerfileExecEvent)
-	if isType {
-		err = dockerfileExecEvent.nullifyDockerfile(dbClient)
-		if err != nil { return err }
-	}
-	
-	return dbClient.writeBack(image)
-}
-
-func (image *InMemDockerImage) getUniqueVersion() (string, error) {
-	
-	var version string
-	var err error
-	version, err = client.incrementDatabaseKey(ObjectScopeVersionNumbersPrefix + image.getId())
-	return version, err
-}
-
-func (image *InMemDockerImage) addVersionId(dbClient DBClient, dockerImageVersionObjId string) error {
-	....
 }
 
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
@@ -2923,12 +2869,13 @@ type InMemImageVersion struct {  // abstract
 	Version string
 	ImageObjId string
     CreationDate time.Time
+	ImageCreationEventId string
 }
 
 var _ ImageVersion = &InMemImageVersion{}
 
 func (client *InMemClient) NewInMemImageVersion(version, imageObjId string,
-	creationDate time.Time) (*InMemImageVersion, error) {
+	creationDate time.Time, imageCreationEventId string) (*InMemImageVersion, error) {
 	
 	var pers *InMemPersistObj
 	var err error
@@ -2939,24 +2886,78 @@ func (client *InMemClient) NewInMemImageVersion(version, imageObjId string,
 		Version: version,
 		ImageObjId: imageObjId,
 		CreationDate: creationDate,
+		ImageCreationEventId: imageCreationEventId,
 	}
 	
 	return newImageVersion, nil
 }
 
-func (imageVersion *InMemImageVersion) imageVersionFieldsAsJSON() string {
-	return fmt.Sprintf("%s, \"Version\": \"%s\", \"ImageObjId\": \"%s\", \"CreationDate\": %s",
-		imageVersion.persistObjFieldsAsJSON, imageVersion.Version,
-		imageVersion.ImageObjId,
-		apitypes.FormatTimeAsJavascriptDate(imageVersion.CreationTime))
+func (imageVersion *InMemDockerImage) getDockerImageTag() string {
+	return image.Name
 }
 
-func (image *InMemImage) asJSON() string {
+func (imageVersion *InMemDockerImage) getFullName(dbClient DBClient) (string, error) {
+	// See http://blog.thoward37.me/articles/where-are-docker-images-stored/
+	var repo Repo
+	var realm Realm
+	var err error
+	repo, err = dbClient.getRepo(image.getRepoId())
+	if err != nil { return "", err }
+	realm, err = dbClient.getRealm(repo.getRealmId())
+	if err != nil { return "", err }
+	
+	var dockerImageName, tag string
+	dockerImageName, tag = dbClient.getServer().DockerServices.ConstructDockerImageName(
+		realm.getName(), repo.getName(), image.Name)
+	return (dockerImageName + ":" + tag), nil
+}
+
+func (imageVersion *InMemDockerImage) getFullNameParts(dbClient DBClient) (
+	string, string, string, error) {
+
+	var repo Repo
+	var realm Realm
+	var err error
+	repo, err = dbClient.getRepo(image.getRepoId())
+	if err != nil { return "", "", "", err }
+	realm, err = dbClient.getRealm(repo.getRealmId())
+	if err != nil { return "", "", "", err }
+	return realm.getName(), repo.getName(), image.Name, nil
+}
+
+func (imageVersion *InMemImageVersion) deleteAllChildResources(dbClient DBClient) error {
+	
+	var event Event
+	var err error
+	event, err = dbClient.getEvent(image.ImageCreationEventId)
+	if err != nil { return err }
+
+	var dockerfileExecEvent DockerfileExecEvent
+	var isType bool
+	dockerfileExecEvent, isType = event.(DockerfileExecEvent)
+	if isType {
+		err = dockerfileExecEvent.nullifyDockerfile(dbClient)
+		if err != nil { return err }
+	}
+	
+	return dbClient.writeBack(image)
+}
+
+func (imageVersion *InMemImageVersion) imageVersionFieldsAsJSON() string {
+	return fmt.Sprintf("%s, \"Version\": \"%s\", \"ImageObjId\": \"%s\", " +
+		"\"CreationDate\": %s, \"ImageCreationEventId\": \"%s\"",
+		imageVersion.persistObjFieldsAsJSON, imageVersion.Version,
+		imageVersion.ImageObjId,
+		apitypes.FormatTimeAsJavascriptDate(imageVersion.CreationTime),
+		imageVersion.ImageCreationEventId)
+}
+
+func (imageVersion *InMemImage) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
 func (client *InMemClient) ReconstituteImage(id, version, imageObjId string,
-	creationDate time.Time) (*InMemImageVersion, error) {
+	creationDate time.Time, imageCreationEventId string) (*InMemImageVersion, error) {
 	
 	var persObj *InMemPersistObj
 	var err error
@@ -2967,6 +2968,7 @@ func (client *InMemClient) ReconstituteImage(id, version, imageObjId string,
 		Version: version,
 		ImageObjId: imageObjId,
 		CreationDate: creationDate,
+		ImageCreationEventId: imageCreationEventId,
 	}, nil
 }
 
@@ -2982,12 +2984,19 @@ func (imageVersion *InMemImageVersion) getCreationDate() time.Time {
 	return imageVersion.CreationDate
 }
 
+func (imageVersion *InMemImageVersion) getImageCreationEventId() string {
+	return image.ImageCreationEventId
+}
+
+func (imageVersion *InMemImageVersion) setImageCreationEventId(eventId string) {
+	image.ImageCreationEventId = eventId
+}
+
 /*******************************************************************************
  * 
  */
 type InMemDockerImageVersion struct {
 	InMemImageVersion
-	ImageCreationEventId string
 	ScanEventIds []string
 	Signature []byte
 	DockerBuildOutput string
@@ -2996,7 +3005,8 @@ type InMemDockerImageVersion struct {
 var _ DockerImageVersion = &InMemDockerImageVersion{}
 
 func (client *InMemClient) NewInMemDockerImageVersion(version, imageObjId string,
-	creationDate time.Time, buildOutput string, signature []byte) (*InMemDockerImageVersion, error) {
+	creationDate time.Time, buildOutput string, scanEventIds []string,
+	signature []byte) (*InMemDockerImageVersion, error) {
 	
 	var imageVersion *InMemImageVersion
 	var err error
@@ -3005,6 +3015,7 @@ func (client *InMemClient) NewInMemDockerImageVersion(version, imageObjId string
 	
 	var newDockerImageVersion = &InMemDockerImageVersion{
 		InMemImageVersion: *imageVersion,
+		ScanEventIds: scanEventIds,
 		Signature: signature,
 		DockerBuildOutput: buildOutput,
 	}
@@ -3013,7 +3024,8 @@ func (client *InMemClient) NewInMemDockerImageVersion(version, imageObjId string
 }
 
 func (client *InMemClient) dbCreateDockerImageVersion(dockerImageObjId string,
-	creationDate time.Time, buildOutput string, signature []byte) (DockerImageVersion, error) {
+	creationDate time.Time, buildOutput string, scanEventIds []string,
+	signature []byte) (DockerImageVersion, error) {
 	
 	// Check if the image exists and is a DockerImage.
 	var dockerImage DockerImage
@@ -3028,7 +3040,7 @@ func (client *InMemClient) dbCreateDockerImageVersion(dockerImageObjId string,
 	
 	var imageVersion *InMemDockerImageVersion
 	imageVersion, err = client.NewInMemDockerImageVersion(version, dockerImageObjId,
-		creationDate, buildOutput, signature)
+		creationDate, buildOutput, scanEventIds, signature)
 	if err != nil { return nil, err }
 	
 	// Add to Image.
@@ -3039,7 +3051,7 @@ func (client *InMemClient) dbCreateDockerImageVersion(dockerImageObjId string,
 
 func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc() *apitypes.DockerImageVersionDesc {
 	return NewDockerImageVersionDesc(imageVersion.getId(), imageVersion.Version,
-		imageVersion.ImageObjId, imageVersion.CreationDate,
+		imageVersion.ImageObjId, imageVersion.CreationDate, imageVersion.ScanEventIds,
 		imageVersion.Signature, imageVersion.DockerBuildOutput)
 }
 
@@ -3074,17 +3086,16 @@ func (client *InMemClient) ReconstituteDockerImageVersion(version, imageObjId st
 	
 	return &InMemDockerImageVersion{
 		InMemImageVersion: *imageVersion,
-		ImageCreationEventId: imageCreationEventIds,
 		ScanEventIds: scanEventIds,
 		Signature: signature,
 		DockerBuildOutput: dockerBuildOutput,
 	}
 }
 
-func (imageVersion *InMemDockerImageVersion) addScanEventId(dbClient DBClient, id string) {
+func (imageVersion *InMemDockerImageVersion) addScanEventId(dbClient DBClient, id string) error {
 	
 	image.ScanEventIds = append(image.ScanEventIds, id)
-	dbClient.writeBack(image)
+	return dbClient.writeBack(image)
 }
 
 func (imageVersion *InMemDockerImageVersion) getScanEventIds() []string {
@@ -3098,14 +3109,6 @@ func (imageVersion *InMemDockerImageVersion) getMostRecentScanEventId() string {
 	} else {
 		return imageVersion.ScanEventIds[numOfIds-1]
 	}
-}
-
-func (imageVersion *InMemDockerImageVersion) getImageCreationEventId() string {
-	return image.ImageCreationEventId
-}
-
-func (imageVersion *InMemDockerImageVersion) setImageCreationEventId(eventId string) {
-	image.ImageCreationEventId = eventId
 }
 
 func (imageVersion *InMemDockerImageVersion) getSignature() []byte {
@@ -3136,35 +3139,6 @@ func (imageVersion *InMemDockerImageVersion) computeSignature() ([]byte, error) 
 func (imageVersion *InMemDockerImageVersion) getDockerBuildOutput() string {
 	return image.DockerBuildOutput
 }
-
-/*******************************************************************************
- * 
- */
-type InMemDockerfileExecParameterValue struct {
-	....
-}
-
-var _ DockerfileExecParameterValue = &InMemDockerfileExecParameterValue{}
-
-func (client *InMemClient) NewInMemDockerfileExecParameterValue(....) (*InMemDockerfileExecParameterValue, error) {
-	
-}
-
-func (client *InMemClient) dbCreate....
-
-func (client *InMemClient) get....
-
-func (paramValue *InMemDockerfileExecParameterValue) asDockerfileExecParameterValueDesc....
-
-func (paramValue *InMemDockerfileExecParameterValue) writeBack(dbClient DBClient) error....
-
-func (paramValue *InMemDockerfileExecParameterValue) asJSON() string ....
-
-func (client *InMemClient) ReconstituteDockerfileExecParameterValue....
-
-
-func (value *InMemDockerfileExecParameterValue) asDockerfileExecParameterValueDesc(DBClient) *apitypes.DockerfileExecParameterValueDesc
-func (value *InMemDockerfileExecParameterValue) dockerfileExecParameterValueFieldsAsJSON() string
 
 /*******************************************************************************
  * 
@@ -3888,7 +3862,7 @@ func (client *InMemClient) asEventDesc(event Event) apitypes.EventDesc {
 type InMemScanEvent struct {
 	InMemEvent
 	ScanConfigId string
-	DockerImageId string
+	DockerImageVersionId string
 	ProviderName string
 	ActualParameterValueIds []string
 	Score string
@@ -3897,7 +3871,7 @@ type InMemScanEvent struct {
 
 var _ ScanEvent = &InMemScanEvent{}
 
-func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
+func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageVersionId, userObjId,
 	providerName string, score string, result *providers.ScanResult,
 	actParamValueIds []string) (*InMemScanEvent, error) {
 	
@@ -3908,7 +3882,7 @@ func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
 	var scanEvent *InMemScanEvent = &InMemScanEvent{
 		InMemEvent: *event,
 		ScanConfigId: scanConfigId,
-		DockerImageId: imageId,
+		DockerImageVersionId: imageId,
 		ProviderName: providerName,
 		ActualParameterValueIds: actParamValueIds,
 		Score: score,
@@ -3918,7 +3892,7 @@ func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageId, userObjId,
 }
 
 func (client *InMemClient) dbCreateScanEvent(scanConfigId, providerName string,
-	paramNames, paramValues []string, imageId,
+	paramNames, paramValues []string, imageVersionId,
 	userObjId, score string, result *providers.ScanResult) (ScanEvent, error) {
 	
 	// Create actual ParameterValues for the Event.
@@ -3951,11 +3925,11 @@ func (client *InMemClient) dbCreateScanEvent(scanConfigId, providerName string,
 	// Link to ScanConfig.
 	scanConfig.addScanEventId(client, scanEvent.getId())
 	
-	// Link to image.
-	var image DockerImage
-	image, err = client.getDockerImage(imageId)
+	// Link to ImageVersion.
+	var imageVersion DockerImageVersion
+	image, err = client.getDockerImageVersion(imageVersionId)
 	if err != nil { return nil, err }
-	image.addScanEventId(client, scanEvent.getId())
+	imageVersion.addScanEventId(client, scanEvent.getId())
 
 	fmt.Println("Created ScanEvent")
 	return scanEvent, nil
@@ -3978,8 +3952,8 @@ func (event *InMemScanEvent) getScore() string {
 	return event.Score
 }
 
-func (event *InMemScanEvent) getDockerImageId() string {
-	return event.DockerImageId
+func (event *InMemScanEvent) getDockerImageVersionId() string {
+	return event.DockerImageVersionId
 }
 
 func (event *InMemScanEvent) getScanConfigId() string {

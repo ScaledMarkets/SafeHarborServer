@@ -1023,9 +1023,11 @@ func createRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	name, filepath, err = captureFile(repo, files)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if filepath != "" { // a file was attached - presume that it is a dockerfile
-		_, err = createDockerfile(sessionToken, dbClient, repo,
+		var newDockerfile
+		newDockerfile, err = createDockerfile(sessionToken, dbClient, repo,
 			name, filepath, repo.getDescription())
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		return repo.asRepoPlusDockerfileDesc(newDockerfile.getId)
 	}
 	
 	return repo.asRepoDesc()
@@ -2313,6 +2315,11 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 			"Docker image with object Id " + imageObjId + " not found")
 	}
 	
+	// Get most recent image version.
+	var imageVersionObjId string
+	imageVersionObjId, err = dockerImage.getMostRecentVersionId()
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
 	var scanConfig ScanConfig
 	scanConfig, err = dbClient.getScanConfig(scanConfigId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
@@ -2347,7 +2354,7 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	scanContext, err = scanService.CreateScanContext(params)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var imageName string
-	imageName, err = dockerImage.getFullName(dbClient)
+	imageName, err = dockerImageVersion.getFullName(dbClient)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var result *providers.ScanResult
 	fmt.Println("Contacting scan service...")
@@ -2380,7 +2387,7 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 		"User with Id " + userId + " not found") }
 	var scanEvent ScanEvent
 	scanEvent, err = dbClient.dbCreateScanEvent(scanConfig.getId(), scanConfig.getProviderName(),
-		paramNames, paramValues, imageObjId, user.getId(), score, result)
+		paramNames, paramValues, imageVersionObjId, user.getId(), score, result)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return scanEvent.asScanEventDesc(dbClient)

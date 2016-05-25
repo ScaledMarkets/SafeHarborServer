@@ -509,8 +509,9 @@ func NewRepoDesc(id string, realmId string, name string, desc string,
 	}
 }
 
-func (repoDesc *RepoDesc) AsJSON() string {
-	var resp string = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"RealmId\": \"%s\", " +
+func (repoDesc *RepoDesc) repoDescFieldsAsJSON() string {
+	
+	var resp string = fmt.Sprintf("%s, \"Id\": \"%s\", \"RealmId\": \"%s\", " +
 		"\"Name\": \"%s\", \"Description\": \"%s\", \"CreationDate\": %s, " +
 		"\"DockerfileIds\": [",
 		repoDesc.baseTypeFieldsAsJSON(),
@@ -520,8 +521,12 @@ func (repoDesc *RepoDesc) AsJSON() string {
 		if i > 0 { resp = resp + ", " }
 		resp = resp + fmt.Sprintf("\"%s\"", id)
 	}
-	resp = resp + "]}"
+	resp = resp + "]"
 	return resp
+}
+
+func (repoDesc *RepoDesc) AsJSON() string {
+	return "{" + repoDesc.repoDescFieldsAsJSON() + "}"
 }
 
 type RepoDescs []*RepoDesc
@@ -538,6 +543,32 @@ func (repoDescs RepoDescs) AsJSON() string {
 }
 
 func (repoDescs RepoDescs) SendFile() (string, bool) {
+	return "", false
+}
+
+/*******************************************************************************
+ * 
+ */
+type RepoPlusDockerfileDesc struct {
+	RepoDesc
+	NewDockerfileId string
+}
+
+func NewRepoPlusDockerfileDesc(id string, realmId string, name string, desc string,
+	creationTime time.Time, dockerfileIds []string, newDockerfileId string) *RepoPlusDockerfileDesc {
+
+	return &RepoPlusDockerfileDesc{
+		RepoDesc: *NewRepoDesc(id, realmId, name, desc, creationTime, dockerfileIds),
+		NewDockerfileId: newDockerfileId,
+	}
+}
+
+func (repoPlus RepoDescs) AsJSON() string {
+	return "{" + repoDescFieldsAsJSON() + ", \"NewDockerfileId\": \"" +
+		repoPlus.NewDockerfileId + "\"}"
+}
+
+func (repoPlus DockerfileDescs) SendFile() (string, bool) {
 	return "", false
 }
 

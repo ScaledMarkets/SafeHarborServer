@@ -292,6 +292,7 @@ type Repo interface {
 	getDockerImageByName(DBClient, string) (DockerImage, error)
 	getScanConfigByName(DBClient, string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
+	asRepoPlusDockerfileDesc(dockerfileId) *apitypes.RepoPlusDockerfileDesc
 }
 
 type Dockerfile interface {
@@ -311,13 +312,19 @@ type Image interface {  // abstract
 	getRepoId() string
 	getRepo(DBClient) (Repo, error)
 	getImageVersionIds() []string
+	getUniqueVersion() (string, error)
+	addVersionId(DBClient, string) error
+	getMostRecentVersionId() (string, error)
 }
 
 type ImageVersion interface {  // abstract
 	PersistObj
 	getVersion() string
 	getImageObjId() string
-    getCreationDate() time.Time
+	getCreationDate() time.Time
+	getDockerImageTag() string
+	getFullName(dbClient DBClient) (string, error)
+	getFullNameParts(dbClient DBClient) (string, string, string, error)
 }
 
 type DockerImage interface {
@@ -325,8 +332,6 @@ type DockerImage interface {
 	getDockerImageTag() string  // Return same as getName().
 	getFullName(DBClient) (string, error)  // Return the fully qualified docker image path.
 	getFullNameParts(DBClient) (namespace, name, tag string, err error)
-	getUniqueVersion() (string, error)
-	addVersionId(DBClient, string) error
 	//addScanEventId(dbClient DBClient, id string)
 	//getScanEventIds() []string // ordered from oldest to newest
 	//getMostRecentScanEventId() string
@@ -340,7 +345,7 @@ type DockerImage interface {
 
 type DockerImageVersion interface {
 	ImageVersion
-	addScanEventId(dbClient DBClient, id string)
+	addScanEventId(dbClient DBClient, id string) error
 	getScanEventIds() []string // ordered from oldest to newest
 	getMostRecentScanEventId() string
 	getImageCreationEventId() string
