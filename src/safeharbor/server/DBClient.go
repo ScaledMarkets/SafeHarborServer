@@ -58,7 +58,8 @@ type DBClient interface {
 	abort() error
 	
 	updateObject(obj PersistObj) error
-		/** Update the object in the database. If object does not exist, create it. */
+		/** Update the object in the database. If object does not exist, create it.
+			Merely delegates to <Persistence>.updateObject(TxnContext, PersistObj). */
 	
 	deleteObject(obj PersistObj) error
 		/** Remove an object from the database. Error results if the object is not
@@ -67,9 +68,10 @@ type DBClient interface {
 	getPersistentObject(id string) (PersistObj, error)
 		/** Return the database object identified by the id, or error if not found. */
 	
+	// Superfluous - eliminate:
 	writeBack(PersistObj) error
 		/** Update the state of the object in the database. If the object exists,
-			then update it. */
+			then update it. Note: this method is superfluous since updateObject is equivalent. */
 	
 	asJSON(PersistObj) string
 		/** Externalize the object as a JSON-formatted string. */
@@ -323,6 +325,7 @@ type ImageVersion interface {  // abstract
 	getImageObjId() string
 	getCreationDate() time.Time
 	getImageCreationEventId() string
+	setImageCreationEventId(string)
 	getFullName(dbClient DBClient) (string, error)
 	getFullNameParts(dbClient DBClient) (string, string, string, error)
 }
@@ -349,8 +352,6 @@ type DockerImageVersion interface {
 	addScanEventId(dbClient DBClient, id string) error
 	getScanEventIds() []string // ordered from oldest to newest
 	getMostRecentScanEventId() string
-	getImageCreationEventId() string
-	setImageCreationEventId(string)
     getSignature() []byte
     getDockerBuildOutput() string
 }

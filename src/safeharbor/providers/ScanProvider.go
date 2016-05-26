@@ -28,7 +28,6 @@ type Vulnerability struct {
 }
 
 
-
 	/*
 	Lynis:
 		// Lynis scan:

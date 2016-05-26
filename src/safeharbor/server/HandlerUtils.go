@@ -356,14 +356,14 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	
 	// Add a record for the image to the database.
 	// (This automatically computes the signature.)
-	var image DockerImage
-	image, err = dbClient.dbCreateDockerImage(repo.getId(),
+	var imageVersion DockerImageVersion
+	imageVersion, err = dbClient.dbCreateDockerImageVersion(repo.getId(),
 		imageName, dockerfile.getDescription(), digest, outputStr)
 	fmt.Println("Created docker image object.")
 	
 	// Create an event to record that this happened.
 	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), 
-		paramNames, paramValues, image.getId(), user.getId())
+		paramNames, paramValues, imageVersion.getId(), user.getId())
 	
 	return image, err
 }

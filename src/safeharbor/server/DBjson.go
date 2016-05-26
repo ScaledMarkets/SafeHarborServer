@@ -22,8 +22,9 @@ import (
  * Retrieve the type name that precedes the JSON string. It is in the format,
  *	"type-name" : <json-string>
  * or, as BNF,
-	line			::= '"' (no spaces) type_name (no spaces) '"'  ':'  string
+	line			::= '"' (no spaces) type_name (no spaces) '"'  ':'  json
 	type_name		::= string
+	json			::= string (without any embedded line breaks)
  * 
  * Returns the type name, and then the remainder of the string that follows the
  * first colon.
