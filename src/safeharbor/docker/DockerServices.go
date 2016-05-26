@@ -427,7 +427,43 @@ func (dockerSvcs *DockerServices) SaveImage(imageNamespace, imageName, tag strin
 }
 
 /*******************************************************************************
- * Return the hash of the specified Docker image, as computed by the file''s registry.
+ * Return the digest of the specified Docker image, as computed by the file''s registry.
+ */
+func (dockerSvcs *DockerServices) GetDigest(imageId string) ([]byte, error) {
+	
+	if dockerSvcs.Registry == nil {
+		var imageName = ....
+		var info map[string]interface{}
+		var err error
+		info, err = dockerSvcs.Engine.GetImageInfo(imageName)
+		var obj interface{} = info["RepoDigests"]
+		if obj == nil { return nil, utils.ConstructServerError("No digest found") }
+		var objAr []interface{}
+		var isType bool
+		objAr, isType = obj.([]interface)
+		if ! isType { return nil, utils.ConstructServerError("RepoDigests field is not an array") }
+		for _, obj := range objAr {
+			var str string
+			str, isType = obj.(string)
+			if ! isType { return nil, utils.ConstructError("Digest value is not a string") }
+			var parts []string
+			parts = strings.Split(str, "@")
+			if len(parts) != 2 { return nil, utils.ConstructError("Did not find digest in string") }
+			var digest = parts[1]
+			parts = strings.Split(digest, ":")
+			if len(parts) != 2 { return nil, utils.ConstructError("Digest ill-formed - no ':'") }
+			var hashValue = parts[1]
+			....
+		}
+		
+	} else {
+		....
+	}
+}
+
+
+/*******************************************************************************
+ * Return the signature of the specified Docker image, as computed by the file''s registry.
  */
 func GetSignature(imageId string) ([]byte, error) {
 	return []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nil

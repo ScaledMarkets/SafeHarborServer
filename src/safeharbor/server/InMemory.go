@@ -2987,7 +2987,7 @@ func (imageVersion *InMemImageVersion) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
-func (client *InMemClient) ReconstituteImage(id, version, imageObjId string,
+func (client *InMemImageVersion) ReconstituteImage(id, version, imageObjId string,
 	creationDate time.Time, imageCreationEventId string) (*InMemImageVersion, error) {
 	
 	var persObj *InMemPersistObj
@@ -3029,6 +3029,7 @@ func (imageVersion *InMemImageVersion) setImageCreationEventId(eventId string) {
 type InMemDockerImageVersion struct {
 	InMemImageVersion
 	ScanEventIds []string
+	Digest []byte
 	Signature []byte
 	DockerBuildOutput string
 }
@@ -3036,8 +3037,8 @@ type InMemDockerImageVersion struct {
 var _ DockerImageVersion = &InMemDockerImageVersion{}
 
 func (client *InMemClient) NewInMemDockerImageVersion(version, imageObjId string,
-	creationDate time.Time, buildOutput string, scanEventIds []string,
-	signature []byte) (*InMemDockerImageVersion, error) {
+	creationDate time.Time, buildOutput string,
+	digest, signature []byte) (*InMemDockerImageVersion, error) {
 	
 	var imageVersion *InMemImageVersion
 	var err error
@@ -3046,7 +3047,8 @@ func (client *InMemClient) NewInMemDockerImageVersion(version, imageObjId string
 	
 	var newDockerImageVersion = &InMemDockerImageVersion{
 		InMemImageVersion: *imageVersion,
-		ScanEventIds: scanEventIds,
+		ScanEventIds: make([]string, 0),
+		Digest: digest,
 		Signature: signature,
 		DockerBuildOutput: buildOutput,
 	}
@@ -3055,8 +3057,8 @@ func (client *InMemClient) NewInMemDockerImageVersion(version, imageObjId string
 }
 
 func (client *InMemClient) dbCreateDockerImageVersion(dockerImageObjId string,
-	creationDate time.Time, buildOutput string, scanEventIds []string,
-	signature []byte) (DockerImageVersion, error) {
+	creationDate time.Time, buildOutput string,
+	digest, signature []byte) (DockerImageVersion, error) {
 	
 	// Check if the image exists and is a DockerImage.
 	var dockerImage DockerImage
@@ -3071,7 +3073,7 @@ func (client *InMemClient) dbCreateDockerImageVersion(dockerImageObjId string,
 	
 	var imageVersion *InMemDockerImageVersion
 	imageVersion, err = client.NewInMemDockerImageVersion(version, dockerImageObjId,
-		creationDate, buildOutput, scanEventIds, signature)
+		creationDate, buildOutput, digest, signature)
 	if err != nil { return nil, err }
 	
 	// Add to Image.
@@ -3101,7 +3103,7 @@ func (imageVersion *InMemDockerImageVersion) getDockerImageTag() string {
 func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc() *apitypes.DockerImageVersionDesc {
 	return NewDockerImageVersionDesc(imageVersion.getId(), imageVersion.Version,
 		imageVersion.ImageObjId, imageVersion.CreationDate, imageVersion.ScanEventIds,
-		imageVersion.Signature, imageVersion.DockerBuildOutput)
+		imageVersion.Digest, imageVersion.Signature, imageVersion.DockerBuildOutput)
 }
 
 func (imageVersion *InMemDockerImageVersion) writeBack(dbClient DBClient) error {
@@ -3117,8 +3119,9 @@ func (imageVersion *InMemDockerImageVersion) asJSON() string {
 		if i > 0 { json = json + ", " }
 		json = json + id
 	}
-	json = json + "], \"Signature\": " + rest.ByteArrayAsJSON(imageVersion.Signature) + "], "
-	json = json + "\"DockerBuildOutput\": \"" +
+	json = json + "], \"Digest\": " + rest.ByteArrayAsJSON(imageVersion.Digest)
+	json = json + ", \"Signature\": " + rest.ByteArrayAsJSON(imageVersion.Signature)
+	json = json + ", \"DockerBuildOutput\": \"" +
 		rest.EncodeStringForJSON(imageVersion.DockerBuildOutput) + "\"}"
 	
 	return json
@@ -3126,7 +3129,7 @@ func (imageVersion *InMemDockerImageVersion) asJSON() string {
 
 func (client *InMemClient) ReconstituteDockerImageVersion(version, imageObjId string,
 	creationDate time.Time, imageCreationEventIds, scanEventIds []string,
-	signature []byte, dockerBuildOutput string) (*InMemDockerImageVersion, error) {
+	digest, signature []byte, dockerBuildOutput string) (*InMemDockerImageVersion, error) {
 	
 	var imageVersion *InMemImageVersion
 	var err error
@@ -3136,6 +3139,7 @@ func (client *InMemClient) ReconstituteDockerImageVersion(version, imageObjId st
 	return &InMemDockerImageVersion{
 		InMemImageVersion: *imageVersion,
 		ScanEventIds: scanEventIds,
+		Digest: digest,
 		Signature: signature,
 		DockerBuildOutput: dockerBuildOutput,
 	}
@@ -3158,6 +3162,10 @@ func (imageVersion *InMemDockerImageVersion) getMostRecentScanEventId() string {
 	} else {
 		return imageVersion.ScanEventIds[numOfIds-1]
 	}
+}
+
+func (imageVersion *InMemDockerImageVersion) getDigest() []byte {
+	return image.Digest
 }
 
 func (imageVersion *InMemDockerImageVersion) getSignature() []byte {
@@ -4100,7 +4108,7 @@ func (client *InMemClient) ReconstituteScanEvent(id string, when time.Time,
 	
 	// Deserialize the json for the Result.
 	var result  = &providers.ScanResult{
-		Vulnerabilities: [len(vulnAr)]*apitypes.VulnerabilityDesc
+		Vulnerabilities: []*apitypes.VulnerabilityDesc{ "", "", "", "" },
 	}
 	for i, vuln := range vulnAr {
 		result.Vulnerabilities[i] = &providers.Vulnerability{

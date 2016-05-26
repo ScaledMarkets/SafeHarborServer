@@ -1023,7 +1023,7 @@ func createRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	name, filepath, err = captureFile(repo, files)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if filepath != "" { // a file was attached - presume that it is a dockerfile
-		var newDockerfile
+		var newDockerfile Dockerfile
 		newDockerfile, err = createDockerfile(sessionToken, dbClient, repo,
 			name, filepath, repo.getDescription())
 		if err != nil { return apitypes.NewFailureDescFromError(err) }

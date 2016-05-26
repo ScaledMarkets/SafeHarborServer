@@ -563,13 +563,9 @@ func NewRepoPlusDockerfileDesc(id string, realmId string, name string, desc stri
 	}
 }
 
-func (repoPlus RepoDescs) AsJSON() string {
-	return "{" + repoDescFieldsAsJSON() + ", \"NewDockerfileId\": \"" +
+func (repoPlus *RepoPlusDockerfileDesc) AsJSON() string {
+	return "{" + repoPlus.repoDescFieldsAsJSON() + ", \"NewDockerfileId\": \"" +
 		repoPlus.NewDockerfileId + "\"}"
-}
-
-func (repoPlus DockerfileDescs) SendFile() (string, bool) {
-	return "", false
 }
 
 /*******************************************************************************
@@ -723,17 +719,23 @@ func (imageDescs DockerImageDescs) SendFile() (string, bool) {
  */
 type DockerImageVersionDesc struct {
 	ImageVersionDesc
+    Digest []byte
     Signature []byte
     DockerBuildOutput string
 }
 
 func NewDockerImageVersionDesc(objId, version, imageObjId string, creationTime time.Time,
-	signature []byte, buildOutput string) *DockerImageVersionDesc {
+	digest, signature []byte, buildOutput string) *DockerImageVersionDesc {
 	return &DockerImageVersionDesc{
 		ImageVersionDesc: *NewImageVersionDesc(objId, version, imageObjId, creationTime),
+		Digest: digest,
 		Signature: signature,
 		DockerBuildOutput: buildOutput,
 	}
+}
+
+func (versionDesc *DockerImageVersionDesc) getDigest() []byte {
+	return versionDesc.Digest
 }
 
 func (versionDesc *DockerImageVersionDesc) getSignature() []byte {
@@ -746,8 +748,9 @@ func (versionDesc *DockerImageVersionDesc) getDockerBuildOutput() string {
 
 func (versionDesc *DockerImageVersionDesc) AsJSON() string {
 	
-	var json = fmt.Sprintf("{" + versionDesc.imageVersionDescFieldsAsJSON() + ", \"Signature\": ")
-	json = json + rest.ByteArrayAsJSON(versionDesc.Signature)
+	var json = "{" + versionDesc.imageVersionDescFieldsAsJSON()
+	json = json + ", \"Digest\": " + rest.ByteArrayAsJSON(versionDesc.Digest)
+	json = json + ", \"Signature\": " + rest.ByteArrayAsJSON(versionDesc.Signature)
 
 	var dockerBuildOutput *docker.DockerBuildOutput
 	dockerBuildOutput, _ = docker.ParseBuildRESTOutput(versionDesc.DockerBuildOutput)

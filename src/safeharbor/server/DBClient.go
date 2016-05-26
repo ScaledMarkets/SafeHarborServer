@@ -87,8 +87,9 @@ type DBClient interface {
 	dbCreateRealm(*apitypes.RealmInfo, string) (Realm, error)
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
-	dbCreateDockerImage(string, string, string, []byte, string) (DockerImage, error)
-	dbCreateDockerImageVersion(....) (DockerImageVersion, error)
+	dbCreateDockerImage(string, string, string) (DockerImage, error)
+	dbCreateDockerImageVersion(dockerImageObjId string, creationDate time.Time,
+		buildOutput string, digest, signature []byte) (DockerImageVersion, error)
 	dbCreateScanConfig(name, desc, repoId, providerName string, paramValueIds []string, successExpr, flagId string) (ScanConfig, error)
 	dbCreateScanParameterValue(name, value, configId string) (ScanParameterValue, error)
 	dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error)
@@ -294,7 +295,7 @@ type Repo interface {
 	getDockerImageByName(DBClient, string) (DockerImage, error)
 	getScanConfigByName(DBClient, string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
-	asRepoPlusDockerfileDesc(dockerfileId) *apitypes.RepoPlusDockerfileDesc
+	asRepoPlusDockerfileDesc(dockerfileId string) *apitypes.RepoPlusDockerfileDesc
 }
 
 type Dockerfile interface {
@@ -352,6 +353,7 @@ type DockerImageVersion interface {
 	addScanEventId(dbClient DBClient, id string) error
 	getScanEventIds() []string // ordered from oldest to newest
 	getMostRecentScanEventId() string
+	getDigest() []byte
     getSignature() []byte
     getDockerBuildOutput() string
 }
@@ -395,7 +397,7 @@ type ScanParameterValue interface {
 	scanParameterValueFieldsAsJSON() string
 }
 
-type DockerfileExecParameterValue {
+type DockerfileExecParameterValue interface {
 	ParameterValue
 	getDockerfileId() string
 	asDockerfileExecParameterValueDesc(DBClient) *apitypes.DockerfileExecParameterValueDesc
@@ -451,12 +453,6 @@ type DockerfileExecEvent interface {
 	
 	/** Nullify all references to the dockerfile or its external representation. */
 	nullifyDockerfile(DBClient) error
-}
-
-type DockerfileExecParameterValue interface {
-	ParameterValue
-	asDockerfileExecParameterValueDesc(DBClient) *apitypes.DockerfileExecParameterValueDesc
-	dockerfileExecParameterValueFieldsAsJSON() string
 }
 
 type ImageUploadEvent interface {
