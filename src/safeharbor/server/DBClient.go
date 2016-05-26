@@ -322,7 +322,7 @@ type ImageVersion interface {  // abstract
 	getVersion() string
 	getImageObjId() string
 	getCreationDate() time.Time
-	getDockerImageTag() string
+	getImageCreationEventId() string
 	getFullName(dbClient DBClient) (string, error)
 	getFullNameParts(dbClient DBClient) (string, string, string, error)
 }
@@ -345,6 +345,7 @@ type DockerImage interface {
 
 type DockerImageVersion interface {
 	ImageVersion
+	getDockerImageTag() string
 	addScanEventId(dbClient DBClient, id string) error
 	getScanEventIds() []string // ordered from oldest to newest
 	getMostRecentScanEventId() string
@@ -433,7 +434,8 @@ type ScanEvent interface {
 
 type ImageCreationEvent interface {  // abstract
 	Event
-	nullifyDockerImageVersion(DBClient) error
+	nullifyImageVersion(DBClient) error
+	getImageVersionId(DBClient) string
 	//nullifyDockerImage(DBClient) error
 }
 

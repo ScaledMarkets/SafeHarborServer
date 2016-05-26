@@ -2727,6 +2727,10 @@ func (image *InMemImage) addVersionId(dbClient DBClient, dockerImageVersionObjId
 	return dbClient.writeBack(image)
 }
 
+func (image *InMemImage) getImageVersionIds() []string {
+	return image.VersionIds
+}
+
 func (image *InMemDockerImage) getMostRecentVersionId() (string, error) {
 	return image.VersionIds[len(image.VersionIds)-1]
 }
@@ -2892,11 +2896,7 @@ func (client *InMemClient) NewInMemImageVersion(version, imageObjId string,
 	return newImageVersion, nil
 }
 
-func (imageVersion *InMemDockerImage) getDockerImageTag() string {
-	return image.Name
-}
-
-func (imageVersion *InMemDockerImage) getFullName(dbClient DBClient) (string, error) {
+func (imageVersion *InMemImageVersion) getFullName(dbClient DBClient) (string, error) {
 	// See http://blog.thoward37.me/articles/where-are-docker-images-stored/
 	var repo Repo
 	var realm Realm
@@ -2912,7 +2912,7 @@ func (imageVersion *InMemDockerImage) getFullName(dbClient DBClient) (string, er
 	return (dockerImageName + ":" + tag), nil
 }
 
-func (imageVersion *InMemDockerImage) getFullNameParts(dbClient DBClient) (
+func (imageVersion *InMemImageVersion) getFullNameParts(dbClient DBClient) (
 	string, string, string, error) {
 
 	var repo Repo
@@ -2952,7 +2952,7 @@ func (imageVersion *InMemImageVersion) imageVersionFieldsAsJSON() string {
 		imageVersion.ImageCreationEventId)
 }
 
-func (imageVersion *InMemImage) asJSON() string {
+func (imageVersion *InMemImageVersion) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
@@ -3047,6 +3047,10 @@ func (client *InMemClient) dbCreateDockerImageVersion(dockerImageObjId string,
 	err = dockerImage.addVersionId(client, imageVersion.getId())
 	if err != nil { return nil, err }
 	return imageVersion.(DockerImageVersion), nil
+}
+
+func (imageVersion *InMemDockerImageVersion) getDockerImageTag() string {
+	return image.Name
 }
 
 func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc() *apitypes.DockerImageVersionDesc {
@@ -4051,7 +4055,7 @@ func (client *InMemClient) ReconstituteScanEvent(id string, when time.Time,
  */
 type InMemImageCreationEvent struct {  // abstract
 	InMemEvent
-	ImageId string
+	ImageVersionId string
 }
 
 var _ ImageCreationEvent = &InMemImageCreationEvent{}
@@ -4068,13 +4072,18 @@ func (client *InMemClient) NewInMemImageCreationEvent(userObjId,
 	}, nil
 }
 
-func (event *InMemImageCreationEvent) nullifyDockerImage(dbClient DBClient) error {
-	panic("Abstract method called")
+func (event *InMemImageCreationEvent) nullifyImageVersion(dbClient DBClient) error {
+	event.ImageVersionId = ""
+	return dbClient.writeBack(event)
+}
+
+func (event *InMemImageCreationEvent) getImageVersionId(dbClient DBClient) string {
+	return event.ImageVersionId
 }
 
 func (event *InMemImageCreationEvent) imageCreationEventFieldsAsJSON() string {
 	var json = event.eventFieldsAsJSON()
-	json = json + fmt.Sprintf(", \"ImageId\": \"%s\"", event.ImageId)
+	json = json + fmt.Sprintf(", \"ImageVersionId\": \"%s\"", event.ImageVersionId)
 	return json
 }
 
