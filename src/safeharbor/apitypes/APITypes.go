@@ -653,23 +653,31 @@ type ImageVersionDesc struct {
 	Version string
 	ImageObjId string
     CreationDate time.Time
+	RepoId string
+	ImageName string
+	ImageDescription string
 }
 
-func NewImageVersionDesc(objId, version, imageObjId string, creationTime time.Time) *ImageVersionDesc {
+func NewImageVersionDesc(objId, version, imageObjId string, creationTime time.Time,
+	repoId, imageName, imageDescription string) *ImageVersionDesc {
 	return &ImageVersionDesc{
 		BaseType: *NewBaseType(200, "OK"),
 		ObjId: objId,
 		Version: version,
 		ImageObjId: imageObjId,
 		CreationDate: creationTime,
+		RepoId: repoId,
+		ImageName: imageName,
+		ImageDescription: imageDescription,
 	}
 }
 
 func (versionDesc *ImageVersionDesc) imageVersionDescFieldsAsJSON() string {
 	return versionDesc.baseTypeFieldsAsJSON() + fmt.Sprintf(
 		", \"ObjId\": \"%s\", \"Version\": \"%s\", \"ImageObjId\": \"%s\", " +
-		"\"CreationDate\": %s",
-		versionDesc.ObjId, versionDesc.Version, versionDesc.ImageObjId, versionDesc.CreationDate)
+		"\"CreationDate\": %s, \"RepoId\": \"%s\", \"ImageName\": \"%s\", \"ImageDescription\": \"%s\"",
+		versionDesc.ObjId, versionDesc.Version, versionDesc.ImageObjId, versionDesc.CreationDate,
+		versionDesc.RepoId, versionDesc.ImageName, versionDesc.ImageDescription)
 }
 
 /*******************************************************************************
@@ -725,9 +733,11 @@ type DockerImageVersionDesc struct {
 }
 
 func NewDockerImageVersionDesc(objId, version, imageObjId string, creationTime time.Time,
+	repoId, imageName, imageDescription string,
 	digest, signature []byte, buildOutput string) *DockerImageVersionDesc {
 	return &DockerImageVersionDesc{
-		ImageVersionDesc: *NewImageVersionDesc(objId, version, imageObjId, creationTime),
+		ImageVersionDesc: *NewImageVersionDesc(objId, version, imageObjId, creationTime,
+			repoId, imageName, imageDescription),
 		Digest: digest,
 		Signature: signature,
 		DockerBuildOutput: buildOutput,

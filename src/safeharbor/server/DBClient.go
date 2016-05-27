@@ -108,6 +108,7 @@ type DBClient interface {
 	getRepo(string) (Repo, error)
 	getDockerfile(string) (Dockerfile, error)
 	getDockerImage(string) (DockerImage, error)
+	getDockerImageVersion(string) (DockerImageVersion, error)
 	getScanConfig(string) (ScanConfig, error)
 	getParameterValue(string) (ParameterValue, error)
 	getScanParameterValue(string) (ScanParameterValue, error)
@@ -333,9 +334,6 @@ type ImageVersion interface {  // abstract
 
 type DockerImage interface {
 	Image
-	getDockerImageTag() string  // Return same as getName().
-	getFullName(DBClient) (string, error)  // Return the fully qualified docker image path.
-	getFullNameParts(DBClient) (namespace, name, tag string, err error)
 	//addScanEventId(dbClient DBClient, id string)
 	//getScanEventIds() []string // ordered from oldest to newest
 	//getMostRecentScanEventId() string
@@ -356,6 +354,7 @@ type DockerImageVersion interface {
 	getDigest() []byte
     getSignature() []byte
     getDockerBuildOutput() string
+    asDockerImageVersionDesc() *apitypes.DockerImageVersionDesc
 }
 
 type ParameterValue interface {

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	//"errors"
 	"os"
+	"time"
 	"strconv"
 	"strings"
 	"net/url"
@@ -299,7 +300,7 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
  * 
  */
 func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
-	values url.Values) (DockerImage, error) {
+	values url.Values) (DockerImageVersion, error) {
 
 	var repo Repo
 	var err error
@@ -351,7 +352,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
 	
 	var digest []byte
-	digest, err = dbClient.getServer.DockerServices.GetDigest(dockerImageId)
+	digest, err = dbClient.getServer().DockerServices.GetDigest(dockerImageId)
 	if err != nil { return nil, err }
 	
 	var signature []byte
@@ -360,7 +361,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	
 	// Identify the DockerImage, if one exists.
 	var dockerImage DockerImage
-	dockerImage, err = dbCreateDockerImage(repo.getId(), imageName, dockerfile.getDescription())
+	dockerImage, err = dbClient.dbCreateDockerImage(repo.getId(), imageName, dockerfile.getDescription())
 	if err != nil { return nil, err }
 	
 	// Add a record for the image to the database.
@@ -375,7 +376,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), 
 		paramNames, paramValues, imageVersion.getId(), user.getId())
 	
-	return image, err
+	return imageVersion, err
 }
 
 /*******************************************************************************

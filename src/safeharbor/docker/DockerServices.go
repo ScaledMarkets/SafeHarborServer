@@ -431,6 +431,8 @@ func (dockerSvcs *DockerServices) SaveImage(imageNamespace, imageName, tag strin
  */
 func (dockerSvcs *DockerServices) GetDigest(imageId string) ([]byte, error) {
 	
+	return []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, nil
+	/*
 	if dockerSvcs.Registry == nil {
 		var imageName = ....
 		var info map[string]interface{}
@@ -459,6 +461,7 @@ func (dockerSvcs *DockerServices) GetDigest(imageId string) ([]byte, error) {
 	} else {
 		....
 	}
+	*/
 }
 
 

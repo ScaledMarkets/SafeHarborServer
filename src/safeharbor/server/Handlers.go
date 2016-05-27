@@ -1027,7 +1027,7 @@ func createRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 		newDockerfile, err = createDockerfile(sessionToken, dbClient, repo,
 			name, filepath, repo.getDescription())
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
-		return repo.asRepoPlusDockerfileDesc(newDockerfile.getId)
+		return repo.asRepoPlusDockerfileDesc(newDockerfile.getId())
 	}
 	
 	return repo.asRepoDesc()
@@ -1336,7 +1336,7 @@ func replaceDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 
 /*******************************************************************************
  * Arguments: DockerfileId, ImageName
- * Returns: apitypes.DockerImageDesc
+ * Returns: apitypes.DockerImageVersionDesc
  */
 func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -1364,16 +1364,16 @@ func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println("Dockerfile name =", dockerfile.getName())
 	
-	var image DockerImage
-	image, err = buildDockerfile(dbClient, dockerfile, sessionToken, values)
+	var imageVersion DockerImageVersion
+	imageVersion, err = buildDockerfile(dbClient, dockerfile, sessionToken, values)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	return image.asDockerImageDesc()
+	return imageVersion.asDockerImageVersionDesc()
 }
 
 /*******************************************************************************
  * Arguments: RepoId, Description, ImageName, <File attachment>
- * Returns: apitypes.DockerImageDesc
+ * Returns: apitypes.DockerImageVersionDesc
  */
 func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -1414,11 +1414,11 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	if dockerfile == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"No dockerfile was attached") }
 	
-	var image DockerImage
-	image, err = buildDockerfile(dbClient, dockerfile, sessionToken, values)
+	var imageVersion DockerImageVersion
+	imageVersion, err = buildDockerfile(dbClient, dockerfile, sessionToken, values)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	return image.asDockerImageDesc()
+	return imageVersion.asDockerImageVersionDesc()
 }
 
 /*******************************************************************************
@@ -2300,26 +2300,45 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println(scanConfigId)
 	
-	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, imageObjId,
+	// Determine if imageObjId is a DockerImage or a DockerImageVersion.
+	var dockerImage DockerImage
+	var dockerImageId string
+	var dockerImageVersion DockerImageVersion
+	var dockerImageVersionId string
+	dockerImage, err = dbClient.getDockerImage(imageObjId)
+	if err == nil {
+		// User specified a DockerImage - not an image version.
+		dockerImageId = imageObjId
+		// Get most recent image version.
+		dockerImageVersionId, err = dockerImage.getMostRecentVersionId()
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		dockerImageVersion, err = dbClient.getDockerImageVersion(dockerImageVersionId)
+		if err != nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Docker image version with object Id " + dockerImageVersionId + " not found")
+		}
+	} else {
+		dockerImageVersion, err = dbClient.getDockerImageVersion(imageObjId)
+		if err != nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+			"Docker image version with object Id " + imageObjId + " not found")
+		}
+		// User specified a particular image version.
+		dockerImageVersionId = imageObjId
+		dockerImageId = dockerImageVersion.getImageObjId()
+		dockerImage, err = dbClient.getDockerImage(dockerImageId)
+		if err != nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Docker image with object Id " + dockerImageId + " not found")
+		}
+	}
+	
+	// Check if user is authorized to use the DockerImage and the ScanConfig.
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, dockerImageId,
 		"scanImage")
 	if failMsg != nil { return failMsg }
 	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ExecuteMask, scanConfigId,
 		"scanImage")
 	if failMsg != nil { return failMsg }
 	
-	var dockerImage DockerImage
-	dockerImage, err = dbClient.getDockerImage(imageObjId)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	if dockerImage == nil {
-		return apitypes.NewFailureDesc(http.StatusBadRequest,
-			"Docker image with object Id " + imageObjId + " not found")
-	}
-	
-	// Get most recent image version.
-	var imageVersionObjId string
-	imageVersionObjId, err = dockerImage.getMostRecentVersionId()
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	
+	// Retrieve the ScanConfig.
 	var scanConfig ScanConfig
 	scanConfig, err = dbClient.getScanConfig(scanConfigId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
@@ -2328,7 +2347,8 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 			"Scan Config with object Id " + scanConfigId + " not found")
 	}
 
-	fmt.Println("Getting scan parameters from configuration")
+	// Obtain scan provider name and parameters from the ScanConfig.
+	var scanProviderName = scanConfig.getProviderName()
 	var params = map[string]string{}
 	var paramValueIds []string = scanConfig.getParameterValueIds()
 	for _, id := range paramValueIds {
@@ -2338,18 +2358,15 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 		params[paramValue.getName()] = paramValue.getStringValue()
 	}
 
-	// Identify the requested scan provider.
-	var scanProviderName = scanConfig.getProviderName()
-	//var paramValues []string = scanConfig.getParameterValueIds()
-	
-	var score string
-	
+	// Locate the scan provider.
 	fmt.Println("Getting scan service...")
 	var scanService providers.ScanService
 	scanService = dbClient.Server.GetScanService(scanProviderName)
 	if scanService == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"Unable to identify a scan service named '" + scanProviderName + "'")
 	}
+	
+	// Attach to the scan provider.
 	var scanContext providers.ScanContext
 	scanContext, err = scanService.CreateScanContext(params)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
@@ -2364,9 +2381,10 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	fmt.Println("Scanner service completed")
 	
-	score = fmt.Sprintf("%d", len(result.Vulnerabilities))
-	
+	// Compute score.
 	// TBD: Here we should use the scanConfig.SuccessExpression to compute the score.
+	var score string
+	score = fmt.Sprintf("%d", len(result.Vulnerabilities))
 
 	// Construct arrays of param names and values, needed by dbCreateScanEvent.
 	var paramNames = make([]string, len(params))

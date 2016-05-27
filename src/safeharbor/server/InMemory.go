@@ -2601,6 +2601,10 @@ func (dockerfile *InMemDockerfile) replaceDockerfileFile(filepath, desc string) 
 	return os.Remove(oldFilePath)
 }
 
+func (dockerfile *InMemDockerfile) getParameterValueIds() string {
+	....
+}
+
 func (dockerfile *InMemDockerfile) getRepoId() string {
 	return dockerfile.ParentId
 }
@@ -2736,7 +2740,7 @@ func (image *InMemImage) getImageVersionIds() []string {
 	return image.VersionIds
 }
 
-func (image *InMemDockerImage) getMostRecentVersionId() (string, error) {
+func (image *InMemDocker) getMostRecentVersionId() (string, error) {
 	return image.VersionIds[len(image.VersionIds)-1]
 }
 
@@ -2746,6 +2750,10 @@ func (image *InMemImage) getUniqueVersion() (string, error) {
 	var err error
 	version, err = client.incrementDatabaseKey(ObjectScopeVersionNumbersPrefix + image.getId())
 	return version, err
+}
+
+func (image *InMemImage) getMostRecentVersionId() string {
+	....
 }
 
 func (image *InMemImage) imageFieldsAsJSON() string {
