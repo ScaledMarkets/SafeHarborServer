@@ -2715,8 +2715,14 @@ func (image *InMemImage) deleteAllChildResources(dbClient DBClient) error {
 
 func (image *InMemImage) addVersionId(dbClient DBClient, dockerImageVersionObjId string) error {
 	
+	fmt.Println("addVersionId: A")  // debug
+	if image.VersionIds == nil { fmt.Println("image.VersionIds is nil") }  // debug
+	fmt.Println("addVersionId: B")  // debug
 	image.VersionIds = append(image.VersionIds, dockerImageVersionObjId)
-	return dbClient.writeBack(image)
+	fmt.Println("addVersionId: C")  // debug
+	var err = dbClient.writeBack(image)
+	fmt.Println("addVersionId: D")  // debug
+	return err
 }
 
 func (image *InMemImage) getImageVersionIds() []string {
