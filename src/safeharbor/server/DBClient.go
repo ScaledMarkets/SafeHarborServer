@@ -97,7 +97,7 @@ type DBClient interface {
 		userObjId, score string, result *providers.ScanResult) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId string, paramNames, paramValues []string,
 		imageId, userObjId string) (DockerfileExecEvent, error)
-	dbCreateDockerfileExecParameterValue(name, value string) (DockerfileExecParameterValue, error)
+	dbCreateDockerfileExecParameterValue(name, value, dockerfileId string) (DockerfileExecParameterValue, error)
 	dbDeactivateRealm(realmId string) error
 	getResource(string) (Resource, error)
 	getParty(string) (Party, error)
@@ -108,6 +108,8 @@ type DBClient interface {
 	getRepo(string) (Repo, error)
 	getDockerfile(string) (Dockerfile, error)
 	getDockerImage(string) (DockerImage, error)
+	getImage(string) (Image, error)
+	getImageVersion(string) (ImageVersion, error)
 	getDockerImageVersion(string) (DockerImageVersion, error)
 	getScanConfig(string) (ScanConfig, error)
 	getParameterValue(string) (ParameterValue, error)
@@ -307,7 +309,7 @@ type Dockerfile interface {
 	getDockerfileExecEventIds() []string
 	addEventId(DBClient, string) error
 	replaceDockerfileFile(filepath, desc string) error
-	getParameterValueIds() string
+	//getParameterValueIds() string
 	asDockerfileDesc() *apitypes.DockerfileDesc
 }
 
@@ -316,15 +318,17 @@ type Image interface {  // abstract
 	getRepoId() string
 	getRepo(DBClient) (Repo, error)
 	getImageVersionIds() []string
-	getUniqueVersion() (string, error)
+	getUniqueVersion(DBClient) (string, error)
 	addVersionId(DBClient, string) error
-	getMostRecentVersionId() (string, error)
+	getMostRecentVersionId() string
+	deleteImageVersion(DBClient, ImageVersion) error
 }
 
 type ImageVersion interface {  // abstract
 	PersistObj
 	getVersion() string
 	getImageObjId() string
+	getImage(DBClient) (Image, error)
 	getCreationDate() time.Time
 	getImageCreationEventId() string
 	setImageCreationEventId(string)
@@ -430,7 +434,7 @@ type ScanEvent interface {
 	getActualParameterValueIds() []string
 	deleteAllParameterValues(DBClient) error
 	asScanEventDesc(DBClient) *apitypes.ScanEventDesc
-	nullifyDockerImage(DBClient) error
+	nullifyDockerImageVersion(DBClient) error
 	nullifyScanConfig(DBClient) error
 }
 
@@ -438,7 +442,6 @@ type ImageCreationEvent interface {  // abstract
 	Event
 	nullifyImageVersion(DBClient) error
 	getImageVersionId(DBClient) string
-	//nullifyDockerImage(DBClient) error
 }
 
 type DockerfileExecEvent interface {
@@ -451,6 +454,7 @@ type DockerfileExecEvent interface {
 	asDockerfileExecEventDesc(DBClient) *apitypes.DockerfileExecEventDesc
 	
 	/** Nullify all references to the dockerfile or its external representation. */
+	nullifyDockerImageVersion(DBClient) error
 	nullifyDockerfile(DBClient) error
 }
 

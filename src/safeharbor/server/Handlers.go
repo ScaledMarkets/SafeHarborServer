@@ -1437,30 +1437,45 @@ func downloadImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	var resource Resource
-	resource, err = dbClient.getResource(imageObjId)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	if resource == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
-		"Unable to identify resource with Id " + imageObjId) }
-	var image Image
-	var isType bool
-	image, isType = resource.(Image)
-	if ! isType { return apitypes.NewFailureDesc(http.StatusBadRequest,
-		"Resource with Id " + imageObjId + " is not an Image") }
+	// Determine if imageObjId is a DockerImage or a DockerImageVersion.
 	var dockerImage DockerImage
-	dockerImage, isType = image.(DockerImage)
-	if ! isType { return apitypes.NewFailureDesc(http.StatusBadRequest,
-		"Image is not a docker image") }
+	var dockerImageId string
+	var dockerImageVersion DockerImageVersion
+	var dockerImageVersionId string
+	dockerImage, err = dbClient.getDockerImage(imageObjId)
+	if err == nil {
+		// User specified a DockerImage - not an image version.
+		dockerImageId = imageObjId
+		// Get most recent image version.
+		dockerImageVersionId = dockerImage.getMostRecentVersionId()
+		if dockerImageVersionId == "" { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Null most recent DockerImageVersion for image " + dockerImage.getName())
+		}
+		dockerImageVersion, err = dbClient.getDockerImageVersion(dockerImageVersionId)
+		if err != nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Docker image version with object Id " + dockerImageVersionId + " not found")
+		}
+	} else {
+		dockerImageVersion, err = dbClient.getDockerImageVersion(imageObjId)
+		if err != nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+			"Docker image version with object Id " + imageObjId + " not found")
+		}
+		// User specified a particular image version.
+		dockerImageVersionId = imageObjId
+		dockerImageId = dockerImageVersion.getImageObjId()
+		dockerImage, err = dbClient.getDockerImage(dockerImageId)
+		if err != nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Docker image with object Id " + dockerImageId + " not found")
+		}
+	}
 	
-	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, imageObjId,
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, dockerImageId,
 		"downloadImage")
 	if failMsg != nil { return failMsg }
 
 	var tempFilePath string
-	//var imageFullName string
-	//imageFullName, err = dockerImage.getFullName(dbClient)
 	var namespace, imageName, tag string
-	namespace, imageName, tag, err = dockerImage.getFullNameParts(dbClient)
+	namespace, imageName, tag, err = dockerImageVersion.getFullNameParts(dbClient)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	tempFilePath, err = dbClient.getServer().DockerServices.SaveImage(namespace, imageName, tag)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
@@ -2310,8 +2325,10 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 		// User specified a DockerImage - not an image version.
 		dockerImageId = imageObjId
 		// Get most recent image version.
-		dockerImageVersionId, err = dockerImage.getMostRecentVersionId()
-		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		dockerImageVersionId = dockerImage.getMostRecentVersionId()
+		if dockerImageVersionId == "" { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Null most recent DockerImageVersion for image " + dockerImage.getName())
+		}
 		dockerImageVersion, err = dbClient.getDockerImageVersion(dockerImageVersionId)
 		if err != nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
 			"Docker image version with object Id " + dockerImageVersionId + " not found")
@@ -2405,7 +2422,7 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 		"User with Id " + userId + " not found") }
 	var scanEvent ScanEvent
 	scanEvent, err = dbClient.dbCreateScanEvent(scanConfig.getId(), scanConfig.getProviderName(),
-		paramNames, paramValues, imageVersionObjId, user.getId(), score, result)
+		paramNames, paramValues, dockerImageVersionId, user.getId(), score, result)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return scanEvent.asScanEventDesc(dbClient)
@@ -2427,18 +2444,44 @@ func getDockerImageStatus(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	var image DockerImage
-	image, err = dbClient.getDockerImage(imageObjId)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	// Determine if ImageObjId is a DockerImage or a DockerImageVersion.
 	
-	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, imageObjId,
+	var dockerImageId string = ""
+	var dockerImage DockerImage
+	var dockerImageVersionId string = ""
+	var dockerImageVersion DockerImageVersion = nil
+	dockerImage, err = dbClient.getDockerImage(imageObjId)
+	if err == nil {
+		dockerImageId = imageObjId
+		// Get the most recent version.
+		dockerImageVersionId = dockerImage.getMostRecentVersionId()
+		dockerImageVersion, err = dbClient.getDockerImageVersion(dockerImageVersionId)
+		if err != nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Could not identify DockerImageVersion with object Id " + dockerImageVersionId)
+		}
+	} else {
+		dockerImageVersion, err = dbClient.getDockerImageVersion(imageObjId)
+		if err != nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+			"The ImageObjId is not a DockerImage or a DockerImageVersion")
+		}
+		// User specified a DockerImageVersion.
+		dockerImageVersionId = imageObjId
+		// Identify the DockerImage, in order to check the user's authorization.
+		dockerImage, err = dbClient.getDockerImage(dockerImageVersion.getImageObjId())
+		if err != nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Could not identify Docker Image for the DockerImageVersion")
+		}
+	}
+	
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, dockerImageId,
 		"getDockerImageStatus")
 	if failMsg != nil { return failMsg }
 	
 	// Get the most recent ScanEvent, if any.
-	var eventId string = image.getMostRecentScanEventId()
+	var eventId string = dockerImageVersion.getMostRecentScanEventId()
 	if eventId == "" {
-		return apitypes.NewScanEventDesc("", time.Now(), "", imageObjId, "", "", nil, "", nil) // an empty ScanEventDesc
+		return apitypes.NewScanEventDesc("", time.Now(), "", dockerImageVersionId,
+			"", "", nil, "", nil) // an empty ScanEventDesc
 	} else {
 		var event ScanEvent
 		event, err = dbClient.getScanEvent(eventId)
@@ -2549,21 +2592,51 @@ func getDockerImageEvents(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
+	// Determine if ImageObjId is a DockerImage or a DockerImageVersion.
+	//var dockerImageId string = ""
+	var dockerImage DockerImage
+	var dockerImageVersionId string = ""
+	var dockerImageVersion DockerImageVersion = nil
+	dockerImage, err = dbClient.getDockerImage(imageObjId)
+	if err == nil {
+		//dockerImageId = imageObjId
+	} else {
+		dockerImageVersion, err = dbClient.getDockerImageVersion(imageObjId)
+		if err != nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+			"The ImageObjId is not a DockerImage or a DockerImageVersion")
+		}
+		// User specified a DockerImageVersion.
+		dockerImageVersionId = imageObjId
+		// Identify the DockerImage, in order to check the user's authorization.
+		dockerImage, err = dbClient.getDockerImage(dockerImageVersion.getImageObjId())
+		if err != nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Could not identify Docker Image for the DockerImageVersion")
+		}
+	}
+	
 	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
-		imageObjId, "getDockerImageEvents")
+		dockerImage.getId(), "getDockerImageEvents")
 	if failMsg != nil { return failMsg }
 	
-	var image DockerImage
-	image, err = dbClient.getDockerImage(imageObjId)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	
-	var eventIds []string = image.getScanEventIds()
 	var eventDescs apitypes.EventDescs = make([]apitypes.EventDesc, 0)
-	for _, eventId := range eventIds {
-		var event Event
-		event, err = dbClient.getEvent(eventId)
-		if err != nil { return apitypes.NewFailureDescFromError(err) }
-		eventDescs = append(eventDescs, event.asEventDesc(dbClient))
+	var dockerImageVersionIds []string
+	if dockerImageVersion == nil {
+		dockerImageVersionIds = dockerImage.getImageVersionIds()
+	} else {
+		dockerImageVersionIds = []string{ dockerImageVersionId }
+	}
+	for _, versionId := range dockerImageVersionIds {
+		dockerImageVersion, err  = dbClient.getDockerImageVersion(versionId)
+		if err != nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
+			"Cound not identify DockerImageVersion with object Id " + versionId)
+		}
+		var eventIds []string = dockerImageVersion.getScanEventIds()
+		for _, eventId := range eventIds {
+			var event Event
+			event, err = dbClient.getEvent(eventId)
+			if err != nil { return apitypes.NewFailureDescFromError(err) }
+			eventDescs = append(eventDescs, event.asEventDesc(dbClient))
+		}
 	}
 	
 	return eventDescs
