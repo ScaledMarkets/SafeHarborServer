@@ -754,7 +754,7 @@ func (versionDesc *DockerImageVersionDesc) AsJSON() string {
 	dockerBuildOutput, _ = docker.ParseBuildRESTOutput(versionDesc.DockerBuildOutput)
 	
 	json = json + fmt.Sprintf(", \"DockerBuildOutput\": %s}", dockerBuildOutput.AsJSON())
-	return json + "}"
+	return json
 }
 
 type DockerImageVersionDescs []*DockerImageVersionDesc
