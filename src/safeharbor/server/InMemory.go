@@ -3095,25 +3095,35 @@ func (client *InMemClient) dbCreateDockerImageVersion(dockerImageObjId string,
 	creationDate time.Time, buildOutput string,
 	digest, signature []byte) (DockerImageVersion, error) {
 	
+	fmt.Println("dbCreateDockerImageVersion: A")  // debug
+	
 	// Check if the image exists and is a DockerImage.
 	var dockerImage DockerImage
 	var err error
 	dockerImage, err = client.getDockerImage(dockerImageObjId)
+	fmt.Println("dbCreateDockerImageVersion: B")  // debug
 	if err != nil { return nil, err }
+	fmt.Println("dbCreateDockerImageVersion:C ")  // debug
 	
 	// Create a unique version.
 	var version string
 	version, err = dockerImage.getUniqueVersion(client)
+	fmt.Println("dbCreateDockerImageVersion: D")  // debug
 	if err != nil { return nil, err }
+	fmt.Println("dbCreateDockerImageVersion: E")  // debug
 	
 	var imageVersion *InMemDockerImageVersion
 	imageVersion, err = client.NewInMemDockerImageVersion(version, dockerImageObjId,
 		creationDate, buildOutput, digest, signature)
+	fmt.Println("dbCreateDockerImageVersion: F")  // debug
 	if err != nil { return nil, err }
+	fmt.Println("dbCreateDockerImageVersion: G")  // debug
 	
 	// Add to Image.
 	err = dockerImage.addVersionId(client, imageVersion.getId())
+	fmt.Println("dbCreateDockerImageVersion: H")  // debug
 	if err != nil { return nil, err }
+	fmt.Println("dbCreateDockerImageVersion: I")  // debug
 	return imageVersion, nil
 }
 
