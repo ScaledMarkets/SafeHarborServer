@@ -148,7 +148,8 @@ func (client *InMemClient) updateObject(obj PersistObj) error {
 // Superfluous - eliminate:
 func (client *InMemClient) writeBack(obj PersistObj) error {
 	//client.objectsCache[obj.getId()] = obj  // update cache
-	return obj.writeBack(client)  // update database
+	return client.updateObject(obj)
+	//return obj.writeBack(client)  // update database
 }
 
 func (client *InMemClient) deleteObject(obj PersistObj) error {
