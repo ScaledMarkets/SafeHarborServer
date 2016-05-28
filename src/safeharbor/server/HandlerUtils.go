@@ -361,8 +361,14 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	
 	// Identify the DockerImage, if one exists.
 	var dockerImage DockerImage
+	fmt.Println("buildDockerfile: A")  // debug
 	dockerImage, err = dbClient.dbCreateDockerImage(repo.getId(), imageName, dockerfile.getDescription())
+	fmt.Println("buildDockerfile: B")  // debug
 	if err != nil { return nil, err }
+	
+	fmt.Println("buildDockerfile: C")  // debug
+	
+	
 	
 	// Add a record for the image to the database.
 	// (This automatically computes the signature.)
