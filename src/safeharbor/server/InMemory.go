@@ -2666,6 +2666,7 @@ func (client *InMemClient) NewInMemImage(name, desc, repoId string) (*InMemImage
 	if err != nil { return nil, err }
 	return &InMemImage{
 		InMemResource: *resource,
+		VersionIds: make([]string, 0),
 	}, nil
 }
 
@@ -3360,6 +3361,7 @@ func (client *InMemClient) NewInMemScanConfig(name, desc, repoId,
 		ProviderName: providerName,
 		ParameterValueIds: paramValueIds,
 		FlagId: flagId,
+		ScanEventIds: make([]string, 0),
 	}
 	return scanConfig, client.updateObject(scanConfig)
 }
