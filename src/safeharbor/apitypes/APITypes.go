@@ -649,7 +649,7 @@ type ImageVersionDesc struct {
 	ObjId string
 	Version string
 	ImageObjId string
-    CreationDate time.Time
+    CreationDate string
 }
 
 func NewImageVersionDesc(objId, version, imageObjId string, creationTime time.Time) *ImageVersionDesc {
@@ -658,7 +658,7 @@ func NewImageVersionDesc(objId, version, imageObjId string, creationTime time.Ti
 		ObjId: objId,
 		Version: version,
 		ImageObjId: imageObjId,
-		CreationDate: creationTime,
+		CreationDate: FormatTimeAsJavascriptDate(creationTime),
 	}
 }
 
@@ -1077,21 +1077,21 @@ func (flagDescs FlagDescs) SendFile() (string, bool) {
 type EventDesc interface {
 	RespIntfTp
 	GetEventId() string
-	GetWhen() time.Time
+	GetWhen() string
 	GetUserObjId() string
 }
 
 type EventDescBase struct {
 	BaseType
 	EventId string
-	When time.Time
+	When string
 	UserObjId string
 }
 
 func NewEventDesc(objId string, when time.Time, userObjId string) *EventDescBase {
 	return &EventDescBase{
 		EventId: objId,
-		When: when,
+		When: FormatTimeAsJavascriptDate(when),
 		UserObjId: userObjId,
 	}
 }
@@ -1100,7 +1100,7 @@ func (eventDesc *EventDescBase) GetEventId() string {
 	return eventDesc.EventId
 }
 
-func (eventDesc *EventDescBase) GetWhen() time.Time {
+func (eventDesc *EventDescBase) GetWhen() string {
 	return eventDesc.When
 }
 
@@ -1111,7 +1111,7 @@ func (eventDesc *EventDescBase) GetUserObjId() string {
 func (eventDesc *EventDescBase) AsJSON() string {
 	return fmt.Sprintf(" {%s, \"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\"}",
 		eventDesc.baseTypeFieldsAsJSON(),
-		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId)
+		eventDesc.EventId, eventDesc.When, eventDesc.UserObjId)
 }
 
 type EventDescs []EventDesc
@@ -1166,7 +1166,7 @@ func (eventDesc *ScanEventDesc) AsJSON() string {
 		"\"ImageVersionObjId\": \"%s\", " +
 		"\"ScanConfigId\": \"%s\", \"ProviderName\": \"%s\", \"Score\": \"%s\", ",
 		eventDesc.baseTypeFieldsAsJSON(),
-		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
+		eventDesc.EventId, eventDesc.When, eventDesc.UserObjId,
 		eventDesc.ImageVersionObjId, eventDesc.ScanConfigId, eventDesc.ProviderName, eventDesc.Score)
 	
 	s = s + "\"VulnerabilityDescs\": ["
@@ -1235,7 +1235,7 @@ func (eventDesc *DockerfileExecEventDesc) AsJSON() string {
 	var s = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
 		"\"ImageVersionObjId\": \"%s\", " +
 		"\"DockefileId\": \"%s\"", eventDesc.baseTypeFieldsAsJSON(),
-		eventDesc.EventId, FormatTimeAsJavascriptDate(eventDesc.When), eventDesc.UserObjId,
+		eventDesc.EventId, eventDesc.When, eventDesc.UserObjId,
 		eventDesc.ImageVersionObjId, eventDesc.DockerfileId)
 	
 	s = s + ", \"ParameterValues\": ["
