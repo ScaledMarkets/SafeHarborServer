@@ -1199,6 +1199,9 @@ func addDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if dockerfile == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "No dockerfile was attached") }
 	
+	
+	//....create DockerfileExecParameterValues
+	
 	return dockerfile.asDockerfileDesc()
 }
 
@@ -1329,6 +1332,11 @@ func replaceDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if filepath == "" { return apitypes.NewFailureDesc(http.StatusBadRequest, "No file was found") }
 	
+	
+	//....create DockerfileExecParameterValues
+
+	
+	
 	err = dockerfile.replaceDockerfileFile(filepath, desc)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return apitypes.NewResult(200, "Dockerfile file replaced")
@@ -1417,7 +1425,10 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	var imageVersion DockerImageVersion
 	imageVersion, err = buildDockerfile(dbClient, dockerfile, sessionToken, values)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+
 	
+	//....create DockerfileExecParameterValues
+
 	return imageVersion.asDockerImageVersionDesc()
 }
 
