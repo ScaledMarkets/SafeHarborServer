@@ -105,9 +105,13 @@ func clearAll(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values
 			for _, imageId := range repo.getDockerImageIds() {
 				
 				var image DockerImage
+				fmt.Println("clearAll: Getting image with Id '" + imageId + "'...")  // debug
 				image, err = dbClient.getDockerImage(imageId)
+				fmt.Println("clearAll: Retreived image with Id '" + imageId + "'...")  // debug
 				if err != nil { return apitypes.NewFailureDescFromError(err) }
+				fmt.Println("clearAll: A")  // debug
 				var imageName string = image.getName()
+				fmt.Println("clearAll: B")  // debug
 				fmt.Println("\t\tRemoving image " + imageName + ":")
 				
 				// Remove the image.
