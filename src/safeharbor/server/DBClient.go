@@ -150,7 +150,7 @@ type PersistObj interface {  // abstract
 	getId() string
 	getPersistence() *Persistence
 	writeBack(DBClient) error
-	asJSON() string
+	asJSON() string  // panics
 }
 
 /* A Party is a User or a Group. Parties act on Resources. */
@@ -180,7 +180,7 @@ type Resource interface {  // abstract
 	ACL
 	getName() string
 	//setName(string) error
-	setNameDeferredUpdate(string)
+	setNameDeferredUpdate(string)  // does not write to db
 	getCreationTime() time.Time
 	getDescription() string
 	//setDescription(string) error
@@ -200,7 +200,7 @@ type Resource interface {  // abstract
 	
 	removeACLEntryIdAt(index int)  // does not write to db
 	clearAllACLEntryIds()  // does not write to db
-	deleteAllChildResources(DBClient) error
+	deleteAllChildResources(DBClient) error  // panics
 }
 
 type ResourceType int
@@ -319,9 +319,9 @@ type Image interface {  // abstract
 	getRepo(DBClient) (Repo, error)
 	getImageVersionIds() []string
 	getUniqueVersion(DBClient) (string, error)
-	addVersionId(DBClient, string) error
+	addVersionId(DBClient, string) error  // panics
 	getMostRecentVersionId() string
-	deleteImageVersion(DBClient, ImageVersion) error
+	deleteImageVersion(DBClient, ImageVersion) error  // panics
 }
 
 type ImageVersion interface {  // abstract
@@ -331,7 +331,7 @@ type ImageVersion interface {  // abstract
 	getImage(DBClient) (Image, error)
 	getCreationDate() time.Time
 	getImageCreationEventId() string
-	setImageCreationEventId(string)
+	setImageCreationEventId(string)  // does not write to db
 	getFullName(dbClient DBClient) (string, error)
 	getFullNameParts(dbClient DBClient) (string, string, string, error)
 }
@@ -361,11 +361,11 @@ type DockerImageVersion interface {
     asDockerImageVersionDesc() *apitypes.DockerImageVersionDesc
 }
 
-type ParameterValue interface {
+type ParameterValue interface {  // abstract
 	PersistObj
 	getName() string
 	getStringValue() string
-	setStringValue(DBClient, string) error
+	setStringValue(string)  // does not write to db
 	parameterValueFieldsAsJSON() string
 	//asParameterValueDesc() *apitypes.ParameterValueDesc
 }
@@ -422,7 +422,7 @@ type Event interface {  // abstract
 	PersistObj
 	getWhen() time.Time
 	getUserObjId() string
-	asEventDesc(DBClient) apitypes.EventDesc
+	asEventDesc(DBClient) apitypes.EventDesc  // panics
 }
 
 type ScanEvent interface {
@@ -440,7 +440,7 @@ type ScanEvent interface {
 
 type ImageCreationEvent interface {  // abstract
 	Event
-	nullifyImageVersion(DBClient) error
+	nullifyImageVersion()  // does not write to db
 	getImageVersionId(DBClient) string
 }
 

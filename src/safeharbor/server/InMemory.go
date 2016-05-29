@@ -2740,15 +2740,7 @@ func (image *InMemImage) deleteAllChildResources(dbClient DBClient) error {
 }
 
 func (image *InMemImage) addVersionId(dbClient DBClient, dockerImageVersionObjId string) error {
-	
-	fmt.Println("addVersionId: A")  // debug
-	if image.VersionIds == nil { fmt.Println("image.VersionIds is nil") }  // debug
-	fmt.Println("addVersionId: B")  // debug
-	image.VersionIds = append(image.VersionIds, dockerImageVersionObjId)
-	fmt.Println("addVersionId: C")  // debug
-	var err = dbClient.writeBack(image)
-	fmt.Println("addVersionId: D")  // debug
-	return err
+	panic("Call to method that should be abstract")
 }
 
 func (image *InMemImage) getImageVersionIds() []string {
@@ -2863,6 +2855,13 @@ func (client *InMemClient) getDockerImage(id string) (DockerImage, error) {
 	return image, nil
 }
 
+func (image *InMemDockerImage) addVersionId(dbClient DBClient, dockerImageVersionObjId string) error {
+	
+	image.VersionIds = append(image.VersionIds, dockerImageVersionObjId)
+	var err = dbClient.writeBack(image)
+	return err
+}
+
 func (image *InMemDockerImage) deleteImageVersion(dbClient DBClient, imageVersion ImageVersion) error {
 	
 	var dockerImageVersion DockerImageVersion
@@ -2884,7 +2883,8 @@ func (image *InMemDockerImage) deleteImageVersion(dbClient DBClient, imageVersio
 			reflect.TypeOf(event).String())
 	}
 	if imageCreationEvent == nil { fmt.Println("imageCreationEvent is nil") }
-	err = imageCreationEvent.nullifyImageVersion(dbClient)
+	imageCreationEvent.nullifyImageVersion()
+	err = dbClient.updateObject(imageCreationEvent)
 	if err != nil { return err }
 	
 	// Nullify Image in ScanEvents.
@@ -3337,9 +3337,8 @@ func (paramValue *InMemParameterValue) getStringValue() string {
 	return paramValue.StringValue
 }
 
-func (paramValue *InMemParameterValue) setStringValue(dbClient DBClient, value string) error {
+func (paramValue *InMemParameterValue) setStringValue(value string) {
 	paramValue.StringValue = value
-	return dbClient.writeBack(paramValue)
 }
 
 func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.ParameterValueDesc {
@@ -3522,7 +3521,7 @@ func (scanConfig *InMemScanConfig) setParameterValueDeferredUpdate(dbClient DBCl
 			continue
 		}
 		if pv.getName() == name {
-			pv.setStringValue(dbClient, strValue)
+			pv.setStringValue(strValue)
 			return pv, nil
 		}
 	}
@@ -3968,7 +3967,7 @@ func (event *InMemEvent) writeBack(dbClient DBClient) error {
 }
 
 func (event *InMemEvent) asEventDesc(dbClient DBClient) apitypes.EventDesc {
-	return apitypes.NewEventDesc(event.Id, event.When, event.UserObjId)
+	panic("Abstract method should not be called")
 }
 
 func (event *InMemEvent) eventFieldsAsJSON() string {
@@ -3998,7 +3997,7 @@ func (client *InMemClient) ReconstituteEvent(id string, when time.Time,
 }
 
 func (client *InMemClient) asEventDesc(event Event) apitypes.EventDesc {
-	return event.asEventDesc(client)
+	return apitypes.NewEventDesc(event.getId(), event.getWhen(), event.getUserObjId())
 }
 
 /*******************************************************************************
@@ -4246,9 +4245,8 @@ func (event *InMemImageCreationEvent) writeBack(dbClient DBClient) error {
 	panic("Abstract method should not be called")
 }
 
-func (event *InMemImageCreationEvent) nullifyImageVersion(dbClient DBClient) error {
+func (event *InMemImageCreationEvent) nullifyImageVersion() {
 	event.ImageVersionId = ""
-	return dbClient.writeBack(event)
 }
 
 func (event *InMemImageCreationEvent) getImageVersionId(dbClient DBClient) string {
