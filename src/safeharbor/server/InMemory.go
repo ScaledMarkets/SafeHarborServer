@@ -124,6 +124,9 @@ func (client *InMemClient) abort() error {
 }
 
 func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
+	
+	if id == "" { return nil, utils.ConstructServerError("Object Id is empty") }
+	
 	var cachedObj PersistObj = client.objectsCache[id]
 	if cachedObj != nil { return cachedObj, nil }
 
@@ -2359,7 +2362,7 @@ func (repo *InMemRepo) getDockerImageByName(dbClient DBClient, name string) (Doc
 		dockerImage, err = dbClient.getDockerImage(dockerImageId)
 		if err != nil { return nil, err }
 		if dockerImage == nil {
-			return nil, utils.ConstructServerError("Internal error: list DockerImageIds contains an invalid entry")
+			return nil, utils.ConstructServerError("List DockerImageIds contains an invalid entry")
 		}
 		if dockerImage.getName() == name { return dockerImage, nil }
 	}
