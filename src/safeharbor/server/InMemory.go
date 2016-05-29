@@ -2821,16 +2821,23 @@ func (client *InMemClient) dbCreateDockerImage(repoId, imageName, desc string) (
 }
 
 func (client *InMemClient) getDockerImage(id string) (DockerImage, error) {
+	
+	fmt.Println("getDockerImage: A")  // debug
 	var image DockerImage
 	var isType bool
 	var obj PersistObj
 	var err error
 	obj, err = client.getPersistentObject(id)
+	fmt.Println("getDockerImage: B")  // debug
 	if err != nil { return nil, err }
+	fmt.Println("getDockerImage: C")  // debug
 	if obj == nil { return nil, utils.ConstructUserError("DockerImage not found") }
+	fmt.Println("getDockerImage: D")  // debug
 	image, isType = obj.(DockerImage)
+	fmt.Println("getDockerImage: E")  // debug
 	if ! isType { return nil, utils.ConstructUserError(
 		"Object with Id " + id + " is not a DockerImage: it is a " + reflect.TypeOf(image).String()) }
+	fmt.Println("getDockerImage: F")  // debug
 	return image, nil
 }
 
