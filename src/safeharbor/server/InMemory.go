@@ -2836,7 +2836,7 @@ func (client *InMemClient) getDockerImage(id string) (DockerImage, error) {
 	image, isType = obj.(DockerImage)
 	fmt.Println("getDockerImage: E")  // debug
 	if ! isType { return nil, utils.ConstructUserError(
-		"Object with Id " + id + " is not a DockerImage: it is a " + reflect.TypeOf(image).String()) }
+		"Object with Id " + id + " is not a DockerImage: it is a " + reflect.TypeOf(obj).String()) }
 	fmt.Println("getDockerImage: F")  // debug
 	return image, nil
 }
