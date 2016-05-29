@@ -141,11 +141,33 @@ func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
 
 func (client *InMemClient) updateObject(obj PersistObj) error {
 	
+	// Checks that can be removed after testing.
+	if obj == nil { return utils.ConstructServerError("Object is nil") }
+	if client.objectIsAbstract(obj) { return utils.ConstructServerError(
+		"Abstract object: " + reflect.TypeOf(obj).String())
+	}
+	
 	// Check cache for object.
 	client.objectsCache[obj.getId()] = obj  // Add object to cache
 	
 	// Update database.
 	return client.Persistence.updateObject(client.txn, obj)
+}
+
+func (client *InMemClient) objectIsAbstract(obj PersistObj) bool {
+	var t = reflect.TypeOf(obj).String()
+	switch t {
+		case "*server.InMemPersistObj",
+			"*server.InMemACL",
+			"*server.InMemResource",
+			"*server.InMemParty",
+			"*server.InMemImage",
+			"*server.InMemImageVersion",
+			"*server.InMemParameterValue",
+			"*server.InMemEvent",
+			"*server.InMemImageCreationEvent": return true
+		default: return false
+	}
 }
 
 // Superfluous - eliminate:
