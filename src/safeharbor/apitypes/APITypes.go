@@ -62,6 +62,7 @@ var DeleteMask []bool = []bool{false, false, false, false, true}
 type BaseType struct {
 	HTTPStatusCode int
 	HTTPReasonPhrase string
+	ObjectType string
 }
 
 type RespIntfTp interface {  // response interface type
@@ -69,16 +70,18 @@ type RespIntfTp interface {  // response interface type
 	SendFile() (path string, deleteAfter bool)
 }
 
-func NewBaseType(statusCode int, reason string) *BaseType {
+func NewBaseType(statusCode int, reason string, objectType string) *BaseType {
 	return &BaseType{
 		HTTPStatusCode: statusCode,
 		HTTPReasonPhrase: reason,
+		ObjectType: objectType,
 	}
 }
 
 func (b *BaseType) baseTypeFieldsAsJSON() string {
-	return fmt.Sprintf("\"HTTPStatusCode\": %d, \"HTTPReasonPhrase\": \"%s\"",
-		b.HTTPStatusCode, rest.EncodeStringForJSON(b.HTTPReasonPhrase))
+	return fmt.Sprintf(
+		"\"HTTPStatusCode\": %d, \"HTTPReasonPhrase\": \"%s\", \"ObjectType\": \"%s\"",
+		b.HTTPStatusCode, rest.EncodeStringForJSON(b.HTTPReasonPhrase), b.ObjectType)
 }
 
 func (b *BaseType) AsJSON() string {
@@ -98,9 +101,9 @@ type Result struct {
 	BaseType
 }
 
-func NewResult(status int, message string) *Result {
+func NewResult(status int, message string, objectType string) *Result {
 	return &Result{
-		BaseType: *NewBaseType(status, message),
+		BaseType: *NewBaseType(status, message, objectType),
 	}
 }
 
@@ -120,7 +123,7 @@ type FileResponse struct {
 
 func NewFileResponse(status int, filePath string, deleteAfter bool) *FileResponse {
 	return &FileResponse{
-		BaseType: *NewBaseType(status, ""),
+		BaseType: *NewBaseType(status, "", "FileResponse"),
 		Status: status,
 		FilePath: filePath,
 		DeleteAfter: deleteAfter,
@@ -147,7 +150,7 @@ func NewFailureDesc(httpErrorCode int, reason string) *FailureDesc {
 		". Stack trace follows, but the error might be 'normal'")
 	debug.PrintStack()  // debug
 	return &FailureDesc{
-		BaseType: *NewBaseType(httpErrorCode, reason), // see https://golang.org/pkg/net/http/#pkg-constants
+		BaseType: *NewBaseType(httpErrorCode, reason, "FailureDesc"), // see https://golang.org/pkg/net/http/#pkg-constants
 	}
 }
 
@@ -188,7 +191,7 @@ type Credentials struct {
 
 func NewCredentials(uid string, pwd string) *Credentials {
 	return &Credentials{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "Credentials"),
 		UserId: uid,
 		Password: pwd,
 	}
@@ -224,7 +227,7 @@ type SessionToken struct {
 
 func NewSessionToken(sessionId string, userId string) *SessionToken {
 	return &SessionToken{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "SessionToken"),
 		UniqueSessionId: sessionId,
 		AuthenticatedUserid: userId,
 		RealmId: "",
@@ -261,7 +264,7 @@ type GroupDesc struct {
 
 func NewGroupDesc(groupId, realmId, groupName, desc string, creationDate time.Time) *GroupDesc {
 	return &GroupDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "GroupDesc"),
 		GroupId: groupId,
 		RealmId: realmId,
 		GroupName: groupName,
@@ -307,7 +310,7 @@ type UserInfo struct {
 
 func NewUserInfo(userid, name, email, pswd, realmId string) *UserInfo {
 	return &UserInfo{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "UserInfo"),
 		UserId: userid,
 		UserName: name,
 		EmailAddress: email,
@@ -361,7 +364,7 @@ type UserDesc struct {
 
 func NewUserDesc(id, userId, userName, realmId string, canModRealms []string) *UserDesc {
 	return &UserDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "UserDesc"),
 		Id: id,
 		UserId: userId,
 		UserName: userName,
@@ -412,7 +415,7 @@ type RealmDesc struct {
 
 func NewRealmDesc(id string, name string, orgName string, adminUserId string) *RealmDesc {
 	return &RealmDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "RealmDesc"),
 		Id: id,
 		RealmName: name,
 		OrgFullName: orgName,
@@ -458,7 +461,7 @@ func NewRealmInfo(realmName string, orgName string, desc string) (*RealmInfo, er
 	if realmName == "" { return nil, utils.ConstructUserError("realmName is empty") }
 	if orgName == "" { return nil, utils.ConstructUserError("orgName is empty") }
 	return &RealmInfo{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "RealmInfo"),
 		RealmName: realmName,
 		OrgFullName: orgName,
 		Description: desc,
@@ -499,7 +502,7 @@ func NewRepoDesc(id string, realmId string, name string, desc string,
 	creationTime time.Time, dockerfileIds []string) *RepoDesc {
 
 	return &RepoDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "RepoDesc"),
 		Id: id,
 		RealmId: realmId,
 		RepoName: name,
@@ -581,7 +584,7 @@ type DockerfileDesc struct {
 
 func NewDockerfileDesc(id string, repoId string, name string, desc string) *DockerfileDesc {
 	return &DockerfileDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "DockerfileDesc"),
 		Id: id,
 		RepoId: repoId,
 		DockerfileName: name,
@@ -623,9 +626,9 @@ type ImageDesc struct {
 	Description string
 }
 
-func NewImageDesc(objId, repoId, name, desc string) *ImageDesc {
+func NewImageDesc(objectType, objId, repoId, name, desc string) *ImageDesc {
 	return &ImageDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", objectType),
 		ObjId: objId,
 		RepoId: repoId,
 		Name: name,
@@ -649,23 +652,28 @@ type ImageVersionDesc struct {
 	ObjId string
 	Version string
 	ImageObjId string
+    ImageCreationEventId string
     CreationDate string
 }
 
-func NewImageVersionDesc(objId, version, imageObjId string, creationTime time.Time) *ImageVersionDesc {
+func NewImageVersionDesc(objectType, objId, version, imageObjId string, creationEventId string,
+	creationTime time.Time) *ImageVersionDesc {
 	return &ImageVersionDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", objectType),
 		ObjId: objId,
 		Version: version,
 		ImageObjId: imageObjId,
+		ImageCreationEventId: creationEventId,
 		CreationDate: FormatTimeAsJavascriptDate(creationTime),
 	}
 }
 
 func (versionDesc *ImageVersionDesc) imageVersionDescFieldsAsJSON() string {
 	return versionDesc.baseTypeFieldsAsJSON() + fmt.Sprintf(
-		", \"ObjId\": \"%s\", \"Version\": \"%s\", \"ImageObjId\": \"%s\", \"CreationDate\": %s",
-		versionDesc.ObjId, versionDesc.Version, versionDesc.ImageObjId, versionDesc.CreationDate)
+		", \"ObjId\": \"%s\", \"Version\": \"%s\", \"ImageObjId\": \"%s\", " +
+		"\"ImageCreationEventId\": \"%s\", \"CreationDate\": %s",
+		versionDesc.ObjId, versionDesc.Version, versionDesc.ImageObjId,
+		versionDesc.ImageCreationEventId, versionDesc.CreationDate)
 }
 
 /*******************************************************************************
@@ -679,7 +687,7 @@ type DockerImageDesc struct {
 
 func NewDockerImageDesc(objId, repoId, name, desc string) *DockerImageDesc {
 	return &DockerImageDesc{
-		ImageDesc: *NewImageDesc(objId, repoId, name, desc),
+		ImageDesc: *NewImageDesc("DockerImageDesc", objId, repoId, name, desc),
 		//Signature: signature,
 		//OutputFromBuild: outputFromBuild,
 	}
@@ -724,7 +732,7 @@ type DockerImageVersionDesc struct {
 func NewDockerImageVersionDesc(objId, version, imageObjId string, creationTime time.Time,
 	digest, signature []byte, scanEventIds []string, buildOutput string) *DockerImageVersionDesc {
 	return &DockerImageVersionDesc{
-		ImageVersionDesc: *NewImageVersionDesc(objId, version, imageObjId, creationTime),
+		ImageVersionDesc: *NewImageVersionDesc("DockerImageVersionDesc", objId, version, imageObjId, creationTime),
 		Digest: digest,
 		Signature: signature,
 		ScanEventIds: scanEventIds,
@@ -784,7 +792,7 @@ type PermissionMask struct {
 
 func NewPermissionMask(mask []bool) *PermissionMask {
 	return &PermissionMask{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "PermissionMask"),
 		Mask: mask,
 	}
 }
@@ -825,7 +833,7 @@ func NewPermissionDesc(aclEntryId string, resourceId string, partyId string,
 	permissionMask []bool) *PermissionDesc {
 
 	return &PermissionDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "PermissionDesc"),
 		ACLEntryId: aclEntryId,
 		ResourceId: resourceId,
 		PartyId: partyId,
@@ -874,7 +882,7 @@ type ScanProviderDesc struct {
 
 func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc {
 	return &ScanProviderDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "ScanProviderDesc"),
 		ProviderName: name,
 		Parameters: params,
 	}
@@ -939,7 +947,7 @@ type ScanConfigDesc struct {
 
 func NewScanConfigDesc(id, provName, expr, flagId string, paramValueDescs []*ScanParameterValueDesc) *ScanConfigDesc {
 	return &ScanConfigDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "ScanConfigDesc"),
 		Id: id,
 		ProviderName: provName,
 		SuccessExpression: expr,
@@ -1032,7 +1040,7 @@ type FlagDesc struct {
 
 func NewFlagDesc(flagId, repoId, name, imageURL string) *FlagDesc {
 	return &FlagDesc{
-		BaseType: *NewBaseType(200, "OK"),
+		BaseType: *NewBaseType(200, "OK", "FlagDesc"),
 		FlagId: flagId,
 		RepoId: repoId,
 		Name: name,

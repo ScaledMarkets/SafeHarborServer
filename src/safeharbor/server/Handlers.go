@@ -2809,6 +2809,32 @@ func getFlagDescByName(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 }
 
 /*******************************************************************************
+ * Arguments: EventId
+ * Returns: EventDesc
+ */
+func getEventDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	var failMsg apitypes.RespIntfTp
+	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
+	if failMsg != nil { return failMsg }
+
+	var err error
+	var eventId string
+	eventId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "EventId")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
+		eventId, "getEventDesc")
+	if failMsg != nil { return failMsg }
+	
+	var event Event
+	event, err = dbClient.getEvent(eventId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	return dbClient.asEventDesc(event)
+}
+
+/*******************************************************************************
  * Arguments: FlagId
  * Returns: Result
  */
@@ -2874,4 +2900,80 @@ func remDockerImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	err = repo.deleteDockerImage(dbClient, image)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return apitypes.NewResult(200, "Docker image removed")
+}
+
+/*******************************************************************************
+ * Arguments: DockerfileId
+ * Returns: Result
+ */
+func remDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	var failMsg apitypes.RespIntfTp
+	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
+	if failMsg != nil { return failMsg }
+
+	var err error
+	var dockerfileId string
+	dockerfileId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerfileId")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.DeleteMask,
+		dockerfileId, "remDockerfile")
+	if failMsg != nil { return failMsg }
+	
+	....
+}
+
+/*******************************************************************************
+ * Arguments: ImageVersionId
+ * Returns: Result
+ */
+func remImageVersion(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	var failMsg apitypes.RespIntfTp
+	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
+	if failMsg != nil { return failMsg }
+
+	var err error
+	var imageVersionId string
+	imageVersionId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageVersionId")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	var imageId string
+	....
+	
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.DeleteMask,
+		imageId, "remImageVersion")
+	if failMsg != nil { return failMsg }
+	
+	....
+
+
+}
+
+/*******************************************************************************
+ * Arguments: DockerImageId
+ * Returns: DockerImageVersionDescs
+ */
+func getDockerImageVersions(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	var failMsg apitypes.RespIntfTp
+	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
+	if failMsg != nil { return failMsg }
+
+	var err error
+	var imageId string
+	imageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerImageId")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
+		imageId, "getDockerImageVersions")
+	if failMsg != nil { return failMsg }
+	
+	....
+
+
 }

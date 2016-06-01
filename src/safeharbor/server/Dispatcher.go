@@ -110,6 +110,10 @@ func NewDispatcher() *Dispatcher {
 		"getFlagDescByName": getFlagDescByName,
 		"remFlag": remFlag,
 		"remDockerImage": remDockerImage,
+		"remDockerfile": remDockerfile,
+		"remImageVersion": remImageVersion,
+		"getDockerImageVersions": getDockerImageVersions,
+		"getEventDesc": getEventDesc,
 	}
 	
 	var dispatcher *Dispatcher = &Dispatcher{

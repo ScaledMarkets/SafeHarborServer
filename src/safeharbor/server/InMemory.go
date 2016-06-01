@@ -2951,14 +2951,14 @@ type InMemImageVersion struct {  // abstract
 	InMemPersistObj
 	Version string
 	ImageObjId string
-    CreationDate time.Time
 	ImageCreationEventId string
+    CreationDate time.Time
 }
 
 var _ ImageVersion = &InMemImageVersion{}
 
 func (client *InMemClient) NewInMemImageVersion(version, imageObjId string,
-	creationDate time.Time) (*InMemImageVersion, error) {
+	creationEventId string, creationDate time.Time) (*InMemImageVersion, error) {
 	
 	var pers *InMemPersistObj
 	var err error
@@ -2968,6 +2968,7 @@ func (client *InMemClient) NewInMemImageVersion(version, imageObjId string,
 		InMemPersistObj: *pers,
 		Version: version,
 		ImageObjId: imageObjId,
+		ImageCreationEventId: creationEventId,
 		CreationDate: creationDate,
 	}
 	
@@ -3047,11 +3048,10 @@ func (imageVersion *InMemImageVersion) deleteAllChildResources(dbClient DBClient
 
 func (imageVersion *InMemImageVersion) imageVersionFieldsAsJSON() string {
 	return fmt.Sprintf("%s, \"Version\": \"%s\", \"ImageObjId\": \"%s\", " +
-		"\"CreationDate\": %s, \"ImageCreationEventId\": \"%s\"",
+		"\"ImageCreationEventId\": \"%s\", \"CreationDate\": %s",
 		imageVersion.persistObjFieldsAsJSON(), imageVersion.Version,
-		imageVersion.ImageObjId,
-		apitypes.FormatTimeAsJavascriptDate(imageVersion.CreationDate),
-		imageVersion.ImageCreationEventId)
+		imageVersion.ImageObjId, imageVersion.ImageCreationEventId,
+		apitypes.FormatTimeAsJavascriptDate(imageVersion.CreationDate))
 }
 
 func (imageVersion *InMemImageVersion) asJSON() string {
@@ -3069,8 +3069,8 @@ func (client *InMemClient) ReconstituteImageVersion(id, version, imageObjId stri
 		InMemPersistObj: *persObj,
 		Version: version,
 		ImageObjId: imageObjId,
-		CreationDate: creationDate,
 		ImageCreationEventId: imageCreationEventId,
+		CreationDate: creationDate,
 	}, nil
 }
 
