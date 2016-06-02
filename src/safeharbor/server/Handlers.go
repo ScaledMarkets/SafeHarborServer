@@ -2922,7 +2922,37 @@ func remDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 		dockerfileId, "remDockerfile")
 	if failMsg != nil { return failMsg }
 	
-	....
+	// Identify the Dockerfile.
+	var dockerfile Dockerfile
+	dockerfile, err = dbClient.getDockerfile(dockerfileId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	// Remove the Dockerfile's ACLEntries.
+	err = dbClient.deleteAllAccessToResource(dockerfile)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	// Nullify the Dockerfile in each of its DockerfileExecEvents.
+	var execEventIds []string = dockerfile.getDockerfileExecEventIds()
+	for _, id := range execEventIds {
+		var DockerfileExecEvent event
+		event, err = dbClient.getDockerfileExecEvent(id)
+		if err != nil {
+			fmt.Println("While retrieving DockerfileExecEvent with Id " + id)
+			fmt.Println(err.Error())
+			continue
+		}
+		err = event.nullifyDockerfile(dbClient)
+		if err != nil {
+			fmt.Println("While calling nullifyDockerfile with DockerfileExecEvent Id " + id)
+			fmt.Println(err.Error())
+			continue
+		}
+	}
+	
+	// Remove the Dockerfile from its Repo.
+	err = repo.deleteDockerfile(dbClient, dockerfile)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	return apitypes.NewResult(200, "Dockerfile removed")
 }
 
 /*******************************************************************************
@@ -2942,15 +2972,52 @@ func remImageVersion(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var imageId string
-	....
+	var imageVersion ImageVersion
+	imageVersion, err = dbClient.getImageVersion(imageVersionId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	imageId = imageVersion.getImageObjId()
 	
 	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.DeleteMask,
 		imageId, "remImageVersion")
 	if failMsg != nil { return failMsg }
 	
-	....
+	// Nullify the ImageVersion Id in the version's ImageCreationEvent.
+	var eventId = imageVersion.getImageCreationEventId()
+	var imageCreationEvent ImageCreationEvent
+	imageCreationEvent, err = dbClient.getImageCreationEvent(imageCreationEventId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	imageCreationEvent.nullifyImageVersion()
+	
+	// Nullify the ImageVersion Id in any of the version's ScanEvents.
+	var isType bool
+	var dockerImageVersion DockerImageVersion
+	dockerImageVersion, isType = imageVersion.(DockerImageVersion)
+	if isType {
+		for _, scanEventId := range dockerImageVersion.getScanEventIds() {
+			var scanEvent ScanEvent
+			scanEvent, err = dbClient.getScanEvent(scanEventId)
+			if err != nil {
+				fmt.Println("While getting ScanEvent with Id " + scanEventId)
+				fmt.Println(err.Error())
+				continue
+			}
+			err = event.nullifyDockerImageVersion(dbClient)
+			if err != nil {
+				fmt.Println("While nullifying DockerImageVersion for ScanEvent with Id " + scanEventId)
+				fmt.Println(err.Error())
+				continue
+			}
+		}
+	}
+	
+	// Remove the ImageVersion from the Image.
+	var image Image
+	image, err = dbClient.getImage(imageId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	image.deleteImageVersion(dbClient, imageVersion) error
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
-
+	return apitypes.NewResult(200, "Image version removed")
 }
 
 /*******************************************************************************
@@ -2966,14 +3033,25 @@ func getDockerImageVersions(dbClient *InMemClient, sessionToken *apitypes.Sessio
 
 	var err error
 	var imageId string
-	imageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerImageId")
+	dockerImageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerImageId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
-		imageId, "getDockerImageVersions")
+		dockerImageId, "getDockerImageVersions")
 	if failMsg != nil { return failMsg }
 	
-	....
-
-
+	var dockerImage DockerImage
+	dockerImage, err = dbClient.getDockerImage(dockerImageId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	var descs = make([]*apitypes.DockerImageVersionDesc, 0)
+	versionIds []string = dockerImage.getImageVersionIds()
+	for _, versionId := range versionIds {
+		var dockerImageVersion DockerImageVersion
+		dockerImageVersion, err = dbClient.getDockerImageVersion(versionId)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		descs = append(descs, dockerImageVersion.asDockerImageVersionDesc())
+	}
+	
+	return descs.(apitypes.RespIntfTp)
 }
