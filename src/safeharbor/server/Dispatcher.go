@@ -114,6 +114,9 @@ func NewDispatcher() *Dispatcher {
 		"remImageVersion": remImageVersion,
 		"getDockerImageVersions": getDockerImageVersions,
 		"getEventDesc": getEventDesc,
+		"updateUserInfo": updateUserInfo,
+		"userExists": userExists,
+		"validateAccountVerificationToken": validateAccountVerificationToken,
 	}
 	
 	var dispatcher *Dispatcher = &Dispatcher{

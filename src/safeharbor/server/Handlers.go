@@ -1355,6 +1355,8 @@ func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 
 	fmt.Println("Entered execDockerfile")
 	
+	....check: can now return a DockerImageVersionDesc
+	
 	var failMsg apitypes.RespIntfTp
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
@@ -1391,6 +1393,8 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	fmt.Println("Entered addAndExecDockerfile")
+	
+	....check: can now return a DockerImageVersionDesc
 	
 	var failMsg apitypes.RespIntfTp = nil
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
@@ -2318,6 +2322,8 @@ func defineFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
+	....Check: User can now specify an image version.
+
 	var failMsg apitypes.RespIntfTp
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
@@ -2450,6 +2456,8 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 func getDockerImageStatus(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
+	....Check: User can now specify an image version.
+
 	var failMsg apitypes.RespIntfTp
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
@@ -2598,6 +2606,8 @@ func getUserEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func getDockerImageEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
+	....Check: User can now specify an image version.
+
 	var failMsg apitypes.RespIntfTp
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
@@ -3054,4 +3064,97 @@ func getDockerImageVersions(dbClient *InMemClient, sessionToken *apitypes.Sessio
 	}
 	
 	return descs.(apitypes.RespIntfTp)
+}
+
+/*******************************************************************************
+ * Arguments: UserInfo
+ * Returns: UserDesc
+ */
+func updateUserInfo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	var failMsg apitypes.RespIntfTp
+	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
+	if failMsg != nil { return failMsg }
+
+	/* UserInfo:
+	UserId
+	UserName - full name (e.g., "John Smith")
+	EmailAddress
+	Password - ignored
+	RealmId
+	*/
+
+	var newUserInfo *UserInfo
+	var err error
+	newUserInfo, err = apitypes.GetUserInfoChanges(values)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	var specifiedUser User
+	specifiedUser, err = dbClient.dbGetUserByUserId(newUserInfo.UserId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if specifiedUser == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError, "User unidentified") }
+	
+	// Check that the userId is for the user who is currently logged in.
+	if sessionToken.AuthenticatedUserid != newUserInfo.UserId {
+		return apitypes.NewFailureDesc(http.StatusForbidden,
+			"Only an account owner may change their info")
+	}
+	
+	var bool changesMade = false
+	if newUserInfo.UserName != "" {
+		specifiedUser.setUserName(newUserInfo.UserName)
+		changesMade = true
+	}
+	
+	if newUserInfo.EmailAddress != "" {
+		specifiedUser.setEmailAddress(newUserInfo.EmailAddress)
+		changesMade = true
+	}
+	
+	if changesMade { dbClient.updateObject(specifiedUser) }
+	return specifiedUser.asUserDesc()
+}
+
+/*******************************************************************************
+ * Arguments: UserId
+ * Returns: bool
+ */
+func userExists(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	var specifiedUserId string
+	var err error
+	specifiedUserId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserId")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+
+	// Can only be called by the special user "HighTrustClient".
+	//if sessionToken.AuthenticatedUserid != "HighTrustClient" {
+	//	return apitypes.NewFailureDesc(http.StatusForbidden,
+	//		"Only HighTrustClient may call this method")
+	//}
+	
+	var specifiedUser User
+	specifiedUser, err = dbClient.dbGetUserByUserId(specifiedUserId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if specifiedUser == nil { return apitypes.NewFailureDesc(http.StatusNotFound,
+		"User with Id " + specifiedUserId)
+	}
+	
+	return apitypes.NewResult(200, "User with Id " + specifiedUserId + " exists")
+}
+
+/*******************************************************************************
+ * Arguments: AccountVerificationToken
+ * Returns: 
+ */
+func validateAccountVerificationToken(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	var token string
+	var err error
+	token, err = apitypes.GetRequiredHTTPParameterValue(true, values, "AccountVerificationToken")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+
+	return NewFailureDesc(http.StatusNotImplemented, "validateAccountVerificationToken not implemented")
 }

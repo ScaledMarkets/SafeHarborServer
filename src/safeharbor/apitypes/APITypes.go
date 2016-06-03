@@ -344,6 +344,28 @@ func GetUserInfo(values url.Values) (*UserInfo, error) {
 	return NewUserInfo(userid, name, email, pswd, realmId), nil
 }
 
+func GetUserInfoChanges(values url.Values) (*UserInfo, error) {
+	
+	var err error
+	var userId, newUserName, newEmailAddress, newPassword, newRealmId string
+	userId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserId")
+	if err != nil { return nil, err }
+
+	newUserName, err = apitypes.GetHTTPParameterValue(true, values, "UserName")
+	if err != nil { return nil, err }
+
+	newEmailAddress, err = apitypes.GetHTTPParameterValue(true, values, "EmailAddress")
+	if err != nil { return nil, err }
+
+	newPassword, err = apitypes.GetHTTPParameterValue(true, values, "Password")
+	if err != nil { return nil, err }
+
+	newRealmId, err = apitypes.GetHTTPParameterValue(true, values, "RealmId")
+	if err != nil { return nil, err }
+
+	return NewUserInfo(userid, newUserName, newEmailAddress, newPassword, newRealmId), nil
+}
+
 func (userInfo *UserInfo) AsJSON() string {
 	return fmt.Sprintf(" {%s, \"UserId\": \"%s\", \"UserName\": \"%s\", \"EmailAddress\": \"%s\", \"RealmId\": \"%s\"}",
 		userInfo.baseTypeFieldsAsJSON(),

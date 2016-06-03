@@ -449,6 +449,28 @@ func getLeafResources(dbClient DBClient, user User,
 }
 
 /*******************************************************************************
+ * 
+ *
+func sendEmailToUser(userObjId string, message string) error {
+	....
+}
+
+/*******************************************************************************
+ * 
+ */
+func generateVerificationToken() string {
+	....
+}
+
+/*******************************************************************************
+ * 
+ */
+func vaidateVerificationToken(token string) error {
+	....
+}
+*/
+
+/*******************************************************************************
  * Populate a map of the Repo''s Dockerfiles, indexed by Dockerfile object Id.
  */
 func mapRepoDockerfileIds(dbClient DBClient, repo Repo, leaves map[string]Resource) error {
