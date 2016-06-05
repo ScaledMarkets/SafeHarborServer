@@ -2939,7 +2939,7 @@ func remDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	// Nullify the Dockerfile in each of its DockerfileExecEvents.
 	var execEventIds []string = dockerfile.getDockerfileExecEventIds()
 	for _, id := range execEventIds {
-		var DockerfileExecEvent event
+		var event DockerfileExecEvent
 		event, err = dbClient.getDockerfileExecEvent(id)
 		if err != nil {
 			fmt.Println("While retrieving DockerfileExecEvent with Id " + id)
@@ -2955,6 +2955,9 @@ func remDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	}
 	
 	// Remove the Dockerfile from its Repo.
+	var repo Repo
+	repo, err = dbClient.getRepo(dockerfile.getRepoId())
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	err = repo.deleteDockerfile(dbClient, dockerfile)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return apitypes.NewResult(200, "Dockerfile removed")
@@ -2989,7 +2992,7 @@ func remImageVersion(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	// Nullify the ImageVersion Id in the version's ImageCreationEvent.
 	var eventId = imageVersion.getImageCreationEventId()
 	var imageCreationEvent ImageCreationEvent
-	imageCreationEvent, err = dbClient.getImageCreationEvent(imageCreationEventId)
+	imageCreationEvent, err = dbClient.getImageCreationEvent(eventId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	imageCreationEvent.nullifyImageVersion()
 	
@@ -3006,7 +3009,7 @@ func remImageVersion(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 				fmt.Println(err.Error())
 				continue
 			}
-			err = event.nullifyDockerImageVersion(dbClient)
+			err = scanEvent.nullifyDockerImageVersion(dbClient)
 			if err != nil {
 				fmt.Println("While nullifying DockerImageVersion for ScanEvent with Id " + scanEventId)
 				fmt.Println(err.Error())
@@ -3019,7 +3022,7 @@ func remImageVersion(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	var image Image
 	image, err = dbClient.getImage(imageId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	image.deleteImageVersion(dbClient, imageVersion) error
+	err = image.deleteImageVersion(dbClient, imageVersion)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	return apitypes.NewResult(200, "Image version removed")
@@ -3037,7 +3040,7 @@ func getDockerImageVersions(dbClient *InMemClient, sessionToken *apitypes.Sessio
 	if failMsg != nil { return failMsg }
 
 	var err error
-	var imageId string
+	var dockerImageId string
 	dockerImageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerImageId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
@@ -3049,8 +3052,9 @@ func getDockerImageVersions(dbClient *InMemClient, sessionToken *apitypes.Sessio
 	dockerImage, err = dbClient.getDockerImage(dockerImageId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	var descs = make([]*apitypes.DockerImageVersionDesc, 0)
-	versionIds []string = dockerImage.getImageVersionIds()
+	var descs apitypes.DockerImageVersionDescs
+	descs = make([]*apitypes.DockerImageVersionDesc, 0)
+	var versionIds []string = dockerImage.getImageVersionIds()
 	for _, versionId := range versionIds {
 		var dockerImageVersion DockerImageVersion
 		dockerImageVersion, err = dbClient.getDockerImageVersion(versionId)
@@ -3058,7 +3062,7 @@ func getDockerImageVersions(dbClient *InMemClient, sessionToken *apitypes.Sessio
 		descs = append(descs, dockerImageVersion.asDockerImageVersionDesc())
 	}
 	
-	return descs.(apitypes.RespIntfTp)
+	return descs
 }
 
 /*******************************************************************************
@@ -3080,7 +3084,7 @@ func updateUserInfo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	RealmId
 	*/
 
-	var newUserInfo *UserInfo
+	var newUserInfo *apitypes.UserInfo
 	var err error
 	newUserInfo, err = apitypes.GetUserInfoChanges(values)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
@@ -3096,19 +3100,19 @@ func updateUserInfo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 			"Only an account owner may change their info")
 	}
 	
-	var bool changesMade = false
+	var changesMade = false
 	if newUserInfo.UserName != "" {
-		specifiedUser.setUserName(newUserInfo.UserName)
+		specifiedUser.setNameDeferredUpdate(newUserInfo.UserName)
 		changesMade = true
 	}
 	
 	if newUserInfo.EmailAddress != "" {
-		specifiedUser.setEmailAddress(newUserInfo.EmailAddress)
+		specifiedUser.setEmailAddressDeferredUpdate(newUserInfo.EmailAddress)
 		changesMade = true
 	}
 	
 	if changesMade { dbClient.updateObject(specifiedUser) }
-	return specifiedUser.asUserDesc()
+	return specifiedUser.asUserDesc(dbClient)
 }
 
 /*******************************************************************************
@@ -3146,10 +3150,10 @@ func userExists(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 func validateAccountVerificationToken(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	var token string
+	//var token string
 	var err error
-	token, err = apitypes.GetRequiredHTTPParameterValue(true, values, "AccountVerificationToken")
+	_, err = apitypes.GetRequiredHTTPParameterValue(true, values, "AccountVerificationToken")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
-	return NewFailureDesc(http.StatusNotImplemented, "validateAccountVerificationToken not implemented")
+	return apitypes.NewFailureDesc(http.StatusNotImplemented, "validateAccountVerificationToken not implemented")
 }

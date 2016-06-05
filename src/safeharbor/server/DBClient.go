@@ -117,6 +117,8 @@ type DBClient interface {
 	getDockerfileExecParameterValue(string) (DockerfileExecParameterValue, error)
 	getFlag(string) (Flag, error)
 	getEvent(string) (Event, error)
+	getImageCreationEvent(string) (ImageCreationEvent, error)
+	getDockerfileExecEvent(string) (DockerfileExecEvent, error)
 	getScanEvent(string) (ScanEvent, error)
 	getRealmsAdministeredByUser(string) ([]string, error)  // those realms for which user can edit the realm
 		
@@ -160,6 +162,7 @@ type Party interface {  // abstract
 	isActive() bool
 	getRealmId() string
 	getRealm(DBClient) (Realm, error)
+	setNameDeferredUpdate(string)
 	getName() string
 	getCreationTime() time.Time
 	getACLEntryIds() []string
@@ -228,6 +231,8 @@ type Group interface {
 type User interface {
 	Party
 	getUserId() string
+	setEmailAddressDeferredUpdate(string)
+	getEmailAddress() string
 	setPassword(DBClient, string) error
 	validatePassword(dbClient DBClient, pswd string) bool
 	hasGroupWithId(DBClient, string) bool

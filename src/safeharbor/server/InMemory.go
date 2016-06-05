@@ -796,6 +796,10 @@ func (party *InMemParty) isActive() bool {
 	return party.IsActive
 }
 
+func (party *InMemParty) setNameDeferredUpdate(name string) {
+	party.Name = name
+}
+
 func (party *InMemParty) getName() string {
 	return party.Name
 }
@@ -1171,6 +1175,14 @@ func (client *InMemClient) getUser(id string) (User, error) {
 
 func (user *InMemUser) getUserId() string {
 	return user.UserId
+}
+
+func (user *InMemUser) setEmailAddressDeferredUpdate(emailAddress string) {
+	user.EmailAddress = emailAddress
+}
+
+func (user *InMemUser) getEmailAddress() string {
+	return user.EmailAddress
 }
 
 func (user *InMemUser) hasGroupWithId(dbClient DBClient, groupId string) bool {
@@ -3118,7 +3130,7 @@ func (client *InMemClient) NewInMemDockerImageVersion(version, imageObjId string
 	
 	var imageVersion *InMemImageVersion
 	var err error
-	imageVersion, err = client.NewInMemImageVersion(version, imageObjId, creationDate)
+	imageVersion, err = client.NewInMemImageVersion(version, imageObjId, "", creationDate)
 	if err != nil { return nil, err }
 	
 	var newDockerImageVersion = &InMemDockerImageVersion{
@@ -3188,8 +3200,9 @@ func (imageVersion *InMemDockerImageVersion) getDockerImageTag() string {
 
 func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc() *apitypes.DockerImageVersionDesc {
 	return apitypes.NewDockerImageVersionDesc(imageVersion.getId(), imageVersion.Version,
-		imageVersion.ImageObjId, imageVersion.CreationDate, imageVersion.Digest,
-		imageVersion.Signature, imageVersion.ScanEventIds, imageVersion.DockerBuildOutput)
+		imageVersion.ImageObjId, imageVersion.ImageCreationEventId, imageVersion.CreationDate,
+		imageVersion.Digest, imageVersion.Signature, imageVersion.ScanEventIds,
+		imageVersion.DockerBuildOutput)
 }
 
 func (imageVersion *InMemDockerImageVersion) writeBack(dbClient DBClient) error {
@@ -3219,9 +3232,9 @@ func (client *InMemClient) ReconstituteDockerImageVersion(version, imageObjId st
 	
 	var imageVersion *InMemImageVersion
 	var err error
-	imageVersion, err = client.NewInMemImageVersion(version, imageObjId, creationDate)
+	imageVersion, err = client.NewInMemImageVersion(
+		version, imageObjId, imageCreationEventId, creationDate)
 	if err != nil { return nil, err }
-	imageVersion.ImageCreationEventId = imageCreationEventId
 	
 	return &InMemDockerImageVersion{
 		InMemImageVersion: *imageVersion,
@@ -4263,6 +4276,19 @@ func (event *InMemImageCreationEvent) asJSON() string {
 	panic("Call to method that should be abstract")
 }
 
+func (client *InMemClient) getImageCreationEvent(id string) (ImageCreationEvent, error) {
+	var imageCreationEvent ImageCreationEvent
+	var isType bool
+	var obj PersistObj
+	var err error
+	obj, err = client.getPersistentObject(id)
+	if err != nil { return nil, err }
+	if obj == nil { return nil, utils.ConstructServerError("ImageCreationEvent not found") }
+	imageCreationEvent, isType = obj.(ImageCreationEvent)
+	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	return imageCreationEvent, nil
+}
+
 func (client *InMemClient) ReconstituteImageCreationEvent(id string, when time.Time,
 	userObjId string, imageVersionId string) (*InMemImageCreationEvent, error) {
 	
@@ -4430,6 +4456,19 @@ func (execEvent *InMemDockerfileExecEvent) asJSON() string {
 	json = json + fmt.Sprintf(", \"DockerfileContent\": \"%s\"}",
 		rest.EncodeStringForJSON(execEvent.DockerfileContent))
 	return json
+}
+
+func (client *InMemClient) getDockerfileExecEvent(id string) (DockerfileExecEvent, error) {
+	var dockerfileExecEvent DockerfileExecEvent
+	var isType bool
+	var obj PersistObj
+	var err error
+	obj, err = client.getPersistentObject(id)
+	if err != nil { return nil, err }
+	if obj == nil { return nil, utils.ConstructServerError("DockerfileExecEvent not found") }
+	dockerfileExecEvent, isType = obj.(DockerfileExecEvent)
+	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	return dockerfileExecEvent, nil
 }
 
 func (client *InMemClient) ReconstituteDockerfileExecEvent(id string, when time.Time,

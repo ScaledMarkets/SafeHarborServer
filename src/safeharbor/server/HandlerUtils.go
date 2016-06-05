@@ -457,14 +457,14 @@ func sendEmailToUser(userObjId string, message string) error {
 
 /*******************************************************************************
  * 
- */
+ *
 func generateVerificationToken() string {
 	....
 }
 
 /*******************************************************************************
  * 
- */
+ *
 func vaidateVerificationToken(token string) error {
 	....
 }

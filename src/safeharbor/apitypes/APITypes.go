@@ -101,9 +101,9 @@ type Result struct {
 	BaseType
 }
 
-func NewResult(status int, message string, objectType string) *Result {
+func NewResult(status int, message string) *Result {
 	return &Result{
-		BaseType: *NewBaseType(status, message, objectType),
+		BaseType: *NewBaseType(status, message, "Result"),
 	}
 }
 
@@ -348,22 +348,22 @@ func GetUserInfoChanges(values url.Values) (*UserInfo, error) {
 	
 	var err error
 	var userId, newUserName, newEmailAddress, newPassword, newRealmId string
-	userId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "UserId")
+	userId, err = GetRequiredHTTPParameterValue(true, values, "UserId")
 	if err != nil { return nil, err }
 
-	newUserName, err = apitypes.GetHTTPParameterValue(true, values, "UserName")
+	newUserName, err = GetHTTPParameterValue(true, values, "UserName")
 	if err != nil { return nil, err }
 
-	newEmailAddress, err = apitypes.GetHTTPParameterValue(true, values, "EmailAddress")
+	newEmailAddress, err = GetHTTPParameterValue(true, values, "EmailAddress")
 	if err != nil { return nil, err }
 
-	newPassword, err = apitypes.GetHTTPParameterValue(true, values, "Password")
+	newPassword, err = GetHTTPParameterValue(true, values, "Password")
 	if err != nil { return nil, err }
 
-	newRealmId, err = apitypes.GetHTTPParameterValue(true, values, "RealmId")
+	newRealmId, err = GetHTTPParameterValue(true, values, "RealmId")
 	if err != nil { return nil, err }
 
-	return NewUserInfo(userid, newUserName, newEmailAddress, newPassword, newRealmId), nil
+	return NewUserInfo(userId, newUserName, newEmailAddress, newPassword, newRealmId), nil
 }
 
 func (userInfo *UserInfo) AsJSON() string {
@@ -751,10 +751,12 @@ type DockerImageVersionDesc struct {
     DockerBuildOutput string
 }
 
-func NewDockerImageVersionDesc(objId, version, imageObjId string, creationTime time.Time,
-	digest, signature []byte, scanEventIds []string, buildOutput string) *DockerImageVersionDesc {
+func NewDockerImageVersionDesc(objId, version, imageObjId, creationEventId string, 
+	creationTime time.Time, digest, signature []byte, scanEventIds []string,
+	buildOutput string) *DockerImageVersionDesc {
 	return &DockerImageVersionDesc{
-		ImageVersionDesc: *NewImageVersionDesc("DockerImageVersionDesc", objId, version, imageObjId, creationTime),
+		ImageVersionDesc: *NewImageVersionDesc("DockerImageVersionDesc", 
+			objId, version, imageObjId, creationEventId, creationTime),
 		Digest: digest,
 		Signature: signature,
 		ScanEventIds: scanEventIds,
