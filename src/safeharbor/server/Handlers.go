@@ -1257,7 +1257,7 @@ func getRepoDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 
 /*******************************************************************************
  * Arguments: DockerImageId
- * Returns: DockerImageDesc
+ * Returns: DockerImageDesc or DockerImageVersionDesc
  */
 func getDockerImageDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -1274,7 +1274,12 @@ func getDockerImageDesc(dbClient *InMemClient, sessionToken *apitypes.SessionTok
 	
 	var image DockerImage
 	image, err = dbClient.getDockerImage(imageId)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if err != nil {
+		var imageVersion DockerImageVersion
+		imageVersion, err = dbClient.getDockerImageVersion(imageId)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		return imageVersion.asDockerImageVersionDesc()
+	}
 	return image.asDockerImageDesc()
 }
 
@@ -1348,14 +1353,12 @@ func replaceDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 
 /*******************************************************************************
  * Arguments: DockerfileId, ImageName
- * Returns: apitypes.DockerImageVersionDesc
+ * Returns: DockerImageVersionDesc
  */
 func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	fmt.Println("Entered execDockerfile")
-	
-	....check: can now return a DockerImageVersionDesc
 	
 	var failMsg apitypes.RespIntfTp
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
@@ -1387,14 +1390,12 @@ func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 
 /*******************************************************************************
  * Arguments: RepoId, Description, ImageName, <File attachment>
- * Returns: apitypes.DockerImageVersionDesc
+ * Returns: DockerImageVersionDesc
  */
 func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	fmt.Println("Entered addAndExecDockerfile")
-	
-	....check: can now return a DockerImageVersionDesc
 	
 	var failMsg apitypes.RespIntfTp = nil
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
@@ -2322,8 +2323,6 @@ func defineFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	....Check: User can now specify an image version.
-
 	var failMsg apitypes.RespIntfTp
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
@@ -2456,8 +2455,6 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 func getDockerImageStatus(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	....Check: User can now specify an image version.
-
 	var failMsg apitypes.RespIntfTp
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
@@ -2606,8 +2603,6 @@ func getUserEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 func getDockerImageEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 	
-	....Check: User can now specify an image version.
-
 	var failMsg apitypes.RespIntfTp
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
