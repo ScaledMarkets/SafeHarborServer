@@ -3301,7 +3301,7 @@ func (client *InMemClient) NewInMemParameterValue(name, value string) (*InMemPar
 		Name: name,
 		StringValue: value,
 	}
-	return paramValue, client.updateObject(paramValue)
+	return paramValue, nil
 }
 
 func (client *InMemClient) getParameterValue(id string) (ParameterValue, error) {
