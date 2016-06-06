@@ -360,7 +360,8 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var dockerImage DockerImage
 	dockerImage, err = repo.getDockerImageByName(dbClient, imageName)
 	fmt.Println("buildDockerfile: O")  // debug
-	if err != nil {
+	if err != nil { return nil, err }
+	if dockerImage == nil {
 		fmt.Println("buildDockerfile: P")  // debug
 		dockerImage, err = dbClient.dbCreateDockerImage(repo.getId(), imageName, dockerfile.getDescription())
 		fmt.Println("buildDockerfile: Q")  // debug
