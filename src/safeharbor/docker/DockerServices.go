@@ -60,25 +60,16 @@ func NewDockerServices(registry DockerRegistry, engine DockerEngine) *DockerServ
  * 
  */
 func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
-	dockerfileName, realmName, repoName, imageName string,
+	dockerfileName, dockerImageName, tag string,
 	paramNames, paramValues []string) (string, error) {
 	
-	if ! localDockerImageNameIsValid(imageName) {
-		return "", utils.ConstructUserError(fmt.Sprintf("Image name '%s' is not valid - must be " +
-			"of format <name>[:<tag>]", imageName))
-	}
-	fmt.Println("Image name =", imageName)
-	
-	// Check if an image with that name already exists.
-	var dockerImageName, tag string
-	dockerImageName, tag = dockerSvcs.ConstructDockerImageName(realmName, repoName, imageName)
 	var exists bool = false
 	var err error = nil
+	var fullName = dockerImageName
 	if dockerSvcs.Registry == nil {  // no registry
 		// Check if image exists in engine.
-		var fullName = dockerImageName
-		if imageName != "" { fullName = fullName + ":" + imageName }
-		_, err = dockerSvcs.Engine.GetImageInfo(imageName)
+		if tag != "" { fullName = fullName + ":" + tag }
+		_, err = dockerSvcs.Engine.GetImageInfo(fullName)
 		if err == nil { exists = true }
 	} else {
 		exists, err = dockerSvcs.Registry.ImageExists(dockerImageName, tag)
@@ -87,12 +78,8 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	
 	if exists {
 		return "", utils.ConstructUserError(
-			"Image with name " + realmName + "/" + repoName + ":" + imageName + " already exists.")
+			"Image with name " + dockerImageName + ":" + tag + " already exists.")
 	}
-	
-	// Verify that the image name conforms to Docker's requirements.
-	err = NameConformsToDockerRules(imageName)
-	if err != nil { return "", err }
 	
 	// Create a temporary directory to serve as the build context.
 	var tempDirPath string
@@ -129,8 +116,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	// docker.io/cesanta/docker_auth   latest              3d31749deac5        3 months ago        528 MB
 	// Image id format: <hash>[:TAG]
 	
-	var imageFullName string = realmName + "/" + repoName + ":" + imageName
-	
+	var imageFullName = dockerImageName + ":" + tag
 	var outputStr string
 	outputStr, err = dockerSvcs.Engine.BuildImage(tempDirPath, imageFullName, 
 		dockerfileName, paramNames, paramValues)
@@ -174,8 +160,6 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 		}
 		
 		// Push image to registry - all layers and manifest.
-		var dockerImageName, tag string
-		dockerImageName, tag = dockerSvcs.ConstructDockerImageName(realmName, repoName, imageName)
 		err = dockerSvcs.Registry.PushImage(dockerImageName, tag, imageFilePath)
 		if err != nil { return outputStr, err }
 		
@@ -393,7 +377,7 @@ func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
  * Retrieve the specified image from the registry and store it in a file.
  * Return the file path.
  */
-func (dockerSvcs *DockerServices) SaveImage(imageNamespace, imageName, tag string) (string, error) {
+func (dockerSvcs *DockerServices) SaveImage(imageName, tag string) (string, error) {
 
 	fmt.Println("Creating temp file to save the image to...")
 	var tempFile *os.File
@@ -403,23 +387,16 @@ func (dockerSvcs *DockerServices) SaveImage(imageNamespace, imageName, tag strin
 	if err != nil { return "", err }
 	var tempFilePath = tempFile.Name()
 	
-	var imageFullName string
-	if imageNamespace == "" {
-		imageFullName = imageName
-	} else {
-		imageFullName = imageNamespace + "/" + imageName
-	}
-
 	if dockerSvcs.Registry == nil {  // no registry
 		
-		var repoNameAndTag = imageFullName
+		var repoNameAndTag = imageName
 		if tag != "" { repoNameAndTag = repoNameAndTag + ":" + tag }
 		err = dockerSvcs.Engine.GetImage(repoNameAndTag, tempFilePath)
 		if err != nil { return "", err }
 		
 	} else {
 	
-		err = dockerSvcs.Registry.GetImage(imageFullName, tag, tempFilePath)
+		err = dockerSvcs.Registry.GetImage(imageName, tag, tempFilePath)
 		if err != nil { return "", err }
 	}
 	
@@ -495,21 +472,21 @@ func (dockerSvcs *DockerServices) RemoveDockerImage(repoName, tag string) error 
  * a period, underscore, or dash. If rules are satisfied, return nil; otherwise,
  * return an error.
  */
-func NameConformsToDockerRules(name string) error {
-	var a = strings.TrimLeft(name, "abcdefghijklmnopqrstuvwxyz0123456789")
-	var b = strings.TrimRight(a, "abcdefghijklmnopqrstuvwxyz0123456789._-")
-	if len(b) == 0 { return nil }
-	return utils.ConstructUserError("Name '" + name + "' does not conform to docker name rules: " +
-		"[a-z0-9]+(?:[._-][a-z0-9]+)*  Offending fragment: '" + b + "'")
+func NamePartConformsToDockerRules(part string) error {
+	
+	matched, err := regexp.MatchString("^[a-zA-Z0-9\\-_]*$", part)
+	if err != nil { return utils.ConstructServerError("Unexpected internal error") }
+	if ! matched { return utils.ConstructServerError("Name does not conform to docker rules") }
+	return nil
 }
 
 /*******************************************************************************
  * 
  */
-func (dockerSvcs *DockerServices) ConstructDockerImageName(shRealmName,
-	shRepoName, shImageName string) (imageName, tag string) {
+func ConstructDockerImageName(shRealmName,
+	shRepoName, shImageName, version string) (imageName, tag string) {
 
-	return (shRealmName + "/" + shRepoName), shImageName
+	return (shRealmName + "/" + shRepoName + "/" + shImageName), version
 }
 
 
@@ -519,24 +496,6 @@ func (dockerSvcs *DockerServices) ConstructDockerImageName(shRealmName,
 *******************************************************************************/
 
 
-
-/*******************************************************************************
- * Verify that the specified image name is valid, for an image stored within
- * the SafeHarborServer repository. Local images must be of the form,
-     NAME[:TAG]
- */
-func localDockerImageNameIsValid(name string) bool {
-	var parts [] string = strings.Split(name, ":")
-	if len(parts) > 2 { return false }
-	
-	for _, part := range parts {
-		matched, err := regexp.MatchString("^[a-zA-Z0-9\\-_]*$", part)
-		if err != nil { panic(utils.ConstructServerError("Unexpected internal error")) }
-		if ! matched { return false }
-	}
-	
-	return true
-}
 
 /*******************************************************************************
  * The docker daemon build function - a REST function - returns a series of

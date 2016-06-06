@@ -81,7 +81,7 @@ func printFileMap(m map[string][]*multipart.FileHeader) {
  * a realm. If rules are satisfied, return nil; otherwise, return an error.
  */
 func nameConformsToSafeHarborImageNameRules(name string) error {
-	var err error = docker.NameConformsToDockerRules(name)
+	var err error = docker.NamePartConformsToDockerRules(name)
 	if err != nil { return err }
 	if strings.Contains(name, ".") { return utils.ConstructUserError(
 		"SafeHarbor does not allow periods in names: " + name)
@@ -341,9 +341,28 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
 	if err != nil { return nil, err }
+	
+	// Retrieve the Image, or if it does not exist, create it.
+	var dockerImage DockerImage
+	dockerImage, err = repo.getDockerImageByName(dbClient, imageName)
+	if err != nil {
+		dockerImage, err = dbClient.dbCreateDockerImage(repo.getId(), imageName, dockerfile.getDescription())
+		if err != nil { return nil, err }
+	}
+	
+	// Create a unique version.
+	var version string
+	version, err = dockerImage.getUniqueVersion(dbClient)
+	if err != nil { return nil, err }
+	
+	// Check if an image with that name already exists.
+	var dockerImageName, tag string
+	dockerImageName, tag = docker.ConstructDockerImageName(
+		realm.getName(), repo.getName(), imageName, version)
+	
 	outputStr, err = dbClient.getServer().DockerServices.BuildDockerfile(
-		dockerfile.getExternalFilePath(), dockerfile.getName(), realm.getName(),
-		repo.getName(), imageName, paramNames, paramValues)
+		dockerfile.getExternalFilePath(), dockerfile.getName(),
+		dockerImageName, tag, paramNames, paramValues)
 	if err != nil { return nil, err }
 	
 	var dockerBuildOutput *docker.DockerBuildOutput
@@ -359,25 +378,10 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	signature, err = docker.GetSignature(dockerImageId)
 	if err != nil { return nil, err }
 	
-	// Identify the DockerImage, if one exists.
-	var dockerImage DockerImage
-	fmt.Println("buildDockerfile: A")  // debug
-	dockerImage, err = dbClient.dbCreateDockerImage(repo.getId(), imageName, dockerfile.getDescription())
-	fmt.Println("buildDockerfile: B")  // debug
-	if err != nil { return nil, err }
-	
-	fmt.Println("buildDockerfile: C")  // debug
-	
-	
-	
-	// Add a record for the image to the database.
-	// (This automatically computes the signature.)
 	var imageVersion DockerImageVersion
-	imageVersion, err = dbClient.dbCreateDockerImageVersion(dockerImage.getId(),
+	imageVersion, err = dbClient.dbCreateDockerImageVersion(version, dockerImage.getId(),
 		time.Now(), outputStr, digest, signature)
 		
-	fmt.Println("Created docker image object.")
-	
 	// Create an event to record that this happened.
 	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), 
 		paramNames, paramValues, imageVersion.getId(), user.getId())

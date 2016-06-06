@@ -88,7 +88,7 @@ type DBClient interface {
 	dbCreateRepo(string, string, string) (Repo, error)
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string, string) (DockerImage, error)
-	dbCreateDockerImageVersion(dockerImageObjId string, creationDate time.Time,
+	dbCreateDockerImageVersion(version, dockerImageObjId string, creationDate time.Time,
 		buildOutput string, digest, signature []byte) (DockerImageVersion, error)
 	dbCreateScanConfig(name, desc, repoId, providerName string, paramValueIds []string, successExpr, flagId string) (ScanConfig, error)
 	dbCreateScanParameterValue(name, value, configId string) (ScanParameterValue, error)
@@ -338,7 +338,7 @@ type ImageVersion interface {  // abstract
 	getImageCreationEventId() string
 	setImageCreationEventId(string)  // does not write to db
 	getFullName(dbClient DBClient) (string, error)
-	getFullNameParts(dbClient DBClient) (string, string, string, error)
+	getFullNameParts(dbClient DBClient) (string, string, string, string, error)
 }
 
 type DockerImage interface {

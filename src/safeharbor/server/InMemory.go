@@ -27,7 +27,7 @@ import (
 	//"goredis"
 	
 	"safeharbor/apitypes"
-	//"safeharbor/docker"
+	"safeharbor/docker"
 	"safeharbor/rest"
 	"safeharbor/utils"
 	"safeharbor/providers"
@@ -2912,15 +2912,13 @@ func (image *InMemDockerImage) deleteImageVersion(dbClient DBClient, imageVersio
 	}
 	
 	// Remove from docker.
-	var imageFullName, namespace, imageName, tag string
-	namespace, imageName, tag, err = dockerImageVersion.getFullNameParts(dbClient)
+	var realmName, repoName, imageName, version string
+	realmName, repoName, imageName, version, err = dockerImageVersion.getFullNameParts(dbClient)
 	if err != nil { return err }
-	if namespace == "" {
-		imageFullName = imageName
-	} else {
-		imageFullName = namespace + "/" + imageName
-	}
-	err = dbClient.getServer().DockerServices.RemoveDockerImage(imageFullName, tag)
+	var dockerImageName, tag string
+	dockerImageName, tag = docker.ConstructDockerImageName(
+		realmName, repoName, imageName, version)
+	err = dbClient.getServer().DockerServices.RemoveDockerImage(dockerImageName, tag)
 	return err
 }
 
@@ -3019,25 +3017,25 @@ func (imageVersion *InMemImageVersion) getFullName(dbClient DBClient) (string, e
 	if err != nil { return "", err }
 	
 	var dockerImageName, tag string
-	dockerImageName, tag = dbClient.getServer().DockerServices.ConstructDockerImageName(
-		realm.getName(), repo.getName(), image.getName())
+	dockerImageName, tag = docker.ConstructDockerImageName(
+		realm.getName(), repo.getName(), image.getName(), imageVersion.Version)
 	return (dockerImageName + ":" + tag), nil
 }
 
 func (imageVersion *InMemImageVersion) getFullNameParts(dbClient DBClient) (
-	string, string, string, error) {
+	string, string, string, string, error) {
 
 	var repo Repo
 	var realm Realm
 	var err error
 	var image Image
 	image, err = imageVersion.getImage(dbClient)
-	if err != nil { return "", "", "", err }
+	if err != nil { return "", "", "", "", err }
 	repo, err = dbClient.getRepo(image.getRepoId())
-	if err != nil { return "", "", "", err }
+	if err != nil { return "", "", "", "", err }
 	realm, err = dbClient.getRealm(repo.getRealmId())
-	if err != nil { return "", "", "", err }
-	return realm.getName(), repo.getName(), image.getName(), nil
+	if err != nil { return "", "", "", "", err }
+	return realm.getName(), repo.getName(), image.getName(), imageVersion.Version, nil
 }
 
 func (imageVersion *InMemImageVersion) deleteAllChildResources(dbClient DBClient) error {
@@ -3144,39 +3142,24 @@ func (client *InMemClient) NewInMemDockerImageVersion(version, imageObjId string
 	return newDockerImageVersion, client.updateObject(newDockerImageVersion)
 }
 
-func (client *InMemClient) dbCreateDockerImageVersion(dockerImageObjId string,
+func (client *InMemClient) dbCreateDockerImageVersion(version, dockerImageObjId string,
 	creationDate time.Time, buildOutput string,
 	digest, signature []byte) (DockerImageVersion, error) {
-	
-	fmt.Println("dbCreateDockerImageVersion: A")  // debug
 	
 	// Check if the image exists and is a DockerImage.
 	var dockerImage DockerImage
 	var err error
 	dockerImage, err = client.getDockerImage(dockerImageObjId)
-	fmt.Println("dbCreateDockerImageVersion: B")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("dbCreateDockerImageVersion:C ")  // debug
-	
-	// Create a unique version.
-	var version string
-	version, err = dockerImage.getUniqueVersion(client)
-	fmt.Println("dbCreateDockerImageVersion: D")  // debug
-	if err != nil { return nil, err }
-	fmt.Println("dbCreateDockerImageVersion: E")  // debug
 	
 	var imageVersion *InMemDockerImageVersion
 	imageVersion, err = client.NewInMemDockerImageVersion(version, dockerImageObjId,
 		creationDate, buildOutput, digest, signature)
-	fmt.Println("dbCreateDockerImageVersion: F")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("dbCreateDockerImageVersion: G")  // debug
 	
 	// Add to Image.
 	err = dockerImage.addVersionId(client, imageVersion.getId())
-	fmt.Println("dbCreateDockerImageVersion: H")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("dbCreateDockerImageVersion: I")  // debug
 	return imageVersion, nil
 }
 

@@ -25,7 +25,7 @@ import (
 	// Our packages:
 	"safeharbor/providers"
 	"safeharbor/apitypes"
-	//"safeharbor/docker"
+	"safeharbor/docker"
 	//"safeharbor/utils"
 )
 
@@ -1494,10 +1494,12 @@ func downloadImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	if failMsg != nil { return failMsg }
 
 	var tempFilePath string
-	var namespace, imageName, tag string
-	namespace, imageName, tag, err = dockerImageVersion.getFullNameParts(dbClient)
+	var realmName, repoName, imageName, version string
+	realmName, repoName, imageName, version, err = dockerImageVersion.getFullNameParts(dbClient)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	tempFilePath, err = dbClient.getServer().DockerServices.SaveImage(namespace, imageName, tag)
+	var dockerImageName, tag string
+	dockerImageName, tag = docker.ConstructDockerImageName(realmName, repoName, imageName, version)
+	tempFilePath, err = dbClient.getServer().DockerServices.SaveImage(dockerImageName, tag)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return apitypes.NewFileResponse(200, tempFilePath, true)
