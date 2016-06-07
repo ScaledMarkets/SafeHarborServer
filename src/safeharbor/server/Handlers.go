@@ -110,18 +110,29 @@ func clearAll(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values
 				fmt.Println("clearAll: Retreived image with Id '" + imageId + "'...")  // debug
 				if err != nil { return apitypes.NewFailureDescFromError(err) }
 				fmt.Println("clearAll: A")  // debug
-				var imageName string = image.getName()
-				fmt.Println("clearAll: B")  // debug
-				fmt.Println("\t\tRemoving image " + imageName + ":")
 				
-				// Remove the image.
-				cmd = exec.Command("/usr/bin/docker", "rmi", imageName)
-				output, _ = cmd.CombinedOutput()
-				outputStr = string(output)
-				if ! strings.HasPrefix(outputStr, "Error") {
-					fmt.Println("While removing image " + imageName + ": " + outputStr)
-				} else {
-					fmt.Println("\t\tRemoved image", imageName)
+				for _, versionId := range image.getImageVersionIds() {
+					
+					var imageVersion ImageVersion
+					imageVersion, err = dbClient.getImageVersion(versionId)
+					if err != nil { return apitypes.NewFailureDescFromError(err) }
+					
+					var imageFullName, tag string
+					imageFullName, tag = docker.ConstructDockerImageName(
+						realm.getName(), repo.getName(), image.getName(), imageVersion.getVersion())
+					var imageFullTaggedName = imageFullName + ":" + tag
+					fmt.Println("clearAll: B")  // debug
+					fmt.Println("\t\tRemoving image " + imageFullTaggedName + ":")
+					
+					// Remove the image.
+					cmd = exec.Command("/usr/bin/docker", "rmi", imageFullTaggedName)
+					output, _ = cmd.CombinedOutput()
+					outputStr = string(output)
+					if ! strings.HasPrefix(outputStr, "Error") {
+						fmt.Println("While removing image " + imageFullTaggedName + ": " + outputStr)
+					} else {
+						fmt.Println("\t\tRemoved image", imageFullTaggedName)
+					}
 				}
 			}
 		}
