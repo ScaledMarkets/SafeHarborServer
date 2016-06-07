@@ -105,11 +105,8 @@ func clearAll(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values
 			for _, imageId := range repo.getDockerImageIds() {
 				
 				var image DockerImage
-				fmt.Println("clearAll: Getting image with Id '" + imageId + "'...")  // debug
 				image, err = dbClient.getDockerImage(imageId)
-				fmt.Println("clearAll: Retreived image with Id '" + imageId + "'...")  // debug
 				if err != nil { return apitypes.NewFailureDescFromError(err) }
-				fmt.Println("clearAll: A")  // debug
 				
 				for _, versionId := range image.getImageVersionIds() {
 					
@@ -121,7 +118,6 @@ func clearAll(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values
 					imageFullName, tag = docker.ConstructDockerImageName(
 						realm.getName(), repo.getName(), image.getName(), imageVersion.getVersion())
 					var imageFullTaggedName = imageFullName + ":" + tag
-					fmt.Println("clearAll: B")  // debug
 					fmt.Println("\t\tRemoving image " + imageFullTaggedName + ":")
 					
 					// Remove the image.
@@ -2658,9 +2654,6 @@ func getDockerImageEvents(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	} else {
 		dockerImageVersionIds = []string{ dockerImageVersionId }
 	}
-	
-	fmt.Println(fmt.Sprintf("getDockerImageEvents: there are %d docker image versions", // debug
-		len(dockerImageVersionIds))) // debug
 	
 	for _, versionId := range dockerImageVersionIds {
 		dockerImageVersion, err  = dbClient.getDockerImageVersion(versionId)

@@ -302,41 +302,29 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *apitypes.SessionToken,
 	values url.Values) (DockerImageVersion, error) {
 
-	fmt.Println("buildDockerfile: A")  // debug
 	var repo Repo
 	var err error
 	repo, err = dockerfile.getRepo(dbClient)
-	fmt.Println("buildDockerfile: B")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: C")  // debug
 	var realm Realm
 	realm, err = repo.getRealm(dbClient)
-	fmt.Println("buildDockerfile: D")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: E")  // debug
 	
 	var user User
 	user, err = getCurrentUser(dbClient, sessionToken)
-	fmt.Println("buildDockerfile: F")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: G")  // debug
 
 	var imageName string
 	imageName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageName")
-	fmt.Println("buildDockerfile: H")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: I")  // debug
 	if imageName == "" { return nil, utils.ConstructUserError("No HTTP parameter found for ImageName") }
-	fmt.Println("buildDockerfile: J")  // debug
 	
 	// Retrieve dockerfile build parameters.
 	var paramNames = make([]string, 0)
 	var paramValues = make([]string, 0)
 	var paramString string
 	paramString, err = apitypes.GetHTTPParameterValue(true, values, "Params")
-	fmt.Println("buildDockerfile: K")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: L")  // debug
 	if len(paramString) > 0 {
 		var paramPairs []string = strings.Split(paramString, ";")
 		paramNames = make([]string, len(paramPairs))
@@ -352,29 +340,21 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
-	fmt.Println("buildDockerfile: M")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: N")  // debug
 	
 	// Retrieve the Image, or if it does not exist, create it.
 	var dockerImage DockerImage
 	dockerImage, err = repo.getDockerImageByName(dbClient, imageName)
-	fmt.Println("buildDockerfile: O")  // debug
 	if err != nil { return nil, err }
 	if dockerImage == nil {
-		fmt.Println("buildDockerfile: P")  // debug
 		dockerImage, err = dbClient.dbCreateDockerImage(repo.getId(), imageName, dockerfile.getDescription())
-		fmt.Println("buildDockerfile: Q")  // debug
 		if err != nil { return nil, err }
-		fmt.Println("buildDockerfile: R")  // debug
 	}
 	
 	// Create a unique version.
 	var version string
 	version, err = dockerImage.getUniqueVersion(dbClient)
-	fmt.Println("buildDockerfile: S")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: T")  // debug
 	
 	// Check if an image with that name already exists.
 	var dockerImageName, tag string
@@ -384,41 +364,30 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	outputStr, err = dbClient.getServer().DockerServices.BuildDockerfile(
 		dockerfile.getExternalFilePath(), dockerfile.getName(),
 		dockerImageName, tag, paramNames, paramValues)
-	fmt.Println("buildDockerfile: U")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: V")  // debug
 	
 	var dockerBuildOutput *docker.DockerBuildOutput
 	dockerBuildOutput, err = docker.ParseBuildRESTOutput(outputStr)
-	fmt.Println("buildDockerfile: W")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: X")  // debug
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
 	
 	var digest []byte
 	digest, err = dbClient.getServer().DockerServices.GetDigest(dockerImageId)
-	fmt.Println("buildDockerfile: Y")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: Z")  // debug
 	
 	var signature []byte
 	signature, err = docker.GetSignature(dockerImageId)
-	fmt.Println("buildDockerfile: 1")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: 2")  // debug
 	
 	var imageVersion DockerImageVersion
 	imageVersion, err = dbClient.dbCreateDockerImageVersion(version, dockerImage.getId(),
 		time.Now(), outputStr, digest, signature)
 	if imageVersion.getId() == "" { return nil, utils.ConstructServerError("imageVersion.getId() is nil") } // debug
-	fmt.Println("buildDockerfile: 3")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("buildDockerfile: 4")  // debug
 		
 	// Create an event to record that this happened.
 	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), 
 		paramNames, paramValues, imageVersion.getId(), user.getId())
-	fmt.Println("buildDockerfile: 5")  // debug
 	
 	return imageVersion, err
 }

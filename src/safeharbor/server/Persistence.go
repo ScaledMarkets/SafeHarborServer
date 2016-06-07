@@ -238,21 +238,16 @@ func (persist *Persistence) createUniqueDbObjectId() (string, error) {
  */
 func (persist *Persistence) incrementDatabaseKey(keyname string) (string, error) {
 	
-	fmt.Println("incrementDatabaseKey: A")  // debug
 	var id int64
 	if persist.InMemoryOnly {
-		fmt.Println("incrementDatabaseKey: B")  // debug
 		id = atomic.AddInt64(&persist.uniqueId, 1)
-		fmt.Println("incrementDatabaseKey: C")  // debug
 	} else {
 		var err error
 		id, err = persist.RedisClient.Incr(keyname)
 		if err != nil { return "", err }
 	}
 	
-	fmt.Println("incrementDatabaseKey: D")  // debug
 	persist.uniqueId = id
-	fmt.Println("incrementDatabaseKey: E")  // debug
 	return fmt.Sprintf("%d", id), nil
 }
 
