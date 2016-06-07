@@ -2611,7 +2611,7 @@ func getUserEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 
 /*******************************************************************************
  * Arguments: ImageObjId
- * Returns: EventDescBase...
+ * Returns: Array of derived types of EventDescBase.
  */
 func getDockerImageEvents(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -2658,6 +2658,10 @@ func getDockerImageEvents(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	} else {
 		dockerImageVersionIds = []string{ dockerImageVersionId }
 	}
+	
+	fmt.Println(fmt.Sprintf("getDockerImageEvents: there are %d docker image versions", // debug
+		len(dockerImageVersionIds))) // debug
+	
 	for _, versionId := range dockerImageVersionIds {
 		dockerImageVersion, err  = dbClient.getDockerImageVersion(versionId)
 		if err != nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
@@ -2670,6 +2674,11 @@ func getDockerImageEvents(dbClient *InMemClient, sessionToken *apitypes.SessionT
 			if err != nil { return apitypes.NewFailureDescFromError(err) }
 			eventDescs = append(eventDescs, event.asEventDesc(dbClient))
 		}
+		var eventId string = dockerImageVersion.getImageCreationEventId()
+		var event Event
+		event, err = dbClient.getEvent(eventId)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		eventDescs = append(eventDescs, event.asEventDesc(dbClient))
 	}
 	
 	return eventDescs
