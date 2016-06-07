@@ -410,6 +410,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var imageVersion DockerImageVersion
 	imageVersion, err = dbClient.dbCreateDockerImageVersion(version, dockerImage.getId(),
 		time.Now(), outputStr, digest, signature)
+	if imageVersion.getId() == "" { return nil, utils.ConstructServerError("imageVersion.getId() is nil") } // debug
 	fmt.Println("buildDockerfile: 3")  // debug
 	if err != nil { return nil, err }
 	fmt.Println("buildDockerfile: 4")  // debug
