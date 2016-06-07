@@ -2842,13 +2842,31 @@ func getEventDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	eventId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "EventId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
-		eventId, "getEventDesc")
-	if failMsg != nil { return failMsg }
-	
+	// Identify the resource to which the event applies.
 	var event Event
 	event, err = dbClient.getEvent(eventId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	var isType bool
+	var scanEvent ScanEvent
+	scanEvent, isType = event.(ScanEvent)
+	var objId string
+	if isType {
+		objId = scanEvent.getScanConfigId()
+	} else {
+		var imageCreationEvent ImageCreationEvent
+		imageCreationEvent, isType = event.(ImageCreationEvent)
+		if isType {
+			objId = imageCreationEvent.getImageVersionId(dbClient)
+		} else {
+			return apitypes.NewFailureDesc(http.StatusInternalServerError,
+				"Unexpected Event type: " + reflect.TypeOf(event).String())
+		}
+	}
+	
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
+		objId, "getEventDesc")
+	if failMsg != nil { return failMsg }
+	
 	return dbClient.asEventDesc(event)
 }
 
