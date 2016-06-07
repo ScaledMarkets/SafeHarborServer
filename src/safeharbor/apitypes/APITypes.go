@@ -1120,8 +1120,9 @@ type EventDescBase struct {
 	UserObjId string
 }
 
-func NewEventDesc(objId string, when time.Time, userObjId string) *EventDescBase {
+func NewEventDesc(objectType, objId string, when time.Time, userObjId string) *EventDescBase {
 	return &EventDescBase{
+		BaseType: *NewBaseType(200, "OK", objectType),
 		EventId: objId,
 		When: FormatTimeAsJavascriptDate(when),
 		UserObjId: userObjId,
@@ -1181,7 +1182,7 @@ func NewScanEventDesc(objId string, when time.Time, userObjId string,
 	score string, vulnDescs []*VulnerabilityDesc) *ScanEventDesc {
 
 	return &ScanEventDesc{
-		EventDescBase: *NewEventDesc(objId, when, userObjId),
+		EventDescBase: *NewEventDesc("ScanEventDesc", objId, when, userObjId),
 		ImageVersionObjId: imageVersionObjId,
 		ScanConfigId: scanConfigId,
 		ProviderName: providerName,
@@ -1254,7 +1255,7 @@ func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
 	dockerfileContent string) *DockerfileExecEventDesc {
 
 	return &DockerfileExecEventDesc{
-		EventDescBase: *NewEventDesc(objId, when, userId),
+		EventDescBase: *NewEventDesc("DockerfileExecEventDesc", objId, when, userId),
 		ImageVersionObjId: imageVersionObjId,
 		DockerfileId: dockerfileId,
 		ParameterValueDescs: paramValueDescs,
@@ -1266,7 +1267,7 @@ func (eventDesc *DockerfileExecEventDesc) AsJSON() string {
 	
 	var s = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"When\": %s, \"UserObjId\": \"%s\", " +
 		"\"ImageVersionObjId\": \"%s\", " +
-		"\"DockefileId\": \"%s\"", eventDesc.baseTypeFieldsAsJSON(),
+		"\"DockerfileId\": \"%s\"", eventDesc.baseTypeFieldsAsJSON(),
 		eventDesc.EventId, eventDesc.When, eventDesc.UserObjId,
 		eventDesc.ImageVersionObjId, eventDesc.DockerfileId)
 	
