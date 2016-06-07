@@ -4002,7 +4002,8 @@ func (client *InMemClient) ReconstituteEvent(id string, when time.Time,
 }
 
 func (client *InMemClient) asEventDesc(event Event) apitypes.EventDesc {
-	return apitypes.NewEventDesc(event.getId(), event.getWhen(), event.getUserObjId())
+	return event.asEventDesc(client)
+	//return apitypes.NewEventDesc(event.getId(), event.getWhen(), event.getUserObjId())
 }
 
 /*******************************************************************************
