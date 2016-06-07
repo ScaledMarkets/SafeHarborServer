@@ -2857,6 +2857,7 @@ func getEventDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 		imageCreationEvent, isType = event.(ImageCreationEvent)
 		if isType {
 			var imageVersion ImageVersion
+			if imageCreationEvent.getImageVersionId() == "" { return apitypes.NewFailureDesc(http.StatusInternalServerError, "imageCreationEvent.getImageVersionId() is nil") }  // debug
 			imageVersion, err = dbClient.getImageVersion(imageCreationEvent.getImageVersionId())
 			if err != nil { return apitypes.NewFailureDescFromError(err) }
 			objId = imageVersion.getImageObjId()
