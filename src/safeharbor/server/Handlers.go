@@ -2856,7 +2856,10 @@ func getEventDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 		var imageCreationEvent ImageCreationEvent
 		imageCreationEvent, isType = event.(ImageCreationEvent)
 		if isType {
-			objId = imageCreationEvent.getImageVersionId(dbClient)
+			var imageVersion ImageVersion
+			imageVersion, err = dbClient.getImageVersion(imageCreationEvent.getImageVersionId())
+			if err != nil { return apitypes.NewFailureDescFromError(err) }
+			objId = imageVersion.getImageObjId()
 		} else {
 			return apitypes.NewFailureDesc(http.StatusInternalServerError,
 				"Unexpected Event type: " + reflect.TypeOf(event).String())

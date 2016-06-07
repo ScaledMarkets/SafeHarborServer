@@ -4254,7 +4254,7 @@ func (event *InMemImageCreationEvent) nullifyImageVersion() {
 	event.ImageVersionId = ""
 }
 
-func (event *InMemImageCreationEvent) getImageVersionId(dbClient DBClient) string {
+func (event *InMemImageCreationEvent) getImageVersionId() string {
 	return event.ImageVersionId
 }
 

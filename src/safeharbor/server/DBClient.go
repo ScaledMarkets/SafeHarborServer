@@ -446,7 +446,7 @@ type ScanEvent interface {
 type ImageCreationEvent interface {  // abstract
 	Event
 	nullifyImageVersion()  // does not write to db
-	getImageVersionId(DBClient) string
+	getImageVersionId() string
 }
 
 type DockerfileExecEvent interface {
