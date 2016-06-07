@@ -2919,6 +2919,15 @@ func (image *InMemDockerImage) deleteImageVersion(dbClient DBClient, imageVersio
 	dockerImageName, tag = docker.ConstructDockerImageName(
 		realmName, repoName, imageName, version)
 	err = dbClient.getServer().DockerServices.RemoveDockerImage(dockerImageName, tag)
+	if err != nil { return err }
+	
+	// Remove from image's list of versions.
+	image.VersionIds = apitypes.RemoveFrom(imageVersion.getId(), image.VersionIds)
+	
+	// Remove from database.
+	dbClient.deleteObject(imageVersion)
+	dbClient.updateObject(image)
+	
 	return err
 }
 
