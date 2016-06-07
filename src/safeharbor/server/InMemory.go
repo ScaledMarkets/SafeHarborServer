@@ -4250,6 +4250,10 @@ var _ ImageCreationEvent = &InMemImageCreationEvent{}
 
 func (client *InMemClient) NewInMemImageCreationEvent(userObjId, 
 	imageVersionId string) (*InMemImageCreationEvent, error) {
+	
+	if imageVersionId == "" { fmt.Println("imageVersionId is nil"); panic("imageVersionId is nil") }
+	
+	
 	var event *InMemEvent
 	var err error
 	event, err = client.NewInMemEvent(userObjId)

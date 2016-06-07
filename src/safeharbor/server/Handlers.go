@@ -2857,19 +2857,22 @@ func getEventDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 		imageCreationEvent, isType = event.(ImageCreationEvent)
 		if isType {
 			var imageVersion ImageVersion
-			if imageCreationEvent.getImageVersionId() == "" { return apitypes.NewFailureDesc(http.StatusInternalServerError, "imageCreationEvent.getImageVersionId() is nil") }  // debug
-			imageVersion, err = dbClient.getImageVersion(imageCreationEvent.getImageVersionId())
-			if err != nil { return apitypes.NewFailureDescFromError(err) }
-			objId = imageVersion.getImageObjId()
+			if imageCreationEvent.getImageVersionId() != "" {
+				imageVersion, err = dbClient.getImageVersion(imageCreationEvent.getImageVersionId())
+				if err != nil { return apitypes.NewFailureDescFromError(err) }
+				objId = imageVersion.getImageObjId()
+			}
 		} else {
 			return apitypes.NewFailureDesc(http.StatusInternalServerError,
 				"Unexpected Event type: " + reflect.TypeOf(event).String())
 		}
 	}
 	
-	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
-		objId, "getEventDesc")
-	if failMsg != nil { return failMsg }
+	if objId != "" {
+		failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
+			objId, "getEventDesc")
+		if failMsg != nil { return failMsg }
+	}
 	
 	return dbClient.asEventDesc(event)
 }
