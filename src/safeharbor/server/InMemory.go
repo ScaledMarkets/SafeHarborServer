@@ -4002,7 +4002,20 @@ func (client *InMemClient) ReconstituteEvent(id string, when time.Time,
 }
 
 func (client *InMemClient) asEventDesc(event Event) apitypes.EventDesc {
-	return event.asEventDesc(client)
+	var scanEvent ScanEvent
+	var isType bool
+	scanEvent, isType = event.(ScanEvent)
+	if isType {
+		return scanEvent.asEventDesc(client)
+	} else {
+		var dockerfileExecEvent DockerfileExecEvent
+		dockerfileExecEvent, isType = event.(DockerfileExecEvent)
+		if isType {
+			return dockerfileExecEvent.asEventDesc(client)
+		} else {
+			panic("Unexpected event type: " + reflect.TypeOf(event).String())
+		}
+	}
 	//return apitypes.NewEventDesc(event.getId(), event.getWhen(), event.getUserObjId())
 }
 
