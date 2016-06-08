@@ -477,7 +477,7 @@ func (client *InMemClient) deleteAccess(resource Resource, party Party) error {
 }
 
 func (resource *InMemResource) removeACLEntryIdAt(index int) {
-	resource.ACLEntryIds = apitypes.RemoveAt(index, resource.ACLEntryIds)
+	resource.ACLEntryIds = utils.RemoveAt(index, resource.ACLEntryIds)
 }
 
 func (resource *InMemResource) printACLs(dbClient DBClient, party Party) {
@@ -848,7 +848,7 @@ func (client *InMemClient) deleteACLEntryForParty(party Party, entry ACLEntry) e
 }
 
 func (party *InMemParty) deleteACLEntry(dbClient DBClient, entry ACLEntry) error {
-	party.ACLEntryIds = apitypes.RemoveFrom(entry.getId(), party.ACLEntryIds)
+	party.ACLEntryIds = utils.RemoveFrom(entry.getId(), party.ACLEntryIds)
 	var err error = dbClient.deleteObject(entry)
 	return err
 }
@@ -1309,7 +1309,7 @@ func (user *InMemUser) deleteEvent(dbClient DBClient, event Event) error {
 		if err != nil { return err }
 	}
 	
-	user.EventIds = apitypes.RemoveFrom(event.getId(), user.EventIds)
+	user.EventIds = utils.RemoveFrom(event.getId(), user.EventIds)
 	
 	var err error = dbClient.deleteObject(event)
 	if err != nil { return err }
@@ -1767,7 +1767,7 @@ func (realm *InMemRealm) removeUserId(dbClient DBClient, userObjId string) (User
 	if user.getRealmId() != realm.getId() {
 		return nil, utils.ConstructUserError("User with obj Id " + userObjId + " belongs to another realm")
 	}
-	realm.UserObjIds = apitypes.RemoveFrom(userObjId, realm.UserObjIds)
+	realm.UserObjIds = utils.RemoveFrom(userObjId, realm.UserObjIds)
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = ""
 	err = dbClient.writeBack(realm)
@@ -1964,7 +1964,7 @@ func (realm *InMemRealm) deleteGroup(dbClient DBClient, group Group) error {
 	
 	// Remove the group from its realm. Do this first so that no new actions
 	// will be taken on the group.
-	realm.GroupIds = apitypes.RemoveFrom(group.getId(), realm.GroupIds)
+	realm.GroupIds = utils.RemoveFrom(group.getId(), realm.GroupIds)
 	var err error
 	err = dbClient.writeBack(realm)
 	if err != nil { return err }
@@ -2005,7 +2005,7 @@ func (realm *InMemRealm) deleteRepo(dbClient DBClient, repo Repo) error {
 	
 	// Remove the Repo from its Realm. Do this first so that no new actions
 	// will be taken on the Repo.
-	realm.RepoIds = apitypes.RemoveFrom(repo.getId(), realm.RepoIds)
+	realm.RepoIds = utils.RemoveFrom(repo.getId(), realm.RepoIds)
 	var err error
 	err = dbClient.writeBack(realm)
 	if err != nil { return err }
@@ -2253,12 +2253,12 @@ func (repo *InMemRepo) deleteScanConfig(dbClient DBClient, config ScanConfig) er
 	
 	// Unlink from DockerImages that use this ScanConfig.
 	for _, imageId := range config.getDockerImageIdsThatUse() {
-		err = config.remDockerImage(dbClient, imageId)
+		var err = config.remDockerImage(dbClient, imageId)
 		if err != nil { return err }
 	}
 
 	// Remove from repo.
-	repo.ScanConfigIds = apitypes.RemoveFrom(config.getId(), repo.ScanConfigIds)
+	repo.ScanConfigIds = utils.RemoveFrom(config.getId(), repo.ScanConfigIds)
 
 	// Remove ACL entries.
 	var err error = dbClient.deleteAllAccessToResource(config)
@@ -2288,7 +2288,7 @@ func (repo *InMemRepo) deleteFlag(dbClient DBClient, flag Flag) error {
 	if err != nil { return err }
 	
 	// Remove from repo.
-	repo.FlagIds = apitypes.RemoveFrom(flag.getId(), repo.FlagIds)
+	repo.FlagIds = utils.RemoveFrom(flag.getId(), repo.FlagIds)
 	
 	// Remove ACL entries.
 	err = dbClient.deleteAllAccessToResource(flag)
@@ -2345,7 +2345,7 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 	if err != nil { return err }
 	
 	// Unlink from ScanConfigs.
-	for _, configId := range config.getScanConfigsToUse() {
+	for _, configId := range image.getScanConfigsToUse() {
 		var scanConfig ScanConfig
 		scanConfig, err = dbClient.getScanConfig(configId)
 		if err != nil { return err }
@@ -2354,7 +2354,7 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 	}
 	
 	// Remove from repo.
-	repo.DockerImageIds = apitypes.RemoveFrom(image.getId(), repo.DockerImageIds)
+	repo.DockerImageIds = utils.RemoveFrom(image.getId(), repo.DockerImageIds)
 	
 	// Remove from database.
 	err = dbClient.deleteObject(image)
@@ -2934,7 +2934,7 @@ func (image *InMemDockerImage) deleteImageVersion(dbClient DBClient, imageVersio
 	if err != nil { return err }
 	
 	// Remove from image's list of versions.
-	image.VersionIds = apitypes.RemoveFrom(imageVersion.getId(), image.VersionIds)
+	image.VersionIds = utils.RemoveFrom(imageVersion.getId(), image.VersionIds)
 	
 	// Remove from database.
 	dbClient.deleteObject(imageVersion)
@@ -2948,16 +2948,16 @@ func (image *InMemDockerImage) getScanConfigsToUse() []string {
 }
 
 func (image *InMemDockerImage) addScanConfigIdToList(scanConfigId string) {
-	image.ScanConfigsToUse = apitypes.AddUniquely(scanConfigId, image.ScanConfigsToUse)
+	image.ScanConfigsToUse = utils.AddUniquely(scanConfigId, image.ScanConfigsToUse)
 }
 
 func (image *InMemDockerImage) remScanConfigIdFromList(scanConfigId string) {
-	image.ScanConfigsToUse = apitypes.RemoveFrom(scanConfigId, image.ScanConfigsToUse)
+	image.ScanConfigsToUse = utils.RemoveFrom(scanConfigId, image.ScanConfigsToUse)
 }
 
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
 	return apitypes.NewDockerImageDesc(image.Id, image.getRepoId(), image.Name,
-		image.Description)
+		image.Description, image.ScanConfigsToUse)
 }
 
 func (image *InMemDockerImage) isDockerImage() bool { return true }
@@ -3583,7 +3583,7 @@ func (scanConfig *InMemScanConfig) deleteParameterValue(dbClient DBClient, name 
 			continue
 		}
 		if pv.getName() == name {
-			scanConfig.ParameterValueIds = apitypes.RemoveAt(i, scanConfig.ParameterValueIds)
+			scanConfig.ParameterValueIds = utils.RemoveAt(i, scanConfig.ParameterValueIds)
 			err = dbClient.deleteObject(pv)
 			if err != nil { return err }
 			return dbClient.writeBack(scanConfig)
@@ -3653,28 +3653,34 @@ func (scanConfig *InMemScanConfig) getScanEventIds() []string {
 }
 
 func (scanConfig *InMemScanConfig) deleteScanEventId(dbClient DBClient, eventId string) error {
-	scanConfig.ScanEventIds = apitypes.RemoveFrom(eventId, scanConfig.ScanEventIds)
+	scanConfig.ScanEventIds = utils.RemoveFrom(eventId, scanConfig.ScanEventIds)
 	return dbClient.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) addDockerImage(dbClient DBClient, dockerImageId string) error {
 	
-	scanConfig.DockerImageIdsThatUse = apitypes.AddUniquely(dockerImageId, scanConfig.DockerImageIdsThatUse)
+	scanConfig.DockerImageIdsThatUse = utils.AddUniquely(dockerImageId, scanConfig.DockerImageIdsThatUse)
+	var dockerImage DockerImage
+	var err error
+	dockerImage, err = dbClient.getDockerImage(dockerImageId)
+	if err != nil { return err }
 	dockerImage.addScanConfigIdToList(scanConfig.getId())
 	err = dbClient.updateObject(dockerImage)
 	if err != nil { return err }
-	err = dbClient.updateObject(scanConfig)
-	if err != nil { return err }
+	return dbClient.updateObject(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) remDockerImage(dbClient DBClient, dockerImageId string) error {
 	
-	scanConfig.DockerImageIdsThatUse = apitypes.RemoveFrom(dockerImageId, scanConfig.DockerImageIdsThatUse)
+	scanConfig.DockerImageIdsThatUse = utils.RemoveFrom(dockerImageId, scanConfig.DockerImageIdsThatUse)
+	var dockerImage DockerImage
+	var err error
+	dockerImage, err = dbClient.getDockerImage(dockerImageId)
+	if err != nil { return err }
 	dockerImage.remScanConfigIdFromList(scanConfig.getId())
 	err = dbClient.updateObject(dockerImage)
 	if err != nil { return err }
-	err = dbClient.updateObject(scanConfig)
-	if err != nil { return err }
+	return dbClient.updateObject(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) getDockerImageIdsThatUse() []string {
@@ -3926,12 +3932,12 @@ func (flag *InMemFlag) getSuccessImageURL() string {
 }
 
 func (flag *InMemFlag) addScanConfigRef(dbClient DBClient, scanConfigId string) error {
-	flag.UsedByScanConfigIds = apitypes.AddUniquely(scanConfigId, flag.UsedByScanConfigIds)
+	flag.UsedByScanConfigIds = utils.AddUniquely(scanConfigId, flag.UsedByScanConfigIds)
 	return dbClient.writeBack(flag)
 }
 
 func (flag *InMemFlag) removeScanConfigRef(dbClient DBClient, scanConfigId string) error {
-	flag.UsedByScanConfigIds = apitypes.RemoveFrom(scanConfigId, flag.UsedByScanConfigIds)
+	flag.UsedByScanConfigIds = utils.RemoveFrom(scanConfigId, flag.UsedByScanConfigIds)
 	
 	return dbClient.writeBack(flag)
 }
