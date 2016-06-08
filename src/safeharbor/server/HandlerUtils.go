@@ -323,7 +323,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var paramNames = make([]string, 0)
 	var paramValues = make([]string, 0)
 	var paramString string
-	paramString, err = apitypes.GetHTTPParameterValue(true, values, "Params")
+	paramString, err = apitypes.GetHTTPParameterValue(false, values, "Params")
 	if err != nil { return nil, err }
 	if len(paramString) > 0 {
 		var paramPairs []string = strings.Split(paramString, ";")
@@ -335,6 +335,10 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 				"Ill-formed param string: '" + paramString + "'") }
 			paramNames[i] = parts[0]
 			paramValues[i] = parts[1]
+			_, err = apitypes.Sanitize(paramNames[i])
+			if err != nil { return nil, utils.ConstructUserError(err.Error()) }
+			_, err = apitypes.Sanitize(paramValues[i])
+			if err != nil { return nil, utils.ConstructUserError(err.Error()) }
 		}
 	}
 	

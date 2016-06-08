@@ -2338,7 +2338,7 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 
 	var scanConfigIdSeq, imageObjId string
 	var err error
-	scanConfigIdSeq, err = apitypes.GetHTTPParameterValue(true, values, "ScanConfigId")
+	scanConfigIdSeq, err = apitypes.GetHTTPParameterValue(false, values, "ScanConfigId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
@@ -2383,6 +2383,10 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	} else {
 		// Parse the list of scan config ids.
 		scanConfigIds = strings.Split(scanConfigIdSeq, ",")
+		for _, scanConfigId := range scanConfigIds {
+			_, err = apitypes.Sanitize(scanConfigId)
+			if err != nil { return apitypes.NewFailureDescFromError(err) }
+		}
 	}
 	
 	// Perform scan with each ScanConfig.
