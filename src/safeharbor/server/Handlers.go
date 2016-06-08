@@ -2326,8 +2326,8 @@ func defineFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 }
 
 /*******************************************************************************
- * Arguments: ScanConfigId, ImageObjId
- * Returns: ScanEventDesc
+ * Arguments: ScanConfigId..., ImageObjId
+ * Returns: ScanEventDescs
  */
 func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -2336,13 +2336,12 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
 
-	var scanConfigId, imageObjId string
+	var scanConfigIdSeq, imageObjId string
 	var err error
-	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
+	scanConfigIdSeq, err = apitypes.GetHTTPParameterValue(true, values, "ScanConfigId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	imageObjId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageObjId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	fmt.Println(scanConfigId)
 	
 	// Determine if imageObjId is a DockerImage or a DockerImageVersion.
 	var dockerImage DockerImage
@@ -2376,85 +2375,101 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 		}
 	}
 	
-	// Check if user is authorized to use the DockerImage and the ScanConfig.
-	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, dockerImageId,
-		"scanImage")
-	if failMsg != nil { return failMsg }
-	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ExecuteMask, scanConfigId,
-		"scanImage")
-	if failMsg != nil { return failMsg }
-	
-	// Retrieve the ScanConfig.
-	var scanConfig ScanConfig
-	scanConfig, err = dbClient.getScanConfig(scanConfigId)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	if scanConfig == nil {
-		return apitypes.NewFailureDesc(http.StatusBadRequest,
-			"Scan Config with object Id " + scanConfigId + " not found")
+	// Determine the ScanConfigs to use.
+	var scanConfigIds []string
+	if scanConfigIdSeq == "" {
+		// Obtain the linked scan configs.
+		scanConfigIds = dockerImage.getScanConfigsToUse()
+	} else {
+		// Parse the list of scan config ids.
+		var scanConfigIds = strings.Split(scanConfigIdSeq, ",")
 	}
-
-	// Obtain scan provider name and parameters from the ScanConfig.
-	var scanProviderName = scanConfig.getProviderName()
-	var params = map[string]string{}
-	var paramValueIds []string = scanConfig.getParameterValueIds()
-	for _, id := range paramValueIds {
-		var paramValue ParameterValue
-		paramValue, err = dbClient.getParameterValue(id)
+	
+	// Perform scan with each ScanConfig.
+	var scanEventDescs ScanEventDescs = make([]ScanEventDesc, 0)
+	for _, scanConfigId := range scanConfigIds {
+		// Check if user is authorized to use the DockerImage and the ScanConfig.
+		failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, dockerImageId,
+			"scanImage")
+		if failMsg != nil { return failMsg }
+		failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ExecuteMask, scanConfigId,
+			"scanImage")
+		if failMsg != nil { return failMsg }
+		
+		// Retrieve the ScanConfig.
+		var scanConfig ScanConfig
+		scanConfig, err = dbClient.getScanConfig(scanConfigId)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
-		params[paramValue.getName()] = paramValue.getStringValue()
+		if scanConfig == nil {
+			return apitypes.NewFailureDesc(http.StatusBadRequest,
+				"Scan Config with object Id " + scanConfigId + " not found")
+		}
+	
+		// Obtain scan provider name and parameters from the ScanConfig.
+		var scanProviderName = scanConfig.getProviderName()
+		var params = map[string]string{}
+		var paramValueIds []string = scanConfig.getParameterValueIds()
+		for _, id := range paramValueIds {
+			var paramValue ParameterValue
+			paramValue, err = dbClient.getParameterValue(id)
+			if err != nil { return apitypes.NewFailureDescFromError(err) }
+			params[paramValue.getName()] = paramValue.getStringValue()
+		}
+	
+		// Locate the scan provider.
+		fmt.Println("Getting scan service...")
+		var scanService providers.ScanService
+		scanService = dbClient.Server.GetScanService(scanProviderName)
+		if scanService == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+			"Unable to identify a scan service named '" + scanProviderName + "'")
+		}
+		
+		// Attach to the scan provider.
+		var scanContext providers.ScanContext
+		scanContext, err = scanService.CreateScanContext(params)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		var imageName string
+		imageName, err = dockerImageVersion.getFullName(dbClient)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		var result *providers.ScanResult
+		fmt.Println("Contacting scan service...")
+		
+		// Perform scan.
+		result, err = scanContext.ScanImage(imageName)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		fmt.Println("Scanner service completed")
+		
+		// Compute score.
+		// TBD: Here we should use the scanConfig.SuccessExpression to compute the score.
+		var score string
+		score = fmt.Sprintf("%d", len(result.Vulnerabilities))
+	
+		// Construct arrays of param names and values, needed by dbCreateScanEvent.
+		var paramNames = make([]string, len(params))
+		var paramValues = make([]string, len(paramNames))
+		var i = 0
+		for name, value := range params {
+			paramNames[i] = name
+			paramValues[i] = value
+			i++
+		}
+		
+		// Create a scan event.
+		var userId string = sessionToken.AuthenticatedUserid
+		var user User
+		user, err = dbClient.dbGetUserByUserId(userId)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if user == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+			"User with Id " + userId + " not found") }
+		var scanEvent ScanEvent
+		scanEvent, err = dbClient.dbCreateScanEvent(scanConfig.getId(), scanConfig.getProviderName(),
+			paramNames, paramValues, dockerImageVersionId, user.getId(), score, result)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		
+		scanEventDescs = append(scanEventDescs, scanEvent.asScanEventDesc(dbClient))
 	}
-
-	// Locate the scan provider.
-	fmt.Println("Getting scan service...")
-	var scanService providers.ScanService
-	scanService = dbClient.Server.GetScanService(scanProviderName)
-	if scanService == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
-		"Unable to identify a scan service named '" + scanProviderName + "'")
-	}
 	
-	// Attach to the scan provider.
-	var scanContext providers.ScanContext
-	scanContext, err = scanService.CreateScanContext(params)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	var imageName string
-	imageName, err = dockerImageVersion.getFullName(dbClient)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	var result *providers.ScanResult
-	fmt.Println("Contacting scan service...")
-	
-	// Perform scan.
-	result, err = scanContext.ScanImage(imageName)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	fmt.Println("Scanner service completed")
-	
-	// Compute score.
-	// TBD: Here we should use the scanConfig.SuccessExpression to compute the score.
-	var score string
-	score = fmt.Sprintf("%d", len(result.Vulnerabilities))
-
-	// Construct arrays of param names and values, needed by dbCreateScanEvent.
-	var paramNames = make([]string, len(params))
-	var paramValues = make([]string, len(paramNames))
-	var i = 0
-	for name, value := range params {
-		paramNames[i] = name
-		paramValues[i] = value
-		i++
-	}
-	
-	// Create a scan event.
-	var userId string = sessionToken.AuthenticatedUserid
-	var user User
-	user, err = dbClient.dbGetUserByUserId(userId)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	if user == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
-		"User with Id " + userId + " not found") }
-	var scanEvent ScanEvent
-	scanEvent, err = dbClient.dbCreateScanEvent(scanConfig.getId(), scanConfig.getProviderName(),
-		paramNames, paramValues, dockerImageVersionId, user.getId(), score, result)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	
-	return scanEvent.asScanEventDesc(dbClient)
+	return scanEventDescs
 }
 
 /*******************************************************************************
@@ -3221,7 +3236,7 @@ func useScanConfigForImage(dbClient *InMemClient, sessionToken *apitypes.Session
 		dockerImageId, "useScanConfigForImage")
 	if failMsg != nil { return failMsg }
 	
-	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ExecuteMask,
 		scanConfigId, "stopUsingScanConfigForImage")
 	if failMsg != nil { return failMsg }
 	
