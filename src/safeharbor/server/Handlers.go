@@ -2382,11 +2382,11 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 		scanConfigIds = dockerImage.getScanConfigsToUse()
 	} else {
 		// Parse the list of scan config ids.
-		var scanConfigIds = strings.Split(scanConfigIdSeq, ",")
+		scanConfigIds = strings.Split(scanConfigIdSeq, ",")
 	}
 	
 	// Perform scan with each ScanConfig.
-	var scanEventDescs ScanEventDescs = make([]ScanEventDesc, 0)
+	var scanEventDescs apitypes.ScanEventDescs = make(apitypes.ScanEventDescs, 0)
 	for _, scanConfigId := range scanConfigIds {
 		// Check if user is authorized to use the DockerImage and the ScanConfig.
 		failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, dockerImageId,

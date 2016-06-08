@@ -1233,6 +1233,21 @@ func (eventDesc *ScanEventDesc) AsJSON() string {
 	return s
 }
 
+func (eventDescs ScanEventDescs) AsJSON() string {
+	var response string = " {" + httpOKResponse() + ", \"payload\": [\n"
+	var firstTime bool = true
+	for _, desc := range eventDescs {
+		if firstTime { firstTime = false } else { response = response + ",\n" }
+		response = response + desc.AsJSON()
+	}
+	response = response + "]}"
+	return response
+}
+
+func (eventDescs ScanEventDescs) SendFile() (string, bool) {
+	return "", false
+}
+
 /*******************************************************************************
  * 
  */
