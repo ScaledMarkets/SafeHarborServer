@@ -343,15 +343,10 @@ type ImageVersion interface {  // abstract
 
 type DockerImage interface {
 	Image
-	//addScanEventId(dbClient DBClient, id string)
-	//getScanEventIds() []string // ordered from oldest to newest
-	//getMostRecentScanEventId() string
-	//getImageCreationEventId() string
-	//setImageCreationEventId(string)
+	getScanConfigsToUse() []string
+	addScanConfigIdToList(scanConfigId string)
+	remScanConfigIdFromList(scanConfigId string)
 	asDockerImageDesc() *apitypes.DockerImageDesc
-	//getSignature() []byte
-	//computeSignature() ([]byte, error)
-	//getOutputFromBuild() string
 }
 
 type DockerImageVersion interface {
@@ -395,6 +390,9 @@ type ScanConfig interface {
 	addScanEventId(dbClient DBClient, id string)
 	getScanEventIds() []string
 	deleteScanEventId(DBClient, string) error
+	getDockerImageIdsThatUse() []string
+	addDockerImage(dbClient DBClient, dockerImageId string) error
+	remDockerImage(dbClient DBClient, dockerImageId string) error
 	asScanConfigDesc(DBClient) *apitypes.ScanConfigDesc
 }
 

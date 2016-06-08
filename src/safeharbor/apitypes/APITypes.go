@@ -703,13 +703,15 @@ func (versionDesc *ImageVersionDesc) imageVersionDescFieldsAsJSON() string {
  */
 type DockerImageDesc struct {
 	ImageDesc
+	ScanConfigIds []string
 	//Signature []byte
 	//OutputFromBuild string
 }
 
-func NewDockerImageDesc(objId, repoId, name, desc string) *DockerImageDesc {
+func NewDockerImageDesc(objId, repoId, name, desc string, scanConfigIds []string) *DockerImageDesc {
 	return &DockerImageDesc{
 		ImageDesc: *NewImageDesc("DockerImageDesc", objId, repoId, name, desc),
+		ScanConfigIds: scanConfigIds,
 		//Signature: signature,
 		//OutputFromBuild: outputFromBuild,
 	}
@@ -720,7 +722,13 @@ func (imageDesc *DockerImageDesc) getDockerImageTag() string {
 }
 
 func (imageDesc *DockerImageDesc) AsJSON() string {
-	return "{" + imageDesc.imageDescFieldsAsJSON() + "}"
+	var s = "{" + imageDesc.imageDescFieldsAsJSON() 
+	s = s + ", \"ScanConfigIds\": ["
+	for i, id := range imageDesc.ScanConfigIds {
+		if i > 0 { s = s + ", " }
+		s = s + fmt.Sprintf("\"%s\"", id)
+	}
+	return s + "]}"
 }
 
 type DockerImageDescs []*DockerImageDesc
@@ -967,9 +975,11 @@ type ScanConfigDesc struct {
 	SuccessExpression string
 	FlagId string
 	ScanParameterValueDescs []*ScanParameterValueDesc
+	DockerImagesIdsThatUse []string
 }
 
-func NewScanConfigDesc(id, provName, expr, flagId string, paramValueDescs []*ScanParameterValueDesc) *ScanConfigDesc {
+func NewScanConfigDesc(id, provName, expr, flagId string, paramValueDescs []*ScanParameterValueDesc,
+	dockerImagesIdsThatUse []string) *ScanConfigDesc {
 	return &ScanConfigDesc{
 		BaseType: *NewBaseType(200, "OK", "ScanConfigDesc"),
 		Id: id,
@@ -977,6 +987,7 @@ func NewScanConfigDesc(id, provName, expr, flagId string, paramValueDescs []*Sca
 		SuccessExpression: expr,
 		FlagId: flagId,
 		ScanParameterValueDescs: paramValueDescs,
+		DockerImagesIdsThatUse: dockerImagesIdsThatUse,
 	}
 }
 
@@ -989,6 +1000,11 @@ func (scanConfig *ScanConfigDesc) AsJSON() string {
 	for i, paramValueDesc := range scanConfig.ScanParameterValueDescs {
 		if i > 0 { s = s + ",\n" }
 		s = s + paramValueDesc.AsJSON()
+	}
+	s = s + "\n], \"DockerImagesIdsThatUse\": ["
+	for i, id := range scanConfig.DockerImagesIdsThatUse {
+		if i > 0 { s = s + ", " }
+		s = s + fmt.Sprintf("\"%s\"", id)
 	}
 	return s + "\n]}"
 }

@@ -2250,6 +2250,12 @@ func (repo *InMemRepo) deleteScanConfig(dbClient DBClient, config ScanConfig) er
 		err = flag.removeScanConfigRef(dbClient, config.getId())
 		if err != nil { return err }
 	}
+	
+	// Unlink from DockerImages that use this ScanConfig.
+	for _, imageId := range config.getDockerImageIdsThatUse() {
+		err = config.remDockerImage(dbClient, imageId)
+		if err != nil { return err }
+	}
 
 	// Remove from repo.
 	repo.ScanConfigIds = apitypes.RemoveFrom(config.getId(), repo.ScanConfigIds)
@@ -2332,10 +2338,20 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 		err = image.deleteImageVersion(dbClient, dockerImageVersion)
 		if err != nil { return err }
 	}
+	
 	// Remove ACL entries.
 	var err error
 	err = dbClient.deleteAllAccessToResource(image)
 	if err != nil { return err }
+	
+	// Unlink from ScanConfigs.
+	for _, configId := range config.getScanConfigsToUse() {
+		var scanConfig ScanConfig
+		scanConfig, err = dbClient.getScanConfig(configId)
+		if err != nil { return err }
+		err = scanConfig.remDockerImage(dbClient, image.getId())
+		if err != nil { return err }
+	}
 	
 	// Remove from repo.
 	repo.DockerImageIds = apitypes.RemoveFrom(image.getId(), repo.DockerImageIds)
@@ -2811,6 +2827,7 @@ func (client *InMemClient) ReconstituteImage(id string, aclEntryIds []string,
  */
 type InMemDockerImage struct {
 	InMemImage
+	ScanConfigsToUse []string
 }
 
 var _ DockerImage = &InMemDockerImage{}
@@ -2823,6 +2840,7 @@ func (client *InMemClient) NewInMemDockerImage(name, desc, repoId string) (*InMe
 
 	var newDockerImage = &InMemDockerImage{
 		InMemImage: *image,
+		ScanConfigsToUse: make([]string, 0),
 	}
 	
 	return newDockerImage, client.updateObject(newDockerImage)
@@ -2925,6 +2943,18 @@ func (image *InMemDockerImage) deleteImageVersion(dbClient DBClient, imageVersio
 	return err
 }
 
+func (image *InMemDockerImage) getScanConfigsToUse() []string {
+	return image.ScanConfigsToUse
+}
+
+func (image *InMemDockerImage) addScanConfigIdToList(scanConfigId string) {
+	image.ScanConfigsToUse = apitypes.AddUniquely(scanConfigId, image.ScanConfigsToUse)
+}
+
+func (image *InMemDockerImage) remScanConfigIdFromList(scanConfigId string) {
+	image.ScanConfigsToUse = apitypes.RemoveFrom(scanConfigId, image.ScanConfigsToUse)
+}
+
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
 	return apitypes.NewDockerImageDesc(image.Id, image.getRepoId(), image.Name,
 		image.Description)
@@ -2938,12 +2968,18 @@ func (image *InMemDockerImage) writeBack(dbClient DBClient) error {
 
 func (image *InMemDockerImage) asJSON() string {
 	
-	var json = "\"DockerImage\": {" + image.imageFieldsAsJSON() + "}"
+	var json = "\"DockerImage\": {" + image.imageFieldsAsJSON() + ", \"ScanConfigsToUse\": ["
+	for i, id := range image.ScanConfigsToUse {
+		if i > 0 { json = json + ", " }
+		json = json + fmt.Sprintf("\"%s\"", id)
+	}
+	json = json + "]}"
 	return json
 }
 
 func (client *InMemClient) ReconstituteDockerImage(id string, aclEntryIds []string,
-	name, desc, parentId string, creationTime time.Time, versionIds []string) (*InMemDockerImage, error) {
+	name, desc, parentId string, creationTime time.Time, versionIds,
+	scanConfigsToUse []string) (*InMemDockerImage, error) {
 
 	var image *InMemImage
 	var err error
@@ -2954,6 +2990,7 @@ func (client *InMemClient) ReconstituteDockerImage(id string, aclEntryIds []stri
 	
 	return &InMemDockerImage{
 		InMemImage: *image,
+		ScanConfigsToUse: scanConfigsToUse,
 	}, nil
 }
 
@@ -3381,6 +3418,7 @@ type InMemScanConfig struct {
 	ParameterValueIds []string
 	FlagId string
 	ScanEventIds []string
+	DockerImageIdsThatUse []string
 }
 
 var _ ScanConfig = &InMemScanConfig{}
@@ -3400,6 +3438,7 @@ func (client *InMemClient) NewInMemScanConfig(name, desc, repoId,
 		ParameterValueIds: paramValueIds,
 		FlagId: flagId,
 		ScanEventIds: make([]string, 0),
+		DockerImageIdsThatUse: make([]string, 0),
 	}
 	return scanConfig, client.updateObject(scanConfig)
 }
@@ -3618,6 +3657,30 @@ func (scanConfig *InMemScanConfig) deleteScanEventId(dbClient DBClient, eventId 
 	return dbClient.writeBack(scanConfig)
 }
 
+func (scanConfig *InMemScanConfig) addDockerImage(dbClient DBClient, dockerImageId string) error {
+	
+	scanConfig.DockerImageIdsThatUse = apitypes.AddUniquely(dockerImageId, scanConfig.DockerImageIdsThatUse)
+	dockerImage.addScanConfigIdToList(scanConfig.getId())
+	err = dbClient.updateObject(dockerImage)
+	if err != nil { return err }
+	err = dbClient.updateObject(scanConfig)
+	if err != nil { return err }
+}
+
+func (scanConfig *InMemScanConfig) remDockerImage(dbClient DBClient, dockerImageId string) error {
+	
+	scanConfig.DockerImageIdsThatUse = apitypes.RemoveFrom(dockerImageId, scanConfig.DockerImageIdsThatUse)
+	dockerImage.remScanConfigIdFromList(scanConfig.getId())
+	err = dbClient.updateObject(dockerImage)
+	if err != nil { return err }
+	err = dbClient.updateObject(scanConfig)
+	if err != nil { return err }
+}
+
+func (scanConfig *InMemScanConfig) getDockerImageIdsThatUse() []string {
+	return scanConfig.DockerImageIdsThatUse
+}
+
 func (resource *InMemScanConfig) isScanConfig() bool {
 	return true
 }
@@ -3641,7 +3704,8 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc(dbClient DBClient) *apitypes
 	}
 	
 	return apitypes.NewScanConfigDesc(scanConfig.Id, scanConfig.ProviderName,
-		scanConfig.SuccessExpression, scanConfig.FlagId, paramValueDescs)
+		scanConfig.SuccessExpression, scanConfig.FlagId, paramValueDescs,
+		scanConfig.DockerImageIdsThatUse)
 }
 
 func (scanConfig *InMemScanConfig) writeBack(dbClient DBClient) error {
@@ -3663,6 +3727,11 @@ func (scanConfig *InMemScanConfig) asJSON() string {
 		if i != 0 { json = json + ", " }
 		json = json + "\"" + id + "\""
 	}
+	json = json + "], \"DockerImageIdsThatUse\": ["
+	for i, id := range scanConfig.DockerImageIdsThatUse {
+		if i > 0 { json = json + ", " }
+		json = json + fmt.Sprintf("\"%s\"", id)
+	}
 	json = json + "]}"
 	return json
 }
@@ -3670,7 +3739,7 @@ func (scanConfig *InMemScanConfig) asJSON() string {
 func (client *InMemClient) ReconstituteScanConfig(id string, aclEntryIds []string,
 	name, desc, parentId string, creationTime time.Time,
 	successExpr string, providerName string, paramValueIds []string,
-	flagId string, scanEventIds []string) (*InMemScanConfig, error) {
+	flagId string, scanEventIds, dockerImageIdsThatUse []string) (*InMemScanConfig, error) {
 
 	var resource *InMemResource
 	var err error
@@ -3685,6 +3754,7 @@ func (client *InMemClient) ReconstituteScanConfig(id string, aclEntryIds []strin
 		ParameterValueIds: paramValueIds,
 		FlagId: flagId,
 		ScanEventIds: scanEventIds,
+		DockerImageIdsThatUse: dockerImageIdsThatUse,
 	}, nil
 }
 

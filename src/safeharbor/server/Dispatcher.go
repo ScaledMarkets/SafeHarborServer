@@ -117,6 +117,8 @@ func NewDispatcher() *Dispatcher {
 		"updateUserInfo": updateUserInfo,
 		"userExists": userExists,
 		"validateAccountVerificationToken": validateAccountVerificationToken,
+		"useScanConfigForImage": useScanConfigForImage,
+		"stopUsingScanConfigForImage": stopUsingScanConfigForImage,
 	}
 	
 	var dispatcher *Dispatcher = &Dispatcher{

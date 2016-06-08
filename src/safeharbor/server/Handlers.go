@@ -3197,3 +3197,73 @@ func validateAccountVerificationToken(dbClient *InMemClient, sessionToken *apity
 
 	return apitypes.NewFailureDesc(http.StatusNotImplemented, "validateAccountVerificationToken not implemented")
 }
+
+/*******************************************************************************
+ * Arguments: DockerImageId, ScanConfigId
+ * Returns: Result
+ */
+func useScanConfigForImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	var failMsg apitypes.RespIntfTp
+	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
+	if failMsg != nil { return failMsg }
+
+	var dockerImageId, scanConfigId string
+	var err error
+	dockerImageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerImageId")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask,
+		dockerImageId, "useScanConfigForImage")
+	if failMsg != nil { return failMsg }
+	
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask,
+		scanConfigId, "stopUsingScanConfigForImage")
+	if failMsg != nil { return failMsg }
+	
+	var scanConfig ScanConfig
+	scanConfig, err = dbClient.getScanConfig(scanConfigId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	err = scanConfig.addDockerImage(dbClient, dockerImageId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+
+	return apitypes.NewResult(200, "Scan Config added to image")
+}
+
+/*******************************************************************************
+ * Arguments: DockerImageId, ScanConfigId
+ * Returns: Result
+ */
+func stopUsingScanConfigForImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	var failMsg apitypes.RespIntfTp
+	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
+	if failMsg != nil { return failMsg }
+
+	var dockerImageId, scanConfigId string
+	var err error
+	dockerImageId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "DockerImageId")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	scanConfigId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ScanConfigId")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask,
+		dockerImageId, "stopUsingScanConfigForImage")
+	if failMsg != nil { return failMsg }
+	
+	var scanConfig ScanConfig
+	scanConfig, err = dbClient.getScanConfig(scanConfigId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	err = scanConfig.remDockerImage(dbClient, dockerImageId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+
+	return apitypes.NewResult(200, "Scan Config removed from image")
+}
