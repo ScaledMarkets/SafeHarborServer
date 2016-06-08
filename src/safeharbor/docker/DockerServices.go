@@ -474,7 +474,7 @@ func (dockerSvcs *DockerServices) RemoveDockerImage(repoName, tag string) error 
  */
 func NamePartConformsToDockerRules(part string) error {
 	
-	matched, err := regexp.MatchString("^[a-zA-Z0-9\\-_]*$", part)
+	matched, err := regexp.MatchString("^[a-z0-9\\-_]*$", part)
 	if err != nil { return utils.ConstructServerError("Unexpected internal error") }
 	if ! matched { return utils.ConstructServerError("Name does not conform to docker rules") }
 	return nil
