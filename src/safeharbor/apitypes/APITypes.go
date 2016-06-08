@@ -1361,7 +1361,11 @@ func GetHTTPParameterValue(sanitize bool, values url.Values, name string) (strin
 	valuear, found := values[name]
 	if ! found { return "", nil }
 	if len(valuear) == 0 { return "", nil }
-	if sanitize { return Sanitize(valuear[0]) } else { return valuear[0], nil }
+	var value = valuear[0]
+	var err error
+	value, err = url.QueryUnescape(value)
+	if err != nil { return "", err }
+	if sanitize { return Sanitize(value) } else { return value, nil }
 }
 
 /*******************************************************************************
