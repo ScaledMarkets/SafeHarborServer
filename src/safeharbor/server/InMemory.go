@@ -2665,19 +2665,16 @@ func (dockerfile *InMemDockerfile) deleteAllChildResources(dbClient DBClient) er
 
 func (dockerfile *InMemDockerfile) asDockerfileDesc() (*apitypes.DockerfileDesc, error) {
 	
-	var args []*apitypes.DockerfileExecParameterValueDesc
-	var err error
-	
 	var file *os.File
 	var err error
-	file, err = os.Open(filepath)
+	file, err = os.Open(dockerfile.getExternalFilePath())
 	if err != nil { return nil, err }
 	
-	dockerfile.getExternalFilePath()
+	var dockerfileContent string
+	dockerfileContent, err = string(ioutil.ReadAll(file))
+	if err != nil { return nil, err }
 	
-	var dockerfileContent string = ....
-	
-	
+	var args []*apitypes.DockerfileExecParameterValueDesc
 	args, err = docker.ParseDockerfile(dockerfileContent)
 	if err != nil { return nil, err }
 	return apitypes.NewDockerfileDesc(dockerfile.Id, dockerfile.getRepoId(),
