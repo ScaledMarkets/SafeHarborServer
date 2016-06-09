@@ -22,14 +22,14 @@ func NewDockerBuildOutput() *DockerBuildOutput {
 	}
 }
 
-func (buildOutput *DockerBuildOutput) addStep(number int, cmd string) *DockerBuildStep {
+func (buildOutput *DockerBuildOutput) AddStep(number int, cmd string) *DockerBuildStep {
 
 	var step = NewDockerBuildStep(number, cmd)
 	buildOutput.Steps = append(buildOutput.Steps, step)
 	return step
 }
 
-func (buildOutput *DockerBuildOutput) setFinalImageId(id string) {
+func (buildOutput *DockerBuildOutput) SetFinalImageId(id string) {
 	buildOutput.FinalDockerImageId = id
 }
 

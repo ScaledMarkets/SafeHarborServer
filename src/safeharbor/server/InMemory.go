@@ -2489,6 +2489,13 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 }
 
 func (repo *InMemRepo) asRepoPlusDockerfileDesc(newDockerfileId string) *apitypes.RepoPlusDockerfileDesc {
+	
+	/*
+	RepoDesc
+	NewDockerfileId string
+	ParameterValueDescs
+	 */
+	
 	return apitypes.NewRepoPlusDockerfileDesc(repo.getId(), repo.getRealmId(),
 		repo.getName(), repo.getDescription(),
 		repo.getCreationTime(), repo.getDockerfileIds(), newDockerfileId,

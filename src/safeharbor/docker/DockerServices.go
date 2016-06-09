@@ -272,13 +272,13 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 	Removing intermediate container 3bac4e50b6f9
 	Successfully built 03dcea1bc8a6
  */
-func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) {
+func ParseBuildCommandOutput(buildOutputStr string) (*apitypes.DockerBuildOutput, error) {
 	
-	var output *DockerBuildOutput = NewDockerBuildOutput()
+	var output *apitypes.DockerBuildOutput = apitypes.NewDockerBuildOutput()
 	
 	var lines = strings.Split(buildOutputStr, "\n")
 	var state int = 1
-	var step *DockerBuildStep
+	var step *apitypes.DockerBuildStep
 	var lineNo int = 0
 	for {
 		
@@ -303,7 +303,7 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 				var seppos int = strings.Index(therest, separator)
 				if seppos != -1 { // found
 					cmd = therest[seppos + len(separator):] // portion from seppos on
-					step = output.addStep(stepNo, cmd)
+					step = output.AddStep(stepNo, cmd)
 				}
 				
 				lineNo++
@@ -314,7 +314,7 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 			therest = strings.TrimPrefix(line, "Successfully built ")
 			if len(therest) < len(line) {
 				var id = therest
-				output.setFinalImageId(id)
+				output.SetFinalImageId(id)
 				return output, nil
 			}
 			
@@ -338,12 +338,12 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
 			var therest = strings.TrimPrefix(line, " ---> ")
 			if len(therest) < len(line) {
 				if strings.HasPrefix(therest, "Using cache") {
-					step.setUsedCache()
+					step.SetUsedCache()
 				} else {
 					if strings.Contains(" ", therest) {
 						// Unrecognized line - skip it but stay in the current state.
 					} else {
-						step.setProducedImageId(therest)
+						step.SetProducedImageId(therest)
 					}
 				}
 				lineNo++
@@ -365,7 +365,7 @@ func ParseBuildCommandOutput(buildOutputStr string) (*DockerBuildOutput, error) 
  * Parse the string that is returned by the docker daemon REST build function.
  * Partial results are returned, but with an error.
  */
-func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
+func ParseBuildRESTOutput(restResponse string) (*apitypes.DockerBuildOutput, error) {
 	
 	var outputstr string
 	var err error
@@ -406,12 +406,12 @@ func ParseDockerfile(dockerfileContent string) ([]*apitypes.DockerfileExecParame
 	 * A token is any unbroken sequence of [a-zA-Z0-9]+ or a non-whitespace character.
 	 * Returns "" if no more tokens.
 	 */
-	var getToken func(line string) (token, restOfLine string) {
+	var getToken = func(line string) (token, restOfLine string) {
 		
-		var trimmedline = strings.TrimLeft(line)
-		var posAfterToken = strings.IndexAny(trimmedline, " \t")
-		if posAfterToken == -1 { return trimmedline, "" }
-		return trimmedline[:posAfterToken], trimmedLine[posAfterToken:]
+		var trimmedLine = strings.TrimLeft(line, " \t")
+		var posAfterToken = strings.IndexAny(trimmedLine, " \t")
+		if posAfterToken == -1 { return trimmedLine, "" }
+		return trimmedLine[:posAfterToken], trimmedLine[posAfterToken:]
 	}
 	
 	var lines = strings.Split(dockerfileContent, "\n")
@@ -424,22 +424,16 @@ func ParseDockerfile(dockerfileContent string) ([]*apitypes.DockerfileExecParame
 		
 		var line string = lines[lineNo]
 		
-		if err != nil {
-			if err == io.EOF { // no more data
-				break
-			} else { // some IO error
-				return nil, err
-			}
-		}
 		if strings.HasPrefix(line, "#") { continue }  // skip comment lines.
 		var restOfLine string
+		var instructionName string
 		instructionName, restOfLine = getToken(line)
 		if instructionName == "" { continue }  // skip blank line
 		if strings.ToUpper(instructionName) == "ARG" {
 			// Looking for instruction parts.
 			var argName string
 			argName, restOfLine = getToken(restOfLine)
-			if err == "" { return nil, utils.ConstructUserError(
+			if argName == "" { return nil, utils.ConstructUserError(
 				"No argument name in ARG instruction") }
 			// Looking for opt_assignment, if any.
 			var equalSign string
@@ -448,13 +442,13 @@ func ParseDockerfile(dockerfileContent string) ([]*apitypes.DockerfileExecParame
 			if equalSign == "=" {
 				stringExpr = restOfLine
 			}
-			var paramValueDesc *apitypes.ParameterValueDesc
+			var paramValueDesc *apitypes.DockerfileExecParameterValueDesc
 			paramValueDesc = apitypes.NewDockerfileExecParameterValueDesc(argName, stringExpr) 
 			paramValueDescs = append(paramValueDescs, paramValueDesc)
 		}
 	}
 	
-	return paramValueDescs
+	return paramValueDescs, nil
 }
 
 /*******************************************************************************

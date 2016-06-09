@@ -24,11 +24,11 @@ func NewDockerBuildStep(number int, cmd string) *DockerBuildStep {
 	}
 }
 
-func (step *DockerBuildStep) setUsedCache() {
+func (step *DockerBuildStep) SetUsedCache() {
 	step.UsedCache = true
 }
 
-func (step *DockerBuildStep) setProducedImageId(id string) {
+func (step *DockerBuildStep) SetProducedImageId(id string) {
 	step.ProducedDockerImageId = id
 }
 

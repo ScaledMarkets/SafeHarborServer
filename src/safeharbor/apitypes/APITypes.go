@@ -809,9 +809,13 @@ func (versionDesc *DockerImageVersionDesc) AsJSON() string {
 	var json = "{" + versionDesc.imageVersionDescFieldsAsJSON()
 	json = json + ", \"Digest\": " + rest.ByteArrayAsJSON(versionDesc.Digest)
 	json = json + ", \"Signature\": " + rest.ByteArrayAsJSON(versionDesc.Signature)
-
-	....
-	json = json + fmt.Sprintf(", \"DockerBuildOutput\": %s}", dockerBuildOutput.AsJSON())
+	json = json + ", \"ScanEventIds\": ["
+	for i, id := range versionDesc.ScanEventIds {
+		if i > 0 { json = json + ", " }
+		json = json + fmt.Sprintf("\"%s\"", id)
+	}
+	json = json + fmt.Sprintf("], \"ParsedDockerBuildOutput\": %s}",
+		versionDesc.ParsedDockerBuildOutput.AsJSON())
 	return json
 }
 
