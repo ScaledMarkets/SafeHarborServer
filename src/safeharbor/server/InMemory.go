@@ -2491,7 +2491,8 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 func (repo *InMemRepo) asRepoPlusDockerfileDesc(newDockerfileId string) *apitypes.RepoPlusDockerfileDesc {
 	return apitypes.NewRepoPlusDockerfileDesc(repo.getId(), repo.getRealmId(),
 		repo.getName(), repo.getDescription(),
-		repo.getCreationTime(), repo.getDockerfileIds(), newDockerfileId)
+		repo.getCreationTime(), repo.getDockerfileIds(), newDockerfileId,
+		....dockerfileExecParamValueDescs)
 }
 
 func (repo *InMemRepo) writeBack(dbClient DBClient) error {
@@ -2662,8 +2663,25 @@ func (dockerfile *InMemDockerfile) deleteAllChildResources(dbClient DBClient) er
 	return nil
 }
 
-func (dockerfile *InMemDockerfile) asDockerfileDesc() *apitypes.DockerfileDesc {
-	return apitypes.NewDockerfileDesc(dockerfile.Id, dockerfile.getRepoId(), dockerfile.Name, dockerfile.Description)
+func (dockerfile *InMemDockerfile) asDockerfileDesc() (*apitypes.DockerfileDesc, error) {
+	
+	var args []*apitypes.DockerfileExecParameterValueDesc
+	var err error
+	
+	var file *os.File
+	var err error
+	file, err = os.Open(filepath)
+	if err != nil { return nil, err }
+	
+	dockerfile.getExternalFilePath()
+	
+	var dockerfileContent string = ....
+	
+	
+	args, err = docker.ParseDockerfile(dockerfileContent)
+	if err != nil { return nil, err }
+	return apitypes.NewDockerfileDesc(dockerfile.Id, dockerfile.getRepoId(),
+		dockerfile.Name, dockerfile.Description, args)
 }
 
 func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
@@ -3221,11 +3239,17 @@ func (imageVersion *InMemDockerImageVersion) getDockerImageTag() string {
 	return imageVersion.Version
 }
 
-func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc() *apitypes.DockerImageVersionDesc {
+func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc() (*apitypes.DockerImageVersionDesc, error) {
+	
+	var parsedDockerBuildOutput *DockerBuildOutput
+	var err error
+	parsedDockerBuildOutput, err = docker.ParseBuildRESTOutput(imageVersion.DockerBuildOutput)
+	if err != nil { return nil, err }
+	
 	return apitypes.NewDockerImageVersionDesc(imageVersion.getId(), imageVersion.Version,
 		imageVersion.ImageObjId, imageVersion.ImageCreationEventId, imageVersion.CreationDate,
 		imageVersion.Digest, imageVersion.Signature, imageVersion.ScanEventIds,
-		imageVersion.DockerBuildOutput)
+		imageVersion.DockerBuildOutput, parsedDockerBuildOutput)
 }
 
 func (imageVersion *InMemDockerImageVersion) writeBack(dbClient DBClient) error {

@@ -315,7 +315,7 @@ type Dockerfile interface {
 	addEventId(DBClient, string) error
 	replaceDockerfileFile(filepath, desc string) error
 	//getParameterValueIds() string
-	asDockerfileDesc() *apitypes.DockerfileDesc
+	asDockerfileDesc() (*apitypes.DockerfileDesc, error)
 }
 
 type Image interface {  // abstract
@@ -358,7 +358,7 @@ type DockerImageVersion interface {
 	getDigest() []byte
     getSignature() []byte
     getDockerBuildOutput() string
-    asDockerImageVersionDesc() *apitypes.DockerImageVersionDesc
+    asDockerImageVersionDesc() (*apitypes.DockerImageVersionDesc, error)
 }
 
 type ParameterValue interface {  // abstract

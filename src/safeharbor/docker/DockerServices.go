@@ -20,6 +20,7 @@ import (
 	// SafeHarbor packages:
 	"safeharbor/utils"
 	"safeharbor/rest"
+	"safeharbor/apitypes"
 )
 
 /* Replace with REST calls.
@@ -371,6 +372,89 @@ func ParseBuildRESTOutput(restResponse string) (*DockerBuildOutput, error) {
 	outputstr, err = extractBuildOutputFromRESTResponse(restResponse)
 	if err != nil { return nil, err }
 	return ParseBuildCommandOutput(outputstr)
+}
+
+/*******************************************************************************
+ * Parse the specified dockerfile and return any ARGs that it has.
+ * Syntax:
+ 	buildfile			::= line*
+ 	line				::= instruction argument* | comment
+ 	comment				::= '#' <all characters through end of line>
+ 	insruction			::= arg_instruction | otherinstruction
+ 	arg_instruction		::= [aA][rR][gG] arg_name opt_assignment
+ 	otherinstruction	::= [a-zA-Z]+
+ 	arg_name			::= [a-zA-Z]+
+ 	opt_assignment		::= "=" string_expr | <nothing>
+ 	string_expr			::= <all characters through end of line>
+ 	
+ * Parse algorithm:
+	For each line:
+	1. Looking for next instruction:
+		When no more lines, done.
+		When encounter [aA][rR][gG],
+			Go to state 2.
+		When encounter anything else,
+			Skip line.
+	2. Looking for arg_instruction parts:
+		Obtain arg_name.
+		Obtain opt_assignment, if any.
+		If any error, abort.
+ */
+func ParseDockerfile(dockerfileContent string) ([]*apitypes.DockerfileExecParameterValueDesc, error) {
+	
+	/**
+	 * A token is any unbroken sequence of [a-zA-Z0-9]+ or a non-whitespace character.
+	 * Returns "" if no more tokens.
+	 */
+	var getToken func(line string) (token, restOfLine string) {
+		
+		var trimmedline = strings.TrimLeft(line)
+		var posAfterToken = strings.IndexAny(trimmedline, " \t")
+		if posAfterToken == -1 { return trimmedline, "" }
+		return trimmedline[:posAfterToken], trimmedLine[posAfterToken:]
+	}
+	
+	var lines = strings.Split(dockerfileContent, "\n")
+	
+	var paramValueDescs = make([]*apitypes.DockerfileExecParameterValueDesc, 0)
+	var lineNo = -1
+	for {
+		lineNo++
+		if lineNo >= len(lines) { break }  // done
+		
+		var line string = lines[lineNo]
+		
+		if err != nil {
+			if err == io.EOF { // no more data
+				break
+			} else { // some IO error
+				return nil, err
+			}
+		}
+		if strings.HasPrefix(line, "#") { continue }  // skip comment lines.
+		var restOfLine string
+		instructionName, restOfLine = getToken(line)
+		if instructionName == "" { continue }  // skip blank line
+		if strings.ToUpper(instructionName) == "ARG" {
+			// Looking for instruction parts.
+			var argName string
+			argName, restOfLine = getToken(restOfLine)
+			if err == "" { return nil, utils.ConstructUserError(
+				"No argument name in ARG instruction") }
+			// Looking for opt_assignment, if any.
+			var equalSign string
+			var stringExpr = ""
+			equalSign, restOfLine = getToken(restOfLine)
+			if equalSign == "=" {
+				stringExpr = restOfLine
+			}
+			var paramValueDesc *apitypes.ParameterValueDesc
+			paramValueDesc = apitypes.NewDockerfileExecParameterValueDesc(argName, stringExpr) 
+			paramValueDescs = append(paramValueDescs, paramValueDesc)
+		}
+	}
+	
+	return paramValueDescs
 }
 
 /*******************************************************************************

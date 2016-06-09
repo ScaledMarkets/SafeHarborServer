@@ -1285,7 +1285,10 @@ func getDockerImageDesc(dbClient *InMemClient, sessionToken *apitypes.SessionTok
 		var imageVersion DockerImageVersion
 		imageVersion, err = dbClient.getDockerImageVersion(imageId)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
-		return imageVersion.asDockerImageVersionDesc()
+		var imageVersionDesc DockerImageVersionDesc
+		imageVersionDesc, err = imageVersion.asDockerImageVersionDesc()
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		return imageVersionDesc
 	}
 	return image.asDockerImageDesc()
 }
@@ -1392,7 +1395,10 @@ func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	imageVersion, err = buildDockerfile(dbClient, dockerfile, sessionToken, values)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	return imageVersion.asDockerImageVersionDesc()
+	var imageVersionDesc DockerImageVersionDesc
+	imageVersionDesc, err = imageVersion.asDockerImageVersionDesc()
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	return imageVersionDesc
 }
 
 /*******************************************************************************
@@ -1445,7 +1451,10 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	
 	//....create DockerfileExecParameterValues
 
-	return imageVersion.asDockerImageVersionDesc()
+	var imageVersionDesc DockerImageVersionDesc
+	imageVersionDesc, err = imageVersion.asDockerImageVersionDesc()
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	return imageVersionDesc
 }
 
 /*******************************************************************************
@@ -3118,7 +3127,12 @@ func getDockerImageVersions(dbClient *InMemClient, sessionToken *apitypes.Sessio
 		var dockerImageVersion DockerImageVersion
 		dockerImageVersion, err = dbClient.getDockerImageVersion(versionId)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
-		descs = append(descs, dockerImageVersion.asDockerImageVersionDesc())
+		
+		var imageVersionDesc DockerImageVersionDesc
+		imageVersionDesc, err = dockerImageVersion.asDockerImageVersionDesc()
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		
+		descs = append(descs, imageVersionDesc)
 	}
 	
 	return descs

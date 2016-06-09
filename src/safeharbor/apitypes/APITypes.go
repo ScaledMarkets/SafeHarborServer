@@ -30,7 +30,6 @@ import (
 	
 	// SafeHarbor packages:
 	"safeharbor/rest"
-	"safeharbor/docker"
 	"safeharbor/utils"
 )
 
@@ -577,20 +576,29 @@ func (repoDescs RepoDescs) SendFile() (string, bool) {
 type RepoPlusDockerfileDesc struct {
 	RepoDesc
 	NewDockerfileId string
+	ParameterValueDescs []*DockerfileExecParameterValueDesc
 }
 
 func NewRepoPlusDockerfileDesc(id string, realmId string, name string, desc string,
-	creationTime time.Time, dockerfileIds []string, newDockerfileId string) *RepoPlusDockerfileDesc {
+	creationTime time.Time, dockerfileIds []string, newDockerfileId string,
+	paramValueDescs []*DockerfileExecParameterValueDesc) *RepoPlusDockerfileDesc {
 
 	return &RepoPlusDockerfileDesc{
 		RepoDesc: *NewRepoDesc(id, realmId, name, desc, creationTime, dockerfileIds),
 		NewDockerfileId: newDockerfileId,
+		ParameterValueDescs: paramValueDescs,
 	}
 }
 
 func (repoPlus *RepoPlusDockerfileDesc) AsJSON() string {
-	return "{" + repoPlus.repoDescFieldsAsJSON() + ", \"NewDockerfileId\": \"" +
-		repoPlus.NewDockerfileId + "\"}"
+	var json = "{" + repoPlus.repoDescFieldsAsJSON() + ", \"NewDockerfileId\": \"" +
+		repoPlus.NewDockerfileId + "\", \"ParameterValueDescs\": ["
+	for i, pval := range repoPlus.ParameterValueDescs {
+		if i > 0 { json = json + ", " }
+		json = json + pval.AsJSON()
+	}
+	json = json + "]}"
+	return json
 }
 
 /*******************************************************************************
@@ -602,22 +610,32 @@ type DockerfileDesc struct {
 	RepoId string
 	Description string
 	DockerfileName string
+	ParameterValueDescs []*DockerfileExecParameterValueDesc
 }
 
-func NewDockerfileDesc(id string, repoId string, name string, desc string) *DockerfileDesc {
+func NewDockerfileDesc(id string, repoId string, name string, desc string,
+	paramValueDescs []*DockerfileExecParameterValueDesc) *DockerfileDesc {
 	return &DockerfileDesc{
 		BaseType: *NewBaseType(200, "OK", "DockerfileDesc"),
 		Id: id,
 		RepoId: repoId,
 		DockerfileName: name,
 		Description: desc,
+		ParameterValueDescs: paramValueDescs,
 	}
 }
 
 func (dockerfileDesc *DockerfileDesc) AsJSON() string {
-	return fmt.Sprintf(" {%s, \"Id\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", \"Description\": \"%s\"}",
+	var json = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"RepoId\": \"%s\", \"Name\": \"%s\", \"Description\": \"%s\", ",
 		dockerfileDesc.baseTypeFieldsAsJSON(),
 		dockerfileDesc.Id, dockerfileDesc.RepoId, dockerfileDesc.DockerfileName, dockerfileDesc.Description)
+	json = json + "\"ParameterValueDescs\": ["
+	for i, pval := range dockerfileDesc.ParameterValueDescs {
+		if i > 0 { json = json + ", " }
+		json = json + pval.AsJSON()
+	}
+	json = json + "]}"
+	return json
 }
 
 type DockerfileDescs []*DockerfileDesc
@@ -757,11 +775,12 @@ type DockerImageVersionDesc struct {
     Signature []byte
     ScanEventIds []string
     DockerBuildOutput string
+    ParsedDockerBuildOutput *DockerBuildOutput
 }
 
 func NewDockerImageVersionDesc(objId, version, imageObjId, creationEventId string, 
 	creationTime time.Time, digest, signature []byte, scanEventIds []string,
-	buildOutput string) *DockerImageVersionDesc {
+	buildOutput string, parsedDockerBuildOutput *DockerBuildOutput) *DockerImageVersionDesc {
 	return &DockerImageVersionDesc{
 		ImageVersionDesc: *NewImageVersionDesc("DockerImageVersionDesc", 
 			objId, version, imageObjId, creationEventId, creationTime),
@@ -769,6 +788,7 @@ func NewDockerImageVersionDesc(objId, version, imageObjId, creationEventId strin
 		Signature: signature,
 		ScanEventIds: scanEventIds,
 		DockerBuildOutput: buildOutput,
+		ParsedDockerBuildOutput: parsedDockerBuildOutput,
 	}
 }
 
@@ -790,9 +810,7 @@ func (versionDesc *DockerImageVersionDesc) AsJSON() string {
 	json = json + ", \"Digest\": " + rest.ByteArrayAsJSON(versionDesc.Digest)
 	json = json + ", \"Signature\": " + rest.ByteArrayAsJSON(versionDesc.Signature)
 
-	var dockerBuildOutput *docker.DockerBuildOutput
-	dockerBuildOutput, _ = docker.ParseBuildRESTOutput(versionDesc.DockerBuildOutput)
-	
+	....
 	json = json + fmt.Sprintf(", \"DockerBuildOutput\": %s}", dockerBuildOutput.AsJSON())
 	return json
 }
