@@ -11,6 +11,7 @@ import (
 	//"io/ioutil"
 	"bufio"
 	"strings"
+	"unicode/utf8"
 	"encoding/json"
 	//"os/exec"
 	//"errors"
@@ -402,6 +403,15 @@ func ParseBuildRESTOutput(restResponse string) (*apitypes.DockerBuildOutput, err
  */
 func ParseDockerfile(dockerfileContent string) ([]*apitypes.DockerfileExecParameterValueDesc, error) {
 	
+	var isAlphaChar = func(c rune) bool {
+		return ((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')) ||
+			(c == '_') || (c == '-')
+	}
+	
+	var isNumeric = func(c rune) bool {
+		return (c >= '0') && (c <= '9')
+	}
+	
 	/**
 	 * A token is any unbroken sequence of [a-zA-Z0-9]+ or a non-whitespace character.
 	 * Returns "" if no more tokens.
@@ -409,9 +419,24 @@ func ParseDockerfile(dockerfileContent string) ([]*apitypes.DockerfileExecParame
 	var getToken = func(line string) (token, restOfLine string) {
 		
 		var trimmedLine = strings.TrimLeft(line, " \t")
-		var posAfterToken = strings.IndexAny(trimmedLine, " \t=")
-		if posAfterToken == -1 { return trimmedLine, "" }
-		return trimmedLine[:posAfterToken], trimmedLine[posAfterToken:]
+		if len(trimmedLine) == 0 { return "", "" }
+		
+		// Determine if a special character.
+		var c rune
+		c, _ = utf8.DecodeRuneInString(trimmedLine[0:1])
+		if isAlphaChar(c) { return trimmedLine[0:1], trimmedLine[1:] }
+		
+		// Not a special character - get alphanumeric token.
+		var pos = 1
+		for { // each character pos of trimmedLine, starting from 0,
+			if pos == len(trimmedLine) { break }
+			if strings.ContainsAny(trimmedLine[pos:pos+1], " \t") { break }
+			c, _ = utf8.DecodeRuneInString(trimmedLine[pos:pos+1])
+			if ! (isAlphaChar(c) || isNumeric(c)) { break }
+			pos++
+		}
+		
+		return trimmedLine[:pos], trimmedLine[pos:]
 	}
 	
 	var lines = strings.Split(dockerfileContent, "\n")
