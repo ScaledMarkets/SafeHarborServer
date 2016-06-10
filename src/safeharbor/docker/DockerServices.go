@@ -409,7 +409,7 @@ func ParseDockerfile(dockerfileContent string) ([]*apitypes.DockerfileExecParame
 	var getToken = func(line string) (token, restOfLine string) {
 		
 		var trimmedLine = strings.TrimLeft(line, " \t")
-		var posAfterToken = strings.IndexAny(trimmedLine, " \t")
+		var posAfterToken = strings.IndexAny(trimmedLine, " \t=")
 		if posAfterToken == -1 { return trimmedLine, "" }
 		return trimmedLine[:posAfterToken], trimmedLine[posAfterToken:]
 	}
