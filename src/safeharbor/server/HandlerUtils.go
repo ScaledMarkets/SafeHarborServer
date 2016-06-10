@@ -342,6 +342,13 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		}
 	}
 	
+	fmt.Println("***************Params:") // debug
+	for i, n := range paramNames { // debug
+		fmt.Println(n) // debug
+		fmt.Println(paramValues[i]) // debug
+	} // debug
+	fmt.Println("end of params.") // debug
+	
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
 	if err != nil { return nil, err }
