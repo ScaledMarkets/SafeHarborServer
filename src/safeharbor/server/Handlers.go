@@ -1038,7 +1038,10 @@ func createRepo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 		newDockerfile, err = createDockerfile(sessionToken, dbClient, repo,
 			name, filepath, repo.getDescription())
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
-		return repo.asRepoPlusDockerfileDesc(newDockerfile.getId())
+		var desc *apitypes.RepoPlusDockerfileDesc
+		desc, err = repo.asRepoPlusDockerfileDesc(dbClient, newDockerfile.getId())
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		return desc
 	}
 	
 	return repo.asRepoDesc()
@@ -1115,7 +1118,9 @@ func getDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 		if dockerfile == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError,
 			fmt.Sprintf("Internal error: no Dockerfile found for Id %s", id))
 		}
-		var desc *apitypes.DockerfileDesc = dockerfile.asDockerfileDesc()
+		var desc *apitypes.DockerfileDesc
+		desc, err = dockerfile.asDockerfileDesc()
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		// Add to result
 		result = append(result, desc)
 	}
@@ -1210,10 +1215,10 @@ func addDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if dockerfile == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "No dockerfile was attached") }
 	
-	
-	//....create DockerfileExecParameterValues
-	
-	return dockerfile.asDockerfileDesc()
+	var dockerfileDesc *apitypes.DockerfileDesc
+	dockerfileDesc, err = dockerfile.asDockerfileDesc()
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	return dockerfileDesc
 }
 
 /*******************************************************************************
@@ -1285,7 +1290,7 @@ func getDockerImageDesc(dbClient *InMemClient, sessionToken *apitypes.SessionTok
 		var imageVersion DockerImageVersion
 		imageVersion, err = dbClient.getDockerImageVersion(imageId)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
-		var imageVersionDesc DockerImageVersionDesc
+		var imageVersionDesc *apitypes.DockerImageVersionDesc
 		imageVersionDesc, err = imageVersion.asDockerImageVersionDesc()
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		return imageVersionDesc
@@ -1313,7 +1318,10 @@ func getDockerfileDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToke
 	var dockerfile Dockerfile
 	dockerfile, err = dbClient.getDockerfile(dockerfileId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	return dockerfile.asDockerfileDesc()
+	var dockerfileDesc *apitypes.DockerfileDesc
+	dockerfileDesc, err = dockerfile.asDockerfileDesc()
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	return dockerfileDesc
 }
 
 /*******************************************************************************
@@ -1395,7 +1403,7 @@ func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	imageVersion, err = buildDockerfile(dbClient, dockerfile, sessionToken, values)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	var imageVersionDesc DockerImageVersionDesc
+	var imageVersionDesc *apitypes.DockerImageVersionDesc
 	imageVersionDesc, err = imageVersion.asDockerImageVersionDesc()
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return imageVersionDesc
@@ -1451,7 +1459,7 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	
 	//....create DockerfileExecParameterValues
 
-	var imageVersionDesc DockerImageVersionDesc
+	var imageVersionDesc *apitypes.DockerImageVersionDesc
 	imageVersionDesc, err = imageVersion.asDockerImageVersionDesc()
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return imageVersionDesc
@@ -1926,7 +1934,10 @@ func getMyDockerfiles(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 		dockerfile, isType = leaf.(Dockerfile)
 		if ! isType { return apitypes.NewFailureDesc(http.StatusInternalServerError,
 			"Internal error: type of resource is unexpected") }
-		dockerfileDescs = append(dockerfileDescs, dockerfile.asDockerfileDesc())
+		var dockerfileDesc *apitypes.DockerfileDesc
+		dockerfileDesc, err = dockerfile.asDockerfileDesc()
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		dockerfileDescs = append(dockerfileDescs, dockerfileDesc)
 	}
 	return dockerfileDescs
 }
@@ -3128,7 +3139,7 @@ func getDockerImageVersions(dbClient *InMemClient, sessionToken *apitypes.Sessio
 		dockerImageVersion, err = dbClient.getDockerImageVersion(versionId)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		
-		var imageVersionDesc DockerImageVersionDesc
+		var imageVersionDesc *apitypes.DockerImageVersionDesc
 		imageVersionDesc, err = dockerImageVersion.asDockerImageVersionDesc()
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		

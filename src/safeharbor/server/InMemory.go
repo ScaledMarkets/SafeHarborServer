@@ -2488,18 +2488,38 @@ func (repo *InMemRepo) asRepoDesc() *apitypes.RepoDesc {
 		repo.CreationTime, repo.getDockerfileIds())
 }
 
-func (repo *InMemRepo) asRepoPlusDockerfileDesc(newDockerfileId string) *apitypes.RepoPlusDockerfileDesc {
+func (repo *InMemRepo) asRepoPlusDockerfileDesc(dbClient DBClient,
+	newDockerfileId string) (*apitypes.RepoPlusDockerfileDesc, error) {
 	
 	/*
 	RepoDesc
 	NewDockerfileId string
 	ParameterValueDescs
-	 */
+	*/
 	
-	return apitypes.NewRepoPlusDockerfileDesc(repo.getId(), repo.getRealmId(),
+	var dockerfile Dockerfile
+	var err error
+	dockerfile, err = dbClient.getDockerfile(newDockerfileId)
+	if err != nil { return nil, err }
+	
+	var file *os.File
+	file, err = os.Open(dockerfile.getExternalFilePath())
+	if err != nil { return nil, err }
+	
+	var bytes []byte
+	bytes, err = ioutil.ReadAll(file)
+	if err != nil { return nil, err }
+	var dockerfileContent = string(bytes)
+	
+	var paramValueDescs []*apitypes.DockerfileExecParameterValueDesc
+	paramValueDescs, err = docker.ParseDockerfile(dockerfileContent)
+	if err != nil { return nil, err }
+	
+	return apitypes.NewRepoPlusDockerfileDesc(
+		repo.getId(), repo.getRealmId(),
 		repo.getName(), repo.getDescription(),
 		repo.getCreationTime(), repo.getDockerfileIds(), newDockerfileId,
-		....dockerfileExecParamValueDescs)
+		paramValueDescs), nil
 }
 
 func (repo *InMemRepo) writeBack(dbClient DBClient) error {
@@ -2677,15 +2697,16 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() (*apitypes.DockerfileDesc,
 	file, err = os.Open(dockerfile.getExternalFilePath())
 	if err != nil { return nil, err }
 	
-	var dockerfileContent string
-	dockerfileContent, err = string(ioutil.ReadAll(file))
+	var bytes []byte
+	bytes, err = ioutil.ReadAll(file)
 	if err != nil { return nil, err }
+	var dockerfileContent = string(bytes)
 	
 	var args []*apitypes.DockerfileExecParameterValueDesc
 	args, err = docker.ParseDockerfile(dockerfileContent)
 	if err != nil { return nil, err }
 	return apitypes.NewDockerfileDesc(dockerfile.Id, dockerfile.getRepoId(),
-		dockerfile.Name, dockerfile.Description, args)
+		dockerfile.Name, dockerfile.Description, args), nil
 }
 
 func (dockerfile *InMemDockerfile) isDockerfile() bool { return true }
@@ -3245,7 +3266,7 @@ func (imageVersion *InMemDockerImageVersion) getDockerImageTag() string {
 
 func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc() (*apitypes.DockerImageVersionDesc, error) {
 	
-	var parsedDockerBuildOutput *DockerBuildOutput
+	var parsedDockerBuildOutput *apitypes.DockerBuildOutput
 	var err error
 	parsedDockerBuildOutput, err = docker.ParseBuildRESTOutput(imageVersion.DockerBuildOutput)
 	if err != nil { return nil, err }
@@ -3253,7 +3274,7 @@ func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc() (*apityp
 	return apitypes.NewDockerImageVersionDesc(imageVersion.getId(), imageVersion.Version,
 		imageVersion.ImageObjId, imageVersion.ImageCreationEventId, imageVersion.CreationDate,
 		imageVersion.Digest, imageVersion.Signature, imageVersion.ScanEventIds,
-		imageVersion.DockerBuildOutput, parsedDockerBuildOutput)
+		imageVersion.DockerBuildOutput, parsedDockerBuildOutput), nil
 }
 
 func (imageVersion *InMemDockerImageVersion) writeBack(dbClient DBClient) error {

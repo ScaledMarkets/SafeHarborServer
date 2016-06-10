@@ -303,7 +303,7 @@ type Repo interface {
 	getDockerImageByName(DBClient, string) (DockerImage, error)
 	getScanConfigByName(DBClient, string) (ScanConfig, error)
 	asRepoDesc() *apitypes.RepoDesc
-	asRepoPlusDockerfileDesc(dockerfileId string) *apitypes.RepoPlusDockerfileDesc
+	asRepoPlusDockerfileDesc(dbClient DBClient, dockerfileId string) (*apitypes.RepoPlusDockerfileDesc, error)
 }
 
 type Dockerfile interface {
