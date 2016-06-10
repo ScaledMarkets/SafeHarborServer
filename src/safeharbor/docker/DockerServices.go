@@ -424,7 +424,7 @@ func ParseDockerfile(dockerfileContent string) ([]*apitypes.DockerfileExecParame
 		// Determine if a special character.
 		var c rune
 		c, _ = utf8.DecodeRuneInString(trimmedLine[0:1])
-		if isAlphaChar(c) { return trimmedLine[0:1], trimmedLine[1:] }
+		if ! isAlphaChar(c) { return trimmedLine[0:1], trimmedLine[1:] }
 		
 		// Not a special character - get alphanumeric token.
 		var pos = 1
