@@ -342,13 +342,6 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		}
 	}
 	
-	fmt.Println("***************Params:") // debug
-	for i, n := range paramNames { // debug
-		fmt.Println(n) // debug
-		fmt.Println(paramValues[i]) // debug
-	} // debug
-	fmt.Println("end of params.") // debug
-	
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
 	if err != nil { return nil, err }
@@ -358,7 +351,8 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	dockerImage, err = repo.getDockerImageByName(dbClient, imageName)
 	if err != nil { return nil, err }
 	if dockerImage == nil {
-		dockerImage, err = dbClient.dbCreateDockerImage(repo.getId(), imageName, dockerfile.getDescription())
+		dockerImage, err = dbClient.dbCreateDockerImage(repo.getId(), imageName,
+			dockerfile.getDescription())
 		if err != nil { return nil, err }
 	}
 	
@@ -372,6 +366,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	dockerImageName, tag = docker.ConstructDockerImageName(
 		realm.getName(), repo.getName(), imageName, version)
 	
+	// Access the docker dameon to perform the BUILD operation.
 	outputStr, err = dbClient.getServer().DockerServices.BuildDockerfile(
 		dockerfile.getExternalFilePath(), dockerfile.getName(),
 		dockerImageName, tag, paramNames, paramValues)

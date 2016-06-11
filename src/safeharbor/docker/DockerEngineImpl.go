@@ -245,6 +245,7 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 		buildArgs = url.QueryEscape(buildArgs)
 		queryParamString = queryParamString + buildArgs + "}"
 	}
+	fmt.Println("queryParamString=" + queryParamString) // debug
 	var response *http.Response
 	response, err = engine.SendBasicStreamPost(queryParamString, headers, tarReader)
 	defer response.Body.Close()

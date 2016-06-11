@@ -124,7 +124,7 @@ func (dockerSvcs *DockerServices) BuildDockerfile(dockerfileExternalFilePath,
 		dockerfileName, paramNames, paramValues)
 	if err != nil { return outputStr, err }
 	
-	if dockerSvcs.Registry != nil {  // no registry
+	if dockerSvcs.Registry != nil {  // a registry
 		// Push new image to registry. Use the engine's push image feature.
 		// Have not been able to get the engine push command to work. The docker client
 		// end up reporting "Pull session cancelled".
