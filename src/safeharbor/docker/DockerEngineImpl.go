@@ -241,11 +241,11 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 		for i, paramName := range paramNames {
 						buildArgs = buildArgs + "&buildargs={"
 //			if i > 0 { buildArgs = buildArgs + ", " }
-			buildArgs = buildArgs + fmt.Sprintf("\"%s\": \"%s\"", paramName, paramValues[i])
+			buildArgs = buildArgs + url.QueryEscape(fmt.Sprintf("\"%s\": \"%s\"", paramName, paramValues[i]))
 						buildArgs = buildArgs + "}"
 		}
 		fmt.Println("buildArgs=" + buildArgs)  // debug
-		buildArgs = url.QueryEscape(buildArgs)
+//		buildArgs = url.QueryEscape(buildArgs)
 						queryParamString = queryParamString + buildArgs
 //		queryParamString = queryParamString + buildArgs + "}"
 	}
