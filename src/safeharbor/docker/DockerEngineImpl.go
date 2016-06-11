@@ -242,6 +242,7 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 			if i > 0 { buildArgs = buildArgs + ", " }
 			buildArgs = buildArgs + fmt.Sprintf("\"%s\": \"%s\"", paramName, paramValues[i])
 		}
+		fmt.Println("buildArgs=" + buildArgs)  // debug
 		buildArgs = url.QueryEscape(buildArgs)
 		queryParamString = queryParamString + buildArgs + "}"
 	}
