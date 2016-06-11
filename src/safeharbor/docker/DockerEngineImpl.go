@@ -236,14 +236,14 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 		
 		// Add params to request. See
 		// https://github.com/docker/docker/blob/master/docs/reference/api/docker_remote_api_v1.24.md#build-image-from-a-dockerfile
-		queryParamString = queryParamString + "&buildargs={"
-		var buildArgs string = ""
+		var buildargsJSON string = "{"
 		for i, paramName := range paramNames {
-			if i > 0 { buildArgs = buildArgs + ", " }
-			buildArgs = buildArgs + url.QueryEscape(fmt.Sprintf("\"%s\": \"%s\"", paramName, paramValues[i]))
+			if i > 0 { buildargsJSON = buildargsJSON + ", " }
+			buildargsJSON = buildargsJSON + fmt.Sprintf("\"%s\": \"%s\"", paramName, paramValues[i])
 		}
-		fmt.Println("buildArgs=" + buildArgs)  // debug
-		queryParamString = queryParamString + buildArgs + "}"
+		buildargsJSON = buildargsJSON + "}"
+		fmt.Println("buildargsJSON=" + buildargsJSON)  // debug
+		queryParamString = queryParamString + "&buildargs=" + url.QueryEscape(buildargsJSON)
 	}
 	fmt.Println("queryParamString=" + queryParamString) // debug
 	var response *http.Response
