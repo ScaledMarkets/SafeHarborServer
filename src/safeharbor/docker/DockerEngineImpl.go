@@ -18,6 +18,7 @@ import (
 	//"errors"
 	"path/filepath"
 	"encoding/base64"
+	"encoding/json"
 	
 	"safeharbor/utils"
 	"safeharbor/rest"
@@ -236,12 +237,21 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 		
 		// Add params to request. See
 		// https://github.com/docker/docker/blob/master/docs/reference/api/docker_remote_api_v1.24.md#build-image-from-a-dockerfile
-		var buildargsJSON string = "{"
+		
+		var paramMap = make(map[string]string)
 		for i, paramName := range paramNames {
-			if i > 0 { buildargsJSON = buildargsJSON + ", " }
-			buildargsJSON = buildargsJSON + fmt.Sprintf("\"%s\": \"%s\"", paramName, paramValues[i])
+			paramMap[paramName] = paramValues[i]
 		}
-		buildargsJSON = buildargsJSON + "}"
+		var bytes []byte
+		bytes, err = json.Marshal(paramMap)
+		if err != nil { return "", err }
+		var buildargsJSON = string(bytes)
+		//var buildargsJSON string = "{"
+		//for i, paramName := range paramNames {
+		//	if i > 0 { buildargsJSON = buildargsJSON + ", " }
+		//	buildargsJSON = buildargsJSON + fmt.Sprintf("\"%s\": \"%s\"", paramName, paramValues[i])
+		//}
+		//buildargsJSON = buildargsJSON + "}"
 		fmt.Println("buildargsJSON=" + buildargsJSON)  // debug
 		queryParamString = queryParamString + "&buildargs=" + url.QueryEscape(buildargsJSON)
 	}
