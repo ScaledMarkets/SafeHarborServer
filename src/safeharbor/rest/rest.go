@@ -556,8 +556,8 @@ func EncodeStringForJSON(value string) string {
 	// or backslash backslash, respectively.
 	
 	var encodedValue = value
-	encodedValue = strings.Replace(encodedValue, "\"", "\\\"", -1)
 	encodedValue = strings.Replace(encodedValue, "\\", "\\\\", -1)
+	encodedValue = strings.Replace(encodedValue, "\"", "\\\"", -1)
 	encodedValue = strings.Replace(encodedValue, "/", "\\/", -1)
 	encodedValue = strings.Replace(encodedValue, "\b", "\\b", -1)
 	encodedValue = strings.Replace(encodedValue, "\f", "\\f", -1)
@@ -578,8 +578,8 @@ func DecodeStringFromJSON(encodedValue string) string {
 	decodedValue = strings.Replace(decodedValue, "\\f", "\f", -1)
 	decodedValue = strings.Replace(decodedValue, "\\b", "\b", -1)
 	decodedValue = strings.Replace(decodedValue, "\\/", "/", -1)
-	decodedValue = strings.Replace(decodedValue, "\\\\", "\\", -1)
 	decodedValue = strings.Replace(decodedValue, "\\\"", "\"", -1)
+	decodedValue = strings.Replace(decodedValue, "\\\\", "\\", -1)
 	return decodedValue
 }
 
