@@ -1066,7 +1066,7 @@ func NewScanParameterValueDesc(name, strValue, configId string) *ScanParameterVa
 
 func (desc *ScanParameterValueDesc) AsJSON() string {
 	return fmt.Sprintf(" {\"Name\": \"%s\", \"Value\": \"%s\", \"ConfigId\": \"%s\"}",
-		desc.Name, desc.StringValue, desc.ConfigId)
+		desc.Name, rest.EncodeStringForJSON(desc.StringValue), desc.ConfigId)
 }
 
 /*******************************************************************************
@@ -1085,7 +1085,7 @@ func NewDockerfileExecParameterValueDesc(name string, strValue string) *Dockerfi
 
 func (desc *ParameterValueDesc) AsJSON() string {
 	return fmt.Sprintf(" {\"Name\": \"%s\", \"Value\": \"%s\"}",
-		desc.Name, desc.StringValue)
+		desc.Name, rest.EncodeStringForJSON(desc.StringValue))
 }
 
 /*******************************************************************************

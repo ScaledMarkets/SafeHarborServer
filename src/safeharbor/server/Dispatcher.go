@@ -180,8 +180,6 @@ func (dispatcher *Dispatcher) handleRequest(sessionToken *apitypes.SessionToken,
 	
 	var result apitypes.RespIntfTp = handler(inMemClients[0], sessionToken, values, files)
 	if result == nil { fmt.Println("result is nil") }
-	var jsonResponse string = result.AsJSON()
-	if jsonResponse != "" { fmt.Println("Returning result:", jsonResponse) }
 	
 	// Detect whether an error occurred.
 	failureDesc, isType := result.(*apitypes.FailureDesc)

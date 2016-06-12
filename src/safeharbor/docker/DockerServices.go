@@ -386,13 +386,13 @@ func ParseBuildRESTOutput(restResponse string) (*apitypes.DockerBuildOutput, err
  	otherinstruction	::= [a-zA-Z]+
  	arg_name			::= [a-zA-Z]+
  	opt_assignment		::= "=" string_expr | <nothing>
- 	string_expr			::= <all characters through end of line>
+ 	string_expr			<all characters through end of line>
  	
  * Parse algorithm:
 	For each line:
 	1. Looking for next instruction:
 		When no more lines, done.
-		When encounter [aA][rR][gG],
+		When encounter [aA][rR][gG] beginning in column 1,
 			Go to state 2.
 		When encounter anything else,
 			Skip line.
@@ -449,6 +449,8 @@ func ParseDockerfile(dockerfileContent string) ([]*apitypes.DockerfileExecParame
 		
 		var line string = lines[lineNo]
 		
+		if len(line) == 0 { continue }  // skip blank lines.
+		if strings.ContainsAny(line[0:1], " \t") { continue }  // skip continuation lines.
 		if strings.HasPrefix(line, "#") { continue }  // skip comment lines.
 		var restOfLine string
 		var instructionName string
