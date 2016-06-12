@@ -246,12 +246,6 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 		bytes, err = json.Marshal(paramMap)
 		if err != nil { return "", err }
 		var buildargsJSON = string(bytes)
-		//var buildargsJSON string = "{"
-		//for i, paramName := range paramNames {
-		//	if i > 0 { buildargsJSON = buildargsJSON + ", " }
-		//	buildargsJSON = buildargsJSON + fmt.Sprintf("\"%s\": \"%s\"", paramName, paramValues[i])
-		//}
-		//buildargsJSON = buildargsJSON + "}"
 		fmt.Println("buildargsJSON=" + buildargsJSON)  // debug
 		queryParamString = queryParamString + "&buildargs=" + url.QueryEscape(buildargsJSON)
 	}
