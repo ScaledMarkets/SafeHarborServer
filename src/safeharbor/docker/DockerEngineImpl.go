@@ -246,10 +246,8 @@ func (engine *DockerEngineImpl) BuildImage(buildDirPath, imageFullName string,
 		bytes, err = json.Marshal(paramMap)
 		if err != nil { return "", err }
 		var buildargsJSON = string(bytes)
-		fmt.Println("buildargsJSON=" + buildargsJSON)  // debug
 		queryParamString = queryParamString + "&buildargs=" + url.QueryEscape(buildargsJSON)
 	}
-	fmt.Println("queryParamString=" + queryParamString) // debug
 	var response *http.Response
 	response, err = engine.SendBasicStreamPost(queryParamString, headers, tarReader)
 	defer response.Body.Close()

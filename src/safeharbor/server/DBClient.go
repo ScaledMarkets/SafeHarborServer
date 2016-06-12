@@ -233,6 +233,8 @@ type User interface {
 	getUserId() string
 	setEmailAddressDeferredUpdate(string)
 	getEmailAddress() string
+	setUnvalidatedEmailAddress(string)
+	flagEmailAsVerified(string) error
 	setPassword(DBClient, string) error
 	validatePassword(dbClient DBClient, pswd string) bool
 	hasGroupWithId(DBClient, string) bool

@@ -1185,6 +1185,14 @@ func (user *InMemUser) getEmailAddress() string {
 	return user.EmailAddress
 }
 
+func (user *InMemUser) setUnvalidatedEmailAddress(emailAddress string) {
+	....if address is currently set to validated, unset it.
+}
+
+func (user *InMemUser) flagEmailAsVerified(emailAddress string) error {
+	....If email address is not currently stored, return error
+}
+
 func (user *InMemUser) hasGroupWithId(dbClient DBClient, groupId string) bool {
 	var err error
 	var group Group

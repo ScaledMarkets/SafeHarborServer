@@ -388,7 +388,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var imageVersion DockerImageVersion
 	imageVersion, err = dbClient.dbCreateDockerImageVersion(version, dockerImage.getId(),
 		time.Now(), outputStr, digest, signature)
-	if imageVersion.getId() == "" { return nil, utils.ConstructServerError("imageVersion.getId() is nil") } // debug
+	if imageVersion.getId() == "" { return nil, utils.ConstructServerError("imageVersion.getId() is nil") }
 	if err != nil { return nil, err }
 		
 	// Create an event to record that this happened.

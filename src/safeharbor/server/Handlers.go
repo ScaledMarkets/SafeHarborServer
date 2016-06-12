@@ -3234,12 +3234,23 @@ func userExists(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 func validateAccountVerificationToken(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
-	//var token string
+	var tokenString string
 	var err error
-	_, err = apitypes.GetRequiredHTTPParameterValue(true, values, "AccountVerificationToken")
+	tokenString, err = apitypes.GetRequiredHTTPParameterValue(true, values, "AccountVerificationToken")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
-	return apitypes.NewFailureDesc(http.StatusNotImplemented, "validateAccountVerificationToken not implemented")
+	var tokenId string
+	var emailAddress string
+	tokenId, userId, emailAddress, err = ValidateEmailToken(tokenString)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	err = RetireEmailToken(tokenId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	var user User
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	user.flagEmailAsVerified(emailAddress)
+	
+	return apitypes.NewResult(200, "Email address verified")
 }
 
 /*******************************************************************************
