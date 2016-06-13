@@ -231,10 +231,10 @@ type Group interface {
 type User interface {
 	Party
 	getUserId() string
-	setEmailAddressDeferredUpdate(string)
 	getEmailAddress() string
-	setUnvalidatedEmailAddress(string)
+	setUnverifiedEmailAddress(string)
 	flagEmailAsVerified(string) error
+	emailIsVerified() bool
 	setPassword(DBClient, string) error
 	validatePassword(dbClient DBClient, pswd string) bool
 	hasGroupWithId(DBClient, string) bool

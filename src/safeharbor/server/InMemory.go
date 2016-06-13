@@ -1086,6 +1086,7 @@ type InMemUser struct {
 	InMemParty
 	UserId string
 	EmailAddress string
+	EmailIsVerified bool
 	PasswordHash []byte
 	GroupIds []string
 	MostRecentLoginAttempts []string
@@ -1106,6 +1107,7 @@ func (client *InMemClient) NewInMemUser(userId string, name string,
 		InMemParty: *party,
 		UserId: userId,
 		EmailAddress: email,
+		EmailIsVerified: false,
 		PasswordHash: passwordHash,
 		GroupIds: make([]string, 0),
 		MostRecentLoginAttempts: make([]string, 0),
@@ -1177,20 +1179,22 @@ func (user *InMemUser) getUserId() string {
 	return user.UserId
 }
 
-func (user *InMemUser) setEmailAddressDeferredUpdate(emailAddress string) {
-	user.EmailAddress = emailAddress
-}
-
 func (user *InMemUser) getEmailAddress() string {
 	return user.EmailAddress
 }
 
-func (user *InMemUser) setUnvalidatedEmailAddress(emailAddress string) {
-	....if address is currently set to validated, unset it.
+func (user *InMemUser) setUnverifiedEmailAddress(emailAddress string) {
+	user.EmailAddress = emailAddress
+	user.EmailIsVerified = false
 }
 
 func (user *InMemUser) flagEmailAsVerified(emailAddress string) error {
-	....If email address is not currently stored, return error
+	if user.EmailAddress == "" { return utils.ConstructUserError("No email address set") }
+	user.EmailIsVerified = true
+}
+
+func (user *InMemUser) emailIsVerified() bool {
+	return user.EmailIsVerified
 }
 
 func (user *InMemUser) hasGroupWithId(dbClient DBClient, groupId string) bool {
@@ -1344,7 +1348,8 @@ func (user *InMemUser) asJSON() string {
 	var json = "\"User\": {"
 	json = json + user.partyFieldsAsJSON()
 	json = json + fmt.Sprintf(", \"UserId\": \"%s\", \"EmailAddress\": \"%s\", " +
-		"\"PasswordHash\": [", user.UserId, user.EmailAddress)
+		"\"EmailIsVerified\": %s, "\"PasswordHash\": [",
+		user.UserId, user.EmailAddress, apitypes.BoolToString(user.EmailIsVerified))
 	for i, b := range user.PasswordHash {
 		if i != 0 { json = json + ", " }
 		json = json + fmt.Sprintf("%d", b)
@@ -1370,7 +1375,7 @@ func (user *InMemUser) asJSON() string {
 
 func (client *InMemClient) ReconstituteUser(id string, isActive bool,
 		name string, creationTime time.Time, realmId string, aclEntryIds []string,
-		userId, emailAddr string, pswdHash []byte, groupIds []string,
+		userId, emailAddr string, emailIsVerified bool, pswdHash []byte, groupIds []string,
 		loginAttmpts []string, eventIds []string) (*InMemUser, error) {
 	
 	var party *InMemParty
@@ -1382,6 +1387,7 @@ func (client *InMemClient) ReconstituteUser(id string, isActive bool,
 		InMemParty: *party,
 		UserId: userId,
 		EmailAddress: emailAddr,
+		EmailIsVerified: emailIsVerified,
 		PasswordHash: pswdHash,
 		GroupIds: groupIds,
 		MostRecentLoginAttempts: loginAttmpts,

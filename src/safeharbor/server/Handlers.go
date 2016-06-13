@@ -282,6 +282,11 @@ func createUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, realmId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
+	if email != "" {
+		err = EstablishEmail(dbClient, newUserid, email)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+	}
+	
 	return newUser.asUserDesc(dbClient)
 }
 
@@ -638,6 +643,10 @@ func createRealmAnon(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	var newUser User
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, newRealm.getId())
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if email != nil {
+		err = EstablishEmail(dbClient, newUserid, email)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+	}
 	
 	// Add ACL entry to enable the current user (if any) to access what he/she just created.
 	var curUser User
@@ -3191,7 +3200,7 @@ func updateUserInfo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	}
 	
 	if newUserInfo.EmailAddress != "" {
-		specifiedUser.setEmailAddressDeferredUpdate(newUserInfo.EmailAddress)
+		err = EstablishEmail(dbClient, specifiedUser.getId(), newUserInfo.EmailAddress)
 		changesMade = true
 	}
 	
@@ -3242,8 +3251,6 @@ func validateAccountVerificationToken(dbClient *InMemClient, sessionToken *apity
 	var tokenId string
 	var emailAddress string
 	tokenId, userId, emailAddress, err = ValidateEmailToken(tokenString)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	err = RetireEmailToken(tokenId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var user User
 	user, err = dbClient.dbGetUserByUserId(userId)
