@@ -48,6 +48,8 @@ type Server struct {
 	dispatcher *Dispatcher
 	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
 	Authorize bool
+	AllowToggleEmailVerification bool
+	PerformEmailIdentityVerification bool
 	MaxLoginAttemptsToRetain int
 	InMemoryOnly bool
 	Debug bool // for test only
@@ -59,7 +61,7 @@ type Server struct {
  * Create a Server structure. This includes reading in the auth server cert.
  */
 func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
-	publicHostname string, port int,
+	allowToggleEmailVerification bool, publicHostname string, port int,
 	adapter string, secretSalt string, inMemOnly bool, noRegistry bool) (*Server, error) {
 	
 	// Read configuration. (Defined in a JSON file.)
@@ -93,6 +95,8 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		Debug: debug,
 		NoCache: nocache,
 		Authorize: (! noauthor),
+		AllowToggleEmailVerification: allowToggleEmailVerification,
+		PerformEmailIdentityVerification: (! allowToggleEmailVerification),
 		Config:  config,
 		certPool: certPool,
 		dispatcher: NewDispatcher(),
@@ -201,6 +205,13 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	}
 	
 	return server, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+func (server *Server) setEmailVerification(enabled bool) {
+	server.PerformEmailIdentityVerification = enabled
 }
 
 /*******************************************************************************

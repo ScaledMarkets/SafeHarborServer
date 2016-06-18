@@ -81,6 +81,8 @@ type DBClient interface {
 	addUser(user User) error
 
 	dbGetUserByUserId(string) (User, error)
+	dbCreateIdentityValidationInfo(userId string, creationTime time.Time,
+		token string) (IdentityValidationInfo, error)
 	dbCreateGroup(string, string, string) (Group, error)
 	dbCreateUser(string, string, string, string, string) (User, error)
 	dbCreateACLEntry(resourceId string, partyId string, permissionMask []bool) (ACLEntry, error)
@@ -99,6 +101,8 @@ type DBClient interface {
 		imageId, userObjId string) (DockerfileExecEvent, error)
 	dbCreateDockerfileExecParameterValue(name, value, dockerfileId string) (DockerfileExecParameterValue, error)
 	dbDeactivateRealm(realmId string) error
+	
+	getIdentityValidationInfo(string) (IdentityValidationInfo, error)
 	getResource(string) (Resource, error)
 	getParty(string) (Party, error)
 	getGroup(string) (Group, error)
@@ -153,6 +157,11 @@ type PersistObj interface {  // abstract
 	getPersistence() *Persistence
 	writeBack(DBClient) error
 	asJSON() string  // panics
+}
+
+type IdentityValidationInfo interface {
+	getUserId() string
+	getCreationTime() time.Time
 }
 
 /* A Party is a User or a Group. Parties act on Resources. */

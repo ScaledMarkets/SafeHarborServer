@@ -20,6 +20,7 @@ func main() {
 	var nocache *bool = flag.Bool("nocache", false, "Always refresh objects from the database.")
 	var stubScanners *bool = flag.Bool("stubs", false, "Use stubs for scanners.")
 	var noauthor *bool = flag.Bool("noauthorization", false, "Disable authorization: access control lists are ignored.")
+	var allowToggleEmailVerification *bool = flag.Bool("toggleemail", false, "Enable the enableEmailVerification REST function. If enabled, then the server starts with email verification disabled.")
 	var publicHostname *string = flag.String("host", "", "The public host name or IP address of the server or load balancer, for reaching SafeHarborServer across the Internet.")
 	var port *int = flag.Int("port", 0, "The TCP port on which the SafeHarborServer should listen. If not set, then the value is taken from the conf.json file.")
 	var adapter *string = flag.String("adapter", "", "Network adapter to use (e.g., eth0). If not set, then the value is taken from the conf.json file.")
@@ -48,7 +49,8 @@ func main() {
 	fmt.Println("Creating SafeHarbor server...")
 	var svr *server.Server
 	var err error
-	svr, err = server.NewServer(*debug, *nocache, *stubScanners, *noauthor,
+	svr, err = server.NewServer(*debug, *nocache, *stubScanners,
+		*noauthor, *allowToggleEmailVerification,
 		*publicHostname, *port, *adapter, *secretSalt, *inMemoryOnly, *noRegistry)
 	if err != nil {
 		fmt.Println(err.Error())

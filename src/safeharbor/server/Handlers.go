@@ -3201,6 +3201,7 @@ func updateUserInfo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	
 	if newUserInfo.EmailAddress != "" {
 		err = EstablishEmail(dbClient, specifiedUser.getId(), newUserInfo.EmailAddress)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		changesMade = true
 	}
 	
@@ -3238,7 +3239,7 @@ func userExists(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 
 /*******************************************************************************
  * Arguments: AccountVerificationToken
- * Returns: 
+ * Returns: Result
  */
 func validateAccountVerificationToken(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -3258,6 +3259,32 @@ func validateAccountVerificationToken(dbClient *InMemClient, sessionToken *apity
 	user.flagEmailAsVerified(emailAddress)
 	
 	return apitypes.NewResult(200, "Email address verified")
+}
+
+/*******************************************************************************
+ * Arguments: VerificationEnabled ("true" or "false")
+ * Returns: Result
+ */
+func enableEmailVerification(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	if ! dbClient.Server.AllowToggleEmailVerification { return apitypes.NewFailureDesc(
+		"Method enableEmailVerification disallowed")
+	}
+	
+	var flag string
+	var err error
+	flag, err = apitypes.GetRequiredHTTPParameterValue(true, values, "VerificationEnabled")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if flag == "true" {
+		dbClient.Server.setEmailVerification(true)
+		return apitypes.NewResult(200, "Email verification enabled")
+	}
+	if flag == "false" {
+		dbClient.Server.setEmailVerification(false)
+		return apitypes.NewResult(200, "Email verification disabled")
+	}
+	return apitypes.NewFailureDesc("Unrecognized value for VerificationEnabled: " + flag)
 }
 
 /*******************************************************************************

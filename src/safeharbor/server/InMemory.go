@@ -68,6 +68,7 @@ type InMemClient struct {
 	objectsCache map[string]PersistObj  // maps object id to PersistObj
 	usersCache map[string]User  // maps user id to User obj
 	realmMapCache map[string]Realm  // maps realm name to Realm obj
+	emailTokenCache map[string]string  // maps email verification token to User Id
 }
 
 func NewInMemClient(server *Server) (*InMemClient, error) {
@@ -99,6 +100,7 @@ func (client *InMemClient) resetTransactionCache() {
 	client.objectsCache = make(map[string]PersistObj)
 	client.usersCache = make(map[string]User)
 	client.realmMapCache = make(map[string]Realm)
+	client.emailTokenCache = make(map[string]string)
 }
 
 // Commit the database transaction - after calling this, methods on this instance
@@ -304,6 +306,86 @@ func (client *InMemClient) ReconstitutePersistObj(id string) (*InMemPersistObj, 
 	return &InMemPersistObj{
 		Persistence: client.Persistence,
 		Id: id,
+	}, nil
+}
+
+/*******************************************************************************
+ * 
+ */
+type InMemIdentityValidationInfo struct {
+	InMemPersistObj
+	UserId string
+	CreationTime time.Time
+}
+
+var _ IdentityValidationInfo = &InMemIdentityValidationInfo{}
+
+func (client *InMemClient) NewInMemIdentityValidationInfo(userId string,
+	creationTime time.Time) (*InMemIdentityValidationInfo, error) {
+	
+	var persistobj *InMemPersistObj
+	var err error
+	persistobj, err = client.NewInMemPersistObj()
+	if err != nil { return nil, err }
+	var newInfo = &InMemIdentityValidationInfo{
+		InMemPersistObj: *persistobj,
+		UserId: userId,
+		CreationTime: creationTime,
+	}
+	return newInfo, client.updateObject(newInfo)
+}
+
+func (client *InMemClient) dbCreateIdentityValidationInfo(userId string,
+	creationTime time.Time, token string) (IdentityValidationInfo, error) {
+	
+	var info IdentityValidationInfo
+	var err error
+	info, err = client.NewInMemIdentityValidationInfo(userId, creationTime)
+	if err != nil { return nil, err }
+	err = client.addIdentityValidationInfo(token, info.getId()) error {
+	return info, err
+}
+
+func (client *InMemClient) getIdentityValidationInfo(objId string) (IdentityValidationInfo, error) {
+	
+	var info IdentityValidationInfo
+	var isType bool
+	var obj PersistObj
+	var err error
+	obj, err = client.getPersistentObject(objId)
+	if err != nil { return nil, err }
+	if obj == nil { return nil, utils.ConstructUserError("IdentityValidationInfo not found") }
+	info, isType = obj.(IdentityValidationInfo)
+	if ! isType { return nil, utils.ConstructUserError("Object with Id " + id + " is not a IdentityValidationInfo") }
+	return info, nil
+}
+
+func (info *InMemIdentityValidationInfo) getUserId() string {
+	return token.UserId
+}
+
+func (info *InMemIdentityValidationInfo) getCreationTime() time.Time {
+	return token.CreationTime
+}
+
+func (info *InMemIdentityValidationInfo) asJSON() string {
+	var json = "\"IdentityValidationInfo\": {" + info.persistObjFieldsAsJSON() + ", "
+	json = json + fmt.Sprintf("\"UserId\": \"%s\", \"CreationTime\": time %s}",
+		info.UserId, apitypes.FormatTimeAsJavascriptDate(info.CreationTime))
+	return json
+}
+
+func (client *InMemIdentityValidationInfo) ReconstituteIdentityValidationInfo(
+	id string, userId string, creationTime time.Time) (*InMemUserId, error) {
+	
+	var persistObj *InMemPersistObj
+	var err error
+	persistObj, err = client.ReconstitutePersistObj(id)
+	if err != nil { return nil, err }
+	var acl = &InMemIdentityValidationInfo{
+		InMemPersistObj: *persistObj,
+		UserId: userId,
+		CreationTime: creationTime,
 	}, nil
 }
 

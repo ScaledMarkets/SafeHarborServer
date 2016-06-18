@@ -32,6 +32,7 @@ const (
 	ObjectScopeVersionNumbersPrefix = "objversions/"
 	RealmHashName = "realms"
 	UserHashName = "users"
+	EmailTokenHashName = "EmailTokens"
 	GloballyUniqueId = "UniqueId"
 )
 
@@ -44,11 +45,11 @@ type Persistence struct {
 	RedisClient *goredis.Redis
 	uniqueId int64
 	
-	
 	// Only use this for in-memory only testing.
 	allObjects map[string]PersistObj  // maps object id to PersistObj
 	allUserIds map[string]string  // maps user id to User obj Id
 	realmMap map[string]string  // maps realm name to Realm obj Id
+	emailTokenMap map[string]string  // maps email verification token to IdentityValidationInfo ojb Id
 }
 
 func NewPersistence(server *Server, redisClient *goredis.Redis) (*Persistence, error) {
@@ -137,6 +138,74 @@ func (persist *Persistence) resetPersistentState() error {
 }
 
 /*******************************************************************************
+ * 
+ */
+func (persist *Persistence) addIdentityValidationInfo(token, infoObjId string) error {
+	
+	if persist.InMemoryOnly {
+		persist.emailTokenMap[token] = userId
+	} else {
+		
+		// Write token to database.
+		var added bool
+		added, err = persist.RedisClient.HSet(EmailTokenHashName, token, userId)
+		if err != nil { debug.PrintStack() }
+		if err != nil { return err }
+		if ! added { return utils.ConstructServerError("Unable to add email token") }
+		return nil
+	}
+}
+
+/*******************************************************************************
+ * 
+ */
+func (persist *Persistence) getIdentityValidationInfoByToken(token string) (infoObjId string, err error) {
+	
+	if persist.InMemoryOnly {
+		return persist.emailTokenMap[token], nil
+	} else {
+		var err error
+		var bytes []byte
+		bytes, err = persist.RedisClient.HGet(EmailTokenHashName, token)
+		if err != nil { return "", err }
+		if (bytes == nil) || (len(bytes) == 0) { return "", nil }
+		var userId = string(bytes)
+		return userId, nil
+	}
+}
+
+/*******************************************************************************
+ * 
+ */
+func (persist *Persistence) remIdentityValidationInfo(token string) error {
+	
+	if persist.InMemoryOnly {
+		persist.emailTokenMap[token] = ""
+		return nil
+	} else {
+		// Remove from memory.
+		persist.emailTokenMap[token] = ""
+		
+		// Get Id of the IdentityValidationInfo object.
+		var bytes []byte
+		var err error
+		bytes, err = persist.RedisClient.HGet(EmailTokenHashName, token)
+		if err != nil { return err }
+		if bytes == nil { return utils.ConstructServerError("Token not found") }
+		if len(bytes) == 0 { return utils.ConstructServerError("Obj Id has zero length") }
+		var infoObjId = string(bytes)
+		
+		// Remove from database.
+		var numDeleted int64
+		numDeleted, err = persist.RedisClient.HDel(EmailTokenHashName, token)
+		if err != nil { return err }
+		if numDeleted != 1 { return utils.ConstructServerError("Unable to delete token info") }
+		persist.emailTokenMap[token] = ""
+		persist.allObjects[infoObjId] = nil
+	}
+}
+
+/*******************************************************************************
  * Note: We assume that a user''s user-id is not changed once it has been set.
  */
 func (persist *Persistence) GetUserObjIdByUserId(txn TxnContext, userId string) (string, error) {
@@ -146,7 +215,7 @@ func (persist *Persistence) GetUserObjIdByUserId(txn TxnContext, userId string) 
 	} else {
 		var err error
 		var bytes []byte
-		bytes, err = persist.RedisClient.HGet(UserHashName, userId)
+		bytes, err = persist.RedisClient.HGet(HashName, userId)
 		if err != nil { return "", err }
 		if (bytes == nil) || (len(bytes) == 0) { return "", nil }
 		var userObjId = string(bytes)
