@@ -342,7 +342,7 @@ func (client *InMemClient) dbCreateIdentityValidationInfo(userId string,
 	var err error
 	info, err = client.NewInMemIdentityValidationInfo(userId, creationTime)
 	if err != nil { return nil, err }
-	err = client.addIdentityValidationInfo(token, info.getId()) error {
+	err = client.getPersistence().addIdentityValidationInfo(token, info.getId())
 	return info, err
 }
 
@@ -356,16 +356,16 @@ func (client *InMemClient) getIdentityValidationInfo(objId string) (IdentityVali
 	if err != nil { return nil, err }
 	if obj == nil { return nil, utils.ConstructUserError("IdentityValidationInfo not found") }
 	info, isType = obj.(IdentityValidationInfo)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + id + " is not a IdentityValidationInfo") }
+	if ! isType { return nil, utils.ConstructUserError("Object with Id " + objId + " is not a IdentityValidationInfo") }
 	return info, nil
 }
 
 func (info *InMemIdentityValidationInfo) getUserId() string {
-	return token.UserId
+	return info.UserId
 }
 
 func (info *InMemIdentityValidationInfo) getCreationTime() time.Time {
-	return token.CreationTime
+	return info.CreationTime
 }
 
 func (info *InMemIdentityValidationInfo) asJSON() string {
@@ -375,14 +375,14 @@ func (info *InMemIdentityValidationInfo) asJSON() string {
 	return json
 }
 
-func (client *InMemIdentityValidationInfo) ReconstituteIdentityValidationInfo(
-	id string, userId string, creationTime time.Time) (*InMemUserId, error) {
+func (client *InMemClient) ReconstituteIdentityValidationInfo(
+	id string, userId string, creationTime time.Time) (*InMemIdentityValidationInfo, error) {
 	
 	var persistObj *InMemPersistObj
 	var err error
 	persistObj, err = client.ReconstitutePersistObj(id)
 	if err != nil { return nil, err }
-	var acl = &InMemIdentityValidationInfo{
+	return &InMemIdentityValidationInfo{
 		InMemPersistObj: *persistObj,
 		UserId: userId,
 		CreationTime: creationTime,
@@ -1273,6 +1273,7 @@ func (user *InMemUser) setUnverifiedEmailAddress(emailAddress string) {
 func (user *InMemUser) flagEmailAsVerified(emailAddress string) error {
 	if user.EmailAddress == "" { return utils.ConstructUserError("No email address set") }
 	user.EmailIsVerified = true
+	return nil
 }
 
 func (user *InMemUser) emailIsVerified() bool {
@@ -1418,7 +1419,8 @@ func (user *InMemUser) asUserDesc(dbClient DBClient) *apitypes.UserDesc {
 		fmt.Println("In asUserDesc(), " + err.Error())
 		adminRealmIds = make([]string, 0)
 	}
-	return apitypes.NewUserDesc(user.Id, user.UserId, user.Name, user.RealmId, adminRealmIds)
+	return apitypes.NewUserDesc(user.Id, user.UserId, user.Name, user.RealmId,
+		user.EmailAddress, user.EmailIsVerified, adminRealmIds)
 }
 
 func (user *InMemUser) writeBack(dbClient DBClient) error {
@@ -1430,7 +1432,7 @@ func (user *InMemUser) asJSON() string {
 	var json = "\"User\": {"
 	json = json + user.partyFieldsAsJSON()
 	json = json + fmt.Sprintf(", \"UserId\": \"%s\", \"EmailAddress\": \"%s\", " +
-		"\"EmailIsVerified\": %s, "\"PasswordHash\": [",
+		"\"EmailIsVerified\": %s, \"PasswordHash\": [",
 		user.UserId, user.EmailAddress, apitypes.BoolToString(user.EmailIsVerified))
 	for i, b := range user.PasswordHash {
 		if i != 0 { json = json + ", " }

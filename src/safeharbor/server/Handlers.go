@@ -283,7 +283,7 @@ func createUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if email != "" {
-		err = EstablishEmail(dbClient, newUserid, email)
+		err = EstablishEmail(dbClient.getServer().authService, dbClient, newUserId, email)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 	}
 	
@@ -643,8 +643,8 @@ func createRealmAnon(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	var newUser User
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, newRealm.getId())
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	if email != nil {
-		err = EstablishEmail(dbClient, newUserid, email)
+	if newUser != nil {
+		err = EstablishEmail(dbClient.getServer().authService, dbClient, newUserId, email)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 	}
 	
@@ -685,6 +685,44 @@ func getRealmDesc(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	
 	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, realmId,
 		"getRealmDesc")
+	if failMsg != nil { return failMsg }
+	
+	var realm Realm
+	realm, err = dbClient.getRealm(realmId)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if realm == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Cound not find realm with Id " + realmId) }
+	
+	return realm.asRealmDesc()
+}
+
+/*******************************************************************************
+ * Arguments: RealmName
+ * Returns: apitypes.RealmDesc
+ */
+func getRealmByName(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+
+	var failMsg apitypes.RespIntfTp
+	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
+	if failMsg != nil { return failMsg }
+	
+	var err error
+	var realmName string
+	realmName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmName")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	
+	var realmId string
+	var err error
+	realmId, err = dbClient.getPersistence().GetRealmObjIdByRealmName(
+		dbClient.getTransactionContext(), realmName)
+	if err != nil { return err }
+	if realmId != "" { return utils.ConstructUserError(
+		"Realm with name " + realmName + " not found")
+	}
+	
+	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, realmId,
+		"getRealmByName")
 	if failMsg != nil { return failMsg }
 	
 	var realm Realm
@@ -3200,7 +3238,7 @@ func updateUserInfo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	}
 	
 	if newUserInfo.EmailAddress != "" {
-		err = EstablishEmail(dbClient, specifiedUser.getId(), newUserInfo.EmailAddress)
+		err = EstablishEmail(dbClient.getServer().authService, dbClient, specifiedUser.getId(), newUserInfo.EmailAddress)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		changesMade = true
 	}
@@ -3249,9 +3287,10 @@ func validateAccountVerificationToken(dbClient *InMemClient, sessionToken *apity
 	tokenString, err = apitypes.GetRequiredHTTPParameterValue(true, values, "AccountVerificationToken")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
-	var tokenId string
 	var emailAddress string
-	tokenId, userId, emailAddress, err = ValidateEmailToken(tokenString)
+	var userId string
+	userId, emailAddress, err = ValidateEmailToken(dbClient, 
+		dbClient.getServer().authService, tokenString)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	var user User
 	user, err = dbClient.dbGetUserByUserId(userId)
@@ -3269,7 +3308,7 @@ func enableEmailVerification(dbClient *InMemClient, sessionToken *apitypes.Sessi
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
 
 	if ! dbClient.Server.AllowToggleEmailVerification { return apitypes.NewFailureDesc(
-		"Method enableEmailVerification disallowed")
+		http.StatusForbidden, "Method enableEmailVerification disallowed")
 	}
 	
 	var flag string
@@ -3284,7 +3323,8 @@ func enableEmailVerification(dbClient *InMemClient, sessionToken *apitypes.Sessi
 		dbClient.Server.setEmailVerification(false)
 		return apitypes.NewResult(200, "Email verification disabled")
 	}
-	return apitypes.NewFailureDesc("Unrecognized value for VerificationEnabled: " + flag)
+	return apitypes.NewFailureDesc(http.StatusBadRequest,
+		"Unrecognized value for VerificationEnabled: " + flag)
 }
 
 /*******************************************************************************

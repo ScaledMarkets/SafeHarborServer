@@ -160,6 +160,7 @@ type PersistObj interface {  // abstract
 }
 
 type IdentityValidationInfo interface {
+	PersistObj
 	getUserId() string
 	getCreationTime() time.Time
 }

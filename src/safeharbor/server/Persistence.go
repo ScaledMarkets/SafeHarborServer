@@ -143,17 +143,18 @@ func (persist *Persistence) resetPersistentState() error {
 func (persist *Persistence) addIdentityValidationInfo(token, infoObjId string) error {
 	
 	if persist.InMemoryOnly {
-		persist.emailTokenMap[token] = userId
+		persist.emailTokenMap[token] = infoObjId
 	} else {
 		
 		// Write token to database.
 		var added bool
-		added, err = persist.RedisClient.HSet(EmailTokenHashName, token, userId)
+		var err error
+		added, err = persist.RedisClient.HSet(EmailTokenHashName, token, infoObjId)
 		if err != nil { debug.PrintStack() }
 		if err != nil { return err }
 		if ! added { return utils.ConstructServerError("Unable to add email token") }
-		return nil
 	}
+	return nil
 }
 
 /*******************************************************************************
@@ -203,6 +204,7 @@ func (persist *Persistence) remIdentityValidationInfo(token string) error {
 		persist.emailTokenMap[token] = ""
 		persist.allObjects[infoObjId] = nil
 	}
+	return nil
 }
 
 /*******************************************************************************
@@ -215,7 +217,7 @@ func (persist *Persistence) GetUserObjIdByUserId(txn TxnContext, userId string) 
 	} else {
 		var err error
 		var bytes []byte
-		bytes, err = persist.RedisClient.HGet(HashName, userId)
+		bytes, err = persist.RedisClient.HGet(UserHashName, userId)
 		if err != nil { return "", err }
 		if (bytes == nil) || (len(bytes) == 0) { return "", nil }
 		var userObjId = string(bytes)
