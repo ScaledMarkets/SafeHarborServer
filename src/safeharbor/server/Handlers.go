@@ -26,7 +26,6 @@ import (
 	"safeharbor/providers"
 	"safeharbor/apitypes"
 	"safeharbor/docker"
-	//"safeharbor/utils"
 )
 
 /*******************************************************************************
@@ -713,12 +712,11 @@ func getRealmByName(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var realmId string
-	var err error
 	realmId, err = dbClient.getPersistence().GetRealmObjIdByRealmName(
 		dbClient.getTransactionContext(), realmName)
-	if err != nil { return err }
-	if realmId != "" { return utils.ConstructUserError(
-		"Realm with name " + realmName + " not found")
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	if realmId != "" { return apitypes.NewFailureDesc(
+		http.StatusBadRequest, "Realm with name " + realmName + " not found")
 	}
 	
 	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.ReadMask, realmId,
