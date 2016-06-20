@@ -41,6 +41,7 @@ type Configuration struct {
 	AuthKeyPath string
 	FileRepoRootPath string // where Dockerfiles, images, etc. are stored
 	ScanServices map[string]interface{}
+	EmailService map[string]interface{}
 }
 
 /*******************************************************************************
@@ -142,22 +143,14 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 		return nil, fmt.Errorf("Scan configuration is ill-formatted")
 	}
 	
-	//config.service, exists = entries["SERVICE"]
-	//if ! exists { return nil, fmt.Errorf("Did not find SERVICE in configuration") }
-	
-	//config.AuthServerName, exists = entries["AUTH_SERVER_DNS_NAME"]
-	//if ! exists { return nil, fmt.Errorf("Did not find AUTH_SERVER_DNS_NAME in configuration") }
-	
-	//portStr, exists = entries["AUTH_PORT"]
-	//if ! exists { return nil, fmt.Errorf("Did not find AUTH_PORT in configuration") }
-	//config.AuthPort, err = strconv.Atoi(portStr)
-	//if err != nil { return nil, fmt.Errorf("AUTH_PORT value in configuration is not an integer") }
-	
-	//config.AuthCertPath, exists = entries["AUTH_CERT_PATH"]
-	//if ! exists { return nil, fmt.Errorf("Did not find AUTH_CERT_PATH in configuration") }
-	
-	//config.AuthKeyPath, exists = entries["AUTH_PRIVATE_KEY_PATH"]
-	//if ! exists { return nil, fmt.Errorf("Did not find AUTH_PRIVATE_KEY_PATH in configuration") }
+	// Email service.
+	obj, exists = entries["EmailService"]
+	if ! exists { return nil, fmt.Errorf("Did not find EmailService in configuration") }
+	config.EmailService, isType = obj.(map[string]interface{})
+	if ! isType {
+		fmt.Println("EmailService is a", reflect.TypeOf(obj))
+		return nil, fmt.Errorf("Email configuration is ill-formatted")
+	}
 	
 	fmt.Println("Configuration values obtained")
 	return config, nil

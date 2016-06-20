@@ -45,6 +45,7 @@ type Server struct {
 	authService *AuthService
 	DockerServices *docker.DockerServices
 	ScanServices []providers.ScanService
+	EmailService *utils.EmailService
 	dispatcher *Dispatcher
 	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
 	Authorize bool
@@ -202,6 +203,19 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	if err != nil { AbortStartup("When instantiating Clair scan service: " + err.Error()) }
 	server.ScanServices = []providers.ScanService{
 		scanSvc,
+	}
+	
+	// Install email service.
+	obj = config.EmailService
+	if obj == nil {
+		if server.PerformEmailIdentityVerification {
+			AbortStartup("Email service is not configured")
+		}
+	} else {
+		var emailService *utils.EmailService
+		emailService, err = utils.CreateEmailService(config.EmailService)
+		if err != nil { AbortStartup("When instantiating email service: " + err.Error()) }
+		server.EmailService = emailService
 	}
 	
 	return server, nil

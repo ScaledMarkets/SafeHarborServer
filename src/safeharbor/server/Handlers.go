@@ -282,7 +282,8 @@ func createUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	if email != "" {
-		err = EstablishEmail(dbClient.getServer().authService, dbClient, newUserId, email)
+		err = EstablishEmail(dbClient.getServer().authService, dbClient,
+			dbClient.getServer().EmailService, newUserId, email)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 	}
 	
@@ -643,7 +644,8 @@ func createRealmAnon(dbClient *InMemClient, sessionToken *apitypes.SessionToken,
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, newRealm.getId())
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if newUser != nil {
-		err = EstablishEmail(dbClient.getServer().authService, dbClient, newUserId, email)
+		err = EstablishEmail(dbClient.getServer().authService, dbClient,
+			dbClient.getServer().EmailService, newUserId, email)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 	}
 	
@@ -3236,7 +3238,8 @@ func updateUserInfo(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	}
 	
 	if newUserInfo.EmailAddress != "" {
-		err = EstablishEmail(dbClient.getServer().authService, dbClient, specifiedUser.getId(), newUserInfo.EmailAddress)
+		err = EstablishEmail(dbClient.getServer().authService, dbClient,
+			dbClient.getServer().EmailService, specifiedUser.getId(), newUserInfo.EmailAddress)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		changesMade = true
 	}

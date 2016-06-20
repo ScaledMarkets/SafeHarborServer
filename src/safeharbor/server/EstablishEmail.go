@@ -14,7 +14,8 @@ const (
  * Store EmailAddress in Joe’s account, and flag it as unverified.
  * This method does not commit the transaction.
  */
-func EstablishEmail(authSvc *AuthService, dbClient DBClient, userId string, emailAddress string) error {
+func EstablishEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.EmailService,
+	userId string, emailAddress string) error {
 	
 	var user User
 	var err error
@@ -25,7 +26,7 @@ func EstablishEmail(authSvc *AuthService, dbClient DBClient, userId string, emai
 	
 	if dbClient.getServer().PerformEmailIdentityVerification {
 		// Send email to user, containing the URL to click.
-		return ValidateEmail(authSvc, dbClient, userId, emailAddress)
+		return ValidateEmail(authSvc, dbClient, emailSvc, userId, emailAddress)
 	} else {
 		return user.flagEmailAsVerified(emailAddress)
 	}
@@ -36,7 +37,7 @@ func EstablishEmail(authSvc *AuthService, dbClient DBClient, userId string, emai
  * Embed unforgeable, token containing a digest of the email address and a unique
  * token Id.
  */
-func ValidateEmail(authSvc *AuthService, dbClient DBClient, userId, emailAddress string) error {
+func ValidateEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.EmailService, userId, emailAddress string) error {
 	
 	var token string
 	var err error
@@ -49,7 +50,7 @@ func ValidateEmail(authSvc *AuthService, dbClient DBClient, userId, emailAddress
 		"Click <a href=\"%s\">here</a> to confirm your email address",
 		confirmationURL)
 	
-	return utils.SendEmail(emailAddress, message)
+	return emailSvc.SendEmail(emailAddress, message)
 }
 
 /*******************************************************************************
