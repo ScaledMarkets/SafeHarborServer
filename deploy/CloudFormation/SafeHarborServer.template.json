@@ -1,0 +1,113 @@
+http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-ecs.html
+
+{
+	"AWSTemplateFormatVersion" : "version date",
+	
+	"Description" : "SafeHarbor Server, all components deployed as containers",
+	
+	"Metadata" : {
+		
+	},
+	
+	"Parameters" : {
+		
+	},
+	
+	"Mappings" : {
+		
+	},
+	
+	"Conditions" : {
+		
+	},
+	
+	"Outputs" : {
+		
+	},
+	
+	"Resources" : {
+		"SafeHarborServerCluster": {
+			"Type": "AWS::ECS::Cluster"
+		},
+		"ContainerInstance": {
+			"Type": "AWS::EC2::Instance",
+			"Properties" : {
+				"Affinity" : String,
+				"AvailabilityZone" : String,
+				"BlockDeviceMappings" : [ EC2 Block Device Mapping, ... ],
+				"DisableApiTermination" : Boolean,
+				"EbsOptimized" : Boolean,
+				"HostId" : String,
+				"IamInstanceProfile" : String,
+				"ImageId" : String,
+				"InstanceInitiatedShutdownBehavior" : String,
+				"InstanceType" : String,
+				"KernelId" : String,
+				"KeyName" : String,
+				"Monitoring" : Boolean,
+				"NetworkInterfaces" : [ EC2 Network Interface, ... ],
+				"PlacementGroupName" : String,
+				"PrivateIpAddress" : String,
+				"RamdiskId" : String,
+				"SecurityGroupIds" : [ String, ... ],
+				"SecurityGroups" : [ String, ... ],
+				"SourceDestCheck" : Boolean,
+				"SsmAssociations" : [ SSMAssociation, ... ]
+				"SubnetId" : String,
+				"Tags" : [ Resource Tag, ... ],
+				"Tenancy" : String,
+				"UserData" : String,
+				"Volumes" : [ EC2 MountPoint, ... ],
+				"AdditionalInfo" : String
+			}
+		},
+		"SafeHarborServerTask": {
+			"Type": "AWS::ECS::TaskDefinition",
+			"Properties": {
+				"ContainerDefinitions": [
+					{
+						"Command" : [ String, ... ],
+						"Cpu" : Integer,
+						"DisableNetworking" : Boolean,
+						"DnsSearchDomains" : [ String, ... ],
+						"DnsServers" : [ String, ... ],
+						"DockerLabels" : { String:String, ... },
+						"DockerSecurityOptions" : [ String, ... ],
+						"EntryPoint" : [ String, ... ],
+						"Environment" : [ Environment Variable, ... ],
+						"Essential" : Boolean,
+						"ExtraHosts" : [ Host Entry, ... ],
+						"Hostname" : String,
+						"Image" : String,
+						"Links" : [ String, ... ],
+						"LogConfiguration" : Log Configuration,
+						"Memory" : Integer,
+						"MountPoints" : [ Mount Point, ... ],
+						"Name" : String,
+						"PortMappings" : [ Port Map, ... ],
+						"Privileged" : Boolean,
+						"ReadonlyRootFilesystem" : Boolean,
+						"Ulimits" : [ Ulimit, ... ],
+						"User" : String,
+						"VolumesFrom" : [ Volume From, ... ],
+						"WorkingDirectory" : String,
+					}
+				],
+				"Volumes": [
+					
+				]
+			}
+		},
+		"SafeHarborService": {
+			"Type": "AWS::ECS::Service",
+			"Properties": {
+				"Cluster" : { "Ref": "SafeHarborServerCluster" },
+				"DeploymentConfiguration" : ....,
+				"DesiredCount" : Integer,
+				"LoadBalancers" : [ Load Balancer Objects, ... ],
+				"Role" : String,
+				"TaskDefinition" : { "Ref": "SafeHarborServerTask" }
+			}
+		}
+	}
+}
