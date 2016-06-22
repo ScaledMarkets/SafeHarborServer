@@ -17,17 +17,24 @@ const (
 func EstablishEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.EmailService,
 	userId string, emailAddress string) error {
 	
+	fmt.Println("EstablishEmail: A")  // debug
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(userId)
+	fmt.Println("EstablishEmail: B")  // debug
 	if err != nil { return err } // invalid user Id
+	fmt.Println("EstablishEmail: C")  // debug
 	if user == nil { return utils.ConstructUserError("Unrecognized user Id") }
+	fmt.Println("EstablishEmail: D")  // debug
 	user.setUnverifiedEmailAddress(emailAddress)  // sets a unvalidated
+	fmt.Println("EstablishEmail: E")  // debug
 	
 	if dbClient.getServer().PerformEmailIdentityVerification {
+	fmt.Println("EstablishEmail: F")  // debug
 		// Send email to user, containing the URL to click.
 		return ValidateEmail(authSvc, dbClient, emailSvc, userId, emailAddress)
 	} else {
+	fmt.Println("EstablishEmail: G")  // debug
 		return user.flagEmailAsVerified(emailAddress)
 	}
 }
