@@ -29,6 +29,8 @@ func (emailSvc *EmailService) SendEmail(emailAddress string, subject, message st
 		"Subject: " + subject + "\r\n\r\n" + message + "\r\n")
 	
 	var err = smtp.SendMail(hostAndPort, auth, emailSvc.SenderAddress, toAddress, fullMsg)
+	if err == nil { fmt.Println("SendEmail: when calling SendMail: " + err.Error()) } // debug
+	if err != nil { fmt.Println("Sent email to " + emailAddress) } // debug
 	return err
 }
 
