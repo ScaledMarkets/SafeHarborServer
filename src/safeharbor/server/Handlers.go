@@ -281,11 +281,20 @@ func createUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, realmId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
+	
+	fmt.Println("createUser: A")  // debug
+	
+	
+	
 	if email != "" {
+		fmt.Println("createUser: B")  // debug
 		err = EstablishEmail(dbClient.getServer().authService, dbClient,
 			dbClient.getServer().EmailService, newUserId, email)
+		fmt.Println("createUser: C")  // debug
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		fmt.Println("createUser: D")  // debug
 	}
+	fmt.Println("createUser: E")  // debug
 	
 	return newUser.asUserDesc(dbClient)
 }
