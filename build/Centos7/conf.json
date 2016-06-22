@@ -17,7 +17,7 @@
 			"Host": "localhost",
 			"Port": "6060"
 		}
-	}
+	},
 	
 	"EmailService": {
 		"SES_SMTP_hostname": "email-smtp.us-west-2.amazonaws.com",
