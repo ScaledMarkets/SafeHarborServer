@@ -46,16 +46,21 @@ func EstablishEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.Ema
  */
 func ValidateEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.EmailService, userId, emailAddress string) error {
 	
+	fmt.Println("ValidateEmail: A")  // debug
 	var token string
 	var err error
 	token, _, err = createEmailToken(authSvc, dbClient, userId)
+	fmt.Println("ValidateEmail: B")  // debug
 	if err != nil { return err }
+	fmt.Println("ValidateEmail: C")  // debug
 	
 	var confirmationURL = constructConfirmationURL(dbClient.getServer(), token)
+	fmt.Println("ValidateEmail: D")  // debug
 	
 	var message = fmt.Sprintf(
 		"Click <a href=\"%s\">here</a> to confirm your email address",
 		confirmationURL)
+	fmt.Println("ValidateEmail: E")  // debug
 	
 	return emailSvc.SendEmail(emailAddress, "Verify address", message)
 }
