@@ -145,8 +145,15 @@ func (persist *Persistence) addIdentityValidationInfo(token, infoObjId string) e
 	fmt.Println("addIdentityValidationInfo: A")  // debug
 	if persist.InMemoryOnly {
 		fmt.Println("addIdentityValidationInfo: B")  // debug
-		persist.emailTokenMap[token] = infoObjId
+		
+		if token == "" { fmt.Println("token is nil") }  // debug
+		if persist.emailTokenMap == nil { fmt.Println("emailTokenMap is nil") }  // debug
 		fmt.Println("addIdentityValidationInfo: C")  // debug
+		
+		
+		
+		persist.emailTokenMap[token] = infoObjId
+		fmt.Println("addIdentityValidationInfo: D")  // debug
 	} else {
 		
 		// Write token to database.
@@ -157,7 +164,7 @@ func (persist *Persistence) addIdentityValidationInfo(token, infoObjId string) e
 		if err != nil { return err }
 		if ! added { return utils.ConstructServerError("Unable to add email token") }
 	}
-	fmt.Println("addIdentityValidationInfo: D")  // debug
+	fmt.Println("addIdentityValidationInfo: E")  // debug
 	return nil
 }
 
