@@ -618,6 +618,7 @@ func (persist *Persistence) clearCache() {
 	persist.realmMap = make(map[string]string)
 	persist.allObjects = make(map[string]PersistObj)
 	persist.allUserIds = make(map[string]string)
+	persist.emailTokenMap = make(map[string]string)
 }
 
 /*******************************************************************************
