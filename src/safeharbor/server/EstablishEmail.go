@@ -50,7 +50,7 @@ func ValidateEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.Emai
 		"Click <a href=\"%s\">here</a> to confirm your email address",
 		confirmationURL)
 	
-	return emailSvc.SendEmail(emailAddress, message)
+	return emailSvc.SendEmail(emailAddress, "Verify address", message)
 }
 
 /*******************************************************************************

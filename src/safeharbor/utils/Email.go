@@ -4,20 +4,32 @@ import (
 	"fmt"
 	"net/smtp"
 	"math"
+	"reflect"
 	
 	// SafeHarbor packages:
 )
 
 // http://docs.aws.amazon.com/ses/latest/DeveloperGuide/smtp-connect.html
-func (emailSvc *EmailService) SendEmail(emailAddress string, message string) error {
+// For limit increase: https://console.aws.amazon.com/support/home?region=us-east-1#/case/create?issueType=service-limit-increase&limitType=service-code-ses
+func (emailSvc *EmailService) SendEmail(emailAddress string, subject, message string) error {
 	
 	var tLSServerName = emailSvc.SES_SMTP_hostname
 	var auth smtp.Auth = smtp.PlainAuth("", emailSvc.SenderUserId, emailSvc.SenderPassword, tLSServerName)
 
 	var serverHost = emailSvc.SES_SMTP_hostname
 	var toAddress = []string{ emailAddress }
-	return smtp.SendMail(serverHost + ":" + fmt.Sprintf("%d", emailSvc.SES_SMTP_Port),
-		auth, emailSvc.SenderAddress, toAddress, []byte(message))
+	var hostAndPort = serverHost + ":" + fmt.Sprintf("%d", emailSvc.SES_SMTP_Port)
+	
+	var fullMsg = []byte(
+		"To: " + emailAddress + "\r\n" +
+		"From " + emailSvc.SenderAddress + "\r\n" +
+		"Source" + emailSvc.SenderAddress + "\r\n" +
+		"Sender" + emailSvc.SenderAddress + "\r\n" +
+		"Return-Path" + emailSvc.SenderAddress + "\r\n" +
+		"Subject: " + subject + "\r\n\r\n" + message + "\r\n")
+	
+	var err = smtp.SendMail(hostAndPort, auth, emailSvc.SenderAddress, toAddress, fullMsg)
+	return err
 }
 
 func CreateEmailService(emailConfig map[string]interface{}) (*EmailService, error) {
@@ -36,7 +48,8 @@ func CreateEmailService(emailConfig map[string]interface{}) (*EmailService, erro
 	obj, exists = emailConfig["SES_SMTP_Port"]
 	if ! exists { return nil, ConstructUserError("No SES_SMTP_Port") }
 	fport, isType = obj.(float64)
-	if ! isType { return nil, ConstructUserError("SES_SMTP_Port is not a number") }
+	if ! isType { return nil, ConstructUserError(
+		"SES_SMTP_Port is not a number: it is a " + reflect.TypeOf(obj).String()) }
 	if math.Ceil(fport) != fport { return nil, ConstructUserError("Fractional number for SES_SMTP_Port") }
 	var port int = int(fport)
 	
