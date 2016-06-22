@@ -338,11 +338,16 @@ func (client *InMemClient) NewInMemIdentityValidationInfo(userId string,
 func (client *InMemClient) dbCreateIdentityValidationInfo(userId string,
 	creationTime time.Time, token string) (IdentityValidationInfo, error) {
 	
+	fmt.Println("dbCreateIdentityValidationInfo: A")  // debug
+	
 	var info IdentityValidationInfo
 	var err error
 	info, err = client.NewInMemIdentityValidationInfo(userId, creationTime)
+	fmt.Println("dbCreateIdentityValidationInfo: B")  // debug
 	if err != nil { return nil, err }
+	fmt.Println("dbCreateIdentityValidationInfo: C")  // debug
 	err = client.getPersistence().addIdentityValidationInfo(token, info.getId())
+	fmt.Println("dbCreateIdentityValidationInfo: D")  // debug
 	return info, err
 }
 
