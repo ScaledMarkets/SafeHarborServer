@@ -35,7 +35,7 @@ func (emailSvc *EmailService) SendEmail(emailAddress string, subject, message st
 	fmt.Println("SendEmail: D")  // debug
 	var err = smtp.SendMail(hostAndPort, auth, emailSvc.SenderAddress, toAddress, fullMsg)
 	fmt.Println("SendEmail: E")  // debug
-	if err == nil { fmt.Println("Sent email to " + emailAddress) } // debug
+	if err == nil { fmt.Println("Sent email from " + emailSvc.SenderAddress + " to " + emailAddress) } // debug
 	if err != nil { fmt.Println("SendEmail: when calling SendMail: " + err.Error()) } // debug
 	return err
 }
