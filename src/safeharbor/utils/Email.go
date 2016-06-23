@@ -26,10 +26,10 @@ func (emailSvc *EmailService) SendEmail(emailAddress string, subject, message st
 	
 	var fullMsg = []byte(
 		"To: " + emailAddress + "\r\n" +
-		"From " + emailSvc.SenderAddress + "\r\n" +
-		"Source" + emailSvc.SenderAddress + "\r\n" +
-		"Sender" + emailSvc.SenderAddress + "\r\n" +
-		"Return-Path" + emailSvc.SenderAddress + "\r\n" +
+		"From: " + emailSvc.SenderAddress + "\r\n" +
+		"Source: " + emailSvc.SenderAddress + "\r\n" +
+		"Sender: " + emailSvc.SenderAddress + "\r\n" +
+		"Return-Path: " + emailSvc.SenderAddress + "\r\n" +
 		"Subject: " + subject + "\r\n\r\n" + message + "\r\n")
 	
 	fmt.Println("SendEmail: D")  // debug
