@@ -1172,6 +1172,7 @@ func (client *InMemClient) ReconstituteGroup(id string, isActive bool,
 type InMemUser struct {
 	InMemParty
 	UserId string
+	DefaultRepoId string
 	EmailAddress string
 	EmailIsVerified bool
 	PasswordHash []byte
@@ -1264,6 +1265,30 @@ func (client *InMemClient) getUser(id string) (User, error) {
 
 func (user *InMemUser) getUserId() string {
 	return user.UserId
+}
+
+func (user *InMemUser) getDefaultRepoId() string {
+	return user.DefaultRepoId
+}
+
+func (user *InMemUser) getDefaultRepo(dbClient DBClient) Repo {
+	
+	if user.DefaultRepoId == "" { return nil }
+	var repo Repo
+	var err error
+	repo, err = dbClient.getRepo(user.DefaultRepoId)
+	if err != nil { return nil }
+	return repo
+}
+
+func (user *InMemUser) setDefaultRepoIdDeferredUpdate(id string) error {
+	
+	var repo Repo
+	var err error
+	repo, err = dbClient.getRepo(id)
+	if err != nil { return utils.ConstructUserError("No repo with Id " + id) }
+	user.DefaultRepoId = id
+	return nil
 }
 
 func (user *InMemUser) getEmailAddress() string {
@@ -1436,9 +1461,9 @@ func (user *InMemUser) asJSON() string {
 	
 	var json = "\"User\": {"
 	json = json + user.partyFieldsAsJSON()
-	json = json + fmt.Sprintf(", \"UserId\": \"%s\", \"EmailAddress\": \"%s\", " +
+	json = json + fmt.Sprintf(", \"UserId\": \"%s\", \"DefaultRepoId\": \"%s\", \"EmailAddress\": \"%s\", " +
 		"\"EmailIsVerified\": %s, \"PasswordHash\": [",
-		user.UserId, user.EmailAddress, apitypes.BoolToString(user.EmailIsVerified))
+		user.UserId, user.DefaultRepoId, user.EmailAddress, apitypes.BoolToString(user.EmailIsVerified))
 	for i, b := range user.PasswordHash {
 		if i != 0 { json = json + ", " }
 		json = json + fmt.Sprintf("%d", b)
@@ -1464,7 +1489,7 @@ func (user *InMemUser) asJSON() string {
 
 func (client *InMemClient) ReconstituteUser(id string, isActive bool,
 		name string, creationTime time.Time, realmId string, aclEntryIds []string,
-		userId, emailAddr string, emailIsVerified bool, pswdHash []byte, groupIds []string,
+		userId, defaultRepoId, emailAddr string, emailIsVerified bool, pswdHash []byte, groupIds []string,
 		loginAttmpts []string, eventIds []string) (*InMemUser, error) {
 	
 	var party *InMemParty
@@ -1475,6 +1500,7 @@ func (client *InMemClient) ReconstituteUser(id string, isActive bool,
 	return &InMemUser{
 		InMemParty: *party,
 		UserId: userId,
+		DefaultRepoId: defaultRepoId,
 		EmailAddress: emailAddr,
 		EmailIsVerified: emailIsVerified,
 		PasswordHash: pswdHash,
@@ -2117,11 +2143,17 @@ func (realm *InMemRealm) deleteRepo(dbClient DBClient, repo Repo) error {
 	err = repo.deleteAllChildResources(dbClient)
 	if err != nil { return err }
 	
+	....if the repo is a default for any user, nullify the user''s default repo.
+	
 	// Remove ACL entries.
 	err = dbClient.deleteAllAccessToResource(repo)
 	if err != nil { return err }
 	
 	return nil
+}
+
+func (realm *InMemRealm) createUniqueRepoName() string {
+	....
 }
 
 func (realm *InMemRealm) isRealm() bool { return true }

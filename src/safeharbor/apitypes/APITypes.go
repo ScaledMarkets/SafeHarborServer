@@ -382,11 +382,12 @@ type UserDesc struct {
 	RealmId string
 	EmailAddress string
 	EmailIsVerified bool
+	DefaultRepoId string
 	CanModifyTheseRealms []string
 }
 
 func NewUserDesc(id, userId, userName, realmId, emailAddress string, 
-	emailIsVerified bool, canModRealms []string) *UserDesc {
+	emailIsVerified bool, defaultRepoId string, canModRealms []string) *UserDesc {
 	return &UserDesc{
 		BaseType: *NewBaseType(200, "OK", "UserDesc"),
 		Id: id,
@@ -395,6 +396,7 @@ func NewUserDesc(id, userId, userName, realmId, emailAddress string,
 		RealmId: realmId,
 		EmailAddress: emailAddress,
 		EmailIsVerified: emailIsVerified,
+		DefaultRepoId: defaultRepoId,
 		CanModifyTheseRealms: canModRealms,
 	}
 }
@@ -403,10 +405,11 @@ func (userDesc *UserDesc) AsJSON() string {
 	var response string = fmt.Sprintf(
 		" {%s, \"Id\": \"%s\", \"UserId\": \"%s\", \"Name\": \"%s\", " +
 		"\"RealmId\": \"%s\", \"EmailAddress\": \"%s\", \"EmailIsVerified\": %s, " +
+		"\"DefaultRepoId\": \"%s\", " +
 		"\"CanModifyTheseRealms\": [",
 		userDesc.baseTypeFieldsAsJSON(),
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId,
-		userDesc.EmailAddress, BoolToString(userDesc.EmailIsVerified))
+		userDesc.EmailAddress, BoolToString(userDesc.EmailIsVerified), userDesc.DefaultRepoId)
 	for i, adminRealmId := range userDesc.CanModifyTheseRealms {
 		if i > 0 { response = response + ", " }
 		response = response + "\"" + adminRealmId + "\""

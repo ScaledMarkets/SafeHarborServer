@@ -241,6 +241,9 @@ type Group interface {
 type User interface {
 	Party
 	getUserId() string
+	getDefaultRepoId() string
+	getDefaultRepo(DBClient) Repo
+	setDefaultRepoIdDeferredUpdate(string) error
 	getEmailAddress() string
 	setUnverifiedEmailAddress(string)
 	flagEmailAsVerified(string) error
@@ -290,6 +293,7 @@ type Realm interface {
 	addRepo(DBClient, Repo) error
 	deleteGroup(DBClient, Group) error
 	deleteRepo(DBClient, Repo) error
+	createUniqueRepoName() string
 	asRealmDesc() *apitypes.RealmDesc
 }
 

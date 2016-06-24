@@ -1243,8 +1243,18 @@ func addDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	// Identify the repo.
 	var repoId string
 	var err error
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
+	repoId, err = apitypes.GetHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	// If not specified, use default repo (and create if not exist).
+	var repo Repo
+	if repoId == "" {
+		repo, err = getDefaultRepoForUser(dbClient, sessionToken.AuthenticatedUserid)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+	} else {
+		repo, err = dbClient.getRepo(repoId)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "Repo does not exist") }
+	}
 
 	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
@@ -1253,11 +1263,6 @@ func addDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.CreateInMask, repoId,
 		"addDockerfile")
 	if failMsg != nil { return failMsg }
-	
-	var repo Repo
-	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "Repo does not exist") }
 	
 	var name string
 	var filepath string
@@ -1480,16 +1485,22 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	var repoId string
 	var err error
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
+	// If not specified, use default repo (and create if not exist).
+	var repo Repo
+	if repoId == "" {
+		repo, err = getDefaultRepoForUser(dbClient, sessionToken.AuthenticatedUserid)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+	} else {
+		repo, err = dbClient.getRepo(repoId)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "Repo does not exist") }
+	}
+	
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask, repoId,
 		"addAndExecDockerfile")
 	if failMsg != nil { return failMsg }
-	
-	var repo Repo
-	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "Repo does not exist") }
 	
 	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
@@ -2152,6 +2163,16 @@ func defineScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	var repoId string
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	// If not specified, use default repo (and create if not exist).
+	var repo Repo
+	if repoId == "" {
+		repo, err = getDefaultRepoForUser(dbClient, sessionToken.AuthenticatedUserid)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+	} else {
+		repo, err = dbClient.getRepo(repoId)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "Repo does not exist") }
+	}
 	
 	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.WriteMask, repoId,
 		"defineScanConfig")
@@ -2200,9 +2221,6 @@ func defineScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	
 	// Add success image, if one was attached.
 	var imageFilepath string
-	var repo Repo
-	repo, err = dbClient.getRepo(repoId)
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	_, imageFilepath, err = captureFile(repo, files)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if imageFilepath != "" { // a file was attached - presume that it is an image
@@ -2370,6 +2388,16 @@ func defineFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	var err error
 	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	// If not specified, use default repo (and create if not exist).
+	var repo Repo
+	if repoId == "" {
+		repo, err = getDefaultRepoForUser(dbClient, sessionToken.AuthenticatedUserid)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+	} else {
+		repo, err = dbClient.getRepo(repoId)
+		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "Repo does not exist") }
+	}
 	
 	var name string
 	name, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Name")
@@ -2377,10 +2405,6 @@ func defineFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	
 	var desc string
 	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
-	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	
-	var repo Repo
-	repo, err = dbClient.getRepo(repoId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var successImagePath string

@@ -399,6 +399,48 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 }
 
 /*******************************************************************************
+ * If the user has a default Repo, return it. Otherwise, create a
+ * default Repo for the user, and give the user full access rights to the Repo.
+ */
+func getDefaultRepoForUser(dbClient DBClient, userId string) (Repo, error) {
+	
+	var user User
+	var err error
+	user, err = dbClient.dbGetUserByUserId(userId)
+	if err != nil { return nil, err }
+	if user == nil {
+		return nil, utils.ConstructUserError("user object cannot be identified from user id " + userId)
+	}
+	
+	var repoId string = user.getDefaultRepoId()
+	var repo Repo
+	if repoId != "" {
+		repo, err = dbClient.getRepo(repoId)
+		if err != nil { return nil, err }
+	}
+	
+	if err != nil { return nil, err }
+	
+	// Create a Repo.
+	repo, err = dbClient.dbCreateRepo(user.getRealmId(), realm.createUniqueRepoName(),
+		"Repo created automatically")
+	if err != nil { return nil, err }
+	
+	// Give the user fill access to the Repo.
+	var aclEntry ACLEntry
+	var mask = []bool{ true, true, true, true, true }
+	aclEntry, err = dbClient.setAccess(repo, user, mask)
+	if err != nil { return nil, err }
+	
+	// Set the Repo as the user''s default Repo.
+	err = user.setDefaultRepoIdDeferredUpdate(repo.getId())
+	if err != nil { return nil, err }
+	
+	// Update the database.
+	return repo, dbClient.updateObject(user)
+}
+
+/*******************************************************************************
  * Create a map of the leaf resources (resources that are not containers for other
  * resources) that the specified user has access to. The map is keyed on each
  * resource''s object Id.
