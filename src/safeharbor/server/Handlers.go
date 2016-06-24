@@ -722,15 +722,10 @@ func getRealmByName(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	realmName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RealmName")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	
-	fmt.Println("dbClient.getPersistence().realmMap[" + realmName + "] = " +  // debug
-		dbClient.getPersistence().realmMap[realmName])  // debug
-
-	
 	var realmId string
 	realmId, err = dbClient.getPersistence().GetRealmObjIdByRealmName(realmName)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	if realmId != "" { return apitypes.NewFailureDesc(
+	if realmId == "" { return apitypes.NewFailureDesc(
 		http.StatusBadRequest, "Realm with name " + realmName + " not found")
 	}
 	
@@ -776,17 +771,6 @@ func createRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 	_, err = dbClient.dbCreateACLEntry(realm.getId(), user.getId(),
 		[]bool{ true, true, true, true, true } )
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	
-	
-	_, err = dbClient.getPersistence().GetRealmObjIdByRealmName(  // debug
-		realmInfo.RealmName)  // debug
-	if err == nil { fmt.Println("GetRealmObjIdByRealmName succeeded") } else {  // debug
-		fmt.Println(err.Error())  // debug
-	}  // debug
-	fmt.Println("dbClient.getPersistence().realmMap[" + realmInfo.RealmName + "] = " +  // debug
-		dbClient.getPersistence().realmMap[realmInfo.RealmName])  // debug
-	
-	
 	
 	return realm.asRealmDesc()
 }
