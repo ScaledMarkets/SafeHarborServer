@@ -773,6 +773,15 @@ func createRealm(dbClient *InMemClient, sessionToken *apitypes.SessionToken, val
 		[]bool{ true, true, true, true, true } )
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
+	
+	_, err = dbClient.getPersistence().GetRealmObjIdByRealmName(dbClient.getTransactionContext(),  // debug
+		realmInfo.RealmName)  // debug
+	if err == nil { fmt.Println("GetRealmObjIdByRealmName succeeded") } else {  // debug
+		fmt.Println(err.Error())  // debug
+	}  // debug
+	
+	
+	
 	return realm.asRealmDesc()
 }
 
