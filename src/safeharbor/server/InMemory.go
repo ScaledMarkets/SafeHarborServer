@@ -215,7 +215,7 @@ func (client *InMemClient) addRealm(newRealm Realm) error {
 	// Check if realm with same name already exists.
 	var rid string
 	var err error
-	rid, err = client.Persistence.GetRealmObjIdByRealmName(client.txn, newRealm.getName())
+	rid, err = client.Persistence.GetRealmObjIdByRealmName(newRealm.getName())
 	if err != nil { return err }
 	if rid != "" { return utils.ConstructUserError(
 		"A realm with name " + newRealm.getName() + " already exists")

@@ -253,7 +253,7 @@ func (persist *Persistence) setRealmName(txn TxnContext, name string) error {
 /*******************************************************************************
  * Note: We assume that a realm''s name is not changed once it has been set.
  */
-func (persist *Persistence) GetRealmObjIdByRealmName(txn TxnContext, realmName string) (string, error) {
+func (persist *Persistence) GetRealmObjIdByRealmName(realmName string) (string, error) {
 
 	if persist.InMemoryOnly {
 		return persist.realmMap[realmName], nil
@@ -445,7 +445,7 @@ func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 		// Check if the realm already exists in the hash.
 		var realmObjId string
 		var err error
-		realmObjId, err = persist.GetRealmObjIdByRealmName(txn, newRealm.getName())
+		realmObjId, err = persist.GetRealmObjIdByRealmName(newRealm.getName())
 		if err != nil { return err }
 		if realmObjId != "" {
 			return utils.ConstructUserError(
