@@ -1100,7 +1100,7 @@ func (group *InMemGroup) addUserId(dbClient DBClient, userObjId string) error {
 	user, err = dbClient.getUser(userObjId)
 	if err != nil { return err }
 	group.UserObjIds = append(group.UserObjIds, userObjId)
-	err = user.addGroupId(dbClient, group.getId())
+	err = user.addGroupIdDeferredUpdate(dbClient, group.getId())
 	if err != nil { return err }
 	
 	err = dbClient.writeBack(user)
@@ -1271,16 +1271,6 @@ func (user *InMemUser) getDefaultRepoId() string {
 	return user.DefaultRepoId
 }
 
-func (user *InMemUser) getDefaultRepo(dbClient DBClient) Repo {
-	
-	if user.DefaultRepoId == "" { return nil }
-	var repo Repo
-	var err error
-	repo, err = dbClient.getRepo(user.DefaultRepoId)
-	if err != nil { return nil }
-	return repo
-}
-
 func (user *InMemUser) setDefaultRepoIdDeferredUpdate(id string) error {
 	
 	var repo Repo
@@ -1291,19 +1281,46 @@ func (user *InMemUser) setDefaultRepoIdDeferredUpdate(id string) error {
 	return nil
 }
 
+func (user *InMemUser) unsetDefaultRepoIdDeferredUpdate() {
+	
+	user.DefaultRepoId = ""
+	return nil
+}
+
+func (user *InMemUser) setDefaultRepo(dbClient DBClient, repo Repo) error {
+	
+	var err = user.setDefaultRepoIdDeferredUpdate(repo.getId())
+	if err != nil { return err }
+	
+	// Need to maintain the Repo's DefaultUsers list.
+	repo.addDefaultUserIdDeferredUpdate(dbClient, user.getId())
+	err = dbClient.updateObject(repo)
+	if err != nil { return err }
+	return dbClient.updateObject(user)
+}
+
+func (user *InMemUser) unsetDefaultRepo(dbClient DBClient) error {
+	
+	user.unsetDefaultRepoIdDeferredUpdate()
+	repo.remDefaultUserIdDeferredUpdate(dbClient, user.getId())
+	err = dbClient.updateObject(repo)
+	if err != nil { return err }
+	return dbClient.updateObject(user)
+}
+
 func (user *InMemUser) getEmailAddress() string {
 	return user.EmailAddress
 }
 
-func (user *InMemUser) setUnverifiedEmailAddress(emailAddress string) {
+func (user *InMemUser) setUnverifiedEmailAddressDeferredUpdate(emailAddress string) {
 	user.EmailAddress = emailAddress
 	user.EmailIsVerified = false
 }
 
-func (user *InMemUser) flagEmailAsVerified(emailAddress string) error {
+func (user *InMemUser) flagEmailAsVerified(dbClient DBClient, emailAddress string) error {
 	if user.EmailAddress == "" { return utils.ConstructUserError("No email address set") }
 	user.EmailIsVerified = true
-	return nil
+	return dbClient.updateObject(user)
 }
 
 func (user *InMemUser) emailIsVerified() bool {
@@ -1322,7 +1339,7 @@ func (user *InMemUser) hasGroupWithId(dbClient DBClient, groupId string) bool {
 	return false
 }
 
-func (user *InMemUser) addGroupId(dbClient DBClient, groupId string) error {
+func (user *InMemUser) addGroupIdDeferredUpdate(dbClient DBClient, groupId string) error {
 	
 	if user.hasGroupWithId(dbClient, groupId) { return utils.ConstructUserError(fmt.Sprintf(
 		"Group with object Id %s is already in User's set of groups", groupId))
@@ -2143,7 +2160,9 @@ func (realm *InMemRealm) deleteRepo(dbClient DBClient, repo Repo) error {
 	err = repo.deleteAllChildResources(dbClient)
 	if err != nil { return err }
 	
-	....if the repo is a default for any user, nullify the user''s default repo.
+	// If the repo is a default for any user, nullify the user''s default repo.
+	err = repo.remAllDefaultUsers()
+	if err != nil { return err }
 	
 	// Remove ACL entries.
 	err = dbClient.deleteAllAccessToResource(repo)
@@ -2152,8 +2171,26 @@ func (realm *InMemRealm) deleteRepo(dbClient DBClient, repo Repo) error {
 	return nil
 }
 
-func (realm *InMemRealm) createUniqueRepoName() string {
-	....
+func (realm *InMemRealm) createUniqueRepoName(dbClient DBClient, prefix string) (string, error) {
+	
+	var err = nameConformsToSafeHarborImageNameRules(prefix)
+	if err != nil { return "", err }
+	
+	var name string
+	var i = 1
+	for {
+		if i > 1000 { return "",
+			utils.ConstructUserError("Unable to create a unique repo name")
+		}
+		name = fmt.Sprintf("%s_%d", prefix, i)
+		var repo Repo
+		var err error
+		repo, err = realm.getRepoByName(DBClient, name)
+		if err != nil { return err }
+		if repo == nil { break }  // found a unique name
+		i++
+	}
+	return name, nil
 }
 
 func (realm *InMemRealm) isRealm() bool { return true }
@@ -2215,6 +2252,7 @@ func (client *InMemClient) ReconstituteRealm(id string, aclEntryIds []string,
  */
 type InMemRepo struct {
 	InMemResource
+	DefaultUserIds []string
 	DockerfileIds []string
 	DockerImageIds []string
 	ScanConfigIds []string
@@ -2231,6 +2269,7 @@ func (client *InMemClient) NewInMemRepo(realmId, name, desc string) (*InMemRepo,
 	if err != nil { return nil, err }
 	var newRepo *InMemRepo = &InMemRepo{
 		InMemResource: *resource,
+		DefaultUserIds: make([]string, 0),
 		DockerfileIds: make([]string, 0),
 		DockerImageIds: make([]string, 0),
 		ScanConfigIds: make([]string, 0),
@@ -2295,6 +2334,38 @@ func (repo *InMemRepo) getRealm(dbClient DBClient) (Realm, error) {
 	realm, isType = obj.(Realm)
 	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
 	return realm, nil
+}
+
+func (repo *InMemRepo) getDefaultUserIds() []string {
+	return repo.DefaultUserIds
+}
+
+func (repo *InMemRepo) addDefaultUserIdDeferredUpdate(dbClient, DBClient, userObjId string) {
+	repo.DefaultUserIds = utils.AddUniquely(userObjId, repo.DefaultUserIds)
+}
+
+func (repo *InMemRepo) remDefaultUserIdDeferredUpdate(dbClient, DBClient, userObjId string) {
+	repo.DefaultUserIds = utils.RemoveFrom(userObjId, repo.DefaultUserIds)
+}
+
+func (repo *InMemRepo) addDefaultUser(dbClient, DBClient, user User) error {
+	return user.setDefaultRepo(dbClient, repo)
+}
+
+func (repo *InMemRepo) remDefaultUser(dbClient, DBClient, user User) error {
+	return user.unsetDefaultRepo(dbClient)
+}
+
+func (repo *InMemRepo) remAllDefaultUsers(dbClient, DBClient, ) error {
+	
+	for _, userObjId := range repo.DefaultUserIds {
+		var user User
+		var err error
+		user, err = dbClient.getUser(userObjId)
+		if err != nil { return err }
+		user.unsetDefaultRepo(dbClient)
+	}
+	return nil
 }
 
 func (repo *InMemRepo) getDockerfileIds() []string {
@@ -2665,6 +2736,13 @@ func (repo *InMemRepo) asJSON() string {
 	
 	var json = "\"Repo\": {"
 	json = json + repo.resourceFieldsAsJSON()
+	
+	json = json + ", \"DefaultUserIds\": ["
+	for i, id := range repo.DefaultUserIds {
+		if i != 0 { json = json + ", " }
+		json = json + "\"" + id + "\""
+	}
+	
 	json = json + ", \"DockerFieldIds\": ["
 	for i, id := range repo.DockerfileIds {
 		if i != 0 { json = json + ", " }
@@ -2690,7 +2768,7 @@ func (repo *InMemRepo) asJSON() string {
 }
 
 func (client *InMemClient) ReconstituteRepo(id string, aclEntryIds []string,
-	name, desc, parentId string, creationTime time.Time,
+	name, desc, parentId string, creationTime time.Time, defaultUserIds []string,
 	dockerfileIds, imageIds, configIds, flagIds []string, fileDir string) (*InMemRepo, error) {
 
 	var resource *InMemResource
@@ -2701,6 +2779,7 @@ func (client *InMemClient) ReconstituteRepo(id string, aclEntryIds []string,
 	
 	return &InMemRepo{
 		InMemResource: *resource,
+		DefaultUserIds: defaultUserIds,
 		DockerfileIds: dockerfileIds,
 		DockerImageIds: imageIds,
 		ScanConfigIds: configIds,

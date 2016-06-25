@@ -577,7 +577,7 @@ func addGroupUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, va
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if user == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"User with Id " + userObjId + " unidentified") }
-	user.addGroupId(dbClient, groupId)
+	user.addGroupIdDeferredUpdate(dbClient, groupId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return apitypes.NewResult(200, "User added to group")
@@ -3328,7 +3328,8 @@ func validateAccountVerificationToken(dbClient *InMemClient, sessionToken *apity
 	var user User
 	user, err = dbClient.dbGetUserByUserId(userId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
-	user.flagEmailAsVerified(emailAddress)
+	err = user.flagEmailAsVerified(dbClient, emailAddress)
+	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	return apitypes.NewResult(200, "Email address verified")
 }

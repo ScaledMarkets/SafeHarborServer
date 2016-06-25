@@ -242,16 +242,18 @@ type User interface {
 	Party
 	getUserId() string
 	getDefaultRepoId() string
-	getDefaultRepo(DBClient) Repo
-	setDefaultRepoIdDeferredUpdate(string) error
+	setDefaultRepoIdDeferredUpdate(string) error  // accessor
+	unsetDefaultRepoIdDeferredUpdate()  // accessor
+	setDefaultRepo(DBClient, Repo) error
+	unsetDefaultRepo(DBClient) error
 	getEmailAddress() string
-	setUnverifiedEmailAddress(string)
-	flagEmailAsVerified(string) error
+	setUnverifiedEmailAddressDeferredUpdate(string)
+	flagEmailAsVerified(DBClient, string) error
 	emailIsVerified() bool
 	setPassword(DBClient, string) error
 	validatePassword(dbClient DBClient, pswd string) bool
 	hasGroupWithId(DBClient, string) bool
-	addGroupId(DBClient, string) error
+	addGroupIdDeferredUpdate(DBClient, string) error
 	getGroupIds() []string
 	addLoginAttempt(DBClient)
 	getMostRecentLoginAttempts() []string // each in seconds, Unix time
@@ -293,7 +295,7 @@ type Realm interface {
 	addRepo(DBClient, Repo) error
 	deleteGroup(DBClient, Group) error
 	deleteRepo(DBClient, Repo) error
-	createUniqueRepoName() string
+	createUniqueRepoName(DBClient) (string, error)
 	asRealmDesc() *apitypes.RealmDesc
 }
 
@@ -302,6 +304,14 @@ type Repo interface {
 	getFileDirectory() string
 	getRealmId() string
 	getRealm(DBClient) (Realm, error)
+	
+	getDefaultUserIds() []string
+	addDefaultUserIdDeferredUpdate(dbClient, DBClient, userObjId string)
+	remDefaultUserIdDeferredUpdate(dbClient, DBClient, userObjId string)
+	addDefaultUser(dbClient, DBClient, user User) error
+	remDefaultUser(dbClient DBClient, user User) error
+	remAllDefaultUsers(DBClient) error
+	
 	getDockerfileIds() []string
 	getDockerImageIds() []string
 	getScanConfigIds() []string

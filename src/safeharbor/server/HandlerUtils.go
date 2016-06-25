@@ -422,7 +422,10 @@ func getDefaultRepoForUser(dbClient DBClient, userId string) (Repo, error) {
 	if err != nil { return nil, err }
 	
 	// Create a Repo.
-	repo, err = dbClient.dbCreateRepo(user.getRealmId(), realm.createUniqueRepoName(),
+	var repoName string
+	repoName, err = realm.createUniqueRepoName(dbClient, userId)
+	if err != nil { return nil, err }
+	repo, err = dbClient.dbCreateRepo(user.getRealmId(), repoName,
 		"Repo created automatically")
 	if err != nil { return nil, err }
 	
@@ -432,8 +435,8 @@ func getDefaultRepoForUser(dbClient DBClient, userId string) (Repo, error) {
 	aclEntry, err = dbClient.setAccess(repo, user, mask)
 	if err != nil { return nil, err }
 	
-	// Set the Repo as the user''s default Repo.
-	err = user.setDefaultRepoIdDeferredUpdate(repo.getId())
+	// Set the Repo as the user's default Repo.
+	err = user.setDefaultRepo(repo)
 	if err != nil { return nil, err }
 	
 	// Update the database.
