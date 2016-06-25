@@ -1467,7 +1467,7 @@ func (user *InMemUser) asUserDesc(dbClient DBClient) *apitypes.UserDesc {
 		adminRealmIds = make([]string, 0)
 	}
 	return apitypes.NewUserDesc(user.Id, user.UserId, user.Name, user.RealmId,
-		user.EmailAddress, user.EmailIsVerified, adminRealmIds)
+		user.DefaultRepoId, user.EmailAddress, user.EmailIsVerified, adminRealmIds)
 }
 
 func (user *InMemUser) writeBack(dbClient DBClient) error {
