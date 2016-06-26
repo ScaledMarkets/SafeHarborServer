@@ -68,6 +68,17 @@ func NewPersistence(server *Server, redisClient *goredis.Redis) (*Persistence, e
 type GoRedisTransactionWrapper struct {
 	Persistence *Persistence
 	GoRedisTransaction *goredis.Transaction
+	UserId string
+}
+
+var _ TxnContext = &GoRedisTransactionWrapper{}
+
+func (txn *GoRedisTransactionWrapper) setUserId(userId string) {
+	txn.UserId = userId
+}
+
+func (txn *GoRedisTransactionWrapper) getUserId() string {
+	return txn.UserId
 }
 
 func (txn *GoRedisTransactionWrapper) commit() error {

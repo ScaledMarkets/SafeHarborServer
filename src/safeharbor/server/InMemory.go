@@ -1271,38 +1271,36 @@ func (user *InMemUser) getDefaultRepoId() string {
 	return user.DefaultRepoId
 }
 
-func (user *InMemUser) setDefaultRepoIdDeferredUpdate(id string) error {
-	
-	var repo Repo
-	var err error
-	repo, err = dbClient.getRepo(id)
-	if err != nil { return utils.ConstructUserError("No repo with Id " + id) }
+func (user *InMemUser) setDefaultRepoIdDeferredUpdate(id string) {
 	user.DefaultRepoId = id
-	return nil
 }
 
 func (user *InMemUser) unsetDefaultRepoIdDeferredUpdate() {
 	
 	user.DefaultRepoId = ""
-	return nil
+	return
 }
 
 func (user *InMemUser) setDefaultRepo(dbClient DBClient, repo Repo) error {
 	
-	var err = user.setDefaultRepoIdDeferredUpdate(repo.getId())
-	if err != nil { return err }
+	user.setDefaultRepoIdDeferredUpdate(repo.getId())
 	
 	// Need to maintain the Repo's DefaultUsers list.
-	repo.addDefaultUserIdDeferredUpdate(dbClient, user.getId())
-	err = dbClient.updateObject(repo)
-	if err != nil { return err }
+	repo.addDefaultUserIdDeferredUpdate(user.getId())
 	return dbClient.updateObject(user)
 }
 
 func (user *InMemUser) unsetDefaultRepo(dbClient DBClient) error {
 	
+	var repoId = user.DefaultRepoId
+	if repoId == "" { return nil }
+	
+	var repo Repo
+	var err error
+	repo, err = dbClient.getRepo(repoId)
+	if err != nil { return err }
+	repo.remDefaultUserIdDeferredUpdate(user.getId())
 	user.unsetDefaultRepoIdDeferredUpdate()
-	repo.remDefaultUserIdDeferredUpdate(dbClient, user.getId())
 	err = dbClient.updateObject(repo)
 	if err != nil { return err }
 	return dbClient.updateObject(user)
@@ -1312,9 +1310,10 @@ func (user *InMemUser) getEmailAddress() string {
 	return user.EmailAddress
 }
 
-func (user *InMemUser) setUnverifiedEmailAddressDeferredUpdate(emailAddress string) {
+func (user *InMemUser) setUnverifiedEmailAddress(dbClient DBClient, emailAddress string) error {
 	user.EmailAddress = emailAddress
 	user.EmailIsVerified = false
+	return dbClient.updateObject(user)
 }
 
 func (user *InMemUser) flagEmailAsVerified(dbClient DBClient, emailAddress string) error {
@@ -2161,7 +2160,7 @@ func (realm *InMemRealm) deleteRepo(dbClient DBClient, repo Repo) error {
 	if err != nil { return err }
 	
 	// If the repo is a default for any user, nullify the user''s default repo.
-	err = repo.remAllDefaultUsers()
+	err = repo.remAllDefaultUsers(dbClient)
 	if err != nil { return err }
 	
 	// Remove ACL entries.
@@ -2185,8 +2184,8 @@ func (realm *InMemRealm) createUniqueRepoName(dbClient DBClient, prefix string) 
 		name = fmt.Sprintf("%s_%d", prefix, i)
 		var repo Repo
 		var err error
-		repo, err = realm.getRepoByName(DBClient, name)
-		if err != nil { return err }
+		repo, err = realm.getRepoByName(dbClient, name)
+		if err != nil { return "", err }
 		if repo == nil { break }  // found a unique name
 		i++
 	}
@@ -2280,17 +2279,24 @@ func (client *InMemClient) NewInMemRepo(realmId, name, desc string) (*InMemRepo,
 }
 
 func (client *InMemClient) dbCreateRepo(realmId, name, desc string) (Repo, error) {
+	
+	var repoName = name
 	var realm Realm
 	var err error
 	realm, err = client.getRealm(realmId)
 	if err != nil { return nil, err }
 	
-	err = nameConformsToSafeHarborImageNameRules(name)
+	if repoName == "" {
+		repoName, err = realm.createUniqueRepoName(client, client.getTransactionContext().getUserId())
+		if err != nil { return nil, err }
+	}
+	
+	err = nameConformsToSafeHarborImageNameRules(repoName)
 	if err != nil { return nil, err }
 	
 	//var repoId string = createUniqueDbObjectId()
 	var newRepo *InMemRepo
-	newRepo, err = client.NewInMemRepo(realmId, name, desc)
+	newRepo, err = client.NewInMemRepo(realmId, repoName, desc)
 	if err != nil { return nil, err }
 
 	var repoFileDir string
@@ -2340,23 +2346,23 @@ func (repo *InMemRepo) getDefaultUserIds() []string {
 	return repo.DefaultUserIds
 }
 
-func (repo *InMemRepo) addDefaultUserIdDeferredUpdate(dbClient, DBClient, userObjId string) {
+func (repo *InMemRepo) addDefaultUserIdDeferredUpdate(userObjId string) {
 	repo.DefaultUserIds = utils.AddUniquely(userObjId, repo.DefaultUserIds)
 }
 
-func (repo *InMemRepo) remDefaultUserIdDeferredUpdate(dbClient, DBClient, userObjId string) {
+func (repo *InMemRepo) remDefaultUserIdDeferredUpdate(userObjId string) {
 	repo.DefaultUserIds = utils.RemoveFrom(userObjId, repo.DefaultUserIds)
 }
 
-func (repo *InMemRepo) addDefaultUser(dbClient, DBClient, user User) error {
+func (repo *InMemRepo) addDefaultUser(dbClient DBClient, user User) error {
 	return user.setDefaultRepo(dbClient, repo)
 }
 
-func (repo *InMemRepo) remDefaultUser(dbClient, DBClient, user User) error {
+func (repo *InMemRepo) remDefaultUser(dbClient DBClient, user User) error {
 	return user.unsetDefaultRepo(dbClient)
 }
 
-func (repo *InMemRepo) remAllDefaultUsers(dbClient, DBClient, ) error {
+func (repo *InMemRepo) remAllDefaultUsers(dbClient DBClient) error {
 	
 	for _, userObjId := range repo.DefaultUserIds {
 		var user User
@@ -3478,15 +3484,21 @@ func (imageVersion *InMemDockerImageVersion) getDockerImageTag() string {
 	return imageVersion.Version
 }
 
-func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc() (*apitypes.DockerImageVersionDesc, error) {
+func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc(dbClient DBClient) (
+	*apitypes.DockerImageVersionDesc, error) {
 	
 	var parsedDockerBuildOutput *apitypes.DockerBuildOutput
 	var err error
 	parsedDockerBuildOutput, err = docker.ParseBuildRESTOutput(imageVersion.DockerBuildOutput)
 	if err != nil { return nil, err }
 	
+	var image Image
+	image, err = dbClient.getImage(imageVersion.ImageObjId)
+	if err != nil { return nil, err }
+	var repoId = image.getParentId()
+	
 	return apitypes.NewDockerImageVersionDesc(imageVersion.getId(), imageVersion.Version,
-		imageVersion.ImageObjId, imageVersion.ImageCreationEventId, imageVersion.CreationDate,
+		imageVersion.ImageObjId, repoId, imageVersion.ImageCreationEventId, imageVersion.CreationDate,
 		imageVersion.Digest, imageVersion.Signature, imageVersion.ScanEventIds,
 		imageVersion.DockerBuildOutput, parsedDockerBuildOutput), nil
 }
@@ -3972,7 +3984,7 @@ func (scanConfig *InMemScanConfig) asScanConfigDesc(dbClient DBClient) *apitypes
 		paramValueDescs = append(paramValueDescs, paramValue.asScanParameterValueDesc(dbClient))
 	}
 	
-	return apitypes.NewScanConfigDesc(scanConfig.Id, scanConfig.ProviderName,
+	return apitypes.NewScanConfigDesc(scanConfig.Id, scanConfig.ParentId, scanConfig.ProviderName,
 		scanConfig.SuccessExpression, scanConfig.FlagId, paramValueDescs,
 		scanConfig.DockerImageIdsThatUse)
 }

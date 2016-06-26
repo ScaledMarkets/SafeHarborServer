@@ -25,7 +25,7 @@ func (emailSvc *EmailService) SendEmail(emailAddress, subject, textMessage, html
 	fmt.Println("SendEmail: C")  // debug
 	
 	var fullMsg = []byte(
-		"Subject: " + subject + "\r\n") +
+		"Subject: " + subject + "\r\n" +
 		"To: " + emailAddress + "\r\n" +
 		"From: " + emailSvc.SenderAddress + "\r\n" +
 		"Source: " + emailSvc.SenderAddress + "\r\n" +
@@ -36,16 +36,15 @@ func (emailSvc *EmailService) SendEmail(emailAddress, subject, textMessage, html
 		"--bcaec520ea5d6918e204a8cea3b4" + "\r\n" +
 		"Content-Type: text/plain; charset=utf-8" + "\r\n" +
 		"\r\n" +
-		textMessage + "\r\n"
+		textMessage + "\r\n" +
 		"\r\n" +
 		"--bcaec520ea5d6918e204a8cea3b4" + "\r\n" +
 		"Content-Type: text/html; charset=utf-8" + "\r\n" +
-		"Content-Transfer-Encoding: quoted-printable" "\r\n" +
+		"Content-Transfer-Encoding: quoted-printable" + "\r\n" +
 		"\r\n" +
-		htmlMessage + "\r\n"
+		htmlMessage + "\r\n" +
 		"\r\n" +
-		"--bcaec520ea5d6918e204a8cea3b4"
-	)
+		"--bcaec520ea5d6918e204a8cea3b4")
 
 	fmt.Println("SendEmail: D")  // debug
 	var err = smtp.SendMail(hostAndPort, auth, emailSvc.SenderAddress, toAddress, fullMsg)

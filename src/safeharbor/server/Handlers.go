@@ -281,20 +281,11 @@ func createUser(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	newUser, err = dbClient.dbCreateUser(newUserId, newUserName, email, pswd, realmId)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	
-	fmt.Println("createUser: A")  // debug
-	
-	
-	
 	if email != "" {
-		fmt.Println("createUser: B")  // debug
 		err = EstablishEmail(dbClient.getServer().authService, dbClient,
 			dbClient.getServer().EmailService, newUserId, email)
-		fmt.Println("createUser: C")  // debug
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
-		fmt.Println("createUser: D")  // debug
 	}
-	fmt.Println("createUser: E")  // debug
 	
 	return newUser.asUserDesc(dbClient)
 }
@@ -1351,7 +1342,7 @@ func getDockerImageDesc(dbClient *InMemClient, sessionToken *apitypes.SessionTok
 		imageVersion, err = dbClient.getDockerImageVersion(imageId)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		var imageVersionDesc *apitypes.DockerImageVersionDesc
-		imageVersionDesc, err = imageVersion.asDockerImageVersionDesc()
+		imageVersionDesc, err = imageVersion.asDockerImageVersionDesc(dbClient)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		return imageVersionDesc
 	}
@@ -1464,7 +1455,7 @@ func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var imageVersionDesc *apitypes.DockerImageVersionDesc
-	imageVersionDesc, err = imageVersion.asDockerImageVersionDesc()
+	imageVersionDesc, err = imageVersion.asDockerImageVersionDesc(dbClient)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return imageVersionDesc
 }
@@ -1526,7 +1517,7 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	//....create DockerfileExecParameterValues
 
 	var imageVersionDesc *apitypes.DockerImageVersionDesc
-	imageVersionDesc, err = imageVersion.asDockerImageVersionDesc()
+	imageVersionDesc, err = imageVersion.asDockerImageVersionDesc(dbClient)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	return imageVersionDesc
 }
@@ -3219,7 +3210,7 @@ func getDockerImageVersions(dbClient *InMemClient, sessionToken *apitypes.Sessio
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		
 		var imageVersionDesc *apitypes.DockerImageVersionDesc
-		imageVersionDesc, err = dockerImageVersion.asDockerImageVersionDesc()
+		imageVersionDesc, err = dockerImageVersion.asDockerImageVersionDesc(dbClient)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		
 		descs = append(descs, imageVersionDesc)

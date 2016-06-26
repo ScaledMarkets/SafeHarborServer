@@ -41,6 +41,8 @@ type DataError interface {
  * 
  */
 type TxnContext interface {
+	setUserId(string)
+	getUserId() string
 	commit() error
 	abort() error
 }
@@ -87,7 +89,7 @@ type DBClient interface {
 	dbCreateUser(string, string, string, string, string) (User, error)
 	dbCreateACLEntry(resourceId string, partyId string, permissionMask []bool) (ACLEntry, error)
 	dbCreateRealm(*apitypes.RealmInfo, string) (Realm, error)
-	dbCreateRepo(string, string, string) (Repo, error)
+	dbCreateRepo(realmId, name, desc string) (Repo, error)  // name may be ""
 	dbCreateDockerfile(string, string, string, string) (Dockerfile, error)
 	dbCreateDockerImage(string, string, string) (DockerImage, error)
 	dbCreateDockerImageVersion(version, dockerImageObjId string, creationDate time.Time,
@@ -242,12 +244,12 @@ type User interface {
 	Party
 	getUserId() string
 	getDefaultRepoId() string
-	setDefaultRepoIdDeferredUpdate(string) error  // accessor
+	setDefaultRepoIdDeferredUpdate(string)  // accessor
 	unsetDefaultRepoIdDeferredUpdate()  // accessor
 	setDefaultRepo(DBClient, Repo) error
 	unsetDefaultRepo(DBClient) error
 	getEmailAddress() string
-	setUnverifiedEmailAddressDeferredUpdate(string)
+	setUnverifiedEmailAddress(DBClient, string) error
 	flagEmailAsVerified(DBClient, string) error
 	emailIsVerified() bool
 	setPassword(DBClient, string) error
@@ -295,7 +297,7 @@ type Realm interface {
 	addRepo(DBClient, Repo) error
 	deleteGroup(DBClient, Group) error
 	deleteRepo(DBClient, Repo) error
-	createUniqueRepoName(DBClient) (string, error)
+	createUniqueRepoName(DBClient, string) (string, error)
 	asRealmDesc() *apitypes.RealmDesc
 }
 
@@ -306,9 +308,9 @@ type Repo interface {
 	getRealm(DBClient) (Realm, error)
 	
 	getDefaultUserIds() []string
-	addDefaultUserIdDeferredUpdate(dbClient, DBClient, userObjId string)
-	remDefaultUserIdDeferredUpdate(dbClient, DBClient, userObjId string)
-	addDefaultUser(dbClient, DBClient, user User) error
+	addDefaultUserIdDeferredUpdate(userObjId string)
+	remDefaultUserIdDeferredUpdate(userObjId string)
+	addDefaultUser(dbClient DBClient, user User) error
 	remDefaultUser(dbClient DBClient, user User) error
 	remAllDefaultUsers(DBClient) error
 	
@@ -384,7 +386,7 @@ type DockerImageVersion interface {
 	getDigest() []byte
     getSignature() []byte
     getDockerBuildOutput() string
-    asDockerImageVersionDesc() (*apitypes.DockerImageVersionDesc, error)
+    asDockerImageVersionDesc(DBClient) (*apitypes.DockerImageVersionDesc, error)
 }
 
 type ParameterValue interface {  // abstract

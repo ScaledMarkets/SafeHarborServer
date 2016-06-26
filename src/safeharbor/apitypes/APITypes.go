@@ -383,12 +383,11 @@ type UserDesc struct {
 	DefaultRepoId string
 	EmailAddress string
 	EmailIsVerified bool
-	DefaultRepoId string
 	CanModifyTheseRealms []string
 }
 
 func NewUserDesc(id, userId, userName, realmId, defaultRepoId, emailAddress string, 
-	emailIsVerified bool, defaultRepoId string, canModRealms []string) *UserDesc {
+	emailIsVerified bool, canModRealms []string) *UserDesc {
 	return &UserDesc{
 		BaseType: *NewBaseType(200, "OK", "UserDesc"),
 		Id: id,
@@ -398,7 +397,6 @@ func NewUserDesc(id, userId, userName, realmId, defaultRepoId, emailAddress stri
 		DefaultRepoId: defaultRepoId,
 		EmailAddress: emailAddress,
 		EmailIsVerified: emailIsVerified,
-		DefaultRepoId: defaultRepoId,
 		CanModifyTheseRealms: canModRealms,
 	}
 }
@@ -407,11 +405,10 @@ func (userDesc *UserDesc) AsJSON() string {
 	var response string = fmt.Sprintf(
 		" {%s, \"Id\": \"%s\", \"UserId\": \"%s\", \"Name\": \"%s\", " +
 		"\"RealmId\": \"%s\", \"DefaultRepoId\": \"%s\", \"EmailAddress\": \"%s\", \"EmailIsVerified\": %s, " +
-		"\"DefaultRepoId\": \"%s\", " +
 		"\"CanModifyTheseRealms\": [",
 		userDesc.baseTypeFieldsAsJSON(),
 		userDesc.Id, userDesc.UserId, userDesc.UserName, userDesc.RealmId, userDesc.DefaultRepoId,
-		userDesc.EmailAddress, BoolToString(userDesc.EmailIsVerified), userDesc.DefaultRepoId)
+		userDesc.EmailAddress, BoolToString(userDesc.EmailIsVerified))
 	for i, adminRealmId := range userDesc.CanModifyTheseRealms {
 		if i > 0 { response = response + ", " }
 		response = response + "\"" + adminRealmId + "\""
@@ -706,17 +703,19 @@ type ImageVersionDesc struct {
 	ObjId string
 	Version string
 	ImageObjId string
+	RepoId string
     ImageCreationEventId string
     CreationDate string
 }
 
-func NewImageVersionDesc(objectType, objId, version, imageObjId string, creationEventId string,
-	creationTime time.Time) *ImageVersionDesc {
+func NewImageVersionDesc(objectType, objId, version, imageObjId, repoId string,
+	creationEventId string, creationTime time.Time) *ImageVersionDesc {
 	return &ImageVersionDesc{
 		BaseType: *NewBaseType(200, "OK", objectType),
 		ObjId: objId,
 		Version: version,
 		ImageObjId: imageObjId,
+		RepoId: repoId,
 		ImageCreationEventId: creationEventId,
 		CreationDate: FormatTimeAsJavascriptDate(creationTime),
 	}
@@ -725,8 +724,8 @@ func NewImageVersionDesc(objectType, objId, version, imageObjId string, creation
 func (versionDesc *ImageVersionDesc) imageVersionDescFieldsAsJSON() string {
 	return versionDesc.baseTypeFieldsAsJSON() + fmt.Sprintf(
 		", \"ObjId\": \"%s\", \"Version\": \"%s\", \"ImageObjId\": \"%s\", " +
-		"\"ImageCreationEventId\": \"%s\", \"CreationDate\": %s",
-		versionDesc.ObjId, versionDesc.Version, versionDesc.ImageObjId,
+		"\"RepoId\": \"%s\", \"ImageCreationEventId\": \"%s\", \"CreationDate\": %s",
+		versionDesc.ObjId, versionDesc.Version, versionDesc.ImageObjId, versionDesc.RepoId,
 		versionDesc.ImageCreationEventId, versionDesc.CreationDate)
 }
 
@@ -792,12 +791,12 @@ type DockerImageVersionDesc struct {
     ParsedDockerBuildOutput *DockerBuildOutput
 }
 
-func NewDockerImageVersionDesc(objId, version, imageObjId, creationEventId string, 
+func NewDockerImageVersionDesc(objId, version, imageObjId, repoId, creationEventId string, 
 	creationTime time.Time, digest, signature []byte, scanEventIds []string,
 	buildOutput string, parsedDockerBuildOutput *DockerBuildOutput) *DockerImageVersionDesc {
 	return &DockerImageVersionDesc{
 		ImageVersionDesc: *NewImageVersionDesc("DockerImageVersionDesc", 
-			objId, version, imageObjId, creationEventId, creationTime),
+			objId, repoId, version, imageObjId, creationEventId, creationTime),
 		Digest: digest,
 		Signature: signature,
 		ScanEventIds: scanEventIds,
@@ -1007,6 +1006,7 @@ func NewParameterValueDesc(name string, strValue string) *ParameterValueDesc {
 type ScanConfigDesc struct {
 	BaseType
 	Id string
+	RepoId string
 	ProviderName string
 	SuccessExpression string
 	FlagId string
@@ -1014,11 +1014,12 @@ type ScanConfigDesc struct {
 	DockerImagesIdsThatUse []string
 }
 
-func NewScanConfigDesc(id, provName, expr, flagId string, paramValueDescs []*ScanParameterValueDesc,
+func NewScanConfigDesc(id, repoId, provName, expr, flagId string, paramValueDescs []*ScanParameterValueDesc,
 	dockerImagesIdsThatUse []string) *ScanConfigDesc {
 	return &ScanConfigDesc{
 		BaseType: *NewBaseType(200, "OK", "ScanConfigDesc"),
 		Id: id,
+		RepoId: repoId,
 		ProviderName: provName,
 		SuccessExpression: expr,
 		FlagId: flagId,
@@ -1028,10 +1029,10 @@ func NewScanConfigDesc(id, provName, expr, flagId string, paramValueDescs []*Sca
 }
 
 func (scanConfig *ScanConfigDesc) AsJSON() string {
-	var s string = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"ProviderName\": \"%s\", " +
+	var s string = fmt.Sprintf(" {%s, \"Id\": \"%s\", \"RepoId\": \"%s\", \"ProviderName\": \"%s\", " +
 		"\"SuccessExpression\": \"%s\", \"FlagId\": \"%s\", " +
 		"\"ScanParameterValueDescs\": [", scanConfig.baseTypeFieldsAsJSON(),
-		scanConfig.Id, scanConfig.ProviderName,
+		scanConfig.Id, scanConfig.RepoId, scanConfig.ProviderName,
 		scanConfig.SuccessExpression, scanConfig.FlagId)
 	for i, paramValueDesc := range scanConfig.ScanParameterValueDescs {
 		if i > 0 { s = s + ",\n" }

@@ -169,6 +169,7 @@ func authenticateSession(dbClient *InMemClient, sessionToken *apitypes.SessionTo
 		return nil, apitypes.NewFailureDesc(
 			http.StatusUnauthorized, "user object cannot be identified from user id " + userId)
 	}
+	dbClient.getTransactionContext().setUserId(userId)
 	
 	return sessionToken, nil
 }
@@ -421,22 +422,20 @@ func getDefaultRepoForUser(dbClient DBClient, userId string) (Repo, error) {
 	
 	if err != nil { return nil, err }
 	
-	// Create a Repo.
-	var repoName string
-	repoName, err = realm.createUniqueRepoName(dbClient, userId)
-	if err != nil { return nil, err }
-	repo, err = dbClient.dbCreateRepo(user.getRealmId(), repoName,
-		"Repo created automatically")
-	if err != nil { return nil, err }
+	if repo == nil {
+		// Create a Repo.
+		repo, err = dbClient.dbCreateRepo(user.getRealmId(), "",
+			"Repo created automatically")
+		if err != nil { return nil, err }
+	}
 	
 	// Give the user fill access to the Repo.
-	var aclEntry ACLEntry
 	var mask = []bool{ true, true, true, true, true }
-	aclEntry, err = dbClient.setAccess(repo, user, mask)
+	_, err = dbClient.setAccess(repo, user, mask)
 	if err != nil { return nil, err }
 	
 	// Set the Repo as the user's default Repo.
-	err = user.setDefaultRepo(repo)
+	err = user.setDefaultRepo(dbClient, repo)
 	if err != nil { return nil, err }
 	
 	// Update the database.
