@@ -165,9 +165,15 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 	
 	Groups may not belong to other groups.
 	
-	The user must have the required access mode (Create, Read, Write, Exec, Delete).
+	The user must have the required access mode (CreateIn, Read, Write, Exec, Delete).
 	No access mode implies any other access mode.
-	
+	The access modes have the following meanings:
+		CreateIn - The party can create resources that will be owned by the target resource.
+		Read - The party can obtain the contents of the target resource.
+		Write - The party can modify the contents of the target resource.
+		Exec - The party can compel SafeHarbor to perform the actions specified by
+			the target resource (e.g., execute a Dockerfile).
+		Delete - The party can Delete the target resource.
 	*/
 	
 	if sessionToken == nil { return false, utils.ConstructServerError("No session token") }
