@@ -1241,11 +1241,11 @@ func addDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	if repoId == "" {
 		repo, err = getDefaultRepoForUser(dbClient, sessionToken.AuthenticatedUserid)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		repoId = repo.getId()
 	} else {
 		repo, err = dbClient.getRepo(repoId)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		if repo == nil { return apitypes.NewFailureDesc(http.StatusBadRequest, "Repo does not exist") }
-		repoId = repo.getId()
 	}
 
 	var desc string
