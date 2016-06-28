@@ -1476,12 +1476,13 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	
 	var repoId string
 	var err error
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
+	repoId, err = apitypes.GetHTTPParameterValue(true, values, "RepoId")
 	// If not specified, use default repo (and create if not exist).
 	var repo Repo
 	if repoId == "" {
 		repo, err = getDefaultRepoForUser(dbClient, sessionToken.AuthenticatedUserid)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		repoId = repo.getId()
 	} else {
 		repo, err = dbClient.getRepo(repoId)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
@@ -2153,13 +2154,14 @@ func defineScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
 	var repoId string
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
+	repoId, err = apitypes.GetHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	// If not specified, use default repo (and create if not exist).
 	var repo Repo
 	if repoId == "" {
 		repo, err = getDefaultRepoForUser(dbClient, sessionToken.AuthenticatedUserid)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		repoId = repo.getId()
 	} else {
 		repo, err = dbClient.getRepo(repoId)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
@@ -2378,13 +2380,14 @@ func defineFlag(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 	
 	var repoId string
 	var err error
-	repoId, err = apitypes.GetRequiredHTTPParameterValue(true, values, "RepoId")
+	repoId, err = apitypes.GetHTTPParameterValue(true, values, "RepoId")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	// If not specified, use default repo (and create if not exist).
 	var repo Repo
 	if repoId == "" {
 		repo, err = getDefaultRepoForUser(dbClient, sessionToken.AuthenticatedUserid)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
+		repoId = repo.getId()
 	} else {
 		repo, err = dbClient.getRepo(repoId)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
