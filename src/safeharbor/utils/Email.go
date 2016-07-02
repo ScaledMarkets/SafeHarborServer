@@ -30,12 +30,14 @@ func (emailSvc *EmailService) SendEmail(emailAddress, subject, textMessage, html
 		"Content-Type: multipart/alternative; boundary=bcaec520ea5d6918e204a8cea3b4" + "\r\n" +
 		"\r\n" +
 		"--bcaec520ea5d6918e204a8cea3b4" + "\r\n" +
-		"Content-Type: text/plain; charset=utf-8" + "\r\n" +
+		"Content-Type: text/plain; charset=ascii" + "\r\n" +
+		//"Content-Type: text/plain; charset=utf-8" + "\r\n" +
 		"\r\n" +
 		textMessage + "\r\n" +
 		"\r\n" +
 		"--bcaec520ea5d6918e204a8cea3b4" + "\r\n" +
-		"Content-Type: text/html; charset=utf-8" + "\r\n" +
+		"Content-Type: text/html; charset=ascii" + "\r\n" +
+		//"Content-Type: text/html; charset=utf-8" + "\r\n" +
 		"Content-Transfer-Encoding: quoted-printable" + "\r\n" +
 		"\r\n" +
 		htmlMessage + "\r\n" +
