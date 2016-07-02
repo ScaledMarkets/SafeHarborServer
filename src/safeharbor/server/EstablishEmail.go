@@ -52,9 +52,9 @@ func ValidateEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.Emai
 	var textMessage = fmt.Sprintf(
 		"In your browser, go to %s to confirm your email address", confirmationURL)
 	var htmlMessage = fmt.Sprintf(
-		"Click <a href=\"%s\">here</a> to confirm your email address\n" +
-		"This enables SafeHarbor to verify your identity, and protects you" +
-		"from others who might try to register using your email address",
+		"Click <a href=\"%s\">here</a> to confirm your email address. " +
+		"This enables SafeHarbor to verify your identity, and protects you " +
+		"from others who might try to register using your email address.",
 		confirmationURL)
 	
 	return emailSvc.SendEmail(emailAddress, "Verify address", textMessage, htmlMessage)
@@ -124,5 +124,6 @@ func constructConfirmationURL(server *Server, token string) string {
 	var baseURL string = server.GetBasePublicURL()
 	var restMethodName = "validateAccountVerificationToken"
 	return fmt.Sprintf(
-		"%s/%s?AccountVerificationToken=%s", baseURL, restMethodName, url.QueryEscape(token))
+		"%s/%s?AccountVerificationToken%s", baseURL, restMethodName, url.QueryEscape(
+			"%3D" + token))
 }
