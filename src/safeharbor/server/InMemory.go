@@ -2310,6 +2310,12 @@ func (client *InMemClient) dbCreateRepo(realmId, name, desc string) (Repo, error
 	if err != nil { return nil, err }
 	fmt.Println("Created repo")
 	err = realm.addRepo(client, newRepo)  // Add it to the realm.
+	
+	
+	fmt.Println("--------dbCreateRepo: Id=" + newRepo.getId())  // debug
+
+	
+	
 	return newRepo, err
 }
 
