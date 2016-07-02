@@ -124,6 +124,5 @@ func constructConfirmationURL(server *Server, token string) string {
 	var baseURL string = server.GetBasePublicURL()
 	var restMethodName = "validateAccountVerificationToken"
 	return fmt.Sprintf(
-		"%s/%s?AccountVerificationToken%s", baseURL, restMethodName, url.QueryEscape(
-			"%3D" + token))
+		"%s/%s?AccountVerificationToken=%s", baseURL, restMethodName, url.QueryEscape(token))
 }

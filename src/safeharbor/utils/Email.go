@@ -38,7 +38,7 @@ func (emailSvc *EmailService) SendEmail(emailAddress, subject, textMessage, html
 		"--bcaec520ea5d6918e204a8cea3b4" + "\r\n" +
 		"Content-Type: text/html; charset=ascii" + "\r\n" +
 		//"Content-Type: text/html; charset=utf-8" + "\r\n" +
-		"Content-Transfer-Encoding: quoted-printable" + "\r\n" +
+//		"Content-Transfer-Encoding: quoted-printable" + "\r\n" +
 		"\r\n" +
 		htmlMessage + "\r\n" +
 		"\r\n" +
