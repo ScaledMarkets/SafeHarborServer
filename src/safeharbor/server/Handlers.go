@@ -1249,7 +1249,7 @@ func addDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 	}
 
 	var desc string
-	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
+	desc, err = apitypes.GetHTTPParameterValue(true, values, "Description")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	failMsg = authorizeHandlerAction(dbClient, sessionToken, apitypes.CreateInMask, repoId,
@@ -1496,7 +1496,7 @@ func addAndExecDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionT
 	if failMsg != nil { return failMsg }
 	
 	var desc string
-	desc, err = apitypes.GetRequiredHTTPParameterValue(true, values, "Description")
+	desc, err = apitypes.GetHTTPParameterValue(true, values, "Description")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 
 	var name string

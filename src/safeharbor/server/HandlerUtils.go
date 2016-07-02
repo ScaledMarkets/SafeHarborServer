@@ -316,9 +316,12 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	if err != nil { return nil, err }
 
 	var imageName string
-	imageName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ImageName")
+	imageName, err = apitypes.GetHTTPParameterValue(true, values, "ImageName")
 	if err != nil { return nil, err }
-	if imageName == "" { return nil, utils.ConstructUserError("No HTTP parameter found for ImageName") }
+	if imageName == "" {
+		imageName, err = repo.createUniqueDockerImageName(dbClient, "image")
+		if err != nil { return nil, err }
+	}
 	
 	// Retrieve dockerfile build parameters.
 	var paramNames = make([]string, 0)

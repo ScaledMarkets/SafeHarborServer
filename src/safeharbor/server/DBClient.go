@@ -330,6 +330,7 @@ type Repo interface {
 	getFlagByName(DBClient, string) (Flag, error)
 	getDockerImageByName(DBClient, string) (DockerImage, error)
 	getScanConfigByName(DBClient, string) (ScanConfig, error)
+	createUniqueDockerImageName(DBClient, string) (string, error)
 	asRepoDesc() *apitypes.RepoDesc
 	asRepoPlusDockerfileDesc(dbClient DBClient, dockerfileId string) (*apitypes.RepoPlusDockerfileDesc, error)
 }

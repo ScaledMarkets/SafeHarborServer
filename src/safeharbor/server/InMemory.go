@@ -2639,6 +2639,28 @@ func (repo *InMemRepo) getScanConfigByName(dbClient DBClient, name string) (Scan
 	return nil, nil
 }
 
+func (repo *InMemRepo) createUniqueDockerImageName(dbClient DBClient, prefix string) (string, error) {
+	
+	var err = nameConformsToSafeHarborImageNameRules(prefix)
+	if err != nil { return "", err }
+	
+	var name string
+	var i = 1
+	for {
+		if i > 1000 { return "",
+			utils.ConstructUserError("Unable to create a unique image name")
+		}
+		name = fmt.Sprintf("%s_%d", prefix, i)
+		var image Image
+		var err error
+		image, err = repo.getDockerImageByName(dbClient, name)
+		if err != nil { return "", err }
+		if image == nil { break }  // found a unique name
+		i++
+	}
+	return name, nil
+}
+
 func (repo *InMemRepo) deleteAllChildResources(dbClient DBClient) error {
 	
 	// Remove all resources from the Repo: Dockerfiles, ScanConfigs, Flags, Images.
