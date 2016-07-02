@@ -795,8 +795,14 @@ func NewDockerImageVersionDesc(objId, version, imageObjId, repoId, creationEvent
 	creationTime time.Time, digest, signature []byte, scanEventIds []string,
 	buildOutput string, parsedDockerBuildOutput *DockerBuildOutput) *DockerImageVersionDesc {
 	return &DockerImageVersionDesc{
-		ImageVersionDesc: *NewImageVersionDesc("DockerImageVersionDesc", 
-			objId, repoId, version, imageObjId, creationEventId, creationTime),
+		ImageVersionDesc: *NewImageVersionDesc(
+			"DockerImageVersionDesc", 
+			objId,
+			version,
+			imageObjId,
+			repoId,
+			creationEventId,
+			creationTime),
 		Digest: digest,
 		Signature: signature,
 		ScanEventIds: scanEventIds,
