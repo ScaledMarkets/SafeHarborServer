@@ -1273,7 +1273,7 @@ func (user *InMemUser) getDefaultRepoId() string {
 
 func (user *InMemUser) setDefaultRepoIdDeferredUpdate(id string) {
 	
-	fmt.Println("setDefaultRepoIdDeferredUpdate: setting default repo Id to " + id)  // debug
+	fmt.Println("--------setDefaultRepoIdDeferredUpdate: setting default repo Id to " + id)  // debug
 	
 	user.DefaultRepoId = id
 }
