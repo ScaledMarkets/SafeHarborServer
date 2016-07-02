@@ -495,6 +495,7 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 	}
 	
 	fmt.Println("AccountVerificationToken=" + httpReq.FormValue("AccountVerificationToken"))  // debug
+	fmt.Println("URL=" + httpReq.URL.String())  // debug
 	
 	fmt.Println("Calling handleRequest")
 	server.dispatcher.handleRequest(sessionToken, headers, writer, reqName, values, files)
