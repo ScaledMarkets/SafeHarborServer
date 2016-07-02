@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"time"
+	"net/url"
 	"safeharbor/utils"
 )
 
@@ -46,7 +47,7 @@ func ValidateEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.Emai
 	token, _, err = createEmailToken(authSvc, dbClient, userId)
 	if err != nil { return err }
 	
-	var confirmationURL = constructConfirmationURL(dbClient.getServer(), token)
+	var confirmationURL = constructConfirmationURL(dbClient.getServer(), url.QueryEscape(token))
 	
 	var textMessage = fmt.Sprintf(
 		"In your browser, go to %s to confirm your email address", confirmationURL)
