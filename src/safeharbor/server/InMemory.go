@@ -338,16 +338,11 @@ func (client *InMemClient) NewInMemIdentityValidationInfo(userId string,
 func (client *InMemClient) dbCreateIdentityValidationInfo(userId string,
 	creationTime time.Time, token string) (IdentityValidationInfo, error) {
 	
-	fmt.Println("dbCreateIdentityValidationInfo: A")  // debug
-	
 	var info IdentityValidationInfo
 	var err error
 	info, err = client.NewInMemIdentityValidationInfo(userId, creationTime)
-	fmt.Println("dbCreateIdentityValidationInfo: B")  // debug
 	if err != nil { return nil, err }
-	fmt.Println("dbCreateIdentityValidationInfo: C")  // debug
 	err = client.getPersistence().addIdentityValidationInfo(token, info.getId())
-	fmt.Println("dbCreateIdentityValidationInfo: D")  // debug
 	return info, err
 }
 
@@ -1272,14 +1267,10 @@ func (user *InMemUser) getDefaultRepoId() string {
 }
 
 func (user *InMemUser) setDefaultRepoIdDeferredUpdate(id string) {
-	
-	fmt.Println("--------setDefaultRepoIdDeferredUpdate: setting default repo Id to " + id)  // debug
-	
 	user.DefaultRepoId = id
 }
 
 func (user *InMemUser) unsetDefaultRepoIdDeferredUpdate() {
-	
 	user.DefaultRepoId = ""
 	return
 }
@@ -2310,12 +2301,6 @@ func (client *InMemClient) dbCreateRepo(realmId, name, desc string) (Repo, error
 	if err != nil { return nil, err }
 	fmt.Println("Created repo")
 	err = realm.addRepo(client, newRepo)  // Add it to the realm.
-	
-	
-	fmt.Println("--------dbCreateRepo: Id=" + newRepo.getId())  // debug
-
-	
-	
 	return newRepo, err
 }
 

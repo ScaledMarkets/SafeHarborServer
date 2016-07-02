@@ -416,29 +416,15 @@ func getDefaultRepoForUser(dbClient DBClient, userId string) (Repo, error) {
 	var repoId string = user.getDefaultRepoId()
 	var repo Repo
 	if repoId != "" {
-		
-		
-		fmt.Println("--------getDefaultRepoForUser: user has a default repo Id: " + repoId)  // debug
-		
-		
-		
 		repo, err = dbClient.getRepo(repoId)
 		if err != nil { return nil, err }
 	}
 	
 	if repo == nil {
-		
-		
-		fmt.Println("--------getDefaultRepoForUser: user has no default repo - creating one...")  // debug
-		
 		// Create a Repo.
 		repo, err = dbClient.dbCreateRepo(user.getRealmId(), "",
 			"Repo created automatically")
 		if err != nil { return nil, err }
-		
-		
-		fmt.Println("--------getDefaultRepoForUser: created a default repo, id=" + repo.getId())  // debug
-		
 	}
 	
 	// Give the user fill access to the Repo.

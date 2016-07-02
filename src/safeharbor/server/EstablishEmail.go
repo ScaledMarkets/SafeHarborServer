@@ -105,15 +105,11 @@ func ValidateEmailToken(dbClient DBClient, authSvc *AuthService,
  * 
  */
 func createEmailToken(authSvc *AuthService, dbClient DBClient, userId string) (string, IdentityValidationInfo, error) {
-	fmt.Println("createEmailToken: A")  // debug
 	var token = authSvc.createUniqueSessionId()
-	fmt.Println("createEmailToken: B")  // debug
 	var info IdentityValidationInfo
 	var err error
 	info, err = dbClient.dbCreateIdentityValidationInfo(userId, time.Now(), token)
-	fmt.Println("createEmailToken: C")  // debug
 	if err != nil { return "", nil, err }
-	fmt.Println("createEmailToken: D")  // debug
 	return token, info, nil
 }
 
