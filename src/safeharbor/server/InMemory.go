@@ -3508,14 +3508,16 @@ func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc(dbClient D
 	parsedDockerBuildOutput, err = docker.ParseBuildRESTOutput(imageVersion.DockerBuildOutput)
 	if err != nil { return nil, err }
 	
-	var image Image
-	image, err = dbClient.getImage(imageVersion.ImageObjId)
+	var dockerImage DockerImage
+	dockerImage, err = dbClient.getDockerImage(imageVersion.ImageObjId)
 	if err != nil { return nil, err }
-	var repoId = image.getParentId()
+	var repoId = dockerImage.getParentId()
 	
 	return apitypes.NewDockerImageVersionDesc(imageVersion.getId(), imageVersion.Version,
-		imageVersion.ImageObjId, repoId, imageVersion.ImageCreationEventId, imageVersion.CreationDate,
-		imageVersion.Digest, imageVersion.Signature, imageVersion.ScanEventIds,
+		imageVersion.ImageObjId, dockerImage.getName(), dockerImage.getDescription(),
+		repoId, imageVersion.ImageCreationEventId,
+		imageVersion.CreationDate, imageVersion.Digest, imageVersion.Signature,
+		dockerImage.getScanConfigsToUse(), imageVersion.ScanEventIds,
 		imageVersion.DockerBuildOutput, parsedDockerBuildOutput), nil
 }
 

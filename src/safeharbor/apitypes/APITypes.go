@@ -703,18 +703,23 @@ type ImageVersionDesc struct {
 	ObjId string
 	Version string
 	ImageObjId string
+	ImageName string
+	ImageDescription string
 	RepoId string
     ImageCreationEventId string
     CreationDate string
 }
 
-func NewImageVersionDesc(objectType, objId, version, imageObjId, repoId string,
-	creationEventId string, creationTime time.Time) *ImageVersionDesc {
+func NewImageVersionDesc(objectType, objId, version, imageObjId, imageName,
+	imageDescription string, repoId string, creationEventId string,
+	creationTime time.Time) *ImageVersionDesc {
 	return &ImageVersionDesc{
 		BaseType: *NewBaseType(200, "OK", objectType),
 		ObjId: objId,
 		Version: version,
 		ImageObjId: imageObjId,
+		ImageName: imageName,
+		ImageDescription: imageDescription,
 		RepoId: repoId,
 		ImageCreationEventId: creationEventId,
 		CreationDate: FormatTimeAsJavascriptDate(creationTime),
@@ -724,9 +729,11 @@ func NewImageVersionDesc(objectType, objId, version, imageObjId, repoId string,
 func (versionDesc *ImageVersionDesc) imageVersionDescFieldsAsJSON() string {
 	return versionDesc.baseTypeFieldsAsJSON() + fmt.Sprintf(
 		", \"ObjId\": \"%s\", \"Version\": \"%s\", \"ImageObjId\": \"%s\", " +
+		"\"ImageName\": \"%s\", \"ImageDescription\": \"%s\", " +
 		"\"RepoId\": \"%s\", \"ImageCreationEventId\": \"%s\", \"CreationDate\": %s",
-		versionDesc.ObjId, versionDesc.Version, versionDesc.ImageObjId, versionDesc.RepoId,
-		versionDesc.ImageCreationEventId, versionDesc.CreationDate)
+		versionDesc.ObjId, versionDesc.Version, versionDesc.ImageObjId,
+		versionDesc.ImageName, versionDesc.ImageDescription,
+		versionDesc.RepoId, versionDesc.ImageCreationEventId, versionDesc.CreationDate)
 }
 
 /*******************************************************************************
@@ -784,15 +791,17 @@ func (imageDescs DockerImageDescs) SendFile() (string, bool) {
  */
 type DockerImageVersionDesc struct {
 	ImageVersionDesc
-    Digest []byte
-    Signature []byte
-    ScanEventIds []string
-    DockerBuildOutput string
-    ParsedDockerBuildOutput *DockerBuildOutput
+	Digest []byte
+	Signature []byte
+	ImageScanConfigIds []string
+	ScanEventIds []string
+	DockerBuildOutput string
+	ParsedDockerBuildOutput *DockerBuildOutput
 }
 
-func NewDockerImageVersionDesc(objId, version, imageObjId, repoId, creationEventId string, 
-	creationTime time.Time, digest, signature []byte, scanEventIds []string,
+func NewDockerImageVersionDesc(objId, version, imageObjId, imageName, imageDescription,
+	repoId, creationEventId string, creationTime time.Time, 
+	digest, signature []byte, imageScanConfigIds []string, scanEventIds []string,
 	buildOutput string, parsedDockerBuildOutput *DockerBuildOutput) *DockerImageVersionDesc {
 	return &DockerImageVersionDesc{
 		ImageVersionDesc: *NewImageVersionDesc(
@@ -800,11 +809,14 @@ func NewDockerImageVersionDesc(objId, version, imageObjId, repoId, creationEvent
 			objId,
 			version,
 			imageObjId,
+			imageName,
+			imageDescription,
 			repoId,
 			creationEventId,
 			creationTime),
 		Digest: digest,
 		Signature: signature,
+		ImageScanConfigIds: imageScanConfigIds,
 		ScanEventIds: scanEventIds,
 		DockerBuildOutput: buildOutput,
 		ParsedDockerBuildOutput: parsedDockerBuildOutput,
@@ -828,7 +840,14 @@ func (versionDesc *DockerImageVersionDesc) AsJSON() string {
 	var json = "{" + versionDesc.imageVersionDescFieldsAsJSON()
 	json = json + ", \"Digest\": " + rest.ByteArrayAsJSON(versionDesc.Digest)
 	json = json + ", \"Signature\": " + rest.ByteArrayAsJSON(versionDesc.Signature)
-	json = json + ", \"ScanEventIds\": ["
+	
+	json = json + ", \"ImageScanConfigIds\": ["
+	for i, id := range versionDesc.ImageScanConfigIds {
+		if i > 0 { json = json + ", " }
+		json = json + fmt.Sprintf("\"%s\"", id)
+	}
+	
+	json = json + "], \"ScanEventIds\": ["
 	for i, id := range versionDesc.ScanEventIds {
 		if i > 0 { json = json + ", " }
 		json = json + fmt.Sprintf("\"%s\"", id)
