@@ -420,7 +420,7 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 	
 	if httpMethod == "GET" {
 		
-		if err = httpReq.ParseForm(); err != nil {
+		if err = httpReq.ParseForm(); err != nil { // Query parameters are automatically unencoded.
 			apitypes.RespondWithClientError(writer, err.Error())
 			return
 		}
@@ -434,7 +434,7 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 		// need to authorize the user; otherwise, we deny. In the future we should
 		// allow users to register trusted origins.
 		
-		if err = httpReq.ParseForm(); err != nil {
+		if err = httpReq.ParseForm(); err != nil {  // Query parameters are automatically unencoded.
 			apitypes.RespondWithClientError(writer, err.Error())
 			return
 		}
@@ -493,6 +493,8 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 			fmt.Println("Log:", stringToLog)
 		}
 	}
+	
+	fmt.Println("AccountVerificationToken=" + httpReq.FormValue("AccountVerificationToken"))  // debug
 	
 	fmt.Println("Calling handleRequest")
 	server.dispatcher.handleRequest(sessionToken, headers, writer, reqName, values, files)

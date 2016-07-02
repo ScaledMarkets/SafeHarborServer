@@ -47,7 +47,7 @@ func ValidateEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.Emai
 	token, _, err = createEmailToken(authSvc, dbClient, userId)
 	if err != nil { return err }
 	
-	var confirmationURL = constructConfirmationURL(dbClient.getServer(), url.QueryEscape(token))
+	var confirmationURL = constructConfirmationURL(dbClient.getServer(), token)
 	
 	var textMessage = fmt.Sprintf(
 		"In your browser, go to %s to confirm your email address", confirmationURL)
@@ -120,5 +120,6 @@ func createEmailToken(authSvc *AuthService, dbClient DBClient, userId string) (s
 func constructConfirmationURL(server *Server, token string) string {
 	var baseURL string = server.GetBasePublicURL()
 	var restMethodName = "validateAccountVerificationToken"
-	return fmt.Sprintf("%s/%s?AccountVerificationToken=%s", baseURL, restMethodName, token)
+	return fmt.Sprintf(
+		"%s/%s?AccountVerificationToken=%s", baseURL, restMethodName, url.QueryEscape(token))
 }
