@@ -1,7 +1,7 @@
 http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-ecs.html
 
 {
-	"AWSTemplateFormatVersion" : "version date",
+	"AWSTemplateFormatVersion" : "2010-09-09",
 	
 	"Description" : "SafeHarbor Server, all components deployed as containers",
 	
@@ -27,7 +27,9 @@ http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-ecs.html
 	
 	"Resources" : {
 		"SafeHarborServerCluster": {
-			"Type": "AWS::ECS::Cluster"
+			"Type": "AWS::ECS::Cluster",
+			"Properties" : {
+			}
 		},
 		"ContainerInstance": {
 			"Type": "AWS::EC2::Instance",
@@ -66,31 +68,20 @@ http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-ecs.html
 			"Properties": {
 				"ContainerDefinitions": [
 					{
-						"Command" : [ String, ... ],
-						"Cpu" : Integer,
-						"DisableNetworking" : Boolean,
-						"DnsSearchDomains" : [ String, ... ],
-						"DnsServers" : [ String, ... ],
-						"DockerLabels" : { String:String, ... },
-						"DockerSecurityOptions" : [ String, ... ],
-						"EntryPoint" : [ String, ... ],
-						"Environment" : [ Environment Variable, ... ],
-						"Essential" : Boolean,
-						"ExtraHosts" : [ Host Entry, ... ],
-						"Hostname" : String,
-						"Image" : String,
-						"Links" : [ String, ... ],
-						"LogConfiguration" : Log Configuration,
-						"Memory" : Integer,
-						"MountPoints" : [ Mount Point, ... ],
-						"Name" : String,
-						"PortMappings" : [ Port Map, ... ],
-						"Privileged" : Boolean,
-						"ReadonlyRootFilesystem" : Boolean,
-						"Ulimits" : [ Ulimit, ... ],
-						"User" : String,
-						"VolumesFrom" : [ Volume From, ... ],
-						"WorkingDirectory" : String,
+						"Name" : "safeharborserver",
+						"Hostname" : "safeharborserver",
+						"Image" : ....$SafeHarborImageName,
+						"Memory" : 200,
+						"MountPoints" : [
+							"ContainerPath": ...."/usr/local/",
+							"SourceVolume": ...."my-vol"
+						],
+						"PortMappings" : [
+							{ "HostPort": ....$SafeHarborPort, "ContainerPort": ....$SafeHarborPort }
+						]
+					},
+					{
+						....
 					}
 				],
 				"Volumes": [
