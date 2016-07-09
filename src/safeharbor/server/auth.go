@@ -13,7 +13,8 @@ import (
 	"crypto/x509"
 	"time"
 	//"errors"
-	"crypto/sha512"
+	"crypto/sha256"
+	//"crypto/sha512"
 	"hash"
 	//"encoding/hex"
 	
@@ -50,7 +51,7 @@ func NewAuthService(serviceName string, authServerName string, authPort int,
  * Compute a salted hash of the specified clear text password. The hash is suitable
  * for storage and later use for validation of input passwords, using the
  * companion function PasswordHashIsValid. Thus, the hash is required to be 
- * cryptographically secure. The 512-bit SHA-2 algorithm, aka "SHA-512",
+ * cryptographically secure. The 256-bit SHA-2 algorithm, aka "SHA-256",
  * is used.
  */
 func (authSvc *AuthService) CreatePasswordHash(pswd string) []byte {
@@ -243,28 +244,31 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 }
 
 /*******************************************************************************
- * Return the SHA-512 hash of the content of the specified file. Should not be salted
+ * Return the SHA-256 hash of the content of the specified file. Should not be salted
  * because the hash is intended to be reproducible by third parties, given the
  * original file.
  */
-func (authSvc *AuthService) ComputeFileSignature(filepath string) ([]byte, error) {
+func (authSvc *AuthService) ComputeFileDigest(filepath string) ([]byte, error) {
 	
-	return utils.ComputeFileSignature(sha512.New(), filepath)
+	return utils.ComputeFileDigest(sha256.New(), filepath)
 }
 
 /*******************************************************************************
- * Compute a SHA-512 has of the specified string. Salt the hash so that the
+ * Compute a SHA-256 has of the specified string. Salt the hash so that the
  * hash value cannot be forged or identified via a lookup table.
  */
 func (authSvc *AuthService) computeHash(s string) hash.Hash {
 	
-	var hash hash.Hash = sha512.New()
+	var hash hash.Hash = sha256.New()
 	var bytes []byte = []byte(s)
 	hash.Write(authSvc.secretSalt)
 	hash.Write(bytes)
 	return hash
 }
 
+/*******************************************************************************
+ * 
+ */
 func (authSvc *AuthService) compareHashValues(h1, h2 []byte) bool {
 	if len(h1) != len(h2) { return false }
 	for i, b := range h1 { if b != h2[i] { return false } }

@@ -501,7 +501,7 @@ func (registry *DockerRegistryImpl) PushLayer(layerFilePath, repoName string) (s
 	// Compute layer signature.
 	var digest []byte
 	var err error
-	digest, err = utils.ComputeFileSignature(sha256.New(), layerFilePath)
+	digest, err = utils.ComputeFileDigest(sha256.New(), layerFilePath)
 	if err != nil { return "", err }
 	var digestString = hex.EncodeToString(digest)
 	fmt.Println("Computed digest: " + digestString)

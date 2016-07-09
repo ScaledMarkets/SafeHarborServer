@@ -14,11 +14,11 @@ import (
 )
 
 /*******************************************************************************
- * Return the SHA-512 hash of the content of the specified file. Should not be salted
+ * Return the hash of the content of the specified file. Should not be salted
  * because the hash is intended to be reproducible by third parties, given the
  * original file.
  */
-func ComputeFileSignature(hash hash.Hash, filepath string) ([]byte, error) {
+func ComputeFileDigest(hash hash.Hash, filepath string) ([]byte, error) {
 	
 	var file *os.File
 	var err error
@@ -41,15 +41,15 @@ func ComputeFileSignature(hash hash.Hash, filepath string) ([]byte, error) {
 	fmt.Println("Total bytes read:", totalBytesRead)
 	
 	var empty = []byte{}
-	var sig = hash.Sum(empty)
+	var dig = hash.Sum(empty)
 	
 	var fileInfo os.FileInfo
 	fileInfo, _ = file.Stat()
 	fmt.Println(fmt.Sprintf("Signature of file %s, size %d:", filepath, fileInfo.Size()))
-	for _, b := range sig {
+	for _, b := range dig {
 		fmt.Print(b, ", ")
 	}
 	fmt.Println()
 	
-	return sig, nil
+	return dig, nil
 }

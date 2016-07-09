@@ -3588,27 +3588,6 @@ func (imageVersion *InMemDockerImageVersion) getSignature() []byte {
 	return imageVersion.Signature
 }
 
-/* ----- Not used anymore - we get the signature from the docker v2 registry -----
-func (imageVersion *InMemDockerImageVersion) computeSignature() ([]byte, error) {
-	var err error
-	var tempFilePath string
-	var imageFullName
-	imageFullName, err = image.getFullName(dbClient)
-	tempFilePath, err = docker.SaveImage(imageFullName)
-	if err != nil { return nil, err }
-	defer func() {
-		fmt.Println("Removing all files at " + tempFilePath)
-		os.RemoveAll(tempFilePath)
-	}()
-	var file *os.File
-	file, _ = os.Open(tempFilePath)
-	var fileInfo os.FileInfo
-	fileInfo, _ = file.Stat()
-	fmt.Println(fmt.Sprintf("Size of file %s is %d", tempFilePath, fileInfo.Size()))
-	return image.Client.Server.authService.ComputeFileSignature(tempFilePath)
-}
-*/
-
 func (imageVersion *InMemDockerImageVersion) getDockerBuildOutput() string {
 	return imageVersion.DockerBuildOutput
 }

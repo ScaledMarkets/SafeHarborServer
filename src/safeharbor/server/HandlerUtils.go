@@ -371,7 +371,8 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		realm.getName(), repo.getName(), imageName, version)
 	
 	// Access the docker dameon to perform the BUILD operation.
-	outputStr, err = dbClient.getServer().DockerServices.BuildDockerfile(
+	var dockerSvcs = dbClient.getServer().DockerServices
+	outputStr, err = dockerSvcs.BuildDockerfile(
 		dockerfile.getExternalFilePath(), dockerfile.getName(),
 		dockerImageName, tag, paramNames, paramValues)
 	if err != nil { return nil, err }
@@ -382,7 +383,8 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
 	
 	var digest []byte
-	digest, err = dbClient.getServer().DockerServices.GetDigest(dockerImageId)
+	//digest, err = dbClient.getServer().DockerServices.GetDigest(dockerImageId)
+	digest, err = computeDockerImageDigest(dbClient, dockerImageName, tag, dockerSvcs)
 	if err != nil { return nil, err }
 	
 	var signature []byte
@@ -400,6 +402,28 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		paramNames, paramValues, imageVersion.getId(), user.getId())
 	
 	return imageVersion, err
+}
+
+/*******************************************************************************
+ * 
+ */
+func computeDockerImageDigest(dbClient DBClient, imageName, tag string,
+	dockerSvcs *docker.DockerServices) ([]byte, error) {
+
+	var tempFilePath string
+	var err error
+	tempFilePath, err = dockerSvcs.SaveImage(imageName, tag)
+	if err != nil { return nil, err }
+	defer func() {
+		fmt.Println("Removing all files at " + tempFilePath)
+		os.RemoveAll(tempFilePath)
+	}()
+	var file *os.File
+	file, _ = os.Open(tempFilePath)
+	var fileInfo os.FileInfo
+	fileInfo, _ = file.Stat()
+	fmt.Println(fmt.Sprintf("Size of file %s is %d", tempFilePath, fileInfo.Size()))
+	return dbClient.getServer().authService.ComputeFileDigest(tempFilePath)
 }
 
 /*******************************************************************************
