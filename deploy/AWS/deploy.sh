@@ -14,7 +14,7 @@ source $( dirname "${BASH_SOURCE[0]}" )/env.sh
 sudo docker run --name redis --net=host -d -v /home/centos/SafeHarborServer/build/Centos7:/config -v /home/centos/safeharbordata:/data docker.io/redis redis-server --appendonly yes /config/redis.conf
 
 # Start postgres (needed by Clair).
-sudo docker run --name postgres --net=host -d -e POSTGRES_PASSWORD=4word2day -d docker.io/postgres
+sudo docker run --name postgres --net=host -d -e POSTGRES_PASSWORD=$postgresPassword -d docker.io/postgres
 
 # Start Clair (needed by SafeHarborServer).
 sudo docker run --name clair --net=host -d -v /home/centos/SafeHarborServer/build/Centos7:/config:ro quay.io/coreos/clair:latest --config=/config/clairconfig.yaml
@@ -32,7 +32,7 @@ sudo docker run --name registry --net=host -d -p $RegistryPort:$RegistryPort \
 	-v $DataVolMountPoint/registrydata:/var/lib/registry
 	-e "REGISTRY_AUTH=htpasswd" \
 	-e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
-	-e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
+	-e "REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd" \
 	docker.io/registry:2
 
 # Start SafeHarborServer.

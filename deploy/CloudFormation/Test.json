@@ -3,7 +3,7 @@
   "Parameters" : {
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName",
-      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the ECS instances."
+      "Description": "EC2 KeyPair to access the ECS instances."
     },
     "SubnetID": {
       "Type": "List<AWS::EC2::Subnet::Id>",
@@ -59,8 +59,8 @@
             "Image": ....$SafeHarborImageName,
             "Memory":"300",
             "MountPoints": [{
-              "ContainerPath": "/usr/local/apache2/htdocs",
-              "SourceVolume": "my-vol"
+              "ContainerPath": ...."/usr/local/apache2/htdocs",
+              "SourceVolume": ...."my-vol"
             }],
             "PortMappings": [
               { "HostPort": 80, "ContainerPort": 80 }
@@ -69,7 +69,7 @@
           ....one for each container
         ],
         "Volumes": [
-          { "Name": "my-vol" }
+          { "Name": ...."my-vol" }
         ]
       }
     },    

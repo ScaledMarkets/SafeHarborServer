@@ -672,8 +672,17 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 	var methodType reflect.Type = method.Type()
 	var noOfFormalArgs int = methodType.NumIn()
 	if noOfFormalArgs != len(actArgAr) {
+		fmt.Println("For " + typeName + ", number of actual args does not match number of formal args.")
+		fmt.Println("Formal arg types:")
+		for i := 0; i < methodType.NumIn(); i++ {
+			fmt.Println("\t" + methodType.In(i).String())
+		}
+		fmt.Println("Actual arg types:")
+		for _, v := range actArgAr {
+			fmt.Println("\t" + v.Type().String())
+		}
 		return typeName, nil, utils.ConstructServerError(fmt.Sprintf(
-			"Number of actual args (%d) does not match number of formal args (%d)",
+			"For " + typeName + ", number of actual args (%d) does not match number of formal args (%d)",
 			len(actArgAr), noOfFormalArgs))
 	}
 	
