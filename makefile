@@ -57,10 +57,11 @@ $(BUILDDIR):
 compilego: $(BUILDDIR)
 	@GOPATH=$(PROJECTROOT) go install $(PACKAGENAME)
 
-# https://www.elastic.co/blog/code-coverage-for-your-golang-system-tests
+# See https://www.elastic.co/blog/code-coverage-for-your-golang-system-tests
 # See https://blog.golang.org/cover
 covergo: $(BUILDDIR)
-	@GOPATH=$(PROJECTROOT) go test -c -o $(BUILDDIR)/safeharbor $(PACKAGENAME)
+	@GOPATH=$(PROJECTROOT) go test -c -o $(BUILDDIR)/safeharbor -covermode=count $(PACKAGENAME)
+	@GOPATH=$(PROJECTROOT) go test -c -o $(BUILDDIR)/safeharbor -covermode=count -coverpkg ./...
 
 # Generate REST docs.
 # http://apidocjs.com/
