@@ -10,5 +10,6 @@ ADD ["*.crt", "/safeharbor/"]
 ADD ["*.yaml", "/safeharbor/"]
 ADD ["*.conf", "/safeharbor/"]
 ADD ["*.json", "/safeharbor/"]
+ADD ["*.cov", "/safeharbor/"]
 WORKDIR /safeharbor/
-CMD ["/safeharbor/safeharbor", "-port", "6000"]
+CMD ["/safeharbor/safeharbor", "-port", "6000" "-systemTest", "-test.coverprofile", "/safeharbor/data/safeharbor.cov"]

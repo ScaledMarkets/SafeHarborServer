@@ -1,0 +1,50 @@
+# Deploy SafeHarborServer and all of its components, using Docker Compose.
+version: '2'
+services:
+  shs:
+    container_name: safeharborserver
+    depends_on:
+      - redis
+      - clair
+      - registry
+    image: ${SafeHarborImageName}
+    net: "host"
+    ports:
+      - ${SafeHarborPort}:${SafeHarborPort}
+    volumes:
+      - ${DataVolMountPoint}:/safeharbor/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    links:
+      - redis
+  redis:
+    image: docker.io/redis
+    command: redis-server --appendonly yes /config/redis.conf
+    volumes:
+      - /home/centos/SafeHarborServer/build/Centos7:/config
+      - /home/centos/safeharbordata:/data
+    net: "host"
+  clair:
+    depends_on:
+      - postgres
+    image: quay.io/coreos/clair
+    command: --config=/config/clairconfig.yaml
+    net: "host"
+    volumes:
+      - /home/centos/SafeHarborServer/build/Centos7:/config:ro
+  registry:
+    image: docker.io/registry:2
+    net: "host"
+    ports:
+      - ${RegistryPort}:${RegistryPort}
+    volumes:
+      - ${RegistryPath}/registryauth:/auth
+      - ${DataVolMountPoint}/registrydata:/var/lib/registry
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+  postgres:
+    image: docker.io/postgres
+    net: "host"
+    environment:
+      POSTGRES_PASSWORD: ${postgresPassword}
