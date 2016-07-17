@@ -2765,7 +2765,7 @@ func (repo *InMemRepo) asJSON() string {
 		json = json + "\"" + id + "\""
 	}
 	
-	json = json + ", \"DockerFieldIds\": ["
+	json = json + "], \"DockerFieldIds\": ["
 	for i, id := range repo.DockerfileIds {
 		if i != 0 { json = json + ", " }
 		json = json + "\"" + id + "\""
