@@ -4,7 +4,9 @@ pushd $( dirname "${BASH_SOURCE[0]}" )
 export BuildDir=`pwd`
 echo BuildDir=$BuildDir
 popd
-export DeployDir=$BuildDir/../../deploy/Compose
+pushd $BuildDir/../../deploy/Compose
+export DeployDir=`pwd`
+popd
 echo DeployDir=$DeployDir
 
 source $BuildDir/env.sh  # Load build configuration.
