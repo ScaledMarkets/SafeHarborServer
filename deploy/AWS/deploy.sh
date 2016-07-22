@@ -8,8 +8,6 @@
 # We can eventually automate the above by installing the AWS command tools on
 # the deployment machine and then running "sudo `aws ecr get-login`
 
-source $( dirname "${BASH_SOURCE[0]}" )/env.sh
-
 # Start redis (needed by SafeHarborServer).
 sudo docker run --name redis --net=host -d -v /home/centos/SafeHarborServer/build/Centos7:/config -v /home/centos/safeharbordata:/data docker.io/redis redis-server --appendonly yes /config/redis.conf
 

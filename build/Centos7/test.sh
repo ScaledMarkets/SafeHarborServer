@@ -8,9 +8,6 @@
 # Example:
 #	./test.sh 127.0.0.1 6000 basic
 
-# Load configuration.
-source $( dirname "${BASH_SOURCE[0]}" )/env.sh
-
 pushd $PROJECTROOT/../TestSafeHarborServer
 
 # Update the test code and compile it.

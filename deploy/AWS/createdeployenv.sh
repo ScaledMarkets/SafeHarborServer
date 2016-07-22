@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# Load configuration.
-source $( dirname "${BASH_SOURCE[0]}" )/env.sh
-
 # Configure host.
 sudo mkdir -p $DataVolMountPoint
 

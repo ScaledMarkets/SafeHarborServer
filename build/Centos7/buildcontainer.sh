@@ -8,9 +8,6 @@
 # Get the AWS container registry login command by executing "aws ecr get-login" locally.
 # Then paste that command into the development env shell.
 
-# Load configuration.
-source $( dirname "${BASH_SOURCE[0]}" )/env.sh
-
 pushd $PROJECTROOT
 
 # Build the safeharborserver executable.

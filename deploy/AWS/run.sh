@@ -1,10 +1,8 @@
 # For running server manually, for testing - not intended for production use.
 
-source $( dirname "${BASH_SOURCE[0]}" )/env.sh
-
-#nohup redis-server redis.conf > redis.out 2> redis.err < /dev/null &
-#rm redis/redis.log
-#rm redis/dump.rdb
+nohup redis-server redis.conf > redis.out 2> redis.err < /dev/null &
+rm redis/redis.log
+rm redis/dump.rdb
 #sudo -u postgres pg_ctl stop -D /usr/local/pgsql/data
 #sudo nohup bin/safeharbor -debug -secretkey=jafakeu9s3ls -stubs > log.out 2> log.err < /dev/null &
 #sudo docker run --name=postgres -e POSTGRES_PASSWORD=4word2day -d postgres
@@ -16,7 +14,7 @@ source $( dirname "${BASH_SOURCE[0]}" )/env.sh
 sudo nohup bin/safeharbor -debug -stubs -secretkey=jafakeu9s3ls -noregistry -host=52.11.24.124 > log.out 2> log.err < /dev/null &
 
 # For my testing:
-sudo bin/safeharbor -debug -toggleemail -stubs -secretkey=jafakeu9s3ls -noregistry -inmem -host=
+sudo bin/safeharbor -secretkey=jafakeu9s3ls -debug -toggleemail -stubs -noregistry -inmem -host=
 
 # Containerized:
 sudo docker run -i -t --net=host -p $SafeHarborPort:$SafeHarborPort \

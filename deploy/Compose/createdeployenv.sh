@@ -1,7 +1,8 @@
 #!/bin/sh
 
-# Load configuration.
-source $( dirname "${BASH_SOURCE[0]}" )/env.sh
+# Run this on the machine that will host the SafeHarborServer containers.
+# The machine must have docker and docker Compose installed. For Compose,
+# see https://github.com/docker/compose/releases
 
 # Configure host.
 sudo mkdir -p $DataVolMountPoint

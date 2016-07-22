@@ -10,8 +10,6 @@
 
 # DEPLOY SAFE HARBOR SERVER AND ITS COMPONENTS----------------------------------
 
-source $( dirname "${BASH_SOURCE[0]}" )/env.sh
-
 # Get images:
 sudo docker pull $SafeHarborImageName
 
