@@ -24,7 +24,7 @@ export ScaledMarketsRegistryNamespace=500058573678.dkr.ecr.us-east-1.amazonaws.c
 export SafeHarborImageName=$ScaledMarketsRegistryNamespace/safeharborserver
 
 # Deploy and test.
-$BuildDir/createdeployenv.sh	# Create a test env.
+$DeployDir/createdeployenv.sh	# Create a test env.
 $DeployDir/deploy.sh			# Deploy to the test env.
 $BuildDir/test.sh				# Run tests.
 $DeployDir/undeploy.sh			# Destroy test env.
