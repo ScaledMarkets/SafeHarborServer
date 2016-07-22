@@ -1,8 +1,12 @@
 # Create a test environment, run tests, and optionally tear down env if tests all pass.
 
-export BuildDir=$( dirname "${BASH_SOURCE[0]}" )
+pushd $( dirname "${BASH_SOURCE[0]}" )
+export BuildDir=`pwd`
+echo BuildDir=$BuildDir
+popd
 export DeployDir=$BuildDir/../../deploy/Compose
-echo $BuildDir
+echo DeployDir=$DeployDir
+
 source $BuildDir/env.sh  # Load build configuration.
 
 # Set deploy configuration for testing.
