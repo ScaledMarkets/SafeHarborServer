@@ -37,7 +37,7 @@ services:
     ports:
       - ${RegistryPort}:${RegistryPort}
     volumes:
-      - ${RegistryPath}/registryauth:/auth
+      - ${DataVolMountPoint}/registryauth:/auth
       - ${DataVolMountPoint}/registrydata:/var/lib/registry
     environment:
       REGISTRY_AUTH: htpasswd

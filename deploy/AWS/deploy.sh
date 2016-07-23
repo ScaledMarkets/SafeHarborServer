@@ -26,7 +26,7 @@ docker run --entrypoint htpasswd docker.io/registry:2 -Bbn $registryUser $regist
 #	-e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
 #	-e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
 sudo docker run --name registry --net=host -d -p $RegistryPort:$RegistryPort \
-	-v $RegistryPath/registryauth:/auth \
+	-v $DataVolMountPoint/registryauth:/auth \
 	-v $DataVolMountPoint/registrydata:/var/lib/registry
 	-e "REGISTRY_AUTH=htpasswd" \
 	-e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
