@@ -13,16 +13,20 @@ pushd $( dirname "${BASH_SOURCE[0]}" )/../../../TestSafeHarborServer
 export TestDir=`pwd`
 
 # Update the test code and compile it.
+echo Pulling test source code...
 git pull
+echo Building tests...
 make compile
 
 # Execute tests.
+echo Executing test suite $3...
 make $3
 
 # Determine code coverage. Requires running report in the SafeHarborServer container.
 # We achieve that by attaching to the container.
 # See https://www.elastic.co/blog/code-coverage-for-your-golang-system-tests
 # See https://blog.golang.org/cover
+echo Attaching to SHS container to run coverage report...
 docker attach --detach-keys detach safeharborserver
 go tool cover -html=/safeharbor/data/safeharbor.cov -o /safeharbor/data/safeharbor.cov.html
 detach

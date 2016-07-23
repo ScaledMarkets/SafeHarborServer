@@ -9,7 +9,10 @@
 # We can eventually automate the above by installing the AWS command tools on
 # the deployment machine and then running "sudo `aws ecr get-login`
 
-# Create Docker Registry password file (needed by Docker Registry).
+echo Create Docker Registry password file (needed by Docker Registry)...
 docker run --entrypoint htpasswd docker.io/registry:2 -Bbn $registryUser $registryPassword > $DataVolMountPoint/registryauth/htpasswd
 
+echo Running Compose...
 docker-compose up -d --force-recreate
+
+echo ...finished running Compose.
