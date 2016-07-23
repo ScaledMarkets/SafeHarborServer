@@ -11,4 +11,6 @@ sudo yum install git
 # Install test suite.
 pushd $PROJECTROOT/..
 sudo git clone https://github.com/Scaled-Markets/TestSafeHarborServer.git
+cd build/Centos7
+sudo chown centos:centos *
 popd
