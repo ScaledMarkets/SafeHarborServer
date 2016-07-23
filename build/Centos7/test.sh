@@ -1,4 +1,5 @@
 # Run integration test suite.
+# Run this on the machine that hosts the containers under test.
 # Assumes that SafeHarborServer has been built with the TEST option and deployed
 # to a test environment. It also assumes that the test environment has go installed.
 # Arguments:
@@ -18,13 +19,14 @@ make compile
 # Execute tests.
 make $3
 
-# Determine code coverage. Requires running report on server - hence the ssh.
+# Determine code coverage. Requires running report in the SafeHarborServer container.
+# We achieve that by attaching to the container.
 # See https://www.elastic.co/blog/code-coverage-for-your-golang-system-tests
 # See https://blog.golang.org/cover
-ssh -i $SSHTestKeyPath centos@$1 \
-	"go tool cover -html=/safeharbor/data/safeharbor.cov -o /safeharbor/data/safeharbor.cov.html"
+docker attach --detach-keys detach safeharborserver
+go tool cover -html=/safeharbor/data/safeharbor.cov -o /safeharbor/data/safeharbor.cov.html
+detach
 
-# Retrieve the HTML coverage report.
-scp -i $SSHTestKeyPath centos@$1:$DataVolMountPoint/safeharbor.cov.html .
+echo The HTML coverage report is in $DataVolMountPoint/safeharbor.cov.html
 
 popd
