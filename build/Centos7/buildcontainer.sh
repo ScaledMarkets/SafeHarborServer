@@ -7,7 +7,7 @@
 # MANUAL STEP:
 # Log into AWS container registry:
 # Get the AWS container registry login command by executing "aws ecr get-login" locally.
-# Then paste that command into the development env shell.
+# Then paste that command into the build env shell.
 
 pushd $PROJECTROOT
 

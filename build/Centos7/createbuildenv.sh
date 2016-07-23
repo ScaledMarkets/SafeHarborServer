@@ -7,8 +7,9 @@
 # ONE TIME: Dev env setup-------------------------------------------------------
 
 # Install development tools on centos7:
-sudo yum install go
-sudo yum install git
+sudo yum install -y go
+sudo yum install -y git
+sudo yum install -y golang-cover.x86_64
 
 # Set build location.
 pushd $( dirname "${BASH_SOURCE[0]}" )

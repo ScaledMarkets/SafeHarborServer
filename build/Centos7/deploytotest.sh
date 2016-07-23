@@ -2,6 +2,11 @@
 # Run this on the machine that hosts the containers under test.
 # Arguments:
 #	$1 - Public IP address or DNS name of the test server.
+#
+# MANUAL STEP:
+# Log into AWS container registry:
+# Get the AWS container registry login command by executing "aws ecr get-login" locally.
+# Then paste that command into the build env shell.
 
 pushd $( dirname "${BASH_SOURCE[0]}" )
 export BuildDir=`pwd`
