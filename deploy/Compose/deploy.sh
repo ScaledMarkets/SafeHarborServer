@@ -12,4 +12,4 @@
 # Create Docker Registry password file (needed by Docker Registry).
 docker run --entrypoint htpasswd docker.io/registry:2 -Bbn $registryUser $registryPassword > $DataVolMountPoint/registryauth/htpasswd
 
-docker-compose up -d
+docker-compose up -d --force-recreate

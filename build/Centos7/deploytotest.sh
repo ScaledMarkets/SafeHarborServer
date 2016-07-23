@@ -1,4 +1,7 @@
-# Create a test environment, run tests, and optionally tear down env if tests all pass.
+# Create a test environment and run tests.
+# Run this on the machine that hosts the containers under test.
+# Arguments:
+#	$1 - Public IP address or DNS name of the test server.
 
 pushd $( dirname "${BASH_SOURCE[0]}" )
 export BuildDir=`pwd`
@@ -12,7 +15,8 @@ echo DeployDir=$DeployDir
 source $BuildDir/env.sh  # Load build configuration.
 
 # Set deploy configuration for testing.
-export SafeHarborPublicHostname=52.39.70.179
+export SafeHarborPublicHostname=$1
+export TestSuite=all
 export RandomString=alkejfa4ak0s3
 export DataVolMountPoint=/home/centos/safeharbordata  # this gets mapped to the container /safeharbor/data directory.
 export registryUser=safeharbor
@@ -24,7 +28,8 @@ export ScaledMarketsRegistryNamespace=500058573678.dkr.ecr.us-east-1.amazonaws.c
 export SafeHarborImageName=$ScaledMarketsRegistryNamespace/safeharborserver
 
 # Deploy and test.
-$DeployDir/createdeployenv.sh	# Create a test env.
-$DeployDir/deploy.sh			# Deploy to the test env.
-$BuildDir/test.sh				# Run tests.
-$DeployDir/undeploy.sh			# Destroy test env.
+pushd $DeployDir
+./createdeployenv.sh									# Create a test env.
+./deploy.sh												# Deploy to the test env.
+$BuildDir/test.sh $1 $SafeHarborPort $TestSuite			# Run tests.
+popd
