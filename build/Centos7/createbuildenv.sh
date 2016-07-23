@@ -26,5 +26,5 @@ sudo chmod +x $DeployDir/*.sh
 
 # Install test suite.
 pushd $BuildDir/../../..
-sudo git clone https://github.com/Scaled-Markets/TestSafeHarborServer.git
+git clone https://github.com/Scaled-Markets/TestSafeHarborServer.git
 popd
