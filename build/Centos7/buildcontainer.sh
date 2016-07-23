@@ -11,27 +11,27 @@
 pushd $PROJECTROOT
 
 # Build the safeharborserver executable.
-sudo git pull
+git pull
 
 if [ $1 -eq 'TEST' ]
 then
-	sudo make cover  # compile with test coverage instrumentation
+	make cover  # compile with test coverage instrumentation
 else
-	sudo make compile
+	make compile
 fi
 
 # Build safeharborserver image:
-sudo cp bin/safeharbor build/Centos7
+cp bin/safeharbor build/Centos7
 cd build/Centos7
 
 if [ $1 -eq 'TEST' ]
 then
-	sudo docker build --file Dockerfile.test --tag=$SafeHarborImageName .
+	docker build --file Dockerfile.test --tag=$SafeHarborImageName .
 else
-	sudo docker build --tag=$SafeHarborImageName .
+	docker build --tag=$SafeHarborImageName .
 fi
 
 # Push safeharborserver image to AWS registry:
-sudo docker push $SafeHarborImageName
+docker push $SafeHarborImageName
 
 popd

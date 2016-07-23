@@ -11,7 +11,7 @@
 pushd $PROJECTROOT/../TestSafeHarborServer
 
 # Update the test code and compile it.
-sudo git pull
+git pull
 make compile
 
 # Execute tests.
