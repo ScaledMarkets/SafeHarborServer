@@ -1,4 +1,6 @@
-# Install docker on centos7: See https://docs.docker.com/engine/installation/linux/centos/
+# The machine must have docker and docker Compose installed on Centos7.
+# For Docker, see https://docs.docker.com/engine/installation/linux/centos/
+# For Compose, see https://github.com/docker/compose/releases
 
 # ONE TIME: Dev env setup-------------------------------------------------------
 
