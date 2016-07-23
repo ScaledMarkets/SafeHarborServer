@@ -8,7 +8,8 @@
 # Example:
 #	./test.sh 127.0.0.1 6000 basic
 
-pushd $PROJECTROOT/../TestSafeHarborServer
+pushd $( dirname "${BASH_SOURCE[0]}" )/../../../TestSafeHarborServer
+export TestDir=`pwd`
 
 # Update the test code and compile it.
 git pull

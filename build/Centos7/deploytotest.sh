@@ -34,5 +34,6 @@ export SafeHarborImageName=$ScaledMarketsRegistryNamespace/safeharborserver
 pushd $DeployDir
 ./createdeployenv.sh									# Create a test env.
 ./deploy.sh												# Deploy to the test env.
+echo Running tests...
 $BuildDir/test.sh $1 $SafeHarborPort $TestSuite			# Run tests.
 popd
