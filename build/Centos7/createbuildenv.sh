@@ -8,9 +8,17 @@
 sudo yum install go
 sudo yum install git
 
+# Set build location.
+pushd $( dirname "${BASH_SOURCE[0]}" )
+export BuildDir=`pwd`
+echo BuildDir=$BuildDir
+popd
+
+# Fix file ownership.
+sudo chown centos:centos $BuildDir/build/Centos7/*
+sudo chown centos:centos $BuildDir/deploy/Compose/*
+
 # Install test suite.
-pushd $PROJECTROOT/..
+pushd $BuildDir/../../..
 sudo git clone https://github.com/Scaled-Markets/TestSafeHarborServer.git
-cd build/Centos7
-sudo chown centos:centos *
 popd
