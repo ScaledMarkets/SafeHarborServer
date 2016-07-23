@@ -13,10 +13,16 @@ pushd $( dirname "${BASH_SOURCE[0]}" )
 export BuildDir=`pwd`
 echo BuildDir=$BuildDir
 popd
+pushd $BuildDir/../../deploy/Compose
+export DeployDir=`pwd`
+popd
+echo DeployDir=$DeployDir
 
 # Fix file ownership.
-sudo chown centos:centos $BuildDir/build/Centos7/*
-sudo chown centos:centos $BuildDir/deploy/Compose/*
+sudo chown centos:centos $BuildDir/*
+sudo chown centos:centos $DeployDir/*
+sudo chmod +x $BuildDir/*.sh
+sudo chmod +x $DeployDir/*.sh
 
 # Install test suite.
 pushd $BuildDir/../../..
