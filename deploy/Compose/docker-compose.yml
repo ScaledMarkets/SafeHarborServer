@@ -8,7 +8,7 @@ services:
       - clair
       - registry
     image: ${SafeHarborImageName}
-    net: "host"
+    network_mode: "host"
     ports:
       - ${SafeHarborPort}:${SafeHarborPort}
     volumes:
@@ -22,18 +22,18 @@ services:
     volumes:
       - /home/centos/SafeHarborServer/build/Centos7:/config
       - /home/centos/safeharbordata:/data
-    net: "host"
+    network_mode: "host"
   clair:
     depends_on:
       - postgres
     image: quay.io/coreos/clair
     command: --config=/config/clairconfig.yaml
-    net: "host"
+    network_mode: "host"
     volumes:
       - /home/centos/SafeHarborServer/build/Centos7:/config:ro
   registry:
     image: docker.io/registry:2
-    net: "host"
+    network_mode: "host"
     ports:
       - ${RegistryPort}:${RegistryPort}
     volumes:
@@ -45,6 +45,6 @@ services:
       REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
   postgres:
     image: docker.io/postgres
-    net: "host"
+    network_mode: "host"
     environment:
       POSTGRES_PASSWORD: ${postgresPassword}

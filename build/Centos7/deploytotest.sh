@@ -27,6 +27,9 @@ export RegistryPort=5000
 export ScaledMarketsRegistryNamespace=500058573678.dkr.ecr.us-east-1.amazonaws.com
 export SafeHarborImageName=$ScaledMarketsRegistryNamespace/safeharborserver
 
+# Make sure docker is running.
+#sudo service docker restart
+
 # Deploy and test.
 pushd $DeployDir
 ./createdeployenv.sh									# Create a test env.

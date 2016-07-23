@@ -24,6 +24,10 @@ sudo chown centos:centos $DeployDir/*
 sudo chmod +x $BuildDir/*.sh
 sudo chmod +x $DeployDir/*.sh
 
+# Create docker group.
+sudo groupadd docker
+sudo gpasswd -a centos docker
+
 # Install test suite.
 pushd $BuildDir/../../..
 git clone https://github.com/Scaled-Markets/TestSafeHarborServer.git
