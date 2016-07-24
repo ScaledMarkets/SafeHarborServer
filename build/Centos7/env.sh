@@ -1,3 +1,4 @@
+#!/bin/sh
 # Environment configuration used by all build scripts.
 
 export PROJECTROOT=$( dirname "${BASH_SOURCE[0]}" )/../..

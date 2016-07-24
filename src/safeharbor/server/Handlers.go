@@ -165,6 +165,61 @@ func printDatabase(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 }
 
 /*******************************************************************************
+ * Arguments: <any>
+ * Returns: apitypes.SessionToken
+ * A File argument is obtained from the form values as follows:
+ *    The name specified by the client is keyed on "filename".
+ * The handler should move the file to a permanent name.
+ */
+func acknowledge(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
+	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
+	
+	fmt.Println("acknowledge")
+	
+	if ! dbClient.Server.Debug {
+		return apitypes.NewFailureDesc(http.StatusForbidden,
+			"Not in debug mode - returning from acknowledge")
+	}
+	
+	var msg = "Parameters:\n"
+	
+	for key, valueAr := range values {  // valueAr is a []string
+		msg = msg + "\t" + key + ": "
+		for i, value := range valueAr {
+			if i > 0 { msg = msg + ";" }
+			msg = msg + value
+		}
+		msg = msg + "\n"
+	}
+	
+	msg = msg + "Files:\n"
+	var headers []*multipart.FileHeader = files["filename"]
+	
+	for _, header := range headers {
+		var filename string = header.Filename	
+		var file multipart.File
+		var err error
+		file, err = header.Open()
+		if err != nil { return apitypes.NewFailureDesc(http.StatusBadRequest, err.Error()) }
+		if file == nil { return apitypes.NewFailureDesc(http.StatusInternalServerError, "no file found") }	
+		var buf = make([]byte, 100000)
+		var size = 0
+		for {
+			var n int
+			n, err = file.Read(buf)
+			size = size + n
+			if n < 100000 { break }
+		}
+		if err != nil { return apitypes.NewFailureDesc(http.StatusBadRequest, err.Error()) }
+		msg = msg + filename + ": " + fmt.Sprintf("%d", size) + " bytes\n"
+	}
+	
+	msg = msg + "End of data"
+	
+	return apitypes.NewResult(200, msg)
+}
+
+/*******************************************************************************
  * Arguments: apitypes.Credentials
  * Returns: apitypes.SessionToken
  */

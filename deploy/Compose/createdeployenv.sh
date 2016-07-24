@@ -1,4 +1,5 @@
 #!/bin/sh
+# http://www.linuxjournal.com/magazine/work-shell-handling-errors-and-making-scripts-bulletproof
 
 # Run this on the machine that will host the SafeHarborServer containers.
 # The machine must have docker and docker Compose installed. For Compose,

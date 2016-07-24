@@ -1,3 +1,4 @@
+#!/bin/sh
 # Compile the source code and package it as a container image.
 # Run this on the machine that hosts the containers under test.
 # Arguments:

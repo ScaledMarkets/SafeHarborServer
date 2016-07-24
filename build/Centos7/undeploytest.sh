@@ -1,3 +1,4 @@
+#!/bin/sh
 # Create a test environment, run tests, and optionally tear down env if tests all pass.
 # Arguments:
 #	$1 - IP address of the test server.

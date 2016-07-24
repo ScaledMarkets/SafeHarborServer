@@ -286,14 +286,22 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 	}
 	
 	// Save the file data to a permanent file.
-	var bytes []byte
-	bytes, err = ioutil.ReadAll(file)
-	err = ioutil.WriteFile(filepath, bytes, os.ModePerm)
-	if err != nil {
-		fmt.Println(err.Error())
-		return "", "", utils.ConstructServerError("While writing dockerfile, " + err.Error())
+	
+	var buf = make([]byte, 100000)
+	var size int64 = 0
+	for {
+		var n int
+		n, err = file.Read(buf)
+		err = ioutil.WriteFile(filepath, buf, os.ModeAppend | os.ModePerm)
+		if err != nil {
+			fmt.Println(err.Error())
+			return "", "", utils.ConstructServerError("While writing file, " + err.Error())
+		}
+		size = size + int64(n)
+		if n < 100000 { break }
 	}
-	fmt.Println(strconv.FormatInt(int64(len(bytes)), 10), "bytes written to file", filepath)
+	
+	fmt.Println(strconv.FormatInt(size, 10), "bytes written to file", filepath)
 	return filename, filepath, nil
 }
 

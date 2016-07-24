@@ -47,6 +47,7 @@ func NewDispatcher() *Dispatcher {
 		"ping": ping,
 		"clearAll": clearAll,
 		"printDatabase": printDatabase,
+		"acknowledge": acknowledge,
 		"authenticate": authenticate,
 		"logout": logout,
 		"createUser": createUser,

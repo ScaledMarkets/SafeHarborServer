@@ -15,4 +15,4 @@ docker run --entrypoint htpasswd docker.io/registry:2 -Bbn $registryUser $regist
 echo Running Compose...
 docker-compose up -d --force-recreate
 
-echo ...finished running Compose.
+echo ...finished running Compose: status $?.

@@ -1,3 +1,4 @@
+#!/bin/sh
 # Run integration test suite.
 # Run this on the machine that hosts the containers under test.
 # Assumes that SafeHarborServer has been built with the TEST option and deployed

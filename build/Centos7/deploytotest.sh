@@ -1,3 +1,4 @@
+#!/bin/sh
 # Create a test environment and run tests.
 # Run this on the machine that hosts the containers under test.
 # Arguments:
