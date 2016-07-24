@@ -457,6 +457,14 @@ func ParseResponseBodyToPayloadMaps(body io.ReadCloser) ([]map[string]interface{
 	value, err = ioutil.ReadAll(body)
 	if err != nil { return nil, err }
 	var obj map[string]interface{}
+	var s = string(value)
+	var pos = strings.Index(s, "\x00")
+	if pos >= 0 {
+		fmt.Println(fmt.Sprintf("null char occurs at pos %d", pos))
+		s = s[0:pos]
+	}
+	value = []byte(s)
+	
 	err = json.Unmarshal(value, &obj)
 	if err != nil { return nil, err }
 	
