@@ -424,7 +424,7 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 			apitypes.RespondWithClientError(writer, err.Error())
 			return
 		}
-		values = httpReq.Form  // map[string]string
+		values = httpReq.Form  // map[string][]string
 		
 	} else if httpMethod == "POST" {  // dispatch to an error handler.
 	
@@ -438,33 +438,40 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 			apitypes.RespondWithClientError(writer, err.Error())
 			return
 		}
-		values = httpReq.PostForm  // map[string]string
+		values = httpReq.PostForm  // map[string][]string
 		
 		// Check if the POST is multipart/form-data.
 		// https://golang.org/pkg/net/http/#Request.MultipartReader
 		// http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4
 		var mpReader *multipart.Reader
 		mpReader, err = httpReq.MultipartReader()
-		if mpReader != nil { // has multipart data
-			// We require all multipart requests to include one (and only one) file part.
-			fmt.Println("has multipart data...")
-			
-			// https://golang.org/pkg/mime/multipart/#Reader.ReadForm
-			var form *multipart.Form
-			form, err = mpReader.ReadForm(10000)
-			if form == nil {
-				apitypes.RespondWithClientError(writer, "No form found")
-				return
-			}
-			fmt.Println("Read form data")
+		if mpReader == nil {
+			fmt.Println("Request is not multipart")
 			if err != nil {
 				apitypes.RespondWithClientError(writer, err.Error())
 				return
 			}
+		} else { // has multipart data
+			// We require all multipart requests to include one (and only one) file part.
+			fmt.Println("Request is multipart...")
+			
+			// https://golang.org/pkg/mime/multipart/#Reader.ReadForm
+			var form *multipart.Form
+			form, err = mpReader.ReadForm(10000)
+			if err != nil {
+				apitypes.RespondWithClientError(writer, err.Error())
+				return
+			}
+			if form == nil {
+				apitypes.RespondWithClientError(writer, "No form found")
+				return
+			}
+			fmt.Println("Read all multipart form-data parts without error.")
 			
 			values = form.Value
 			files = form.File
-			fmt.Println("Set file parameters")
+			fmt.Println(fmt.Sprintf(
+				"Retrieved POST parameters: %d values and %d files.", len(values), len(files)))
 		}
 
 	} else if httpMethod == "OPTIONS" {

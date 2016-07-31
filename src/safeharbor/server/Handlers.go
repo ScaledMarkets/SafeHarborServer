@@ -1,6 +1,7 @@
 /*******************************************************************************
  * All of the REST handlers are contained here. These functions are called by
- * the handleRequest method in Dispatcher.go.
+ * the handleRequest method in Dispatcher.go. Methods and types are defined here:
+ *	https://drive.google.com/open?id=1KLRJ8u0rk3djxr5_sw0vfNnq9cVY3OLzDoQV6YWoVto
  * Error codes used are (see https://golang.org/pkg/net/http/#pkg-constants),
 	StatusBadRequest (400) - Bad request.
 	StatusUnauthorized (401) - User is not authenticated, and must be to perform the requested action.
@@ -166,7 +167,7 @@ func printDatabase(dbClient *InMemClient, sessionToken *apitypes.SessionToken, v
 
 /*******************************************************************************
  * Arguments: <any>
- * Returns: apitypes.SessionToken
+ * Returns: apitypes.Result
  * A File argument is obtained from the form values as follows:
  *    The name specified by the client is keyed on "filename".
  * The handler should move the file to a permanent name.

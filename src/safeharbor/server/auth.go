@@ -114,8 +114,8 @@ func (authSvc *AuthService) authenticateRequestCookie(httpReq *http.Request) *ap
 	
 	fmt.Println("authenticating request...")
 	var sessionId = getSessionIdFromCookie(httpReq)
-	fmt.Println("obtained session id:", sessionId)
 	if sessionId != "" {
+		fmt.Println("obtained session id:", sessionId)
 		sessionToken = authSvc.identifySession(sessionId)  // returns nil if invalid
 	}
 	
