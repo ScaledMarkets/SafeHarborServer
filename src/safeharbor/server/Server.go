@@ -450,11 +450,6 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 		mpReader, err = httpReq.MultipartReader()
 		if mpReader == nil {
 			fmt.Println("Request is not multipart")
-			if err != nil {
-				fmt.Println(err.Error())
-				apitypes.RespondWithClientError(writer, err.Error())
-				return
-			}
 		} else { // has multipart data
 			// We require all multipart requests to include one (and only one) file part.
 			fmt.Println("Request is multipart...")
