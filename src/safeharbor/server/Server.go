@@ -418,6 +418,9 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 	var values url.Values
 	var files map[string][]*multipart.FileHeader = nil
 	
+	fmt.Println("URL=" + httpReq.URL.String())  // debug
+	fmt.Println("RequestURI=" + httpReq.RequestURI) // debug
+
 	if httpMethod == "GET" {
 		
 		if err = httpReq.ParseForm(); err != nil { // Query parameters are automatically unencoded.
@@ -503,8 +506,6 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 	}
 	
 	fmt.Println("AccountVerificationToken=" + httpReq.FormValue("AccountVerificationToken"))  // debug
-	fmt.Println("URL=" + httpReq.URL.String())  // debug
-	fmt.Println("RequestURI=" + httpReq.RequestURI) // debug
 	
 	fmt.Println("Calling handleRequest")
 	server.dispatcher.handleRequest(sessionToken, headers, writer, reqName, values, files)
