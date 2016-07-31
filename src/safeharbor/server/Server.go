@@ -448,6 +448,7 @@ func (server *Server) dispatch(sessionToken *apitypes.SessionToken,
 		if mpReader == nil {
 			fmt.Println("Request is not multipart")
 			if err != nil {
+				fmt.Println(err.Error())
 				apitypes.RespondWithClientError(writer, err.Error())
 				return
 			}
