@@ -5,22 +5,22 @@ metadata:
   labels:
     app: safeharborserver
 spec:
-  type: NodePort  # One of ClusterIP, NodePort, or LoadBalancer. Defaults to ClusterIP.
+  type: LoadBalancer
   ports:
-  - port: 80
-    name: http
-    targetPort: 80
-    protocol: TCP
+    - port: 80
+      name: http
+      targetPort: 80 # 6000
+      protocol: TCP
   selector:
     app: safeharborserver
 ---
-apiVersion: v1
-kind: ReplicationController
+apiVersion: extensions/v1beta1
+kind: Deployment
 metadata:
   name: safeharborserver
 spec:
-  replicas: 1
-  template: # See https://blog.redspread.com/2016/02/09/Using-AWS-EC2-Container-Registry-with-K8S/
+  replicas: 2
+  template:
     metadata:
       labels:
         app: safeharborserver
@@ -28,7 +28,7 @@ spec:
       imagePullSecrets:
         - name: scaledmarkets_registrykey
       containers:
-      - name: safeharborserver
-        image: 5000-5857-3678.dkr.ecr.us-east-1.amazonaws.com/safeharborserver:latest  
-        ports:
-        - containerPort: 80
+        - name: safeharborserver
+          image: nginx # 5000-5857-3678.dkr.ecr.us-east-1.amazonaws.com/safeharborserver:latest
+          ports:
+            - containerPort: 80 #6000

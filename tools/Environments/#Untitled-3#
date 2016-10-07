@@ -1,0 +1,14 @@
+shell:
+
+/usr/sbin:
+
+/usr/bin:
+
+
+
+
+/opt/gradle/latest/bin:
+/usr/local/bin:
+/usr/local/sbin:
+/home/ec2-user/.local/bin:
+/home/ec2-user/bin

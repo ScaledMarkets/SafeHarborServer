@@ -1,0 +1,14 @@
+# Deploy the JMeter performance tool.
+# In ECS, task will be called "ecscompose-JMeter".
+# In ECS, service will be called "ecscompose-service-JMeter".
+# Env variables requried: none.
+#
+version: '2'
+services:
+  zap:
+    depends_on:
+    image: ....
+    command: 
+    network_mode: "host"
+    volumes:
+      - ....:/....:ro

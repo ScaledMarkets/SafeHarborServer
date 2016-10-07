@@ -1,0 +1,31 @@
+# Deploy the CoreOS "Clair" container security scanner.
+# In ECS, task will be called "ecscompose-Clair".
+# In ECS, service will be called "ecscompose-service-Clair".
+# Env variables requried:
+#   PostgresPassword
+#
+version: '2'
+services:
+  clair:
+    # sudo docker run --name clair --network bridge --link postgres -p 6060-6061:6060-6061 -v /tmp:/tmp -v /home/ec2-user/tools/Clair:/config:ro -it quay.io/coreos/clair:v1.2.2 -config=/config/clairconfig.yaml
+    depends_on:
+      - postgres
+    image: quay.io/coreos/clair:v1.2.2
+    command: -config=/config/clairconfig.yaml
+    network_mode: "bridge"
+    links:
+      - postgres
+    ports:
+      - "6060:6060"
+      - "6061:6061"
+    volumes:
+      - /home/ec2-user/tools/Clair:/config:ro
+      - /tmp:/tmp
+  postgres:  # Required by clair.
+    # sudo docker run --name postgres --network bridge -p 5432:5432 -e POSTGRES_PASSWORD=PostgresPassword -d docker.io/postgres
+    image: docker.io/postgres
+    network_mode: "bridge"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${PostgresPassword}

@@ -1,0 +1,10 @@
+Jenkins:
+/sbin:
+/usr/sbin:
+/bin:
+/usr/bin:
+/opt/gradle-2.14.1/bin/:
+/opt/apache-maven-3.3.9/bin/:
+/opt/gradle-2.14.1/bin/:
+/opt/apache-maven-3.3.9/bin/
+

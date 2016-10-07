@@ -1,0 +1,19 @@
+# Deploy a OWASP "ZAP" security scanner pod.
+# Ref: https://hub.docker.com/r/owasp/zap2docker-stable/
+# Ref: https://github.com/zaproxy/zaproxy/wiki/Docker
+# In ECS, task will be called "ecscompose-ZAP".
+# In ECS, service will be called "ecscompose-service-ZAP".
+# Env variables requried:
+#   ZAPPort
+#
+version: '2'
+services:
+  zap:
+    depends_on:
+    image: owasp/zap2docker-stable
+    command: zap.sh -daemon -host 0.0.0.0 -port 8080
+    network_mode: "host"
+    ports:
+      - ${ZAPPort}:8080
+    volumes:
+      - ....:/....:ro
