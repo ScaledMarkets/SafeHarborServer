@@ -1,5 +1,7 @@
 /*******************************************************************************
  * This file contains all declarations related to Server.
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package server

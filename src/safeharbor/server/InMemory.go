@@ -8,6 +8,8 @@
  * 
  * For each concrete (non-abstract) type that has a writeBack() method, the New<type>
  * function writes the new instance to persistent storage.
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package server

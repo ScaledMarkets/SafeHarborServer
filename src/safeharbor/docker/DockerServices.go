@@ -1,6 +1,8 @@
 /*******************************************************************************
  * Provide abstract functions that we need from docker and docker registry.
  * This module relies on implementations of DockerEngine and DockerRegistry.
+ *
+ * Copyright Scaled Markets, Inc.
  */
 package docker
 

@@ -17,6 +17,8 @@
  * that are needed by the handler methods defined in the API (slides titled
  * "SafeHarbor REST API" of the desgin), which are implemented by the functions
  * in Handlers.go.
+ *
+ * Copyright Scaled Markets, Inc.
  */ 
  
 package server

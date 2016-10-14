@@ -32,6 +32,8 @@
 	/home/vagrant/bin/analyze-local-images <Docker Image ID>
 	
 	"ImageFormat": "Docker"
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package providers

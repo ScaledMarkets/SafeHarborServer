@@ -3,6 +3,8 @@
  * getConfiguration function (in Server.go) retrieves the path of the configuration 
  * file and creates a File that is passed to the NewConfiguration function here. That
  * function parses the file, creates, and returns a Configuration struct.
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package server

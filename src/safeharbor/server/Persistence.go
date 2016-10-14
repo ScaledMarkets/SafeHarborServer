@@ -6,6 +6,8 @@
  * Redis bindings for go: http://redis.io/clients#go
  * Chosen binding: https://github.com/xuyu/goredis
  * Prior binding: https://github.com/alphazero/Go-Redis
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package server

@@ -1,5 +1,7 @@
 /*******************************************************************************
  * Functions for reading JSON from the database and reconstituting objects in memory.
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 

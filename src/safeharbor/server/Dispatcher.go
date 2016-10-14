@@ -1,5 +1,7 @@
 /*******************************************************************************
  * Dispatch incoming HTTP requests to the appropriate REST function.
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package server

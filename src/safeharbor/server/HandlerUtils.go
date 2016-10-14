@@ -1,5 +1,7 @@
 /*******************************************************************************
  * Functions needed to implement the handlers in Handlers.go.
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package server

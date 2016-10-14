@@ -1,5 +1,7 @@
 /*******************************************************************************
  * Authentication and authorization.
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package server

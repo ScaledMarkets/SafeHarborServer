@@ -14,6 +14,8 @@
  *		JSON formatting for this, but we do it manually to have better control
  *		of what gets sent.
  * To do: Define JSON schema for the API. See http://json-schema.org/example2.html.
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package apitypes

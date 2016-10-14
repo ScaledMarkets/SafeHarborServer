@@ -11,10 +11,10 @@ rm redis/dump.rdb
 
 
 # For Steve's test server:
-sudo nohup bin/safeharbor -debug -stubs -secretkey=jafakeu9s3ls -noregistry -host=52.11.24.124 > log.out 2> log.err < /dev/null &
+sudo nohup bin/safeharbor -debug -stubs -secretkey=jafakeu9s3ls -noregistry -host=52.37.99.62 > log.out 2> log.err < /dev/null &
 
 # For my testing:
-sudo bin/safeharbor -secretkey=jafakeu9s3ls -debug -toggleemail -stubs -noregistry -inmem -host=
+sudo bin/safeharbor -secretkey=jafakeu9s3ls -debug -toggleemail -stubs -noregistry -inmem -host=54.71.85.235
 
 # Containerized:
 sudo docker run -i -t --net=host -p $SafeHarborPort:$SafeHarborPort \

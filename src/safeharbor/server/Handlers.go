@@ -8,6 +8,8 @@
 	StatusForbidden (403) - User is authenticated, but is not authorized to perform the action.
 	StatusConflict (409) - Contention among multiple users for update to the same data.
 	StatusInternalServerError (500) - An unexpected internal server error.
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package server

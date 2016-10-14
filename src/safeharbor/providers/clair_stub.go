@@ -1,6 +1,8 @@
 /*******************************************************************************
  * Implementation of ScanProvider for the CoreOS Clair container scanner.
  * See https://github.com/coreos/clair
+ *
+ * Copyright Scaled Markets, Inc.
  */
 
 package providers

@@ -1,6 +1,8 @@
 /*******************************************************************************
  * SafeHarbor REST server.
  * See https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
+ *
+ * Copyright Scaled Markets, Inc.
 */
 
 package main
