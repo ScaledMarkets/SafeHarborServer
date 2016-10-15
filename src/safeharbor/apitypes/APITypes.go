@@ -31,8 +31,8 @@ import (
 	"runtime/debug"
 	
 	// SafeHarbor packages:
-	"safeharbor/rest"
 	"safeharbor/utils"
+	"utilities/rest"
 )
 
 /*******************************************************************************

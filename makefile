@@ -16,7 +16,9 @@ PROJECTROOT := $(shell pwd)
 BUILDSCRIPTDIR := $(PROJECTROOT)/build/Centos7
 SRCDIR := $(PROJECTROOT)/src
 BUILDDIR := $(PROJECTROOT)/bin
+PKGDIR := $(PROJECTROOT)/pkg
 STATUSDIR := $(PROJECTROOT)/status
+UTILITIESDIR:=$(realpath $(PROJECTROOT)/../Utilities)
 
 
 # Tools: -----------------------------------------------------------------------
@@ -49,13 +51,23 @@ info: infotask
 .ONESHELL:
 .NOTPARALLEL:
 .SUFFIXES:
-.PHONY: compilego docs cleango infotask
+.PHONY: compilego covergo docs cleango infotask
+
 
 $(BUILDDIR):
 	mkdir $(BUILDDIR)
 
-compilego: $(BUILDDIR)
-	@GOPATH=$(PROJECTROOT) go install $(PACKAGENAME)
+# Main executable depends on source files.
+$(BUILDDIR)/$(EXECNAME): $(build_dir) $(src_dir)/$(PACKAGENAME)/*.go
+
+# Main executable depends on external packages.
+$(BUILDDIR)/$(EXECNAME): $(UTILITIESDIR)/$(CPU_ARCH)/$(PACKAGENAME)/*.a
+
+# The compilego target depends on the main executable.
+# 'make compilego' builds the executable, which is placed in <build_dir>.
+compilego: $(BUILDDIR)/$(EXECNAME)
+	@echo "UTILITIESDIR=$(UTILITIESDIR)"
+	@GOPATH=$(PROJECTROOT):$(UTILITIESDIR) go install $(PACKAGENAME) -o $(EXECNAME)
 
 # See https://www.elastic.co/blog/code-coverage-for-your-golang-system-tests
 # See https://blog.golang.org/cover

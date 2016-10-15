@@ -22,8 +22,8 @@ import (
 	
 	// SafeHarbor packages:
 	"safeharbor/utils"
-	"safeharbor/rest"
 	"safeharbor/apitypes"
+	"utilities/rest"
 )
 
 /* Replace with REST calls.

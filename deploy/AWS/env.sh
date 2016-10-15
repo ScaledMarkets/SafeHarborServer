@@ -3,6 +3,7 @@ export DataVolMountPoint=/home/centos/safeharbordata  # this gets mapped to the 
 export registryUser=safeharbor
 export registryPassword=gksspie8a
 export postgresPassword=4word2day
+export SafeHarborServerHost=54.71.85.235
 export SafeHarborPort=6000
 export RegistryPort=5000
 

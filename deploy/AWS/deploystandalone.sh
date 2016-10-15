@@ -14,7 +14,12 @@
 sudo docker pull $SafeHarborImageName
 
 # Start SafeHarborServer.
-sudo docker run --net=host -d -p $SafeHarborPort:$SafeHarborPort -v $DataVolMountPoint:/safeharbor/data -v /var/run/docker.sock:/var/run/docker.sock $SafeHarborImageName /safeharbor/safeharbor -debug -secretkey=jafa -port=$SafeHarborPort -inmem -stubs -noregistry
+sudo docker run --net=host -d -p $SafeHarborPort:$SafeHarborPort \
+	-v $DataVolMountPoint:/safeharbor/data \
+	-v /var/run/docker.sock:/var/run/docker.sock \
+	$SafeHarborImageName /safeharbor/safeharbor \
+	-debug -port=$SafeHarborPort -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host=$SafeHarborServerHost
+
 
 # For debugging:
 # Start container but don't start SafeHarborServer.

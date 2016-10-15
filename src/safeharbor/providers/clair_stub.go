@@ -27,8 +27,9 @@ import (
 
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
-	"safeharbor/rest"
 	"safeharbor/utils"
+
+	"utilities/rest"
 )
 
 type ClairServiceStub struct {

@@ -26,7 +26,6 @@ import (
 	"goredis"
 	
 	// SafeHarbor packages:
-	//"rest"
 	"safeharbor/apitypes"
 	"safeharbor/docker"
 	"safeharbor/providers"
