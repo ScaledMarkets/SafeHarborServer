@@ -3,8 +3,8 @@ package apitypes
 import (
 	"fmt"
 	
-	// SafeHarbor packages:
-	"safeharbor/rest"
+	// ScaledMarkets packages:
+	"utilities/rest"
 )
 
 /*******************************************************************************

@@ -30,9 +30,10 @@ import (
 	
 	"safeharbor/apitypes"
 	"safeharbor/docker"
-	"safeharbor/rest"
 	"safeharbor/utils"
 	"safeharbor/providers"
+	
+	"utilities/rest"
 )
 
 const (
