@@ -19,7 +19,7 @@ SRCDIR := $(PROJECTROOT)/src
 BUILDDIR := $(PROJECTROOT)/bin
 PKGDIR := $(PROJECTROOT)/pkg
 STATUSDIR := $(PROJECTROOT)/status
-UTILITIESDIR:=$(realpath $(PROJECTROOT)/../Utilities)
+UTILITIESDIR:=$(realpath $(PROJECTROOT)/../utilities)
 
 
 # Tools: -----------------------------------------------------------------------
