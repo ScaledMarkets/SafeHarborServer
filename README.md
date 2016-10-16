@@ -21,3 +21,4 @@ See https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wf
 
 ## To Stop
 <code>./stop.sh</code>
+ trigger
