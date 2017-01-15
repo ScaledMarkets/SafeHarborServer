@@ -5,6 +5,7 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Compiling the Go code...
+      - EXPORT PROJECTROOT = .
       - make compile
   post_build:
     commands:
