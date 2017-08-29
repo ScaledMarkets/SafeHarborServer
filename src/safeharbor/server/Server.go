@@ -188,22 +188,39 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	
 	
 	// Install scanning services.
+	
 	var obj interface{} = config.ScanServices["clair"]
-	if obj == nil { AbortStartup("Cound not find configuration for the clair scanning service") }
+	if obj != nil { AbortStartup("Cound not find configuration for the clair scanning service") }
 	var clairConfig map[string]interface{}
 	var isType bool
 	clairConfig, isType = obj.(map[string]interface{})
 	if ! isType { AbortStartup("Configuration of clair services is ill-formed:") }
 	clairConfig["LocalIPAddress"] = config.ipaddr
-	var scanSvc providers.ScanService
+	var clairScanSvc providers.ScanService
 	if stubScanners {
-		scanSvc, err = providers.CreateClairServiceStub(clairConfig) // for testing only
+		clairScanSvc, err = providers.CreateClairServiceStub(clairConfig) // for testing only
 	} else {
-		scanSvc, err = providers.CreateClairService(clairConfig)
+		clairScanSvc, err = providers.CreateClairService(clairConfig)
 	}
 	if err != nil { AbortStartup("When instantiating Clair scan service: " + err.Error()) }
+	
+	obj = config.ScanServices["openscap"]
+	if obj != nil { AbortStartup("Cound not find configuration for the openscap scanning service") }
+	var openscapConfig map[string]interface{}
+	openscapConfig, isType = obj.(map[string]interface{})
+	if ! isType { AbortStartup("Configuration of openscap services is ill-formed:") }
+	openscapConfig["LocalIPAddress"] = config.ipaddr
+	var openscapScanSvc providers.ScanService
+	if stubScanners {
+		openscapScanSvc, err = providers.CreateOpenScapServiceStub(openscapConfig) // for testing only
+	} else {
+//		openscapScanSvc, err = providers.CreateOpenScapService(openscapConfig)
+	}
+	if err != nil { AbortStartup("When instantiating OpenScap scan service: " + err.Error()) }
+	
 	server.ScanServices = []providers.ScanService{
-		scanSvc,
+		clairScanSvc,
+		openscapScanSvc,
 	}
 	
 	// Install email service.

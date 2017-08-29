@@ -17,6 +17,9 @@ sudo docker run --name postgres --net=host -d -e POSTGRES_PASSWORD=$postgresPass
 # Start Clair (needed by SafeHarborServer).
 sudo docker run --name clair --net=host -d -v /home/centos/SafeHarborServer/build/Centos7:/config:ro quay.io/coreos/clair:latest --config=/config/clairconfig.yaml
 
+# Start OpenScap scanning slave.
+sudo docker run --name scap --net=host -d -v ....
+
 # Create Docker Registry password file (needed by Docker Registry).
 docker run --entrypoint htpasswd docker.io/registry:2 -Bbn $registryUser $registryPassword > $DataVolMountPoint/registryauth/htpasswd
 

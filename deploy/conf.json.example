@@ -18,6 +18,10 @@
 		"clair": {
 			"Host": "localhost",
 			"Port": "6060"
+		},
+		"openscap": {
+			"Host": "localhost",
+			"Port": "6070"
 		}
 	}
 }

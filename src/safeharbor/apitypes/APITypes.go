@@ -386,7 +386,8 @@ type UserDesc struct {
 	DefaultRepoId string
 	EmailAddress string
 	EmailIsVerified bool
-	CanModifyTheseRealms []string
+	CanModifyTheseRealms []string  // This reveals too much - this info should
+		// only be available for the user who is authenticated.
 }
 
 func NewUserDesc(id, userId, userName, realmId, defaultRepoId, emailAddress string, 
