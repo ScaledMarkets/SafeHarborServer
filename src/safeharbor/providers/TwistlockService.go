@@ -43,6 +43,9 @@ import (
 	"utilities/rest"
 )
 
+ScanResultWaitIntervalMs int
+MaxNumberOfTries int
+
 type TwistlockService struct {
 	UseSSL bool
 	Host string
@@ -161,7 +164,7 @@ func (twistlockContext *TwistlockRestContext) PingService() *apitypes.Result {
 func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*ScanResult, error) {
 	
 	fmt.Println("Initiating image scan")
-	var err error = twistlockContext.initiateScan(imageName)
+	var err error = twistlockContext.initiateScan(....registryName, ....repoName)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +174,8 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 		when it completes, so we have to poll.
 		The call will return an array, in which the first object contains these elements:
 			scanTime - time scan was performed, e.g., "2017-09-02T17:01:43.265Z".
-			info.cveVulnerabilities - an array of objects containing these string-valued attributes:
+			info.cveVulnerabilities - either null, or an array of objects containing
+			these string-valued attributes:
 				id
 				link
 				severity
@@ -179,20 +183,25 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 	*/
 	var vulnerabilities []interface{}
 	var numberOfTries = 0
-	for _, _ {
+	for _, _ { // until we obtain an up to date scan result, or reach max # of tries
 		numberOfTries++
 		if numberOfTries > MaxNumberOfTries {
 			return nil, utils.ConstructUserError("Timed out waiting for scan result")
 		}
 		vulnerabilities, scanCompletionTime, err = twistlockContext.getVulnerabilities(imageName);
 		if err != nil {
-			
+			return nil, err
 		}
 		
 		if scanCompletionTime.Before(time.Now()) {  // scan is the one that we initiated, or later
-			break
+			break  // because we found a recent enough scan result
 		}
+		
+		// Sleep for ScanResultWaitIntervalMs milliseconds.
+		time.Sleep(ScanResultWaitIntervalMs * time.Millisecond)
 	}
+	
+	// Parse the scan result.
 	
 	var info? interface{} = responseMap["info"]  // should be an map[string]
 	var info map[string]interface{}
@@ -202,16 +211,18 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 		return nil, utils.ConstructUserError("Unexpected json object type for info field")
 	}
 	
+	var vulnerabilities []interface{}
 	var vulnerabilities? interface{} = info["cveVulnerabilities"] // should be an array of objects
-	var vulnerabilities, isType = vulnerabilities?.([]interface{})
-	if ! isType {
-		return nil, utils.ConstructUserError("Unexpected json object type for cveVulnerabilities field")
+	if vulnerabilities? == nil {
+		// No vulnerabilities found.
+		vulnerabilities = make([]interface{}, 0)
+	} else {
+		vulnerabilities, isType = vulnerabilities?.([]interface{})
+		if ! isType {
+			return nil, utils.ConstructUserError("Unexpected json object type for cveVulnerabilities field")
+		}
 	}
 	
-	if len(vulnerabilities) == 0 {
-		fmt.Println("No vulnerabilities found for image")
-	}
-
 	var vulnDescs = make([]*apitypes.VulnerabilityDesc, len(vulnerabilities))
 	for i, vuln? := range vulnerabilities {
 		var vuln map[string]interface{}
@@ -220,9 +231,25 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 			return nil, utils.ConstructUserError("Unexpected json object type for a cveVulnerability")
 		}
 		
-		....add checking to this
-		vulnDescs[i] = apitypes.NewVulnerabilityDesc(
-			vuln["id"], vuln["link"], vuln["severity"], vuln["description"])
+		var id, link, severity, description string
+		id, isType = vuln["id"}.(string)
+		if ! isType {
+			return nil, utils.ConstructUserError("Unexpected json object type for vulnerability id")
+		}
+		link, isType = vuln["link"].(string)
+		if ! isType {
+			return nil, utils.ConstructUserError("Unexpected json object type for vulnerability link")
+		}
+		severity, isType = vuln["severity"].(string)
+		if ! isType {
+			return nil, utils.ConstructUserError("Unexpected json object type for vulnerability severity")
+		}
+		description, isType = vuln["description"].(string)
+		if ! isType {
+			return nil, utils.ConstructUserError("Unexpected json object type for vulnerability description")
+		}
+	
+		vulnDescs[i] = apitypes.NewVulnerabilityDesc(id, link, severity, description)
 	}
 	
 	return &ScanResult{
@@ -275,7 +302,7 @@ type APIVulnerabilitiesResponse struct {
 /*******************************************************************************
  * 
  */
-func initiateScan(imageName string) error {
+func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoName string) error {
 	
 	/* Perform scan.
 		The call to initiate a scan is of the form,
@@ -298,6 +325,7 @@ func initiateScan(imageName string) error {
 	request.Header.Set("Content-Type", "application/json")
 	....Set user/password
 	....Set to ignore cert chain
+	....Need to use https
 
 	client := &http.Client{}
 	response, err := client.Do(request)
@@ -306,17 +334,20 @@ func initiateScan(imageName string) error {
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode != 201 {
+	if response.StatusCode >= 300 {
 		body, _ := ioutil.ReadAll(response.Body)
 		return fmt.Errorf("Got response %d with message %s", response.StatusCode, string(body))
 	}
 	
+	return nil
 }
 
 /*******************************************************************************
  * 
  */
-func getVulnerabilities(imageName string) ([]interface{}, time.Time, error) () {
+func (twistlockContext *TwistlockRestContext) getVulnerabilities(imageName string) ([]interface{}, time.Time, error) () {
+	
+	....How come we don''t have to specify the registry?
 	
 	/*
 		The call to obtain a scan result is of the form,
