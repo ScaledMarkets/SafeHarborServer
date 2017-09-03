@@ -204,6 +204,20 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	}
 	if err != nil { AbortStartup("When instantiating Clair scan service: " + err.Error()) }
 	
+	obj = config.ScanServices["twistlock"]
+	if obj != nil { AbortStartup("Cound not find configuration for the twistlock scanning service") }
+	var twistlockConfig map[string]interface{}
+	twistlockConfig, isType = obj.(map[string]interface{})
+	if ! isType { AbortStartup("Configuration of twistlock services is ill-formed:") }
+	twistlockConfig["LocalIPAddress"] = config.ipaddr
+	var twistlockScanSvc providers.ScanService
+	if stubScanners {
+		twistlockScanSvc, err = providers.CreateTwistlockServiceStub(twistlockConfig) // for testing only
+	} else {
+//		twistlockScanSvc, err = providers.CreateTwistlockService(twistlockConfig)
+	}
+	if err != nil { AbortStartup("When instantiating Twistlock scan service: " + err.Error()) }
+	
 	obj = config.ScanServices["openscap"]
 	if obj != nil { AbortStartup("Cound not find configuration for the openscap scanning service") }
 	var openscapConfig map[string]interface{}
