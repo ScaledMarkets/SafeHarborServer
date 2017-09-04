@@ -159,6 +159,28 @@ func (clairSvc *ClairService) GetParameterDescription(name string) (string, erro
 	return desc, nil
 }
 
+func (clairSvc *ClairService) AsScanProviderDesc() *apitypes.ScanProviderDesc {
+	var params = []apitypes.ParameterInfo{}
+	for name, desc := range clairSvc.Params {
+		params = append(params, *apitypes.NewParameterInfo(name, desc))
+	}
+	return apitypes.NewScanProviderDesc(clairSvc.GetName(), params)
+}
+
+/*******************************************************************************
+ * For accessing the Clair scanning service.
+ */
+type ClairRestContext struct {
+	rest.RestContext
+	MinimumVulnerabilityPriority string
+	ClairService *ClairService
+	sessionId string
+	imageRetrievalIP string  // for clair to call back to, to get images
+	imageRetrievalPort int  // for clair to call back to, to get images
+}
+
+var _ ClairRestContext = &ScanContext{}
+
 func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanContext, error) {
 	
 	var minPriority string
@@ -188,26 +210,6 @@ func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanC
 		imageRetrievalPort: ImageRetrievalPort,
 			
 	}, nil
-}
-
-func (clairSvc *ClairService) AsScanProviderDesc() *apitypes.ScanProviderDesc {
-	var params = []apitypes.ParameterInfo{}
-	for name, desc := range clairSvc.Params {
-		params = append(params, *apitypes.NewParameterInfo(name, desc))
-	}
-	return apitypes.NewScanProviderDesc(clairSvc.GetName(), params)
-}
-
-/*******************************************************************************
- * For accessing the Clair scanning service.
- */
-type ClairRestContext struct {
-	rest.RestContext
-	MinimumVulnerabilityPriority string
-	ClairService *ClairService
-	sessionId string
-	imageRetrievalIP string  // for clair to call back to, to get images
-	imageRetrievalPort int  // for clair to call back to, to get images
 }
 
 func (clairContext *ClairRestContext) getEndpoint() string {

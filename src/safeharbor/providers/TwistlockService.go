@@ -50,7 +50,9 @@ type TwistlockService struct {
 	UseSSL bool
 	Host string
 	Port int
-	LocalIPAddress string  // of this machine, for Twistlock to call back
+	UserId string
+	Password string
+	//LocalIPAddress string  // of this machine, for Twistlock to call back
 	Params map[string]string
 }
 
@@ -60,7 +62,9 @@ func CreateTwistlockService(params map[string]interface{}) (ScanService, error) 
 	
 	var host string
 	var portStr string
-	var localIPAddress string
+	var userId string
+	var password string
+	//var localIPAddress string
 	var isType bool
 	
 	host, isType = params["Host"].(string)
@@ -71,9 +75,17 @@ func CreateTwistlockService(params map[string]interface{}) (ScanService, error) 
 	if portStr == "" { return nil, utils.ConstructUserError("Parameter 'Port' not specified") }
 	if ! isType { return nil, utils.ConstructUserError("Parameter 'Port' is not a string") }
 
-	localIPAddress, isType = params["LocalIPAddress"].(string)
-	if localIPAddress == "" { return nil, utils.ConstructUserError("Parameter 'localIPAddress' not specified") }
-	if ! isType { return nil, utils.ConstructUserError("Parameter 'localIPAddress' is not a string") }
+	userId, isType = params["UserId"].(string)
+	if userId == "" { return nil, utils.ConstructUserError("Parameter 'UserId' not specified") }
+	if ! isType { return nil, utils.ConstructUserError("Parameter 'UserId' is not a string") }
+
+	password, isType = params["Password"].(string)
+	if password == "" { return nil, utils.ConstructUserError("Parameter 'Password' not specified") }
+	if ! isType { return nil, utils.ConstructUserError("Parameter 'Password' is not a string") }
+	
+	//localIPAddress, isType = params["LocalIPAddress"].(string)
+	//if localIPAddress == "" { return nil, utils.ConstructUserError("Parameter 'localIPAddress' not specified") }
+	//if ! isType { return nil, utils.ConstructUserError("Parameter 'localIPAddress' is not a string") }
 	
 	var port int
 	var err error
@@ -81,18 +93,27 @@ func CreateTwistlockService(params map[string]interface{}) (ScanService, error) 
 	if err != nil { return nil, err }
 	
 	return &TwistlockService{
-		UseSSL: false,
+		UseSSL: true,
 		Host: host,
 		Port: port,
-		LocalIPAddress: localIPAddress,
+		UserId: userId,
+		Password: password,
+		//LocalIPAddress: localIPAddress,
 		Params: map[string]string{
-			"MinimumPriority": "The minimum priority level of vulnerabilities to report",
+			"UserId": "User id for connecting to the Twistlock server",
+			"Password": "Password for connecting to the Twistlock server",
 		},
 	}, nil
 }
 
 func (twistlockSvc *TwistlockService) GetEndpoint() string {
-	return fmt.Sprintf("http://%s:%d", twistlockSvc.Host, twistlockSvc.Port)
+	var scheme string
+	if twistlockSvc.UseSSL {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
+	return fmt.Sprintf("%s://%s:%d/api/v1", scheme, twistlockSvc.Host, twistlockSvc.Port)
 }
 
 func (twistlockSvc *TwistlockService) GetParameterDescriptions() map[string]string {
@@ -103,27 +124,6 @@ func (twistlockSvc *TwistlockService) GetParameterDescription(name string) (stri
 	var desc string = twistlockSvc.Params[name]
 	if desc == "" { return "", utils.ConstructUserError("No parameter named '" + name + "'") }
 	return desc, nil
-}
-
-func (twistlockSvc *TwistlockService) CreateScanContext(params map[string]string) (ScanContext, error) {
-	
-	var minPriority string
-	
-	if params != nil {
-		minPriority = params["MinimumPriority"]
-		// this param is optional so do not require its presence.
-	}
-	
-	var scheme string
-	if twistlockSvc.UseSSL { scheme = "https" } else { scheme = "http" }
-	
-	return &TwistlockRestContext{
-		RestContext: *rest.CreateTCPRestContext(scheme,
-			twistlockSvc.Host, twistlockSvc.Port, "", "", setTwistlockSessionId),
-		MinimumVulnerabilityPriority: minPriority,
-		TwistlockService: twistlockSvc,
-		sessionId: "",
-	}, nil
 }
 
 func (twistlockSvc *TwistlockService) AsScanProviderDesc() *apitypes.ScanProviderDesc {
@@ -139,9 +139,50 @@ func (twistlockSvc *TwistlockService) AsScanProviderDesc() *apitypes.ScanProvide
  */
 type TwistlockRestContext struct {
 	rest.RestContext
-	MinimumVulnerabilityPriority string
+	//MinimumVulnerabilityPriority string
 	TwistlockService *TwistlockService
 	sessionId string
+}
+
+var _ TwistlockRestContext = &ScanContext{}
+
+func (twistlockSvc *TwistlockService) CreateScanContext(params map[string]string) (ScanContext, error) {
+	
+	var minPriority string
+	
+	var scheme string
+	if twistlockSvc.UseSSL { scheme = "https" } else { scheme = "http" }
+	
+	var sessionToken string
+	sessionToken, err = authenticate(twistlockSvc.UserId, twistlockSvc.Password)
+	if err != nil {
+		return nil, err
+	}
+	
+	var TwistlockRestContext context = &TwistlockRestContext{
+		RestContext: *rest.CreateTCPRestContext(scheme,
+			twistlockSvc.Host, twistlockSvc.Port, "", "", setTwistlockSessionId),
+		//MinimumVulnerabilityPriority: minPriority,
+		TwistlockService: twistlockSvc,
+		sessionId: sessionToken,
+	}
+	
+	err = context.authenticate(twistlockSvc.UserId, twistlockSvc.Password)
+	if err != nil {
+		return nil, err
+	}
+	
+	return context, nil
+}
+
+/*
+ * See https://twistlock.desk.com/customer/en/portal/articles/2831956-twistlock-api-2-1#authenticate
+ */
+func (twistlockContext *TwistlockRestContext) authenticate(string userId, password) error {
+	
+	....Authenticate to Twistlock server, to obtain session token.
+	twistlockContext.sessionId = ....
+	nil
 }
 
 func (twistlockContext *TwistlockRestContext) getEndpoint() string {
@@ -306,15 +347,15 @@ func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoNam
 	
 	/* Perform scan.
 		The call to initiate a scan is of the form,
-			curl -k -u admin:admin -H "Content-Type: application/json" -d '{"tag":{"registry":"","repo":"scaledmarkets/taskruntime"}}' -X POST http://localhost:8081/api/v1/registry/scan
+			curl -k -u admin:admin -H "Content-Type: application/json" \
+				-d '{"tag":{"registry":"","repo":"scaledmarkets/taskruntime"}}' \
+				-X POST https://localhost:8081/api/v1/registry/scan
 	*/
 	layerURL, layerId, priorLayerId
-	var jsonPayload string = fmt.Sprintf("{\"tag\": {" +
-		"\"registry\": \"%s\", " +
-		"\"repo\": \"%s\"}}",
-		registryName, imagePath)
+	var jsonPayload string = fmt.Sprintf(
+		"{\"tag\": {\"registry\": \"%s\", \"repo\": \"%s\"}}", registryName, repoName)
 	
-	var url = twistlockContext.getEndpoint() + "registry/scan" + postLayerURI
+	var url = twistlockContext.getEndpoint() + "/registry/scan"
 	fmt.Println("Sending request to twistlock:")
 	fmt.Println("POST " + url + " " + string(jsonPayload))
 
@@ -323,14 +364,29 @@ func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoNam
 		return err
 	}
 	request.Header.Set("Content-Type", "application/json")
-	....Set user/password
-	....Set to ignore cert chain
-	....Need to use https
+	
+	// Set session token.
+	// See https://twistlock.desk.com/customer/en/portal/articles/2607258-accessing-the-api
+	request.Header.Set("Authorization", "Bearer " + twistlockContext.sessionId)
+	
+	//....Set to ignore cert chain
+	//....Need to use https
 
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		return err
+		response.Body.Close()
+		// Re-authenticate and try one more time.
+		err = twistlockContext.authenticate(twistlockContext.TwistlockService.UserId,
+			twistlockContext.TwistlockService.Password)
+		if err != nil {
+			return err
+		}
+		response, err := client.Do(request)
+		if err != nil {
+			response.Body.Close()
+			return err
+		}
 	}
 	defer response.Body.Close()
 
