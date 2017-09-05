@@ -27,7 +27,7 @@ The container scanners that are currently supported are,
 </ul>
 
 You can add another scanner by implementing the
-[ScanProvider API[(https://github.com/ScaledMarkets/SafeHarborServer/blob/master/src/safeharbor/providers/ScanProvider.go).
+[ScanProvider API](https://github.com/ScaledMarkets/SafeHarborServer/blob/master/src/safeharbor/providers/ScanProvider.go).
 At present, to add a scan provider, you must also add code to the
 [Server](https://github.com/ScaledMarkets/SafeHarborServer/blob/master/src/safeharbor/server/Server.go)
 module and recompile SafeHarborServer, but we have plans to create a provider API
