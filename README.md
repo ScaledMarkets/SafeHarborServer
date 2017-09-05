@@ -14,6 +14,7 @@ See also the [Safe Harbor command line client](https://github.com/ScaledMarkets/
 	level, a team level, or an organization level.</li>
 <li>You can examine the scan history of an image.</li>
 <li>You can define and save a re-usable scan profile.</li>
+<li>Images can be in any registry that supports the Docker Registery v2 REST protocol.</li>
 </ul>
 
 You can still use the value added features of each scanner. E.g., Twistlock has
