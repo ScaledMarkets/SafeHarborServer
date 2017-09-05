@@ -1,5 +1,15 @@
 # SafeHarborServer
-Server that provides REST API for the SafeHarbor system.
+Server that provides REST API for the SafeHarbor container security scanning system.
+
+## What is SafeHarborServer for?
+
+<ul>
+<li>Enables you to add container image scanning to your dev/test/deploy pipeline.</li>
+<li>You can run any or all of the scanners that are supported by SafeHarborServer.</li>
+<li>You can add an additional scanner, using the ScanProvider API.</li>
+</ul>
+
+
 ## Scan Providers
 ### Clair
 ### Twistlock
