@@ -5,7 +5,8 @@ See also the [Safe Harbor command line client](https://github.com/ScaledMarkets/
 ## What is SafeHarborServer for?
 
 <ul>
-<li>Enables you to add container image scanning to your dev/test/deploy pipeline.</li>
+<li>Enables you to add container image scanning for multiple scanners to your
+	dev/test/deploy pipeline without having to learn the nuances of each scanner.</li>
 <li>You can run any or all of the scanners that are supported by SafeHarborServer.</li>
 <li>You can add an additional scanner, using the ScanProvider API.</li>
 <li>You can define access control lists to give access to your container images
