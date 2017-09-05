@@ -193,7 +193,7 @@ func (twistlockContext *TwistlockRestContext) PingService() *apitypes.Result {
 	var apiVersion string
 	var engineVersion string
 	var err error
-	apiVersion, engineVersion, err = twistlockContext.GetVersions()
+	apiVersion, engineVersion, err = twistlockContext.PingConsole()
 	if err != nil { return apitypes.NewResult(500, err.Error()) }
 	return apitypes.NewResult(200, fmt.Sprintf(
 		"Service is up: api version %s, engine version %s", apiVersion, engineVersion))
@@ -306,25 +306,13 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 /*******************************************************************************
  * 
  */
-func (twistlockContext *TwistlockRestContext) GetVersions() (apiVersion string, engineVersion string, err error) {
+func (twistlockContext *TwistlockRestContext) PingConsole() error {
 
 	var resp *http.Response
-	resp, err = twistlockContext.SendSessionGet(twistlockContext.sessionId, "v1/versions", nil, nil)
+	resp, err = twistlockContext.SendSessionGet(
+		twistlockContext.sessionId, twistlockContext.getEndpoint() + "/_ping", nil, nil)
 	
-	if err != nil { return "", "", err }
-	defer resp.Body.Close()
-	
-	twistlockContext.Verify200Response(resp)
-
-	var responseMap map[string]interface{}
-	responseMap, err = rest.ParseResponseBodyToMap(resp.Body)
-	if err != nil { return "", "", err }
-	var isType bool
-	apiVersion, isType = responseMap["APIVersion"].(string)
-	if ! isType { return "", "", utils.ConstructServerError("Value returned for APIVersion is not a string") }
-	engineVersion, isType = responseMap["EngineVersion"].(string)
-	if ! isType { return "", "", utils.ConstructServerError("Value returned for EngineVersion is not a string") }
-	return apiVersion, engineVersion, nil
+	return err
 }
 
 func (twistlockContext *TwistlockRestContext) GetHealth() string {
@@ -336,9 +324,9 @@ func (twistlockContext *TwistlockRestContext) GetHealth() string {
 /**************************** Internal Implementation Methods ***************************
  ******************************************************************************/
 
-type APIVulnerabilitiesResponse struct {
-	Vulnerabilities []Vulnerability
-}
+//type APIVulnerabilitiesResponse struct {
+//	Vulnerabilities []Vulnerability
+//}
 
 /*******************************************************************************
  * 
@@ -355,39 +343,15 @@ func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoNam
 	var jsonPayload string = fmt.Sprintf(
 		"{\"tag\": {\"registry\": \"%s\", \"repo\": \"%s\"}}", registryName, repoName)
 	
-	var url = twistlockContext.getEndpoint() + "/registry/scan"
-	fmt.Println("Sending request to twistlock:")
-	fmt.Println("POST " + url + " " + string(jsonPayload))
-
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsonPayload)))
+	var response *http.Response
+	var err error
+	response, err = twistlockContext.SendSessionPost(
+		twistlockContext.sessionId, "POST", twistlockContext.getEndpoint() + "/registry/scan",
+		nil, nil, &[]string{ "Content-Type" }, &[]string{ "application/json" })
 	if err != nil {
 		return err
 	}
-	request.Header.Set("Content-Type", "application/json")
 	
-	// Set session token.
-	// See https://twistlock.desk.com/customer/en/portal/articles/2607258-accessing-the-api
-	request.Header.Set("Authorization", "Bearer " + twistlockContext.sessionId)
-	
-	//....Set to ignore cert chain
-	//....Need to use https
-
-	client := &http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
-		response.Body.Close()
-		// Re-authenticate and try one more time.
-		err = twistlockContext.authenticate(twistlockContext.TwistlockService.UserId,
-			twistlockContext.TwistlockService.Password)
-		if err != nil {
-			return err
-		}
-		response, err := client.Do(request)
-		if err != nil {
-			response.Body.Close()
-			return err
-		}
-	}
 	defer response.Body.Close()
 
 	if response.StatusCode >= 300 {
@@ -399,7 +363,14 @@ func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoNam
 }
 
 /*******************************************************************************
- * 
+ * Obtain the scan results for the specified image, and return the results
+ * as an array of objects, where each object is expected to be a map of these values:
+ 	id
+	link
+	severity
+	description
+ * However, this method does not verify that the array elements conform to this.
+ * Also return the time of the most recent scan of the image.
  */
 func (twistlockContext *TwistlockRestContext) getVulnerabilities(imageName string) ([]interface{}, time.Time, error) () {
 	
@@ -410,49 +381,75 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(imageName strin
 			curl -k -u admin:admin https://localhost:8083/api/v1/registry?repository='scaledmarkets/taskruntime'
 	*/
 	
-	....var url = endpoint + fmt.Sprintf(getLayerVulnerabilitiesURI, layerID)
-	fmt.Println(url)
+	var url = twistlockContext.getEndpoint() + "/registry"
 	
-	response, err := http.Get(url)
+	var response *http.Response
+	var err error
+	response, err = twistlockContext.SendSessionPost(
+		twistlockContext.sessionId, "GET", twistlockContext.getEndpoint() + "/registry",
+		"repository", imageName, nil, nil)
 	if err != nil {
-		return []Vulnerability{}, err
+		return err
 	}
+
 	defer response.Body.Close()
 
-	if response.StatusCode != 200 {
+	if response.StatusCode >= 300 {
 		body, _ := ioutil.ReadAll(response.Body)
 		return []Vulnerability{}, fmt.Errorf("Got response %d with message %s", response.StatusCode, string(body))
 	}
 
-	....no
-	var apiResponse APIVulnerabilitiesResponse
-	err = json.NewDecoder(response.Body).Decode(&apiResponse)
+	/*
+		The body will contain a JSON array, in which the first object contains these elements:
+			scanTime - time scan was performed, e.g., "2017-09-02T17:01:43.265Z".
+			info.cveVulnerabilities - either null, or an array of objects containing
+			these string-valued attributes:
+				id
+				link
+				severity
+				description
+		We want to return the info.cveVulnerabilities array.
+	 */
+	
+	// Obtain scan time.
+	var scanTime time.Time
+	var obj = vulnerabilityMap["scanTime"]
+	if obj == nil {
+		return nil, nil, errors.New("No scan time found")
+	}
+	var timeString string
+	var isType bool
+	timeString, isType = obj.(string)
+	if ! isType {
+		return nil, nil, errors.New("scanTime is not a string")
+	}
+	scanTime, err = time.Parse(time.RFC3339, timeString)
 	if err != nil {
-		return []Vulnerability{}, err
+		return nil, nil, errors.New("Error parsing time string: " + timeString)
+	}
+	
+	// Obtain vulnerability list.
+	var vulnerabilityMap map[string]interface{}
+	vulnerabilityMap, err = rest.ParseResponseBodyToMap(response.Body)
+	if err != nil { return nil, err }
+	
+	obj = vulnerabilityMap["info.cveVulnerabilities"]
+	if obj == nil {
+		return []Vulnerability{}, scanTime, nil
+	}
+	var vulnerabilities []interface{}
+	vulnerabilities, isType = obj.([]interface{})
+	if ! isType {
+		return nil, scanTime, errors.New("info.cveVulnerabilities is not an array")
 	}
 
-	return apiResponse.Vulnerabilities, nil
+	return vulnerabilities, scanTime, nil
 }
 
 /*******************************************************************************
- * Set the session Id as a cookie.
+ * Set the session Id as a header token.
  */
 func setTwistlockSessionId(req *http.Request, sessionId string) {
 	
-	// Set cookie containing the session Id.
-	var cookie = &http.Cookie{
-		Name: "SessionId",
-		Value: sessionId,
-		//Path: 
-		//Domain: 
-		//Expires: 
-		//RawExpires: 
-		MaxAge: 86400,
-		Secure: false,  //....change to true later.
-		HttpOnly: true,
-		//Raw: 
-		//Unparsed: 
-	}
-	
-	req.AddCookie(cookie)
+	req.Header.Set("Authorization", "Bearer " + sessionId)
 }
