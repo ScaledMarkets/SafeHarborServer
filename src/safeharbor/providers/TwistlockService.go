@@ -176,13 +176,48 @@ func (twistlockSvc *TwistlockService) CreateScanContext(params map[string]string
 }
 
 /*
+ * Authenticate to Twistlock server, to obtain session token and set it in the
+ * REST context.
  * See https://twistlock.desk.com/customer/en/portal/articles/2831956-twistlock-api-2-1#authenticate
  */
 func (twistlockContext *TwistlockRestContext) authenticate(string userId, password) error {
 	
-	....Authenticate to Twistlock server, to obtain session token.
-	twistlockContext.sessionId = ....
-	nil
+	var response *http.Response
+	var err error
+	response, err = twistlockContext.SendSessionPost(
+		twistlockContext.sessionId, "POST", twistlockContext.getEndpoint() + "/authenticate",
+		string[]{ "username", "password" }, string[]{ userId, password },
+		[]string{ "Content-Type" }, []string{ "application/json" })
+	if err != nil {
+		return err
+	}
+	
+	defer response.Body.Close()
+
+	if response.StatusCode >= 300 {
+		body, _ := ioutil.ReadAll(response.Body)
+		return fmt.Errorf("Got response %d with message %s", response.StatusCode, string(body))
+	}
+	
+	var jsonMap map[string]interface{}
+	jsonMap, err = rest.ParseResponseBodyToMap(response.Body)
+	if err != nil { return nil, err }
+	
+	var obj = jsonMap["token"]
+	if obj == nil {
+		return errors.New("No token found in response")
+	}
+	
+	var token string
+	var isType bool
+	token, isType = obj.(string)
+	if ! isType {
+		return errors.New("Token is not a string")
+	}
+	
+	twistlockContext.sessionId = token
+	
+	return nil
 }
 
 func (twistlockContext *TwistlockRestContext) getEndpoint() string {
@@ -205,7 +240,17 @@ func (twistlockContext *TwistlockRestContext) PingService() *apitypes.Result {
 func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*ScanResult, error) {
 	
 	fmt.Println("Initiating image scan")
-	var err error = twistlockContext.initiateScan(....registryName, ....repoName)
+	
+	// Parse image name, to separate the registry name (if provided), and the repo path.
+	var registryName string
+	var repoPath string
+	var err error
+	registryName, repoPath, err = parseImageFullName(imageName)
+	// If there is no registry name, it is assumed to be dockerhub.
+	// The repo path includes the namespace. If the registyr is dockerhub, this
+	// is the organization name.
+	
+	var err error = twistlockContext.initiateScan(registryName, repoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +392,7 @@ func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoNam
 	var err error
 	response, err = twistlockContext.SendSessionPost(
 		twistlockContext.sessionId, "POST", twistlockContext.getEndpoint() + "/registry/scan",
-		nil, nil, &[]string{ "Content-Type" }, &[]string{ "application/json" })
+		nil, nil, []string{ "Content-Type" }, []string{ "application/json" })
 	if err != nil {
 		return err
 	}
@@ -374,7 +419,7 @@ func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoNam
  */
 func (twistlockContext *TwistlockRestContext) getVulnerabilities(imageName string) ([]interface{}, time.Time, error) () {
 	
-	....How come we don''t have to specify the registry?
+	//....How come we don''t have to specify the registry?
 	
 	/*
 		The call to obtain a scan result is of the form,
@@ -444,6 +489,25 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(imageName strin
 	}
 
 	return vulnerabilities, scanTime, nil
+}
+
+/*******************************************************************************
+ * 	Parse image name, to separate the registry name (if provided), and the repo path.
+ */
+func parseImageFullName(imageName string) (registryName string, repoPath string, err error) {
+	
+	var parts = string.SplitN(imageName, "/", 2)
+	if len(parts) == 0 {
+		return "", "", errors.New("No name parts found in image name")
+	}
+	if len(parts) == 1 {
+		return "", imageName, nil
+	}
+	if len(parts > 2) {
+		return "", "", errors.New("Internal error")
+	}
+	
+	return parts[0], parts[1], nil
 }
 
 /*******************************************************************************
