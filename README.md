@@ -16,6 +16,10 @@ See also the [Safe Harbor command line client](https://github.com/ScaledMarkets/
 <li>You can define and save a re-usable scan profile.</li>
 </ul>
 
+You can still use the value added features of each scanner. E.g., Twistlock has
+powerful scan results examination features, and you can still use those features
+for scans that are triggered by SafeHarborServer. The native scanner platforms
+are not bypassed - they are connected to by SafeHarborServer.
 
 ## Scan Providers
 
