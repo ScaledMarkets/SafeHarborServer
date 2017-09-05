@@ -1,5 +1,6 @@
 # SafeHarborServer
 Server that provides REST API for the SafeHarbor container security scanning system.
+See also the [Safe Harbor command line client](https://github.com/ScaledMarkets/safeharborcmdclient).
 
 ## What is SafeHarborServer for?
 
@@ -7,6 +8,11 @@ Server that provides REST API for the SafeHarbor container security scanning sys
 <li>Enables you to add container image scanning to your dev/test/deploy pipeline.</li>
 <li>You can run any or all of the scanners that are supported by SafeHarborServer.</li>
 <li>You can add an additional scanner, using the ScanProvider API.</li>
+<li>You can define access control lists to give access to your container images
+	to partners in your organization or in other organizations, at an individual
+	level, a team level, or an organization level.</li>
+<li>You can examine the scan history of an image.</li>
+<li>You can define and save a re-usable scan profile.</li>
 </ul>
 
 
