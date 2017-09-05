@@ -17,9 +17,21 @@ See also the [Safe Harbor command line client](https://github.com/ScaledMarkets/
 
 
 ## Scan Providers
-### Clair
-### Twistlock
-### OpenScap
+
+The container scanners that are currently supported are,
+
+<ul>
+<li>Clair</li>
+<li>Twistlock</li>
+<li>OpenScap</li>
+</ul>
+
+You can add another scanner by implementing the
+[ScanProvider API[(https://github.com/ScaledMarkets/SafeHarborServer/blob/master/src/safeharbor/providers/ScanProvider.go).
+At present, to add a scan provider, you must also add code to the
+[Server](https://github.com/ScaledMarkets/SafeHarborServer/blob/master/src/safeharbor/server/Server.go)
+module and recompile SafeHarborServer, but we have plans to create a provider API
+that will not require recompilation.
 
 ## Design and REST API
 See https://drive.google.com/open?id=1r6Xnfg-XwKvmF4YppEZBcxzLbuqXGAA2YCIiPb_9Wfo
