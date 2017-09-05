@@ -73,15 +73,22 @@ func CreateTwistlockServiceStub(params map[string]interface{}) (ScanService, err
 		UseSSL: false,
 		Host: host,
 		Port: port,
-		LocalIPAddress: localIPAddress,
+		//LocalIPAddress: localIPAddress,
 		Params: map[string]string{
-			"MinimumPriority": "The minimum priority level of vulnerabilities to report",
+			"UserId": "User id for connecting to the Twistlock server",
+			"Password": "Password for connecting to the Twistlock server",
 		},
 	}, nil
 }
 
 func (twistlockSvc *TwistlockServiceStub) GetEndpoint() string {
-	return fmt.Sprintf("http://%s:%d", twistlockSvc.Host, twistlockSvc.Port)
+	var scheme string
+	if twistlockSvc.UseSSL {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
+	return fmt.Sprintf("%s://%s:%d/api/v1", scheme, twistlockSvc.Host, twistlockSvc.Port)
 }
 
 func (twistlockSvc *TwistlockServiceStub) GetParameterDescriptions() map[string]string {
@@ -96,23 +103,18 @@ func (twistlockSvc *TwistlockServiceStub) GetParameterDescription(name string) (
 
 func (twistlockSvc *TwistlockServiceStub) CreateScanContext(params map[string]string) (ScanContext, error) {
 	
-	var minPriority string
-	
-	if params != nil {
-		minPriority = params["MinimumPriority"]
-		// this param is optional so do not require its presence.
-	}
-	
 	var scheme string
 	if twistlockSvc.UseSSL { scheme = "https" } else { scheme = "http" }
 	
-	return &TwistlockRestContextStub{
+	var TwistlockRestContext context = &TwistlockRestContext{
 		RestContext: *rest.CreateTCPRestContext(scheme,
-			twistlockSvc.Host, twistlockSvc.Port, "", "", setTwistlockSessionStubId),
-		MinimumVulnerabilityPriority: minPriority,
-		TwistlockServiceStub: twistlockSvc,
-		sessionId: "",
-	}, nil
+			twistlockSvc.Host, twistlockSvc.Port, "", "", setTwistlockSessionId),
+		//MinimumVulnerabilityPriority: minPriority,
+		TwistlockService: twistlockSvc,
+		sessionId: sessionToken,
+	}
+	
+	return context, nil
 }
 
 func (twistlockSvc *TwistlockServiceStub) AsScanProviderDesc() *apitypes.ScanProviderDesc {
@@ -138,13 +140,7 @@ func (twistlockContext *TwistlockRestContextStub) getEndpoint() string {
 }
 
 func (twistlockContext *TwistlockRestContextStub) PingService() *apitypes.Result {
-	var apiVersion string
-	var engineVersion string
-	var err error
-	apiVersion, engineVersion, err = twistlockContext.GetVersions()
-	if err != nil { return apitypes.NewResult(500, err.Error()) }
-	return apitypes.NewResult(200, fmt.Sprintf(
-		"Service is up: api version %s, engine version %s", apiVersion, engineVersion))
+	return apitypes.NewResult(200, "Service is up")
 }
 
 /*******************************************************************************
@@ -187,39 +183,6 @@ func (twistlockContext *TwistlockRestContextStub) ScanImage(imageName string) (*
 }
 
 
-/**************************** Twistlock Service Methods ***************************
- ******************************************************************************/
-
-
-/*******************************************************************************
- * 
- */
-func (twistlockContext *TwistlockRestContextStub) GetVersions() (apiVersion string, engineVersion string, err error) {
-
-	var resp *http.Response
-	resp, err = twistlockContext.SendSessionGet(twistlockContext.sessionId, "v1/versions", nil, nil)
-	
-	if err != nil { return "", "", err }
-	defer resp.Body.Close()
-	
-	twistlockContext.Verify200Response(resp)
-
-	var responseMap map[string]interface{}
-	responseMap, err = rest.ParseResponseBodyToMap(resp.Body)
-	if err != nil { return "", "", err }
-	var isType bool
-	apiVersion, isType = responseMap["APIVersion"].(string)
-	if ! isType { return "", "", utils.ConstructServerError("Value returned for APIVersion is not a string") }
-	engineVersion, isType = responseMap["EngineVersion"].(string)
-	if ! isType { return "", "", utils.ConstructServerError("Value returned for EngineVersion is not a string") }
-	return apiVersion, engineVersion, nil
-}
-
-func (twistlockContext *TwistlockRestContextStub) GetHealth() string {
-	//resp = get("v1/health")
-	return ""
-}
-
 
 /**************************** Internal Implementation Methods ***************************
  ******************************************************************************/
@@ -227,24 +190,9 @@ func (twistlockContext *TwistlockRestContextStub) GetHealth() string {
 
 
 /*******************************************************************************
- * Set the session Id as a cookie.
+ * Set the session Id as a header token.
  */
-func setTwistlockSessionStubId(req *http.Request, sessionId string) {
+func setTwistlockSessionId(req *http.Request, sessionId string) {
 	
-	// Set cookie containing the session Id.
-	var cookie = &http.Cookie{
-		Name: "SessionId",
-		Value: sessionId,
-		//Path: 
-		//Domain: 
-		//Expires: 
-		//RawExpires: 
-		MaxAge: 86400,
-		Secure: false,  //....change to true later.
-		HttpOnly: true,
-		//Raw: 
-		//Unparsed: 
-	}
-	
-	req.AddCookie(cookie)
+	req.Header.Set("Authorization", "Bearer " + sessionId)
 }

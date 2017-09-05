@@ -148,16 +148,10 @@ var _ TwistlockRestContext = &ScanContext{}
 
 func (twistlockSvc *TwistlockService) CreateScanContext(params map[string]string) (ScanContext, error) {
 	
-	var minPriority string
+	//var minPriority string
 	
 	var scheme string
 	if twistlockSvc.UseSSL { scheme = "https" } else { scheme = "http" }
-	
-	var sessionToken string
-	sessionToken, err = authenticate(twistlockSvc.UserId, twistlockSvc.Password)
-	if err != nil {
-		return nil, err
-	}
 	
 	var TwistlockRestContext context = &TwistlockRestContext{
 		RestContext: *rest.CreateTCPRestContext(scheme,
@@ -358,11 +352,6 @@ func (twistlockContext *TwistlockRestContext) PingConsole() error {
 		twistlockContext.sessionId, twistlockContext.getEndpoint() + "/_ping", nil, nil)
 	
 	return err
-}
-
-func (twistlockContext *TwistlockRestContext) GetHealth() string {
-	//resp = get("v1/health")
-	return ""
 }
 
 
