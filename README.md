@@ -24,7 +24,13 @@ The container scanners that are currently supported are,
 <ul>
 <li>Clair</li>
 <li>Twistlock</li>
+</ul>
+
+Under development:
+
+<ul>
 <li>OpenScap</li>
+<li>Lynis</li>
 </ul>
 
 You can add another scanner by implementing the
