@@ -428,12 +428,14 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(
 	
 	// Parse the response - should be a JSON array.
 	var responseAr []interface{}
-	
-	var vulnerabilityMap map[string]interface{}
-	vulnerabilityMap, err = rest.....ParseResponseBodyToMap(response.Body)
-	if err != nil { return nil, err }
+	var value []byte
+	value, err = ioutil.ReadAll(response.Body)
+	if err != nil { return nil, nil, err }
+	err = json.Unmarshal(value, &responseAr)
+	if err != nil { return nil, nil, err }
 	
 	// Obtain the first array element.
+	if len(responseAr) == 0 { return nil, nil, errors.New("No elements found in response array") }
 	var firstObject map[string]interface{}
 	firstObject, isType = responseAr[0].(map[string]interface{})
 	if ! isType {
