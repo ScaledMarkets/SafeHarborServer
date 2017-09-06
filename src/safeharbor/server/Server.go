@@ -234,6 +234,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	
 	server.ScanServices = []providers.ScanService{
 		clairScanSvc,
+		twistlockScanSvc,
 		openscapScanSvc,
 	}
 	

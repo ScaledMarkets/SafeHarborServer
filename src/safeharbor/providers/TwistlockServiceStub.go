@@ -106,12 +106,12 @@ func (twistlockSvc *TwistlockServiceStub) CreateScanContext(params map[string]st
 	var scheme string
 	if twistlockSvc.UseSSL { scheme = "https" } else { scheme = "http" }
 	
-	var TwistlockRestContext context = &TwistlockRestContext{
+	var context *TwistlockRestContextStub = &TwistlockRestContextStub{
 		RestContext: *rest.CreateTCPRestContext(scheme,
-			twistlockSvc.Host, twistlockSvc.Port, "", "", setTwistlockSessionId),
+			twistlockSvc.Host, twistlockSvc.Port, "", "", setTwistlockStubSessionId),
 		//MinimumVulnerabilityPriority: minPriority,
-		TwistlockService: twistlockSvc,
-		sessionId: sessionToken,
+		TwistlockServiceStub: twistlockSvc,
+		sessionId: "",
 	}
 	
 	return context, nil
@@ -192,7 +192,7 @@ func (twistlockContext *TwistlockRestContextStub) ScanImage(imageName string) (*
 /*******************************************************************************
  * Set the session Id as a header token.
  */
-func setTwistlockSessionId(req *http.Request, sessionId string) {
+func setTwistlockStubSessionId(req *http.Request, sessionId string) {
 	
 	req.Header.Set("Authorization", "Bearer " + sessionId)
 }

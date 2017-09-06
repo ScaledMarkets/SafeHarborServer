@@ -25,14 +25,15 @@ import (
 
 	//"bufio"
 	//"bytes"
-	//"encoding/json"
+	"encoding/json"
 	//"flag"
+	"io"
 	"io/ioutil"
 	//"log"
 	//"os"
 	//"os/exec"
 	//"strconv"
-	//"strings"
+	"strings"
 	"time"
 	"strconv"
 
@@ -45,6 +46,7 @@ import (
 
 var ScanResultWaitIntervalMs = 100
 var MaxNumberOfTries = 3
+var NullTime = time.Time{}
 
 type TwistlockService struct {
 	UseSSL bool
@@ -265,6 +267,7 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 		if numberOfTries > MaxNumberOfTries {
 			return nil, utils.ConstructUserError("Timed out waiting for scan result")
 		}
+		var scanCompletionTime time.Time
 		vulnerabilities, scanCompletionTime, err = twistlockContext.getVulnerabilities(imageName);
 		if err != nil {
 			return nil, err
@@ -275,13 +278,14 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 		}
 		
 		// Sleep for ScanResultWaitIntervalMs milliseconds.
-		time.Sleep(ScanResultWaitIntervalMs * time.Millisecond)
+		time.Sleep(time.Duration(ScanResultWaitIntervalMs) * time.Millisecond)
 	}
 
 	// Validate the result format, and construct a ScanResult object to return.
 	var vulnDescs = make([]*apitypes.VulnerabilityDesc, len(vulnerabilities))
 	for i, vuln_ := range vulnerabilities {
 		var vuln map[string]interface{}
+		var isType bool
 		vuln, isType = vuln_.(map[string]interface{})
 		if ! isType {
 			return nil, utils.ConstructUserError("Unexpected json object type for a cveVulnerability")
@@ -323,9 +327,14 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
  */
 func (twistlockContext *TwistlockRestContext) PingConsole() error {
 
-	var resp *http.Response
-	resp, err = twistlockContext.SendSessionGet(
+	var response *http.Response
+	var err error
+	response, err = twistlockContext.SendSessionGet(
 		twistlockContext.sessionId, twistlockContext.getEndpoint() + "/_ping", nil, nil)
+	
+	if response.StatusCode >= 300 {
+		return errors.New(fmt.Sprintf("Returned %d", response.StatusCode))
+	}
 	
 	return err
 }
@@ -353,10 +362,11 @@ func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoNam
 		"{\"tag\": {\"registry\": \"%s\", \"repo\": \"%s\"}}", registryName, repoName)
 	
 	var response *http.Response
+	var stringReader io.Reader = strings.NewReader(jsonPayload)
 	var err error
-	response, err = twistlockContext.SendSessionPost(
+	response, err = twistlockContext.SendSessionStreamPost(
 		twistlockContext.sessionId, "POST", twistlockContext.getEndpoint() + "/registry/scan",
-		nil, nil, []string{ "Content-Type" }, []string{ "application/json" })
+		stringReader, []string{ "Content-Type" }, []string{ "application/json" })
 	if err != nil {
 		return err
 	}
@@ -391,22 +401,20 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(
 			curl -k -u admin:admin https://localhost:8083/api/v1/registry?repository='scaledmarkets/taskruntime'
 	*/
 	
-	var url = twistlockContext.getEndpoint() + "/registry"
-	
 	var response *http.Response
 	var err error
-	response, err = twistlockContext.SendSessionPost(
+	response, err = twistlockContext.SendSessionReq(
 		twistlockContext.sessionId, "GET", twistlockContext.getEndpoint() + "/registry",
-		"repository", imageName, nil, nil)
+		[]string{"repository"}, []string{imageName}, nil, nil)
 	if err != nil {
-		return err
+		return nil, NullTime, err
 	}
 
 	defer response.Body.Close()
 
 	if response.StatusCode >= 300 {
 		body, _ := ioutil.ReadAll(response.Body)
-		return []Vulnerability{}, fmt.Errorf("Got response %d with message %s", response.StatusCode, string(body))
+		return nil, NullTime, fmt.Errorf("Got response %d with message %s", response.StatusCode, string(body))
 	}
 
 	/*
@@ -425,41 +433,41 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(
 	var responseAr []interface{}
 	var value []byte
 	value, err = ioutil.ReadAll(response.Body)
-	if err != nil { return nil, nil, err }
+	if err != nil { return nil, NullTime, err }
 	err = json.Unmarshal(value, &responseAr)
-	if err != nil { return nil, nil, err }
+	if err != nil { return nil, NullTime, err }
 	
 	// Obtain the first array element.
-	if len(responseAr) == 0 { return nil, nil, errors.New("No elements found in response array") }
+	if len(responseAr) == 0 { return nil, NullTime, errors.New("No elements found in response array") }
 	var firstObject map[string]interface{}
+	var isType bool
 	firstObject, isType = responseAr[0].(map[string]interface{})
 	if ! isType {
-		return nil, nil, errors.New("Did not find a map in the first element of the response array")
+		return nil, NullTime, errors.New("Did not find a map in the first element of the response array")
 	}
 	
 	// Obtain scan time.
 	var scanTime time.Time
 	var obj = firstObject["scanTime"]
 	if obj == nil {
-		return nil, nil, errors.New("No scan time found")
+		return nil, NullTime, errors.New("No scan time found")
 	}
 	var timeString string
 	timeString, isType = obj.(string)
 	if ! isType {
-		return nil, nil, errors.New("scanTime is not a string")
+		return nil, NullTime, errors.New("scanTime is not a string")
 	}
 	scanTime, err = time.Parse(time.RFC3339, timeString)
 	if err != nil {
-		return nil, nil, errors.New("Error parsing time string: " + timeString)
+		return nil, NullTime, errors.New("Error parsing time string: " + timeString)
 	}
 
 	// Obtain the vulnerability array.
 	var info_ interface{} = firstObject["info"]  // should be an map[string]
 	var info map[string]interface{}
-	var isType bool
 	info, isType = info_.(map[string]interface{})
 	if ! isType {
-		return nil, utils.ConstructUserError("Unexpected json object type for info field")
+		return nil, NullTime, utils.ConstructUserError("Unexpected json object type for info field")
 	}
 	
 	var vulnerabilities []interface{}
@@ -470,7 +478,7 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(
 	} else {
 		vulnerabilities, isType = vulnerabilities_.([]interface{})
 		if ! isType {
-			return nil, utils.ConstructUserError("Unexpected json object type for cveVulnerabilities field")
+			return nil, NullTime, utils.ConstructUserError("Unexpected json object type for cveVulnerabilities field")
 		}
 	}
 
@@ -482,14 +490,14 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(
  */
 func parseImageFullName(imageName string) (registryName string, repoPath string, err error) {
 	
-	var parts = string.SplitN(imageName, "/", 2)
+	var parts = strings.SplitN(imageName, "/", 2)
 	if len(parts) == 0 {
 		return "", "", errors.New("No name parts found in image name")
 	}
 	if len(parts) == 1 {
 		return "", imageName, nil
 	}
-	if len(parts > 2) {
+	if len(parts) > 2 {
 		return "", "", errors.New("Internal error")
 	}
 	

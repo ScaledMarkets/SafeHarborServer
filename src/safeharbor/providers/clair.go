@@ -179,7 +179,7 @@ type ClairRestContext struct {
 	imageRetrievalPort int  // for clair to call back to, to get images
 }
 
-var _ ClairRestContext = &ScanContext{}
+var _ ScanContext = &ClairRestContext{}
 
 func (clairSvc *ClairService) CreateScanContext(params map[string]string) (ScanContext, error) {
 	
