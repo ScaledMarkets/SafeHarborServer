@@ -14,6 +14,7 @@
 package server
 
 import (
+	"errors"
 	"os"
 	"io"
 	"fmt"
@@ -81,7 +82,7 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	rawValue, exists = entries["INTFNAME"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find INTFNAME in configuration") }
 	config.netIntfName, err = substituteEnvValue(rawValue)
-	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 	
 	// PUBLIC_HOSTNAME
 	rawValue, exists = entries["PUBLIC_HOSTNAME"].(string)
@@ -94,7 +95,7 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	rawValue, exists = entries["PORT"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find PORT in configuration") }
 	stringValue, err = substituteEnvValue(rawValue)
-	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 	config.port, err = strconv.Atoi(stringValue)
 	if err != nil { return nil, fmt.Errorf("PORT value in configuration is not an integer") }
 	
@@ -102,19 +103,19 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	rawValue, exists = entries["LOCAL_AUTH_CERT_PATH"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find LOCAL_AUTH_CERT_PATH in configuration") }
 	config.LocalAuthCertPath, err = substituteEnvValue(rawValue)
-	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 	
 	// LOCAL_ROOT_CERT_PATH
 	rawValue, exists = entries["LOCAL_ROOT_CERT_PATH"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find LOCAL_ROOT_CERT_PATH in configuration") }
 	config.LocalRootCertPath, err = substituteEnvValue(rawValue)
-	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 	
 	// FILE_REPOSITORY_ROOT
 	rawValue, exists = entries["FILE_REPOSITORY_ROOT"].(string)
 	if exists {
 		stringValue, err = substituteEnvValue(rawValue)
-		if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+		if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 		config.FileRepoRootPath = strings.TrimRight(stringValue, "/ ")
 	} else {
 		config.FileRepoRootPath = "Repository"
@@ -123,14 +124,14 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	// REDIS_HOST
 	rawValue, _ = entries["REDIS_HOST"].(string)
 	config.RedisHost, err = substituteEnvValue(rawValue)
-	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 	
 	// REDIS_PORT
 	rawValue, exists = entries["REDIS_PORT"].(string)
 	if exists {
 		var redisPortStr string
 		redisPortStr, err = substituteEnvValue(rawValue)
-		if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+		if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 		config.RedisPort, err = strconv.Atoi(redisPortStr)
 		if err != nil { return nil, fmt.Errorf("REDIS_PORT value in configuration is not an integer") }
 	} else {
@@ -141,19 +142,19 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	rawValue, exists = entries["REDIS_PASSWORD"].(string)
 	if ! exists { return nil, fmt.Errorf("Did not find REDIS_PASSWORD in configuration") }
 	config.RedisPswd, err = substituteEnvValue(rawValue)
-	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 	
 	// REGISTRY_HOST
 	rawValue, exists = entries["REGISTRY_HOST"].(string)
 	config.RegistryHost, err = substituteEnvValue(rawValue)
-	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 	
 	// REGISTRY_PORT
 	rawValue, exists = entries["REGISTRY_PORT"].(string)
 	if exists {
-		valueString, err = substituteEnvValue(rawValue)
-		if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
-		config.RegistryPort, err = strconv.Atoi(valueString)
+		stringValue, err = substituteEnvValue(rawValue)
+		if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
+		config.RegistryPort, err = strconv.Atoi(stringValue)
 		if err != nil { return nil, fmt.Errorf(
 			"REGISTRY_PORT value in configuration is not an integer")
 		}
@@ -162,12 +163,12 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 	// REGISTRY_USERID
 	rawValue, exists = entries["REGISTRY_USERID"].(string)
 	config.RegistryUserId, err = substituteEnvValue(rawValue)
-	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 	
 	// REGISTRY_PASSWORD
 	rawValue, exists = entries["REGISTRY_PASSWORD"].(string)
 	config.RegistryPassword, err = substituteEnvValue(rawValue)
-	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) 
+	if err != nil { return nil, errors.New("Did not find environment variable " + rawValue) }
 	
 	// ScanServices
 	var obj interface{}
@@ -183,7 +184,9 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 		svcParams, isType = obj.(map[string]interface{})
 		if ! isType { return nil, errors.New("Scan service config is invalid") }
 		for key, value := range svcParams { // each attribute of the object
-			svcParams[key], err = substituteEnvValue(value)
+			stringValue, isType = value.(string)
+			if ! isType { return nil, errors.New("Parameter for " + key + " is not a string") }
+			svcParams[key], err = substituteEnvValue(stringValue)
 			if err != nil { return nil, err }
 		}
 	}
@@ -197,7 +200,9 @@ func NewConfiguration(file *os.File) (*Configuration, error) {
 		return nil, fmt.Errorf("Email configuration is ill-formatted")
 	}
 	for key, value := range config.EmailService { // each attribute of emailService
-		config.EmailService[key], err = substituteEnvValue(value)
+		stringValue, isType = value.(string)
+		if ! isType { return nil, errors.New("Parameter for " + key + " is not a string") }
+		config.EmailService[key], err = substituteEnvValue(stringValue)
 		if err != nil { return nil, err }
 	}
 	
@@ -214,7 +219,7 @@ func substituteEnvValue(rawValue string) (string, error) {
 	
 	if strings.HasPrefix(rawValue, "$") {
 		
-		var clippedValue = rawValue[1:]
+		var clippedValue string = rawValue[1:]
 		var value string
 		var found bool
 		value, found = os.LookupEnv(clippedValue)
