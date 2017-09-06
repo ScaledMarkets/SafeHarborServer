@@ -169,7 +169,7 @@ func (twistlockSvc *TwistlockService) CreateScanContext(params map[string]string
 	return context, nil
 }
 
-/*
+/*******************************************************************************
  * Authenticate to Twistlock server, to obtain session token and set it in the
  * REST context.
  * See https://twistlock.desk.com/customer/en/portal/articles/2831956-twistlock-api-2-1#authenticate
@@ -244,13 +244,14 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 	// The repo path includes the namespace. If the registyr is dockerhub, this
 	// is the organization name.
 	
+	// Initiate scan.
 	err = twistlockContext.initiateScan(registryName, repoPath)
 	if err != nil {
 		return nil, err
 	}
 	
-	/* Obtain scan results.
-		Unfortunately, the scan call is non-blocking and there is no way to tell
+	// Obtain scan results.
+	/* Unfortunately, the scan call is non-blocking and there is no way to tell
 		when it completes, so we have to poll.
 		The call will return an array, in which the first object contains these elements:
 			scanTime - time scan was performed, e.g., "2017-09-02T17:01:43.265Z".
@@ -281,8 +282,7 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 		time.Sleep(ScanResultWaitIntervalMs * time.Millisecond)
 	}
 
-	....
-	
+	// Validate the result format, and construct a ScanResult object to return.
 	var vulnDescs = make([]*apitypes.VulnerabilityDesc, len(vulnerabilities))
 	for i, vuln_ := range vulnerabilities {
 		var vuln map[string]interface{}
@@ -426,19 +426,23 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(
 		We want to return the info.cveVulnerabilities array.
 	 */
 	
-	// Parse the response.
+	// Parse the response - should be a JSON array.
+	var responseAr []interface{}
+	
 	var vulnerabilityMap map[string]interface{}
 	vulnerabilityMap, err = rest.....ParseResponseBodyToMap(response.Body)
 	if err != nil { return nil, err }
 	
 	// Obtain the first array element.
 	var firstObject map[string]interface{}
-	....
-	
+	firstObject, isType = responseAr[0].(map[string]interface{})
+	if ! isType {
+		return nil, nil, errors.New("Did not find a map in the first element of the response array")
+	}
 	
 	// Obtain scan time.
 	var scanTime time.Time
-	var obj = vulnerabilityMap["scanTime"]
+	var obj = firstObject["scanTime"]
 	if obj == nil {
 		return nil, nil, errors.New("No scan time found")
 	}
@@ -451,17 +455,9 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(
 	if err != nil {
 		return nil, nil, errors.New("Error parsing time string: " + timeString)
 	}
-	
-	
 
-	
-	
-	
-	??????....check this
 	// Obtain the vulnerability array.
-	var vulnerabilities []interface{}
-	....
-	var info_ interface{} = responseMap["info"]  // should be an map[string]
+	var info_ interface{} = firstObject["info"]  // should be an map[string]
 	var info map[string]interface{}
 	var isType bool
 	info, isType = info_.(map[string]interface{})
@@ -469,6 +465,7 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(
 		return nil, utils.ConstructUserError("Unexpected json object type for info field")
 	}
 	
+	var vulnerabilities []interface{}
 	var vulnerabilities_ interface{} = info["cveVulnerabilities"] // should be an array of objects
 	if vulnerabilities_ == nil {
 		// No vulnerabilities found.
@@ -479,11 +476,6 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(
 			return nil, utils.ConstructUserError("Unexpected json object type for cveVulnerabilities field")
 		}
 	}
-	
-	
-	
-	
-	
 
 	return vulnerabilities, scanTime, nil
 }
