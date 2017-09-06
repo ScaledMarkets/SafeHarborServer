@@ -11,21 +11,8 @@
 package providers
 
 import (
-	//"errors"
 	"net/http"
 	"fmt"
-
-	//"bufio"
-	//"bytes"
-	//"encoding/json"
-	//"flag"
-	//"io/ioutil"
-	//"log"
-	//"os"
-	//"os/exec"
-	//"strconv"
-	//"strings"
-	//"time"
 	"strconv"
 
 	// SafeHarbor packages:
