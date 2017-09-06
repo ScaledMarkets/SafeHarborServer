@@ -43,8 +43,8 @@ import (
 	"utilities/rest"
 )
 
-ScanResultWaitIntervalMs int
-MaxNumberOfTries int
+var ScanResultWaitIntervalMs = 100
+var MaxNumberOfTries = 3
 
 type TwistlockService struct {
 	UseSSL bool
@@ -174,13 +174,13 @@ func (twistlockSvc *TwistlockService) CreateScanContext(params map[string]string
  * REST context.
  * See https://twistlock.desk.com/customer/en/portal/articles/2831956-twistlock-api-2-1#authenticate
  */
-func (twistlockContext *TwistlockRestContext) authenticate(string userId, password) error {
+func (twistlockContext *TwistlockRestContext) authenticate(string userId, string password) error {
 	
 	var response *http.Response
 	var err error
 	response, err = twistlockContext.SendSessionPost(
 		twistlockContext.sessionId, "POST", twistlockContext.getEndpoint() + "/authenticate",
-		string[]{ "username", "password" }, string[]{ userId, password },
+		[]string{ "username", "password" }, []string{ userId, password },
 		[]string{ "Content-Type" }, []string{ "application/json" })
 	if err != nil {
 		return err
@@ -244,7 +244,7 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 	// The repo path includes the namespace. If the registyr is dockerhub, this
 	// is the organization name.
 	
-	var err error = twistlockContext.initiateScan(registryName, repoPath)
+	err = twistlockContext.initiateScan(registryName, repoPath)
 	if err != nil {
 		return nil, err
 	}
@@ -261,9 +261,9 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 				severity
 				description
 	*/
-	var vulnerabilities []interface{}
+	var vulnerabilities []interface{}  // should be an array of maps
 	var numberOfTries = 0
-	for _, _ { // until we obtain an up to date scan result, or reach max # of tries
+	for ;; { // until we obtain an up to date scan result, or reach max # of tries
 		numberOfTries++
 		if numberOfTries > MaxNumberOfTries {
 			return nil, utils.ConstructUserError("Timed out waiting for scan result")
@@ -280,33 +280,13 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 		// Sleep for ScanResultWaitIntervalMs milliseconds.
 		time.Sleep(ScanResultWaitIntervalMs * time.Millisecond)
 	}
-	
-	// Parse the scan result.
-	
-	var info? interface{} = responseMap["info"]  // should be an map[string]
-	var info map[string]interface{}
-	var isType bool
-	info, isType = info?.(map[string]interface{})
-	if ! isType {
-		return nil, utils.ConstructUserError("Unexpected json object type for info field")
-	}
-	
-	var vulnerabilities []interface{}
-	var vulnerabilities? interface{} = info["cveVulnerabilities"] // should be an array of objects
-	if vulnerabilities? == nil {
-		// No vulnerabilities found.
-		vulnerabilities = make([]interface{}, 0)
-	} else {
-		vulnerabilities, isType = vulnerabilities?.([]interface{})
-		if ! isType {
-			return nil, utils.ConstructUserError("Unexpected json object type for cveVulnerabilities field")
-		}
-	}
+
+	....
 	
 	var vulnDescs = make([]*apitypes.VulnerabilityDesc, len(vulnerabilities))
-	for i, vuln? := range vulnerabilities {
+	for i, vuln_ := range vulnerabilities {
 		var vuln map[string]interface{}
-		vuln, isType = vuln?.(map[string]interface{})
+		vuln, isType = vuln_.(map[string]interface{})
 		if ! isType {
 			return nil, utils.ConstructUserError("Unexpected json object type for a cveVulnerability")
 		}
@@ -406,7 +386,8 @@ func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoNam
  * However, this method does not verify that the array elements conform to this.
  * Also return the time of the most recent scan of the image.
  */
-func (twistlockContext *TwistlockRestContext) getVulnerabilities(imageName string) ([]interface{}, time.Time, error) () {
+func (twistlockContext *TwistlockRestContext) getVulnerabilities(
+	imageName string) ([]interface{}, time.Time, error) () {
 	
 	//....How come we don''t have to specify the registry?
 	
@@ -445,6 +426,16 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(imageName strin
 		We want to return the info.cveVulnerabilities array.
 	 */
 	
+	// Parse the response.
+	var vulnerabilityMap map[string]interface{}
+	vulnerabilityMap, err = rest.....ParseResponseBodyToMap(response.Body)
+	if err != nil { return nil, err }
+	
+	// Obtain the first array element.
+	var firstObject map[string]interface{}
+	....
+	
+	
 	// Obtain scan time.
 	var scanTime time.Time
 	var obj = vulnerabilityMap["scanTime"]
@@ -452,7 +443,6 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(imageName strin
 		return nil, nil, errors.New("No scan time found")
 	}
 	var timeString string
-	var isType bool
 	timeString, isType = obj.(string)
 	if ! isType {
 		return nil, nil, errors.New("scanTime is not a string")
@@ -462,20 +452,38 @@ func (twistlockContext *TwistlockRestContext) getVulnerabilities(imageName strin
 		return nil, nil, errors.New("Error parsing time string: " + timeString)
 	}
 	
-	// Obtain vulnerability list.
-	var vulnerabilityMap map[string]interface{}
-	vulnerabilityMap, err = rest.ParseResponseBodyToMap(response.Body)
-	if err != nil { return nil, err }
 	
-	obj = vulnerabilityMap["info.cveVulnerabilities"]
-	if obj == nil {
-		return []Vulnerability{}, scanTime, nil
-	}
+
+	
+	
+	
+	??????....check this
+	// Obtain the vulnerability array.
 	var vulnerabilities []interface{}
-	vulnerabilities, isType = obj.([]interface{})
+	....
+	var info_ interface{} = responseMap["info"]  // should be an map[string]
+	var info map[string]interface{}
+	var isType bool
+	info, isType = info_.(map[string]interface{})
 	if ! isType {
-		return nil, scanTime, errors.New("info.cveVulnerabilities is not an array")
+		return nil, utils.ConstructUserError("Unexpected json object type for info field")
 	}
+	
+	var vulnerabilities_ interface{} = info["cveVulnerabilities"] // should be an array of objects
+	if vulnerabilities_ == nil {
+		// No vulnerabilities found.
+		vulnerabilities = make([]interface{}, 0)
+	} else {
+		vulnerabilities, isType = vulnerabilities_.([]interface{})
+		if ! isType {
+			return nil, utils.ConstructUserError("Unexpected json object type for cveVulnerabilities field")
+		}
+	}
+	
+	
+	
+	
+	
 
 	return vulnerabilities, scanTime, nil
 }
