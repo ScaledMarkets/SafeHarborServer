@@ -5,7 +5,7 @@
     "LOCAL_ROOT_CERT_PATH": "scaledmarkets.crt",
     "FILE_REPOSITORY_ROOT": "data/Repositories",
     
-	"REDIS_PASSWORD": "ahdal8934k383898&*kdu&^",
+	"REDIS_PASSWORD": "$RedisPassword",
 	
 	"REGISTRY_HOST": "localhost",
 	"REGISTRY_PORT": "5000",
