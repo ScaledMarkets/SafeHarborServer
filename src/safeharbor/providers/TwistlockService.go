@@ -19,7 +19,7 @@
 package providers
 
 import (
-	//"errors"
+	"errors"
 	"net/http"
 	"fmt"
 
@@ -27,7 +27,7 @@ import (
 	//"bytes"
 	//"encoding/json"
 	//"flag"
-	//"io/ioutil"
+	"io/ioutil"
 	//"log"
 	//"os"
 	//"os/exec"
@@ -144,7 +144,7 @@ type TwistlockRestContext struct {
 	sessionId string
 }
 
-var _ TwistlockRestContext = &ScanContext{}
+var _ ScanContext = &TwistlockRestContext{}
 
 func (twistlockSvc *TwistlockService) CreateScanContext(params map[string]string) (ScanContext, error) {
 	
@@ -153,15 +153,15 @@ func (twistlockSvc *TwistlockService) CreateScanContext(params map[string]string
 	var scheme string
 	if twistlockSvc.UseSSL { scheme = "https" } else { scheme = "http" }
 	
-	var TwistlockRestContext context = &TwistlockRestContext{
+	var context *TwistlockRestContext = &TwistlockRestContext{
 		RestContext: *rest.CreateTCPRestContext(scheme,
 			twistlockSvc.Host, twistlockSvc.Port, "", "", setTwistlockSessionId),
 		//MinimumVulnerabilityPriority: minPriority,
 		TwistlockService: twistlockSvc,
-		sessionId: sessionToken,
+		sessionId: "",
 	}
 	
-	err = context.authenticate(twistlockSvc.UserId, twistlockSvc.Password)
+	var err = context.authenticate(twistlockSvc.UserId, twistlockSvc.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -174,11 +174,11 @@ func (twistlockSvc *TwistlockService) CreateScanContext(params map[string]string
  * REST context.
  * See https://twistlock.desk.com/customer/en/portal/articles/2831956-twistlock-api-2-1#authenticate
  */
-func (twistlockContext *TwistlockRestContext) authenticate(string userId, string password) error {
+func (twistlockContext *TwistlockRestContext) authenticate(userId string, password string) error {
 	
 	var response *http.Response
 	var err error
-	response, err = twistlockContext.SendSessionPost(
+	response, err = twistlockContext.SendSessionReq(
 		twistlockContext.sessionId, "POST", twistlockContext.getEndpoint() + "/authenticate",
 		[]string{ "username", "password" }, []string{ userId, password },
 		[]string{ "Content-Type" }, []string{ "application/json" })
@@ -195,7 +195,7 @@ func (twistlockContext *TwistlockRestContext) authenticate(string userId, string
 	
 	var jsonMap map[string]interface{}
 	jsonMap, err = rest.ParseResponseBodyToMap(response.Body)
-	if err != nil { return nil, err }
+	if err != nil { return err }
 	
 	var obj = jsonMap["token"]
 	if obj == nil {
@@ -219,13 +219,9 @@ func (twistlockContext *TwistlockRestContext) getEndpoint() string {
 }
 
 func (twistlockContext *TwistlockRestContext) PingService() *apitypes.Result {
-	var apiVersion string
-	var engineVersion string
-	var err error
-	apiVersion, engineVersion, err = twistlockContext.PingConsole()
+	var err = twistlockContext.PingConsole()
 	if err != nil { return apitypes.NewResult(500, err.Error()) }
-	return apitypes.NewResult(200, fmt.Sprintf(
-		"Service is up: api version %s, engine version %s", apiVersion, engineVersion))
+	return apitypes.NewResult(200, "Service is up")
 }
 
 /*******************************************************************************
@@ -292,7 +288,7 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 		}
 		
 		var id, link, severity, description string
-		id, isType = vuln["id"}.(string)
+		id, isType = vuln["id"].(string)
 		if ! isType {
 			return nil, utils.ConstructUserError("Unexpected json object type for vulnerability id")
 		}
@@ -353,7 +349,6 @@ func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoNam
 				-d '{"tag":{"registry":"","repo":"scaledmarkets/taskruntime"}}' \
 				-X POST https://localhost:8081/api/v1/registry/scan
 	*/
-	layerURL, layerId, priorLayerId
 	var jsonPayload string = fmt.Sprintf(
 		"{\"tag\": {\"registry\": \"%s\", \"repo\": \"%s\"}}", registryName, repoName)
 	
@@ -387,7 +382,7 @@ func (twistlockContext *TwistlockRestContext) initiateScan(registryName, repoNam
  * Also return the time of the most recent scan of the image.
  */
 func (twistlockContext *TwistlockRestContext) getVulnerabilities(
-	imageName string) ([]interface{}, time.Time, error) () {
+	imageName string) ([]interface{}, time.Time, error) {
 	
 	//....How come we don''t have to specify the registry?
 	
