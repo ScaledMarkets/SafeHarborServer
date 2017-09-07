@@ -3,6 +3,12 @@
 # This script prepares a host for deployment of the various components of the
 # SafeHarbor server.
 
+if [ -z "$ENV_CONFIGURED" ]
+then
+	echo "env.sh has not been run for the target env"
+	exit 1
+fi
+
 mkdir -p $DataVolMountPoint
 RegistryAuthDir=$DataVolMountPoint/registryauth
 DataDir=$DataVolMountPoint/registrydata

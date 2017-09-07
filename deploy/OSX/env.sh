@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # Env config for OSX.
 # Edit these values for your deployment:
 export DataVolMountPoint=/Transient/safeharbor/data  # this gets mapped to the container data directory.
@@ -12,3 +14,4 @@ export PROJECTROOT=$( dirname "${BASH_SOURCE[0]}" )/../..
 export ScaledMarketsRegistryNamespace=scaledmarkets
 #export ScaledMarketsRegistryNamespace=500058573678.dkr.ecr.us-east-1.amazonaws.com
 export SafeHarborImageName=$ScaledMarketsRegistryNamespace/safeharborserver
+export ENV_CONFIGURED=yes
