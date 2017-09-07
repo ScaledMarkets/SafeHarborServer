@@ -7,4 +7,3 @@ export ScaledMarketsRegistryNamespace=scaledmarkets
 export SafeHarborImageName=$ScaledMarketsRegistryNamespace/safeharborserver
 
 export PROJECTROOT=$( dirname "${BASH_SOURCE[0]}" )/../..
-export DataVolMountPoint=/home/centos/safeharbordata  # this gets mapped to the container /safeharbor/data directory.

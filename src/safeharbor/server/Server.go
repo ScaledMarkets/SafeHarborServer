@@ -191,6 +191,9 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	//....To do: Dynamically link and load the scanning services that are requested,
 	// so that we don't have to statically reference them below.
 	
+	var clairScanSvc providers.ScanService
+	var twistlockScanSvc providers.ScanService
+	var openscapScanSvc providers.ScanService
 	var obj interface{} = config.ScanServices["clair"]
 	var isType bool
 	if obj != nil {
@@ -198,7 +201,6 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		clairConfig, isType = obj.(map[string]interface{})
 		if ! isType { AbortStartup("Configuration of clair services is ill-formed:") }
 		clairConfig["LocalIPAddress"] = config.ipaddr
-		var clairScanSvc providers.ScanService
 		if stubScanners {
 			clairScanSvc, err = providers.CreateClairServiceStub(clairConfig) // for testing only
 		} else {
@@ -213,7 +215,6 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		twistlockConfig, isType = obj.(map[string]interface{})
 		if ! isType { AbortStartup("Configuration of twistlock services is ill-formed:") }
 		twistlockConfig["LocalIPAddress"] = config.ipaddr
-		var twistlockScanSvc providers.ScanService
 		if stubScanners {
 			twistlockScanSvc, err = providers.CreateTwistlockServiceStub(twistlockConfig) // for testing only
 		} else {
@@ -228,7 +229,6 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		openscapConfig, isType = obj.(map[string]interface{})
 		if ! isType { AbortStartup("Configuration of openscap services is ill-formed:") }
 		openscapConfig["LocalIPAddress"] = config.ipaddr
-		var openscapScanSvc providers.ScanService
 		if stubScanners {
 			openscapScanSvc, err = providers.CreateOpenScapServiceStub(openscapConfig) // for testing only
 		} else {

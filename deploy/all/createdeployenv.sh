@@ -3,7 +3,7 @@
 # This script prepares a host for deployment of the various components of the
 # SafeHarbor server.
 
-. env.sh
+mkdir -p $DataVolMountPoint
 RegistryAuthDir=$DataVolMountPoint/registryauth
 DataDir=$DataVolMountPoint/registrydata
 CertDir=$DataVolMountPoint/registrycerts

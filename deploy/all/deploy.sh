@@ -5,8 +5,6 @@
 # Parameter (optional): 'native' - If specified, then run SafeHarborServer as an
 # ordinary application instead of as a container.
 
-. env.sh
-
 # Add credentials to environment.
 . $ScaledMarketsCredentialsDir/SetDockerhubCredentials.sh
 . $SafeHarborCredentialDir/SetEmailServicePassword.sh
