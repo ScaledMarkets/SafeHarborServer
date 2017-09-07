@@ -4,3 +4,4 @@
 *.pem
 *.vagrant
 *.vagrant/*
+Credentials/

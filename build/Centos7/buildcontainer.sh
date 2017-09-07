@@ -33,7 +33,9 @@ else
 	docker build --tag=$SafeHarborImageName .
 fi
 
-# Push safeharborserver image to AWS registry:
+# Push safeharborserver image to registry:
+docker login -u $DockerhubUserId -p $DockerhubPassword
 docker push $SafeHarborImageName
+docker logout
 
 popd
