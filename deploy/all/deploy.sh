@@ -5,7 +5,7 @@
 # Parameter (optional): 'native' - If specified, then run SafeHarborServer as an
 # ordinary application instead of as a container.
 
-if [ -z "$ENV_CONFIGURED" ]
+if [ -z "$TARGET_ENV_CONFIGURED" ]
 then
 	echo "env.sh has not been run for the target env"
 	exit 1
@@ -14,18 +14,24 @@ fi
 # Add credentials to environment.
 . $ScaledMarketsCredentialsDir/SetDockerhubCredentials.sh
 . $SafeHarborCredentialDir/SetEmailServicePassword.sh
-. $SafeHarborCredentialDir/SetPostgresPassword.dh
+. $SafeHarborCredentialDir/SetPostgresPassword.sh
 . $SafeHarborCredentialDir/SetRedisPassword.sh
 . $SafeHarborCredentialDir/SetRegistryPassword.sh
 
 # Start redis (needed by SafeHarborServer).
-sudo docker run --name redis --net=host -d -v /home/centos/SafeHarborServer/build/Centos7:/config -v /home/centos/safeharbordata:/data docker.io/redis redis-server --appendonly yes /config/redis.conf
+cp $PROJECTROOT/deploy/all/redis.conf $RedisConfigDir
+sudo docker run --name redis --net=host -d -v $RedisConfigDir:/config -v $RedisDataDir:/data redis --appendonly yes
 
 # Start postgres (needed by Clair).
-sudo docker run --name postgres --net=host -d -e POSTGRES_PASSWORD=$postgresPassword -d docker.io/postgres
+cp $PROJECTROOT/deploy/all/postgresql.conf $PostgresDir
+sudo docker run --name postgres -p 5432:5432 --net=host -d -v $PostgresDir:/config -e POSTGRES_PASSWORD=$postgresPassword -d postgres
 
 # Start Clair (needed by SafeHarborServer).
-sudo docker run --name clair --net=host -d -v /home/centos/SafeHarborServer/build/Centos7:/config:ro quay.io/coreos/clair:latest --config=/config/clairconfig.yaml
+cp $PROJECTROOT/deploy/all/clairconfig.yaml $ClairDir
+sudo docker run --name clair --net=host -d -e POSTGRES_PASSWORD=$postgresPassword -p 6060:6060 -p 6061:6061 -v $ClairDir:/config:ro quay.io/coreos/clair:latest --config=/config/clairconfig.yaml
+
+# Start Twistlock server.
+....
 
 # Start OpenScap scanning slave.
 #sudo docker run --name scap --net=host -d -v ....

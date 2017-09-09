@@ -14,4 +14,4 @@ export PROJECTROOT=$( dirname "${BASH_SOURCE[0]}" )/../..
 export ScaledMarketsRegistryNamespace=scaledmarkets
 #export ScaledMarketsRegistryNamespace=500058573678.dkr.ecr.us-east-1.amazonaws.com
 export SafeHarborImageName=$ScaledMarketsRegistryNamespace/safeharborserver
-export ENV_CONFIGURED=yes
+export TARGET_ENV_CONFIGURED=yes
