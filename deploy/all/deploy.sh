@@ -28,7 +28,7 @@ sudo docker run --name postgres -p 5432:5432 --net=host -d -v $PostgresDir:/conf
 
 # Start Clair (needed by SafeHarborServer).
 cp $PROJECTROOT/deploy/all/clairconfig.yaml $ClairDir
-sudo docker run --name clair --net=host -d -e POSTGRES_PASSWORD=$postgresPassword -p 6060:6060 -p 6061:6061 -v $ClairDir:/config:ro quay.io/coreos/clair:latest --config=/config/clairconfig.yaml
+sudo docker run --name clair --net=host -e POSTGRES_PASSWORD=$postgresPassword -p 6060:6060 -p 6061:6061 -v $ClairDir:/config:ro quay.io/coreos/clair:latest --config=/config/clairconfig.yaml
 
 # Start Twistlock server.
 ....
