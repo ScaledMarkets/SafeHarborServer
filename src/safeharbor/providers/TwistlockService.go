@@ -101,10 +101,7 @@ func CreateTwistlockService(params map[string]interface{}) (ScanService, error) 
 		UserId: userId,
 		Password: password,
 		//LocalIPAddress: localIPAddress,
-		Params: map[string]string{
-			"UserId": "User id for connecting to the Twistlock server",
-			"Password": "Password for connecting to the Twistlock server",
-		},
+		Params: map[string]string{},
 	}, nil
 }
 

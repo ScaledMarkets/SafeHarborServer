@@ -1,5 +1,4 @@
 # See https://github.com/coreos/clair/blob/master/config.yaml.sample
----
 clair:
   database:
     type: pgsql
@@ -7,61 +6,41 @@ clair:
       # PostgreSQL Connection string
       # https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNSTRING
       source: host=localhost port=5432 user=postgres sslmode=disable statement_timeout=60000
-      
       #source: postgresql://postgres:4word2day@postgres:5432/postgres?connect_timeout=10&sslmode=disable
-      #source: postgresql://postgres:4word2day@localhost:5432/postgres?connect_timeout=10&sslmode=disable
-
       cacheSize: 16384
-      paginationkey: 
   api:
-    addr: "127.0.0.1:6060"
-    healthaddr: "0.0.0.0:6061"
+    port: 6060
+    healthport: 6061
     timeout: 900s
+    paginationkey:
     servername:
     cafile:
     keyfile:
     certfile:
-  worker:
-    namespace_detectors:
-      - os-release
-      - lsb-release
-      - apt-sources
-      - alpine-release
-      - redhat-release
-    feature_listers:
-      - apk
-      - dpkg
-      - rpm
   updater:
     # Frequency the database will be updated with vulnerabilities from the default data sources
     # The value 0 disables the updater entirely.
     interval: 2h
-    enabledupdaters: 
-      - debian
-      - ubuntu
-      - rhel
-      - oracle
-      - alpine
 
   notifier:
     # Number of attempts before the notification is marked as failed to be sent
     attempts: 3
 
-  # Duration before a failed notification is retried
-  renotifyInterval: 2h
+    # Duration before a failed notification is retried
+    renotifyInterval: 2h
 
-  http:
-    # Optional endpoint that will receive notifications via POST requests
-    endpoint:
-
-    # Optional PKI configuration
-    # If you want to easily generate client certificates and CAs, try the following projects:
-    # https://github.com/coreos/etcd-ca
-    # https://github.com/cloudflare/cfssl
-    servername:
-    cafile:
-    keyfile:
-    certfile:
-    
-    # Optional HTTP Proxy: must be a valid URL (including the scheme).
-    proxy:
+    http:
+      # Optional endpoint that will receive notifications via POST requests
+      endpoint:
+  
+      # Optional PKI configuration
+      # If you want to easily generate client certificates and CAs, try the following projects:
+      # https://github.com/coreos/etcd-ca
+      # https://github.com/cloudflare/cfssl
+      servername:
+      cafile:
+      keyfile:
+      certfile:
+  
+      # Optional HTTP Proxy: must be a valid URL (including the scheme).
+      proxy:

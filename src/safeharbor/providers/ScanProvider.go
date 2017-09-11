@@ -3,6 +3,8 @@ package providers
 import (
 	
 	"safeharbor/apitypes"
+	
+	"utilities/rest"
 )
 
 type ScanService interface {
@@ -15,7 +17,7 @@ type ScanService interface {
 }
 
 type ScanContext interface {
-	PingService() *apitypes.Result
+	PingService() *apitypes.ResponseType
 	ScanImage(string) (*ScanResult, error)
 }
 
@@ -23,10 +25,77 @@ type ScanResult struct {
 	Vulnerabilities []*apitypes.VulnerabilityDesc
 }
 
+/*******************************************************************************
+ * 
+ */
+type ScanProviderDesc struct {
+	rest.ResponseType
+	ProviderName string
+	Parameters []ParameterInfo
+}
+
+func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc {
+	return &ScanProviderDesc{
+		rest.ResponseType: *NewResponseType(200, "OK", "ScanProviderDesc"),
+		ProviderName: name,
+		Parameters: params,
+	}
+}
+
+func (scanProviderDesc *ScanProviderDesc) AsJSON() string {
+	var response string = fmt.Sprintf(" {%s, \"Name\": \"%s\", \"Parameters\": [",
+		scanProviderDesc.baseTypeFieldsAsJSON(), scanProviderDesc.ProviderName)
+	var firstTime bool = true
+	for _, paramInfo := range scanProviderDesc.Parameters {
+		if firstTime { firstTime = false } else { response = response + ",\n" }
+		response = response + paramInfo.AsJSON()
+	}
+	response = response + "]}"
+	return response
+}
+
+type ScanProviderDescs []*ScanProviderDesc
+
+func (scanProviderDescs ScanProviderDescs) AsJSON() string {
+	var response string = " {" + httpOKResponse() + ", \"payload\": [\n"
+	var firstTime bool = true
+	for _, desc := range scanProviderDescs {
+		if firstTime { firstTime = false } else { response = response + ",\n" }
+		response = response + desc.AsJSON()
+	}
+	response = response + "]}"
+	return response
+}
+
+func (providerDescs ScanProviderDescs) SendFile() (string, bool) {
+	return "", false
+}
+
+/*******************************************************************************
+ * 
+ */
 type Vulnerability struct {
 	ID, Link, Priority, Description string
 }
 
+type VulnerabilityDesc struct {
+	VCE_ID, Link, Priority, Description string
+}
+
+func NewVulnerabilityDesc(vCE_ID, link, priority, description string) *VulnerabilityDesc {
+	return &VulnerabilityDesc{
+		VCE_ID: vCE_ID,
+		Link: link,
+		Priority: priority,
+		Description: description,
+	}
+}
+
+func (vulnDesc *VulnerabilityDesc) AsJSON() string {
+	return fmt.Sprintf(" {\"VCE_ID\": \"%s\", \"Link\": \"%s\", \"Priority\": \"%s\", " +
+		"\"Description\": \"%s\"}",
+		vulnDesc.VCE_ID, vulnDesc.Link, vulnDesc.Priority, vulnDesc.Description)
+}
 
 	/*
 	Lynis:

@@ -10,6 +10,8 @@ export SafeHarborServerHost=127.0.0.1
 export SafeHarborPort=6000
 export RegistryPort=5000
 
+export TwistlockDir=~/Downloads/twistlock
+
 # Do not change:
 export PROJECTROOT=$( cd $( dirname ${BASH_SOURCE[0]} ) && pwd )/../..
 . $PROJECTROOT/build/common/env.sh

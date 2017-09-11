@@ -1,6 +1,8 @@
 # Makefile for building the Safe Harbor Server.
 # Testing is not done by this makefile - see separate project "TestSafeHarborServer".
 
+....https://github.com/awslabs/git-secrets
+
 
 # Names: -----------------------------------------------------------------------
 PRODUCTNAME := Safe Harbor Server

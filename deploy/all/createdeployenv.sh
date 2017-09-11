@@ -4,6 +4,8 @@
 # SafeHarbor server. Before running this script, set the required environment
 # variables, either by running env.sh for the target environment, followed by
 # running build/common/env.sh.
+# This script must be run on the server host before running the all/deploy.sh
+# or the Compose/deploy.sh file.
 
 if [ -z "$TARGET_ENV_CONFIGURED" ]
 then
@@ -27,10 +29,15 @@ sudo docker pull docker.io/postgres
 sudo docker pull quay.io/coreos/clair
 sudo docker pull docker.io/registry:2
 sudo docker pull $SafeHarborImageName
-....Obtain Twistlock
+
+# Install Twistlock
+
+
 
 # Create the safeharbor user.
 #sudo useradd -g safeharbor safeharbor
 
 # Add the safeharbor user to the docker group so that it can access /var/run/docker.sock.
 #usermod -a -G docker safeharbor
+
+# http://www.linuxjournal.com/magazine/work-shell-handling-errors-and-making-scripts-bulletproof
