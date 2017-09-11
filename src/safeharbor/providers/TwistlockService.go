@@ -38,7 +38,7 @@ import (
 	"strconv"
 
 	// SafeHarbor packages:
-	"safeharbor/apitypes"
+	//"safeharbor/apitypes"
 	"safeharbor/utils"
 
 	"utilities/rest"
@@ -217,10 +217,10 @@ func (twistlockContext *TwistlockRestContext) getEndpoint() string {
 	return twistlockContext.TwistlockService.GetEndpoint()
 }
 
-func (twistlockContext *TwistlockRestContext) PingService() *apitypes.Result {
+func (twistlockContext *TwistlockRestContext) PingService() *rest.RestResponseType {
 	var err = twistlockContext.PingConsole()
-	if err != nil { return apitypes.NewResult(500, err.Error()) }
-	return apitypes.NewResult(200, "Service is up")
+	if err != nil { return rest.NewRestResponseType(500, err.Error()) }
+	return rest.NewRestResponseType(200, "Service is up")
 }
 
 /*******************************************************************************

@@ -2,8 +2,6 @@ package providers
 
 import (
 	
-	"safeharbor/apitypes"
-	
 	"utilities/rest"
 )
 
@@ -13,30 +11,30 @@ type ScanService interface {
 	GetParameterDescriptions() map[string]string
 	GetParameterDescription(string) (string, error)
 	CreateScanContext(map[string]string) (ScanContext, error)  // params may be nil
-	AsScanProviderDesc() *apitypes.ScanProviderDesc
+	AsScanProviderDesc() *ScanProviderDesc
 }
 
 type ScanContext interface {
-	PingService() *apitypes.ResponseType
+	PingService() *rest.RestResponseType
 	ScanImage(string) (*ScanResult, error)
 }
 
 type ScanResult struct {
-	Vulnerabilities []*apitypes.VulnerabilityDesc
+	Vulnerabilities []*VulnerabilityDesc
 }
 
 /*******************************************************************************
  * 
  */
 type ScanProviderDesc struct {
-	rest.ResponseType
+	rest.RestResponseType
 	ProviderName string
-	Parameters []ParameterInfo
+	Parameters []rest.ParameterInfo
 }
 
 func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc {
 	return &ScanProviderDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", "ScanProviderDesc"),
+		rest.RestResponseType: *NewRestReponseType(200, "OK"),
 		ProviderName: name,
 		Parameters: params,
 	}

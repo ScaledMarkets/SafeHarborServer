@@ -32,6 +32,7 @@ import (
 	
 	// SafeHarbor packages:
 	"safeharbor/utils"
+	"safeharbor/providers"
 	
 	"utilities/rest"
 )
@@ -59,48 +60,19 @@ var ExecuteMask []bool = []bool{false, false, false, true, false}
 var DeleteMask []bool = []bool{false, false, false, false, true}
 
 /*******************************************************************************
- * All types defined here include rest.ResponseType type as a go "anonymous field".
+ * All types defined here include ResponseType type as a go "anonymous field".
  */
-
-type RespIntfTp interface {  // response interface type
-	AsJSON() string
-	SendFile() (path string, deleteAfter bool)
-}
-
-func NewResponseType(statusCode int, reason string, objectType string) *rest.ResponseType {
-	return &rest.ResponseType{
-		HTTPStatusCode: statusCode,
-		HTTPReasonPhrase: reason,
-		ObjectType: objectType,
-	}
-}
-
-func (b *rest.ResponseType) baseTypeFieldsAsJSON() string {
-	return fmt.Sprintf(
-		"\"HTTPStatusCode\": %d, \"HTTPReasonPhrase\": \"%s\", \"ObjectType\": \"%s\"",
-		b.HTTPStatusCode, rest.EncodeStringForJSON(b.HTTPReasonPhrase), b.ObjectType)
-}
-
-func (b *rest.ResponseType) AsJSON() string {
-	panic("Call to method that should be abstract")
-}
-
-func (b *rest.ResponseType) SendFile() (path string, deleteAfter bool) {
-	return "", false
-}
-
-var _ RespIntfTp = &rest.ResponseType{}
 
 /*******************************************************************************
  * 
  */
 type Result struct {
-	rest.ResponseType
+	ResponseType
 }
 
 func NewResult(status int, message string) *Result {
 	return &Result{
-		rest.ResponseType: *NewResponseType(status, message, "Result"),
+		ResponseType: *NewResponseType(status, message, "Result"),
 	}
 }
 
@@ -108,11 +80,47 @@ func (result *Result) AsJSON() string {
 	return fmt.Sprintf(" {%s}", result.baseTypeFieldsAsJSON())
 }
 
+type ResponseType struct {
+	RestResponseType
+	ObjectType string
+}
+
+type RespIntfTp interface {  // response interface type
+	AsJSON() string
+	SendFile() (path string, deleteAfter bool)
+}
+
+func NewResponseType(statusCode int, reason string, objectType string) *ResponseType {
+	return &ResponseType{
+		RestReponseType: {
+			HTTPStatusCode: statusCode,
+			HTTPReasonPhrase: reason,
+		},
+		ObjectType: objectType,
+	}
+}
+
+func (b *ResponseType) baseTypeFieldsAsJSON() string {
+	return fmt.Sprintf(
+		"\"HTTPStatusCode\": %d, \"HTTPReasonPhrase\": \"%s\", \"ObjectType\": \"%s\"",
+		b.HTTPStatusCode, EncodeStringForJSON(b.HTTPReasonPhrase), b.ObjectType)
+}
+
+func (b *ResponseType) AsJSON() string {
+	panic("Call to method that should be abstract")
+}
+
+func (b *ResponseType) SendFile() (path string, deleteAfter bool) {
+	return "", false
+}
+
+var _ RespIntfTp = &ResponseType{}
+
 /*******************************************************************************
  * 
  */
 type FileResponse struct {
-	rest.ResponseType
+	ResponseType
 	Status int  // HTTP status code (e.g., 200 is success)
 	FilePath string  // should be removed after content is retrieved
 	DeleteAfter bool
@@ -120,7 +128,7 @@ type FileResponse struct {
 
 func NewFileResponse(status int, filePath string, deleteAfter bool) *FileResponse {
 	return &FileResponse{
-		rest.ResponseType: *NewResponseType(status, "", "FileResponse"),
+		ResponseType: *NewResponseType(status, "", "FileResponse"),
 		Status: status,
 		FilePath: filePath,
 		DeleteAfter: deleteAfter,
@@ -139,7 +147,7 @@ func (response *FileResponse) SendFile() (string, bool) {
  * All handlers return a FailureDesc if they detect an error.
  */
 type FailureDesc struct {
-	rest.ResponseType
+	ResponseType
 }
 
 func NewFailureDesc(httpErrorCode int, reason string) *FailureDesc {
@@ -147,7 +155,7 @@ func NewFailureDesc(httpErrorCode int, reason string) *FailureDesc {
 		". Stack trace follows, but the error might be 'normal'")
 	debug.PrintStack()  // debug
 	return &FailureDesc{
-		rest.ResponseType: *NewResponseType(httpErrorCode, reason, "FailureDesc"), // see https://golang.org/pkg/net/http/#pkg-constants
+		ResponseType: *NewResponseType(httpErrorCode, reason, "FailureDesc"), // see https://golang.org/pkg/net/http/#pkg-constants
 	}
 }
 
@@ -181,14 +189,14 @@ func (failureDesc *FailureDesc) AsJSON() string {
  * Types and functions for credentials.
  */
 type Credentials struct {
-	rest.ResponseType
+	ResponseType
 	UserId string
 	Password string
 }
 
 func NewCredentials(uid string, pwd string) *Credentials {
 	return &Credentials{
-		rest.ResponseType: *NewResponseType(200, "OK", "Credentials"),
+		ResponseType: *NewResponseType(200, "OK", "Credentials"),
 		UserId: uid,
 		Password: pwd,
 	}
@@ -215,7 +223,7 @@ func (creds *Credentials) AsJSON() string {
  * 
  */
 type SessionToken struct {
-	rest.ResponseType
+	ResponseType
 	UniqueSessionId string
 	AuthenticatedUserid string
 	RealmId string
@@ -224,7 +232,7 @@ type SessionToken struct {
 
 func NewSessionToken(sessionId string, userId string) *SessionToken {
 	return &SessionToken{
-		rest.ResponseType: *NewResponseType(200, "OK", "SessionToken"),
+		ResponseType: *NewResponseType(200, "OK", "SessionToken"),
 		UniqueSessionId: sessionId,
 		AuthenticatedUserid: userId,
 		RealmId: "",
@@ -251,7 +259,7 @@ func (sessionToken *SessionToken) AsJSON() string {
  * 
  */
 type GroupDesc struct {
-	rest.ResponseType
+	ResponseType
 	GroupId string
 	RealmId string
 	GroupName string
@@ -261,7 +269,7 @@ type GroupDesc struct {
 
 func NewGroupDesc(groupId, realmId, groupName, desc string, creationDate time.Time) *GroupDesc {
 	return &GroupDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", "GroupDesc"),
+		ResponseType: *NewResponseType(200, "OK", "GroupDesc"),
 		GroupId: groupId,
 		RealmId: realmId,
 		GroupName: groupName,
@@ -297,7 +305,7 @@ func (groupDescs GroupDescs) SendFile() (string, bool) {
  * 
  */
 type UserInfo struct {
-	rest.ResponseType
+	ResponseType
 	UserId string
 	UserName string
 	EmailAddress string
@@ -307,7 +315,7 @@ type UserInfo struct {
 
 func NewUserInfo(userid, name, email, pswd, realmId string) *UserInfo {
 	return &UserInfo{
-		rest.ResponseType: *NewResponseType(200, "OK", "UserInfo"),
+		ResponseType: *NewResponseType(200, "OK", "UserInfo"),
 		UserId: userid,
 		UserName: name,
 		EmailAddress: email,
@@ -373,7 +381,7 @@ func (userInfo *UserInfo) AsJSON() string {
  * 
  */
 type UserDesc struct {
-	rest.ResponseType
+	ResponseType
 	Id string
 	UserId string
 	UserName string
@@ -388,7 +396,7 @@ type UserDesc struct {
 func NewUserDesc(id, userId, userName, realmId, defaultRepoId, emailAddress string, 
 	emailIsVerified bool, canModRealms []string) *UserDesc {
 	return &UserDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", "UserDesc"),
+		ResponseType: *NewResponseType(200, "OK", "UserDesc"),
 		Id: id,
 		UserId: userId,
 		UserName: userName,
@@ -437,7 +445,7 @@ func (userDescs UserDescs) SendFile() (string, bool) {
  * 
  */
 type RealmDesc struct {
-	rest.ResponseType
+	ResponseType
 	Id string
 	RealmName string
 	OrgFullName string
@@ -446,7 +454,7 @@ type RealmDesc struct {
 
 func NewRealmDesc(id string, name string, orgName string, adminUserId string) *RealmDesc {
 	return &RealmDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", "RealmDesc"),
+		ResponseType: *NewResponseType(200, "OK", "RealmDesc"),
 		Id: id,
 		RealmName: name,
 		OrgFullName: orgName,
@@ -482,7 +490,7 @@ func (realmDescs RealmDescs) SendFile() (string, bool) {
  * 
  */
 type RealmInfo struct {
-	rest.ResponseType
+	ResponseType
 	RealmName string
 	OrgFullName string
 	Description string
@@ -492,7 +500,7 @@ func NewRealmInfo(realmName string, orgName string, desc string) (*RealmInfo, er
 	if realmName == "" { return nil, utils.ConstructUserError("realmName is empty") }
 	if orgName == "" { return nil, utils.ConstructUserError("orgName is empty") }
 	return &RealmInfo{
-		rest.ResponseType: *NewResponseType(200, "OK", "RealmInfo"),
+		ResponseType: *NewResponseType(200, "OK", "RealmInfo"),
 		RealmName: realmName,
 		OrgFullName: orgName,
 		Description: desc,
@@ -520,7 +528,7 @@ func (realmInfo *RealmInfo) AsJSON() string {
  * 
  */
 type RepoDesc struct {
-	rest.ResponseType
+	ResponseType
 	Id string
 	RealmId string
 	RepoName string
@@ -533,7 +541,7 @@ func NewRepoDesc(id string, realmId string, name string, desc string,
 	creationTime time.Time, dockerfileIds []string) *RepoDesc {
 
 	return &RepoDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", "RepoDesc"),
+		ResponseType: *NewResponseType(200, "OK", "RepoDesc"),
 		Id: id,
 		RealmId: realmId,
 		RepoName: name,
@@ -615,7 +623,7 @@ func (repoPlus *RepoPlusDockerfileDesc) AsJSON() string {
  * 
  */
 type DockerfileDesc struct {
-	rest.ResponseType
+	ResponseType
 	Id string
 	RepoId string
 	Description string
@@ -626,7 +634,7 @@ type DockerfileDesc struct {
 func NewDockerfileDesc(id string, repoId string, name string, desc string,
 	paramValueDescs []*DockerfileExecParameterValueDesc) *DockerfileDesc {
 	return &DockerfileDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", "DockerfileDesc"),
+		ResponseType: *NewResponseType(200, "OK", "DockerfileDesc"),
 		Id: id,
 		RepoId: repoId,
 		DockerfileName: name,
@@ -669,7 +677,7 @@ func (dockerfileDescs DockerfileDescs) SendFile() (string, bool) {
  * 
  */
 type ImageDesc struct {
-	rest.ResponseType
+	ResponseType
 	ObjId string
 	RepoId string
 	Name string
@@ -678,7 +686,7 @@ type ImageDesc struct {
 
 func NewImageDesc(objectType, objId, repoId, name, desc string) *ImageDesc {
 	return &ImageDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", objectType),
+		ResponseType: *NewResponseType(200, "OK", objectType),
 		ObjId: objId,
 		RepoId: repoId,
 		Name: name,
@@ -698,7 +706,7 @@ func (imageDesc *ImageDesc) imageDescFieldsAsJSON() string {
  * 
  */
 type ImageVersionDesc struct {
-	rest.ResponseType
+	ResponseType
 	ObjId string
 	Version string
 	ImageObjId string
@@ -713,7 +721,7 @@ func NewImageVersionDesc(objectType, objId, version, imageObjId, imageName,
 	imageDescription string, repoId string, creationEventId string,
 	creationTime time.Time) *ImageVersionDesc {
 	return &ImageVersionDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", objectType),
+		ResponseType: *NewResponseType(200, "OK", objectType),
 		ObjId: objId,
 		Version: version,
 		ImageObjId: imageObjId,
@@ -877,13 +885,13 @@ func (versionDescs DockerImageVersionDescs) SendFile() (string, bool) {
  * 
  */
 type PermissionMask struct {
-	rest.ResponseType
+	ResponseType
 	Mask []bool
 }
 
 func NewPermissionMask(mask []bool) *PermissionMask {
 	return &PermissionMask{
-		rest.ResponseType: *NewResponseType(200, "OK", "PermissionMask"),
+		ResponseType: *NewResponseType(200, "OK", "PermissionMask"),
 		Mask: mask,
 	}
 }
@@ -913,7 +921,7 @@ func (mask *PermissionMask) AsJSON() string {
  * 
  */
 type PermissionDesc struct {
-	rest.ResponseType
+	ResponseType
 	PermissionMask
 	ACLEntryId string
 	ResourceId string
@@ -924,7 +932,7 @@ func NewPermissionDesc(aclEntryId string, resourceId string, partyId string,
 	permissionMask []bool) *PermissionDesc {
 
 	return &PermissionDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", "PermissionDesc"),
+		ResponseType: *NewResponseType(200, "OK", "PermissionDesc"),
 		ACLEntryId: aclEntryId,
 		ResourceId: resourceId,
 		PartyId: partyId,
@@ -962,7 +970,7 @@ func NewParameterValueDesc(name string, strValue string) *ParameterValueDesc {
  * 
  */
 type ScanConfigDesc struct {
-	rest.ResponseType
+	ResponseType
 	Id string
 	RepoId string
 	ProviderName string
@@ -975,7 +983,7 @@ type ScanConfigDesc struct {
 func NewScanConfigDesc(id, repoId, provName, expr, flagId string, paramValueDescs []*ScanParameterValueDesc,
 	dockerImagesIdsThatUse []string) *ScanConfigDesc {
 	return &ScanConfigDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", "ScanConfigDesc"),
+		ResponseType: *NewResponseType(200, "OK", "ScanConfigDesc"),
 		Id: id,
 		RepoId: repoId,
 		ProviderName: provName,
@@ -1065,7 +1073,7 @@ func (desc *ParameterValueDesc) AsJSON() string {
  * 
  */
 type FlagDesc struct {
-	rest.ResponseType
+	ResponseType
 	FlagId string
 	RepoId string
 	Name string
@@ -1075,7 +1083,7 @@ type FlagDesc struct {
 
 func NewFlagDesc(flagId, repoId, name, imageURL string) *FlagDesc {
 	return &FlagDesc{
-		rest.ResponseType: *NewResponseType(200, "OK", "FlagDesc"),
+		ResponseType: *NewResponseType(200, "OK", "FlagDesc"),
 		FlagId: flagId,
 		RepoId: repoId,
 		Name: name,
@@ -1118,14 +1126,14 @@ func (flagDescs FlagDescs) SendFile() (string, bool) {
  * 
  */
 type EventDesc interface {
-	RespIntfTp
+	rest.RespIntfTp
 	GetEventId() string
 	GetWhen() string
 	GetUserObjId() string
 }
 
 type EventDescBase struct {
-	rest.ResponseType
+	ResponseType
 	EventId string
 	When string
 	UserObjId string
@@ -1133,7 +1141,7 @@ type EventDescBase struct {
 
 func NewEventDesc(objectType, objId string, when time.Time, userObjId string) *EventDescBase {
 	return &EventDescBase{
-		rest.ResponseType: *NewResponseType(200, "OK", objectType),
+		ResponseType: *NewResponseType(200, "OK", objectType),
 		EventId: objId,
 		When: FormatTimeAsJavascriptDate(when),
 		UserObjId: userObjId,

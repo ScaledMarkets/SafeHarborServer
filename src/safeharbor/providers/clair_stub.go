@@ -26,7 +26,7 @@ import (
 	"strconv"
 
 	// SafeHarbor packages:
-	"safeharbor/apitypes"
+	//"safeharbor/apitypes"
 	"safeharbor/utils"
 
 	"utilities/rest"
@@ -134,13 +134,13 @@ func (clairContext *ClairRestContextStub) getEndpoint() string {
 	return clairContext.ClairServiceStub.GetEndpoint()
 }
 
-func (clairContext *ClairRestContextStub) PingService() *apitypes.Result {
+func (clairContext *ClairRestContextStub) PingService() *rest.RestResponseType {
 	var apiVersion string
 	var engineVersion string
 	var err error
 	apiVersion, engineVersion, err = clairContext.GetVersions()
-	if err != nil { return apitypes.NewResult(500, err.Error()) }
-	return apitypes.NewResult(200, fmt.Sprintf(
+	if err != nil { return rest.NewRestResponseType(500, err.Error()) }
+	return rest.NewRestResponseType(200, fmt.Sprintf(
 		"Service is up: api version %s, engine version %s", apiVersion, engineVersion))
 }
 

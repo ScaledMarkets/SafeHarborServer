@@ -30,7 +30,7 @@ import (
 	"strconv"
 
 	// SafeHarbor packages:
-	"safeharbor/apitypes"
+	//"safeharbor/apitypes"
 	"safeharbor/utils"
 
 	"utilities/rest"
@@ -116,12 +116,12 @@ func (openScapSvc *OpenScapServiceStub) CreateScanContext(params map[string]stri
 	}, nil
 }
 
-func (openScapSvc *OpenScapServiceStub) AsScanProviderDesc() *apitypes.ScanProviderDesc {
-	var params = []apitypes.ParameterInfo{}
+func (openScapSvc *OpenScapServiceStub) AsScanProviderDesc() *ScanProviderDesc {
+	var params = []rest.ParameterInfo{}
 	for name, desc := range openScapSvc.Params {
-		params = append(params, *apitypes.NewParameterInfo(name, desc))
+		params = append(params, *rest.NewParameterInfo(name, desc))
 	}
-	return apitypes.NewScanProviderDesc(openScapSvc.GetName(), params)
+	return NewScanProviderDesc(openScapSvc.GetName(), params)
 }
 
 /*******************************************************************************
@@ -138,13 +138,13 @@ func (openScapContext *OpenScapRestContextStub) getEndpoint() string {
 	return openScapContext.OpenScapServiceStub.GetEndpoint()
 }
 
-func (openScapContext *OpenScapRestContextStub) PingService() *apitypes.Result {
+func (openScapContext *OpenScapRestContextStub) PingService() *rest.RestResponseType {
 	var apiVersion string
 	var engineVersion string
 	var err error
 	apiVersion, engineVersion, err = openScapContext.GetVersions()
-	if err != nil { return apitypes.NewResult(500, err.Error()) }
-	return apitypes.NewResult(200, fmt.Sprintf(
+	if err != nil { return rest.NewRestResponseType(500, err.Error()) }
+	return rest.NewRestResponseType(200, fmt.Sprintf(
 		"Service is up: api version %s, engine version %s", apiVersion, engineVersion))
 }
 
@@ -182,9 +182,9 @@ func (openScapContext *OpenScapRestContextStub) ScanImage(imageName string) (*Sc
 		fmt.Printf("  - Description: %s\n", vulnerability.Description)
 	}
 
-	var vulnDescs = make([]*apitypes.VulnerabilityDesc, len(vulnerabilities))
+	var vulnDescs = make([]*VulnerabilityDesc, len(vulnerabilities))
 	for i, vuln := range vulnerabilities {
-		vulnDescs[i] = apitypes.NewVulnerabilityDesc(
+		vulnDescs[i] = NewVulnerabilityDesc(
 			vuln.ID, vuln.Link, vuln.Priority, vuln.Description)
 	}
 	
