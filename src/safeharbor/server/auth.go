@@ -21,7 +21,7 @@ import (
 	//"encoding/hex"
 	
 	"safeharbor/apitypes"
-	"safeharbor/utils"
+	"utilities/utils"
 )
 
 type AuthService struct {

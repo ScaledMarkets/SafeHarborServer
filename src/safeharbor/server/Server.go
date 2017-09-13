@@ -29,7 +29,7 @@ import (
 	"safeharbor/apitypes"
 	"safeharbor/docker"
 	"safeharbor/providers"
-	"safeharbor/utils"
+	"utilities/utils"
 )
 
 /*******************************************************************************

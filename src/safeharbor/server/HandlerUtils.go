@@ -22,7 +22,7 @@ import (
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
 	"safeharbor/docker"
-	"safeharbor/utils"
+	"utilities/utils"
 )
 
 /*******************************************************************************
