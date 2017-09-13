@@ -2163,7 +2163,7 @@ func getMyFlags(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 
 /*******************************************************************************
  * Arguments: (none)
- * Returns: apitypes.ScanProviderDescs
+ * Returns: providers.ScanProviderDescs
  */
 func getScanProviders(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -2172,7 +2172,7 @@ func getScanProviders(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
 	
-	var providerDescs apitypes.ScanProviderDescs = make([]*apitypes.ScanProviderDesc, 0)
+	var providerDescs providers.ScanProviderDescs = make([]*providers.ScanProviderDesc, 0)
 	var services []providers.ScanService = dbClient.Server.GetScanServices()
 	for _, service := range services {
 		providerDescs = append(providerDescs, service.AsScanProviderDesc())

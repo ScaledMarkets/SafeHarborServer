@@ -112,12 +112,12 @@ func (clairSvc *ClairServiceStub) CreateScanContext(params map[string]string) (S
 	}, nil
 }
 
-func (clairSvc *ClairServiceStub) AsScanProviderDesc() *apitypes.ScanProviderDesc {
-	var params = []apitypes.ParameterInfo{}
+func (clairSvc *ClairServiceStub) AsScanProviderDesc() *ScanProviderDesc {
+	var params = []rest.ParameterInfo{}
 	for name, desc := range clairSvc.Params {
-		params = append(params, *apitypes.NewParameterInfo(name, desc))
+		params = append(params, *rest.NewParameterInfo(name, desc))
 	}
-	return apitypes.NewScanProviderDesc(clairSvc.GetName(), params)
+	return NewScanProviderDesc(clairSvc.GetName(), params)
 }
 
 /*******************************************************************************
@@ -178,9 +178,9 @@ func (clairContext *ClairRestContextStub) ScanImage(imageName string) (*ScanResu
 		fmt.Printf("  - Description: %s\n", vulnerability.Description)
 	}
 
-	var vulnDescs = make([]*apitypes.VulnerabilityDesc, len(vulnerabilities))
+	var vulnDescs = make([]*VulnerabilityDesc, len(vulnerabilities))
 	for i, vuln := range vulnerabilities {
-		vulnDescs[i] = apitypes.NewVulnerabilityDesc(
+		vulnDescs[i] = NewVulnerabilityDesc(
 			vuln.ID, vuln.Link, vuln.Priority, vuln.Description)
 	}
 	

@@ -125,12 +125,12 @@ func (twistlockSvc *TwistlockService) GetParameterDescription(name string) (stri
 	return desc, nil
 }
 
-func (twistlockSvc *TwistlockService) AsScanProviderDesc() *apitypes.ScanProviderDesc {
-	var params = []apitypes.ParameterInfo{}
+func (twistlockSvc *TwistlockService) AsScanProviderDesc() *ScanProviderDesc {
+	var params = []rest.ParameterInfo{}
 	for name, desc := range twistlockSvc.Params {
-		params = append(params, *apitypes.NewParameterInfo(name, desc))
+		params = append(params, *rest.NewParameterInfo(name, desc))
 	}
-	return apitypes.NewScanProviderDesc(twistlockSvc.GetName(), params)
+	return NewScanProviderDesc(twistlockSvc.GetName(), params)
 }
 
 /*******************************************************************************
@@ -279,7 +279,7 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 	}
 
 	// Validate the result format, and construct a ScanResult object to return.
-	var vulnDescs = make([]*apitypes.VulnerabilityDesc, len(vulnerabilities))
+	var vulnDescs = make([]*VulnerabilityDesc, len(vulnerabilities))
 	for i, vuln_ := range vulnerabilities {
 		var vuln map[string]interface{}
 		var isType bool
@@ -306,7 +306,7 @@ func (twistlockContext *TwistlockRestContext) ScanImage(imageName string) (*Scan
 			return nil, utils.ConstructUserError("Unexpected json object type for vulnerability description")
 		}
 	
-		vulnDescs[i] = apitypes.NewVulnerabilityDesc(id, link, severity, description)
+		vulnDescs[i] = NewVulnerabilityDesc(id, link, severity, description)
 	}
 	
 	return &ScanResult{

@@ -4559,12 +4559,12 @@ func (client *InMemClient) ReconstituteScanEvent(id string, when time.Time,
 	
 	// Deserialize the json for the Result.
 	var result  = &providers.ScanResult{
-		Vulnerabilities: []*apitypes.VulnerabilityDesc{
-			&apitypes.VulnerabilityDesc{ "", "", "", "" },
+		Vulnerabilities: []*providers.VulnerabilityDesc{
+			&providers.VulnerabilityDesc{ "", "", "", "" },
 		},
 	}
 	for i, vuln := range vulnAr {
-		result.Vulnerabilities[i] = &apitypes.VulnerabilityDesc{
+		result.Vulnerabilities[i] = &providers.VulnerabilityDesc{
 				VCE_ID: vuln[0],
 				Link: vuln[1],
 				Priority: vuln[2],

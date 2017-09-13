@@ -2,6 +2,7 @@ package providers
 
 import (
 	
+	"fmt"
 	"utilities/rest"
 )
 
@@ -32,9 +33,9 @@ type ScanProviderDesc struct {
 	Parameters []rest.ParameterInfo
 }
 
-func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc {
+func NewScanProviderDesc(name string, params []rest.ParameterInfo) *ScanProviderDesc {
 	return &ScanProviderDesc{
-		rest.RestResponseType: *NewRestReponseType(200, "OK"),
+		RestResponseType: *rest.NewRestResponseType(200, "OK"),
 		ProviderName: name,
 		Parameters: params,
 	}
@@ -42,7 +43,7 @@ func NewScanProviderDesc(name string, params []ParameterInfo) *ScanProviderDesc 
 
 func (scanProviderDesc *ScanProviderDesc) AsJSON() string {
 	var response string = fmt.Sprintf(" {%s, \"Name\": \"%s\", \"Parameters\": [",
-		scanProviderDesc.baseTypeFieldsAsJSON(), scanProviderDesc.ProviderName)
+		scanProviderDesc.RestResponseTypeFieldsAsJSON(), scanProviderDesc.ProviderName)
 	var firstTime bool = true
 	for _, paramInfo := range scanProviderDesc.Parameters {
 		if firstTime { firstTime = false } else { response = response + ",\n" }
@@ -55,7 +56,7 @@ func (scanProviderDesc *ScanProviderDesc) AsJSON() string {
 type ScanProviderDescs []*ScanProviderDesc
 
 func (scanProviderDescs ScanProviderDescs) AsJSON() string {
-	var response string = " {" + httpOKResponse() + ", \"payload\": [\n"
+	var response string = " {" + rest.HttpOKResponse() + ", \"payload\": [\n"
 	var firstTime bool = true
 	for _, desc := range scanProviderDescs {
 		if firstTime { firstTime = false } else { response = response + ",\n" }

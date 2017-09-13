@@ -104,12 +104,12 @@ func (twistlockSvc *TwistlockServiceStub) CreateScanContext(params map[string]st
 	return context, nil
 }
 
-func (twistlockSvc *TwistlockServiceStub) AsScanProviderDesc() *apitypes.ScanProviderDesc {
-	var params = []apitypes.ParameterInfo{}
+func (twistlockSvc *TwistlockServiceStub) AsScanProviderDesc() *ScanProviderDesc {
+	var params = []rest.ParameterInfo{}
 	for name, desc := range twistlockSvc.Params {
-		params = append(params, *apitypes.NewParameterInfo(name, desc))
+		params = append(params, *rest.NewParameterInfo(name, desc))
 	}
-	return apitypes.NewScanProviderDesc(twistlockSvc.GetName(), params)
+	return NewScanProviderDesc(twistlockSvc.GetName(), params)
 }
 
 /*******************************************************************************
@@ -158,9 +158,9 @@ func (twistlockContext *TwistlockRestContextStub) ScanImage(imageName string) (*
 		fmt.Printf("  - Description: %s\n", vulnerability.Description)
 	}
 
-	var vulnDescs = make([]*apitypes.VulnerabilityDesc, len(vulnerabilities))
+	var vulnDescs = make([]*VulnerabilityDesc, len(vulnerabilities))
 	for i, vuln := range vulnerabilities {
-		vulnDescs[i] = apitypes.NewVulnerabilityDesc(
+		vulnDescs[i] = NewVulnerabilityDesc(
 			vuln.ID, vuln.Link, vuln.Priority, vuln.Description)
 	}
 	
