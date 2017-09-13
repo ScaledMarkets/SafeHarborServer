@@ -1,7 +1,7 @@
 # Makefile for building the Safe Harbor Server.
 # Testing is not done by this makefile - see separate project "TestSafeHarborServer".
 
-....https://github.com/awslabs/git-secrets
+# To do: Incorporate https://github.com/awslabs/git-secrets
 
 
 # Names: -----------------------------------------------------------------------
@@ -22,7 +22,7 @@ BUILDDIR := $(PROJECTROOT)/bin
 PKGDIR := $(PROJECTROOT)/pkg
 STATUSDIR := $(PROJECTROOT)/status
 UTILITIESDIR:=$(realpath $(PROJECTROOT)/../utilities)
-
+SCANNERSDIR:=$(realpath $(PROJECTROOT)/../scanners)
 
 # Tools: -----------------------------------------------------------------------
 SHELL := /bin/sh
@@ -48,7 +48,7 @@ $(BUILDDIR)/$(EXECNAME): $(BUILDDIR) $(SRCDIR)/$(PACKAGENAME)/*.go
 # The compile target depends on the main executable.
 # 'make compile' builds the executable, which is placed in <build_dir>.
 compile: $(BUILDDIR)/$(EXECNAME)
-	GOPATH=$(PROJECTROOT):$(UTILITIESDIR) go install $(PACKAGENAME)
+	GOPATH=$(PROJECTROOT):$(SCANNERSDIR):$(UTILITIESDIR) go install $(PACKAGENAME)
 
 # See https://www.elastic.co/blog/code-coverage-for-your-golang-system-tests
 # See https://blog.golang.org/cover
