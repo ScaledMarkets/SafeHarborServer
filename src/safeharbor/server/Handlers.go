@@ -26,9 +26,9 @@ import (
 	//"runtime/debug"
 	
 	// Our packages:
-	"safeharbor/providers"
+	"scanners"
 	"safeharbor/apitypes"
-	"safeharbor/docker"
+	"docker"
 )
 
 /*******************************************************************************
@@ -2163,7 +2163,7 @@ func getMyFlags(dbClient *InMemClient, sessionToken *apitypes.SessionToken, valu
 
 /*******************************************************************************
  * Arguments: (none)
- * Returns: providers.ScanProviderDescs
+ * Returns: scanners.ScanProviderDescs
  */
 func getScanProviders(dbClient *InMemClient, sessionToken *apitypes.SessionToken, values url.Values,
 	files map[string][]*multipart.FileHeader) apitypes.RespIntfTp {
@@ -2172,8 +2172,8 @@ func getScanProviders(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	sessionToken, failMsg = authenticateSession(dbClient, sessionToken, values)
 	if failMsg != nil { return failMsg }
 	
-	var providerDescs providers.ScanProviderDescs = make([]*providers.ScanProviderDesc, 0)
-	var services []providers.ScanService = dbClient.Server.GetScanServices()
+	var providerDescs scanners.ScanProviderDescs = make([]*scanners.ScanProviderDesc, 0)
+	var services []scanners.ScanService = dbClient.Server.GetScanServices()
 	for _, service := range services {
 		providerDescs = append(providerDescs, service.AsScanProviderDesc())
 	}
@@ -2197,7 +2197,7 @@ func defineScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	providerName, err = apitypes.GetRequiredHTTPParameterValue(true, values, "ProviderName")
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	
-	var scanService providers.ScanService
+	var scanService scanners.ScanService
 	scanService = dbClient.Server.GetScanService(providerName)
 	if scanService == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"Unable to identify a scan service named '" + providerName + "'")
@@ -2339,7 +2339,7 @@ func updateScanConfig(dbClient *InMemClient, sessionToken *apitypes.SessionToken
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
 	if successExpr != "" { scanConfig.setSuccessExpressionDeferredUpdate(successExpr) }
 	
-	var scanService providers.ScanService
+	var scanService scanners.ScanService
 	scanService = dbClient.Server.GetScanService(scanConfig.getProviderName())
 	if scanService == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 		"Unable to identify a scan service named '" + providerName + "'")
@@ -2574,20 +2574,20 @@ func scanImage(dbClient *InMemClient, sessionToken *apitypes.SessionToken, value
 	
 		// Locate the scan provider.
 		fmt.Println("Getting scan service...")
-		var scanService providers.ScanService
+		var scanService scanners.ScanService
 		scanService = dbClient.Server.GetScanService(scanProviderName)
 		if scanService == nil { return apitypes.NewFailureDesc(http.StatusBadRequest,
 			"Unable to identify a scan service named '" + scanProviderName + "'")
 		}
 		
 		// Attach to the scan provider.
-		var scanContext providers.ScanContext
+		var scanContext scanners.ScanContext
 		scanContext, err = scanService.CreateScanContext(params)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
 		var imageName string
 		imageName, err = dockerImageVersion.getFullName(dbClient)
 		if err != nil { return apitypes.NewFailureDescFromError(err) }
-		var result *providers.ScanResult
+		var result *scanners.ScanResult
 		fmt.Println("Contacting scan service...")
 		
 		// Perform scan.

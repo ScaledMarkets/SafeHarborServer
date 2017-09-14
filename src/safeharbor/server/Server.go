@@ -27,8 +27,8 @@ import (
 	
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
-	"safeharbor/docker"
-	"safeharbor/providers"
+	"docker"
+	"scanners"
 	"utilities/utils"
 )
 
@@ -45,7 +45,7 @@ type Server struct {
 	certPool *x509.CertPool
 	authService *AuthService
 	DockerServices *docker.DockerServices
-	ScanServices []providers.ScanService
+	ScanServices []scanners.ScanService
 	EmailService *utils.EmailService
 	dispatcher *Dispatcher
 	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
@@ -191,9 +191,9 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	//....To do: Dynamically link and load the scanning services that are requested,
 	// so that we don't have to statically reference them below.
 	
-	var clairScanSvc providers.ScanService
-	var twistlockScanSvc providers.ScanService
-	var openscapScanSvc providers.ScanService
+	var clairScanSvc scanners.ScanService
+	var twistlockScanSvc scanners.ScanService
+	var openscapScanSvc scanners.ScanService
 	var obj interface{} = config.ScanServices["clair"]
 	var isType bool
 	if obj != nil {
@@ -202,9 +202,9 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		if ! isType { AbortStartup("Configuration of clair services is ill-formed:") }
 		clairConfig["LocalIPAddress"] = config.ipaddr
 		if stubScanners {
-			clairScanSvc, err = providers.CreateClairServiceStub(clairConfig) // for testing only
+			clairScanSvc, err = scanners.CreateClairServiceStub(clairConfig) // for testing only
 		} else {
-			clairScanSvc, err = providers.CreateClairService(clairConfig)
+			clairScanSvc, err = scanners.CreateClairService(clairConfig)
 		}
 		if err != nil { AbortStartup("When instantiating Clair scan service: " + err.Error()) }
 	}
@@ -216,9 +216,9 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		if ! isType { AbortStartup("Configuration of twistlock services is ill-formed:") }
 		twistlockConfig["LocalIPAddress"] = config.ipaddr
 		if stubScanners {
-			twistlockScanSvc, err = providers.CreateTwistlockServiceStub(twistlockConfig) // for testing only
+			twistlockScanSvc, err = scanners.CreateTwistlockServiceStub(twistlockConfig) // for testing only
 		} else {
-	//		twistlockScanSvc, err = providers.CreateTwistlockService(twistlockConfig)
+	//		twistlockScanSvc, err = scanners.CreateTwistlockService(twistlockConfig)
 		}
 		if err != nil { AbortStartup("When instantiating Twistlock scan service: " + err.Error()) }
 	}
@@ -230,14 +230,14 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		if ! isType { AbortStartup("Configuration of openscap services is ill-formed:") }
 		openscapConfig["LocalIPAddress"] = config.ipaddr
 		if stubScanners {
-			openscapScanSvc, err = providers.CreateOpenScapServiceStub(openscapConfig) // for testing only
+			openscapScanSvc, err = scanners.CreateOpenScapServiceStub(openscapConfig) // for testing only
 		} else {
-	//		openscapScanSvc, err = providers.CreateOpenScapService(openscapConfig)
+	//		openscapScanSvc, err = scanners.CreateOpenScapService(openscapConfig)
 		}
 		if err != nil { AbortStartup("When instantiating OpenScap scan service: " + err.Error()) }
 	}
 	
-	server.ScanServices = []providers.ScanService{
+	server.ScanServices = []scanners.ScanService{
 		clairScanSvc,
 		twistlockScanSvc,
 		openscapScanSvc,
@@ -335,14 +335,14 @@ func (server *Server) LoginAlert(userId string) {
 /*******************************************************************************
  * 
  */
-func (server *Server) GetScanServices() []providers.ScanService {
+func (server *Server) GetScanServices() []scanners.ScanService {
 	return server.ScanServices
 }
 
 /*******************************************************************************
  * 
  */
-func (server *Server) GetScanService(name string) providers.ScanService {
+func (server *Server) GetScanService(name string) scanners.ScanService {
 	for _, service := range server.ScanServices {
 		if service.GetName() == name { return service }
 	}

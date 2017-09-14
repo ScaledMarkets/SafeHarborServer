@@ -29,9 +29,9 @@ import (
 	//"goredis"
 	
 	"safeharbor/apitypes"
-	"safeharbor/docker"
+	"docker"
 	"utilities/utils"
-	"safeharbor/providers"
+	"scanners"
 	
 	"utilities/rest"
 )
@@ -2742,7 +2742,7 @@ func (repo *InMemRepo) asRepoPlusDockerfileDesc(dbClient DBClient,
 	if err != nil { return nil, err }
 	var dockerfileContent = string(bytes)
 	
-	var paramValueDescs []*apitypes.DockerfileExecParameterValueDesc
+	var paramValueDescs []*docker.DockerfileExecParameterValueDesc
 	paramValueDescs, err = docker.ParseDockerfile(dockerfileContent)
 	if err != nil { return nil, err }
 	
@@ -2941,7 +2941,7 @@ func (dockerfile *InMemDockerfile) asDockerfileDesc() (*apitypes.DockerfileDesc,
 	if err != nil { return nil, err }
 	var dockerfileContent = string(bytes)
 	
-	var args []*apitypes.DockerfileExecParameterValueDesc
+	var args []*docker.DockerfileExecParameterValueDesc
 	args, err = docker.ParseDockerfile(dockerfileContent)
 	if err != nil { return nil, err }
 	return apitypes.NewDockerfileDesc(dockerfile.Id, dockerfile.getRepoId(),
@@ -3506,7 +3506,7 @@ func (imageVersion *InMemDockerImageVersion) getDockerImageTag() string {
 func (imageVersion *InMemDockerImageVersion) asDockerImageVersionDesc(dbClient DBClient) (
 	*apitypes.DockerImageVersionDesc, error) {
 	
-	var parsedDockerBuildOutput *apitypes.DockerBuildOutput
+	var parsedDockerBuildOutput *docker.DockerBuildOutput
 	var err error
 	parsedDockerBuildOutput, err = docker.ParseBuildRESTOutput(imageVersion.DockerBuildOutput)
 	if err != nil { return nil, err }
@@ -3652,8 +3652,8 @@ func (paramValue *InMemParameterValue) setStringValue(value string) {
 	paramValue.StringValue = value
 }
 
-func (paramValue *InMemParameterValue) asParameterValueDesc() *apitypes.ParameterValueDesc {
-	return apitypes.NewParameterValueDesc(paramValue.Name, //paramValue.TypeName,
+func (paramValue *InMemParameterValue) asParameterValueDesc() *rest.ParameterValueDesc {
+	return rest.NewParameterValueDesc(paramValue.Name, //paramValue.TypeName,
 		paramValue.StringValue)
 }
 
@@ -4374,13 +4374,13 @@ type InMemScanEvent struct {
 	ProviderName string
 	ActualParameterValueIds []string
 	Score string
-	Result providers.ScanResult
+	Result scanners.ScanResult
 }
 
 var _ ScanEvent = &InMemScanEvent{}
 
 func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageVersionId, userObjId,
-	providerName string, score string, result *providers.ScanResult,
+	providerName string, score string, result *scanners.ScanResult,
 	actParamValueIds []string) (*InMemScanEvent, error) {
 	
 	var event *InMemEvent
@@ -4401,7 +4401,7 @@ func (client *InMemClient) NewInMemScanEvent(scanConfigId, imageVersionId, userO
 
 func (client *InMemClient) dbCreateScanEvent(scanConfigId, providerName string,
 	paramNames, paramValues []string, imageVersionId,
-	userObjId, score string, result *providers.ScanResult) (ScanEvent, error) {
+	userObjId, score string, result *scanners.ScanResult) (ScanEvent, error) {
 	
 	// Create actual ParameterValues for the Event.
 	var err error
@@ -4536,7 +4536,7 @@ func (event *InMemScanEvent) asJSON() string {
 	
 	// Serialize the Result field in a manner that we can later deserialize: as
 	// an array of string arrays, where each string array contains the fields
-	// of a providers.Vulnerability.
+	// of a scanners.Vulnerability.
 	for i, vuln := range event.Result.Vulnerabilities {
 		if i > 0 { json = json + ", " }
 		json = json + fmt.Sprintf("[\"%s\", \"%s\", \"%s\", \"%s\"]",
@@ -4558,13 +4558,13 @@ func (client *InMemClient) ReconstituteScanEvent(id string, when time.Time,
 	if err != nil { return nil, err }
 	
 	// Deserialize the json for the Result.
-	var result  = &providers.ScanResult{
-		Vulnerabilities: []*providers.VulnerabilityDesc{
-			&providers.VulnerabilityDesc{ "", "", "", "" },
+	var result  = &scanners.ScanResult{
+		Vulnerabilities: []*scanners.VulnerabilityDesc{
+			&scanners.VulnerabilityDesc{ "", "", "", "" },
 		},
 	}
 	for i, vuln := range vulnAr {
-		result.Vulnerabilities[i] = &providers.VulnerabilityDesc{
+		result.Vulnerabilities[i] = &scanners.VulnerabilityDesc{
 				VCE_ID: vuln[0],
 				Link: vuln[1],
 				Priority: vuln[2],
@@ -4780,7 +4780,7 @@ func (execEvent *InMemDockerfileExecEvent) nullifyDockerImageVersion(dbClient DB
 }
 
 func (execEvent *InMemDockerfileExecEvent) asDockerfileExecEventDesc(dbClient DBClient) *apitypes.DockerfileExecEventDesc {
-	var paramValueDescs []*apitypes.DockerfileExecParameterValueDesc = make([]*apitypes.DockerfileExecParameterValueDesc, 0)
+	var paramValueDescs []*docker.DockerfileExecParameterValueDesc = make([]*docker.DockerfileExecParameterValueDesc, 0)
 	for _, valueId := range execEvent.ActualParameterValueIds {
 		var value DockerfileExecParameterValue
 		var err error
@@ -4905,7 +4905,7 @@ func (paramValue *InMemDockerfileExecParameterValue) getDockerfileId() string {
 	return paramValue.DockerfileId
 }
 
-func (client *InMemClient) asDockerfileExecParameterValueDesc(paramValue DockerfileExecParameterValue) *apitypes.DockerfileExecParameterValueDesc {
+func (client *InMemClient) asDockerfileExecParameterValueDesc(paramValue DockerfileExecParameterValue) *docker.DockerfileExecParameterValueDesc {
 	return paramValue.asDockerfileExecParameterValueDesc(client)
 }
 
@@ -4913,8 +4913,8 @@ func (paramValue *InMemDockerfileExecParameterValue) writeBack(dbClient DBClient
 	return dbClient.updateObject(paramValue)
 }
 
-func (paramValue *InMemDockerfileExecParameterValue) asDockerfileExecParameterValueDesc(dbClient DBClient) *apitypes.DockerfileExecParameterValueDesc {
-	return apitypes.NewDockerfileExecParameterValueDesc(paramValue.Name, paramValue.StringValue)
+func (paramValue *InMemDockerfileExecParameterValue) asDockerfileExecParameterValueDesc(dbClient DBClient) *docker.DockerfileExecParameterValueDesc {
+	return docker.NewDockerfileExecParameterValueDesc(paramValue.Name, paramValue.StringValue)
 }
 
 func (paramValue *InMemDockerfileExecParameterValue) dockerfileExecParameterValueFieldsAsJSON() string {

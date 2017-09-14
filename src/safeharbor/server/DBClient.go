@@ -28,7 +28,8 @@ import (
 	//"os"
 	
 	"safeharbor/apitypes"
-	"safeharbor/providers"
+	"scanners"
+	"docker"
 )
 
 /*******************************************************************************
@@ -100,7 +101,7 @@ type DBClient interface {
 	dbCreateScanParameterValue(name, value, configId string) (ScanParameterValue, error)
 	dbCreateFlag(name, desc, repoId, successImagePath string) (Flag, error)
 	dbCreateScanEvent(scanConfigId, providerName string, paramNames, paramValues []string, imageId,
-		userObjId, score string, result *providers.ScanResult) (ScanEvent, error)
+		userObjId, score string, result *scanners.ScanResult) (ScanEvent, error)
 	dbCreateDockerfileExecEvent(dockerfileId string, paramNames, paramValues []string,
 		imageId, userObjId string) (DockerfileExecEvent, error)
 	dbCreateDockerfileExecParameterValue(name, value, dockerfileId string) (DockerfileExecParameterValue, error)
@@ -398,7 +399,7 @@ type ParameterValue interface {  // abstract
 	getStringValue() string
 	setStringValue(string)  // does not write to db
 	parameterValueFieldsAsJSON() string
-	//asParameterValueDesc() *apitypes.ParameterValueDesc
+	//asParameterValueDesc() *rest.ParameterValueDesc
 }
 
 type ScanConfig interface {
@@ -437,7 +438,7 @@ type ScanParameterValue interface {
 type DockerfileExecParameterValue interface {
 	ParameterValue
 	getDockerfileId() string
-	asDockerfileExecParameterValueDesc(DBClient) *apitypes.DockerfileExecParameterValueDesc
+	asDockerfileExecParameterValueDesc(DBClient) *docker.DockerfileExecParameterValueDesc
 	dockerfileExecParameterValueFieldsAsJSON() string
 }
 

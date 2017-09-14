@@ -21,7 +21,7 @@ import (
 	
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
-	"safeharbor/docker"
+	"docker"
 	"utilities/utils"
 )
 
@@ -387,7 +387,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		dockerImageName, tag, paramNames, paramValues)
 	if err != nil { return nil, err }
 	
-	var dockerBuildOutput *apitypes.DockerBuildOutput
+	var dockerBuildOutput *docker.DockerBuildOutput
 	dockerBuildOutput, err = docker.ParseBuildRESTOutput(outputStr)
 	if err != nil { return nil, err }
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()

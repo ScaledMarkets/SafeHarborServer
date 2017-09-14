@@ -32,7 +32,8 @@ import (
 	
 	// SafeHarbor packages:
 	"utilities/utils"
-	"safeharbor/providers"
+	"scanners"
+	"docker"
 	
 	"utilities/rest"
 )
@@ -594,12 +595,12 @@ func (repoDescs RepoDescs) SendFile() (string, bool) {
 type RepoPlusDockerfileDesc struct {
 	RepoDesc
 	NewDockerfileId string
-	ParameterValueDescs []*DockerfileExecParameterValueDesc
+	ParameterValueDescs []*docker.DockerfileExecParameterValueDesc
 }
 
 func NewRepoPlusDockerfileDesc(id string, realmId string, name string, desc string,
 	creationTime time.Time, dockerfileIds []string, newDockerfileId string,
-	paramValueDescs []*DockerfileExecParameterValueDesc) *RepoPlusDockerfileDesc {
+	paramValueDescs []*docker.DockerfileExecParameterValueDesc) *RepoPlusDockerfileDesc {
 
 	return &RepoPlusDockerfileDesc{
 		RepoDesc: *NewRepoDesc(id, realmId, name, desc, creationTime, dockerfileIds),
@@ -628,11 +629,11 @@ type DockerfileDesc struct {
 	RepoId string
 	Description string
 	DockerfileName string
-	ParameterValueDescs []*DockerfileExecParameterValueDesc
+	ParameterValueDescs []*docker.DockerfileExecParameterValueDesc
 }
 
 func NewDockerfileDesc(id string, repoId string, name string, desc string,
-	paramValueDescs []*DockerfileExecParameterValueDesc) *DockerfileDesc {
+	paramValueDescs []*docker.DockerfileExecParameterValueDesc) *DockerfileDesc {
 	return &DockerfileDesc{
 		ResponseType: *NewResponseType(200, "OK", "DockerfileDesc"),
 		Id: id,
@@ -803,13 +804,13 @@ type DockerImageVersionDesc struct {
 	ImageScanConfigIds []string
 	ScanEventIds []string
 	DockerBuildOutput string
-	ParsedDockerBuildOutput *DockerBuildOutput
+	ParsedDockerBuildOutput *docker.DockerBuildOutput
 }
 
 func NewDockerImageVersionDesc(objId, version, imageObjId, imageName, imageDescription,
 	repoId, creationEventId string, creationTime time.Time, 
 	digest, signature []byte, imageScanConfigIds []string, scanEventIds []string,
-	buildOutput string, parsedDockerBuildOutput *DockerBuildOutput) *DockerImageVersionDesc {
+	buildOutput string, parsedDockerBuildOutput *docker.DockerBuildOutput) *DockerImageVersionDesc {
 	return &DockerImageVersionDesc{
 		ImageVersionDesc: *NewImageVersionDesc(
 			"DockerImageVersionDesc", 
@@ -953,22 +954,6 @@ func (desc *PermissionDesc) AsJSON() string {
 /*******************************************************************************
  * 
  */
-type ParameterValueDesc struct {
-	Name string
-	StringValue string
-}
-
-func NewParameterValueDesc(name string, strValue string) *ParameterValueDesc {
-	return &ParameterValueDesc{
-		Name: name,
-		//Type: tp,
-		StringValue: strValue,
-	}
-}
-
-/*******************************************************************************
- * 
- */
 type ScanConfigDesc struct {
 	ResponseType
 	Id string
@@ -1033,12 +1018,12 @@ func (scanConfigDescs ScanConfigDescs) SendFile() (string, bool) {
  * 
  */
 type ScanParameterValueDesc struct {
-	ParameterValueDesc
+	rest.ParameterValueDesc
 	ConfigId string
 }
 
 func NewScanParameterValueDesc(name, strValue, configId string) *ScanParameterValueDesc {
-	var paramValueDesc = NewParameterValueDesc(name, strValue)
+	var paramValueDesc = rest.NewParameterValueDesc(name, strValue)
 	return &ScanParameterValueDesc{
 		ParameterValueDesc: *paramValueDesc,
 		ConfigId: configId,
@@ -1048,25 +1033,6 @@ func NewScanParameterValueDesc(name, strValue, configId string) *ScanParameterVa
 func (desc *ScanParameterValueDesc) AsJSON() string {
 	return fmt.Sprintf(" {\"Name\": \"%s\", \"Value\": \"%s\", \"ConfigId\": \"%s\"}",
 		desc.Name, rest.EncodeStringForJSON(desc.StringValue), desc.ConfigId)
-}
-
-/*******************************************************************************
- * 
- */
-type DockerfileExecParameterValueDesc struct {
-	ParameterValueDesc
-}
-
-func NewDockerfileExecParameterValueDesc(name string, strValue string) *DockerfileExecParameterValueDesc {
-	var paramValueDesc = NewParameterValueDesc(name, strValue)
-	return &DockerfileExecParameterValueDesc{
-		ParameterValueDesc: *paramValueDesc,
-	}
-}
-
-func (desc *ParameterValueDesc) AsJSON() string {
-	return fmt.Sprintf(" {\"Name\": \"%s\", \"Value\": \"%s\"}",
-		desc.Name, rest.EncodeStringForJSON(desc.StringValue))
 }
 
 /*******************************************************************************
@@ -1193,12 +1159,12 @@ type ScanEventDesc struct {
 	ProviderName string
     ScanParameterValueDescs []*ScanParameterValueDesc
 	Score string
-	VulnerabilityDescs []*providers.VulnerabilityDesc
+	VulnerabilityDescs []*scanners.VulnerabilityDesc
 }
 
 func NewScanEventDesc(objId string, when time.Time, userObjId string,
 	imageVersionObjId, scanConfigId, providerName string, paramValueDescs []*ScanParameterValueDesc,
-	score string, vulnDescs []*providers.VulnerabilityDesc) *ScanEventDesc {
+	score string, vulnDescs []*scanners.VulnerabilityDesc) *ScanEventDesc {
 
 	return &ScanEventDesc{
 		EventDescBase: *NewEventDesc("ScanEventDesc", objId, when, userObjId),
@@ -1258,12 +1224,12 @@ type DockerfileExecEventDesc struct {
 	EventDescBase
 	ImageVersionObjId string
 	DockerfileId string
-	ParameterValueDescs []*DockerfileExecParameterValueDesc
+	ParameterValueDescs []*docker.DockerfileExecParameterValueDesc
 	DockerfileContent string
 }
 
 func NewDockerfileExecEventDesc(objId string, when time.Time, userId string,
-	imageVersionObjId, dockerfileId string, paramValueDescs []*DockerfileExecParameterValueDesc,
+	imageVersionObjId, dockerfileId string, paramValueDescs []*docker.DockerfileExecParameterValueDesc,
 	dockerfileContent string) *DockerfileExecEventDesc {
 
 	return &DockerfileExecEventDesc{

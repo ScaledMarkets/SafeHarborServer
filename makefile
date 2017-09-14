@@ -23,6 +23,7 @@ PKGDIR := $(PROJECTROOT)/pkg
 STATUSDIR := $(PROJECTROOT)/status
 UTILITIESDIR:=$(realpath $(PROJECTROOT)/../utilities)
 SCANNERSDIR:=$(realpath $(PROJECTROOT)/../scanners)
+DOCKERDIR:=$(realpath $(PROJECTROOT)/../docker)
 
 # Tools: -----------------------------------------------------------------------
 SHELL := /bin/sh
@@ -48,7 +49,7 @@ $(BUILDDIR)/$(EXECNAME): $(BUILDDIR) $(SRCDIR)/$(PACKAGENAME)/*.go
 # The compile target depends on the main executable.
 # 'make compile' builds the executable, which is placed in <build_dir>.
 compile: $(BUILDDIR)/$(EXECNAME)
-	GOPATH=$(PROJECTROOT):$(SCANNERSDIR):$(UTILITIESDIR) go install $(PACKAGENAME)
+	GOPATH=$(PROJECTROOT):$(SCANNERSDIR):$(DOCKERDIR):$(UTILITIESDIR) go install $(PACKAGENAME)
 
 # See https://www.elastic.co/blog/code-coverage-for-your-golang-system-tests
 # See https://blog.golang.org/cover
