@@ -13,7 +13,9 @@ export RegistryPort=5000
 export TwistlockDir=/twistlock
 
 # Do not change:
-export PROJECTROOT=$( cd $( dirname ${BASH_SOURCE[0]} ) && pwd )/../..
+pushd $( dirname "${BASH_SOURCE[0]}" )/../..
+export PROJECTROOT=`pwd`
+popd
 . $PROJECTROOT/build/common/env.sh
 #export ScaledMarketsRegistryNamespace=scaledmarkets
 #export ScaledMarketsRegistryNamespace=500058573678.dkr.ecr.us-east-1.amazonaws.com
