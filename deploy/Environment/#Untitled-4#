@@ -1,4 +1,0 @@
-export AWS_ACCESS_KEY_ID=AKIAJ35SJOJJIS7JIYRQ
-export AWS_SECRET_ACCESS_KEY=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
-export AWS_DEFAULT_REGION=us-west-2
-export PATH=/xvdf/kubernetes/platforms/linux/amd64:$PATH

@@ -20,6 +20,7 @@ sudo docker run --net=host -d -p $SafeHarborPort:$SafeHarborPort \
 	$SafeHarborImageName /safeharbor/safeharbor \
 	-debug -port=$SafeHarborPort -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host=$SafeHarborServerHost
 
+#sudo docker run --net=host -d -p $SafeHarborPort:$SafeHarborPort -v $DataVolMountPoint:/safeharbor/data -v /var/run/docker.sock:/var/run/docker.sock $SafeHarborImageName /safeharbor/safeharbor -debug -port=$SafeHarborPort -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host=$SafeHarborServerHost
 
 # For debugging:
 # Start container but don't start SafeHarborServer.
