@@ -1,4 +1,4 @@
-# Makefile for building the Safe Harbor Server.
+# Makefile for compiling the Safe Harbor Server.
 # Testing is not done by this makefile - see separate project "TestSafeHarborServer".
 
 # To do: Incorporate https://github.com/awslabs/git-secrets

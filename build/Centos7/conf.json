@@ -19,7 +19,7 @@
 		},
 		"twistlock": {
 			"Host": "localhost",
-			"Port": "6070"
+			"Port": "8083"
 		},
 		"openscap": {
 			"Host": "localhost",
