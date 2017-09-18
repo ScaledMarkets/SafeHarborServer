@@ -6,8 +6,8 @@
 # https://jmeter.apache.org/usermanual/remote-test.html
 # http://www.tutorialspoint.com/jmeter/jmeter_webservice_test_plan.htm
 
-export AWS_ACCESS_KEY_ID=AKIAI27NVGQHURDD6NGA 
-export AWS_SECRET_ACCESS_KEY=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
+export AWS_ACCESS_KEY_ID=
+export AWS_SECRET_ACCESS_KEY=
 export AWS_DEFAULT_REGION=us-west-2
 export AWS_REGION=us-west-2
 export EC2_LOCAL_PEM_FILE_PATH=alethixkey.pem

@@ -14,7 +14,7 @@ users:
   # Password is specified as a BCrypt hash.
   # htpasswd -B -n
   "admin":
-    password: "$2y$05$VoMk1htKkwxXQLLgWfIIQuCyQksdGZ61QU4cuTOThYgCDPZMffqfy"
+    password: 
   "": {}  # Allow anonymous (no "docker login") access.
 
 acl:

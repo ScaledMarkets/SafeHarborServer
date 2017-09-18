@@ -20,6 +20,7 @@ fi
 . $SafeHarborCredentialDir/SetRedisPassword.sh
 . $SafeHarborCredentialDir/SetRegistryPassword.sh
 . $SafeHarborCredentialDir/SetTwistlockBearerToken.sh
+. $SafeHarborCredentialDir/SetSafeHarborRandomString.sh
 
 # Start redis (needed by SafeHarborServer).
 cp $PROJECTROOT/deploy/all/redis.conf $RedisConfigDir
@@ -82,5 +83,7 @@ else # run as a container.
 	sudo docker run -i -t --name safeharborserver --net=host -p $SafeHarborPort:$SafeHarborPort \
 		-v $DataVolMountPoint:/safeharbor/data \
 		-v /var/run/docker.sock:/var/run/docker.sock \
+		-e RandomString="$RandomString" \
+		-e SafeHarborPublicHostname="127.0.0.1" \
 		$SafeHarborImageName bash
 fi

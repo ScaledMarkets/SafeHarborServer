@@ -17,6 +17,8 @@ sudo docker pull $SafeHarborImageName
 sudo docker run --net=host -d -p $SafeHarborPort:$SafeHarborPort \
 	-v $DataVolMountPoint:/safeharbor/data \
 	-v /var/run/docker.sock:/var/run/docker.sock \
+	-e RandomString="$RandomString" \
+	-e SafeHarborPublicHostname="127.0.0.1" \
 	$SafeHarborImageName /safeharbor/safeharbor \
 	-debug -port=$SafeHarborPort -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host=$SafeHarborServerHost
 
