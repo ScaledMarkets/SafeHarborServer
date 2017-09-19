@@ -29,7 +29,6 @@ else
 fi
 
 # Push safeharborserver image to registry:
-source $ScaledMarketsCredentialsDir/SetDockerhubCredentials.sh
 docker login -u $DockerhubUserId -p $DockerhubPassword
 docker push $SafeHarborImageName
 docker logout

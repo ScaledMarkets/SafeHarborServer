@@ -22,6 +22,7 @@ fi
 [ ! -d $PostgresDir ] && mkdir -p $PostgresDir
 [ ! -d $RedisConfigDir ] && mkdir -p $RedisConfigDir
 [ ! -d $RedisDataDir ] && mkdir -p $RedisDataDir
+[ ! -d $TwistlockDir ] && mkdir -p $TwistlockDir
 
 # Retrieve/update images that are needed.
 sudo docker pull docker.io/redis

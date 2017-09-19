@@ -8,4 +8,4 @@ ADD ["*.crt", "/safeharbor/"]
 ADD ["*.conf", "/safeharbor/"]
 ADD ["*.json", "/safeharbor/"]
 WORKDIR /safeharbor/
-CMD ["/safeharbor/safeharbor", "-port", "6000", "-secretkey", "${RandomString}", "-host", "${SafeHarborPublicHostname}", "-toggleemail", "-stubs", "-noregistry", "-inmem", "-debug"]
+#CMD ["/safeharbor/safeharbor", "-port", "6000", "-secretkey", "${RandomString}", "-host", "${SafeHarborPublicHostname}", "-toggleemail", "-stubs", "-noregistry", "-inmem", "-debug"]

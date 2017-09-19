@@ -14,7 +14,8 @@
 sudo docker pull $SafeHarborImageName
 
 # Start SafeHarborServer.
-sudo docker run --net=host -d -p $SafeHarborPort:$SafeHarborPort \
+sudo docker run --name safeharbor \
+	--net=host -d -p $SafeHarborPort:$SafeHarborPort \
 	-v $DataVolMountPoint:/safeharbor/data \
 	-v /var/run/docker.sock:/var/run/docker.sock \
 	-e RandomString="$RandomString" \
@@ -22,7 +23,7 @@ sudo docker run --net=host -d -p $SafeHarborPort:$SafeHarborPort \
 	$SafeHarborImageName /safeharbor/safeharbor \
 	-debug -port=$SafeHarborPort -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host=$SafeHarborServerHost
 
-#sudo docker run --net=host -d -p $SafeHarborPort:$SafeHarborPort -v $DataVolMountPoint:/safeharbor/data -v /var/run/docker.sock:/var/run/docker.sock $SafeHarborImageName /safeharbor/safeharbor -debug -port=$SafeHarborPort -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host=$SafeHarborServerHost
+#sudo docker run --name safeharbor -e RandomString="$RandomString" -e SafeHarborPublicHostname="127.0.0.1" --net=host -d -p $SafeHarborPort:$SafeHarborPort -v $DataVolMountPoint:/safeharbor/data -v /var/run/docker.sock:/var/run/docker.sock $SafeHarborImageName /safeharbor/safeharbor -debug -port=$SafeHarborPort -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host=$SafeHarborServerHost
 
 # For debugging:
 # Start container but don't start SafeHarborServer.

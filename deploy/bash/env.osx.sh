@@ -18,7 +18,6 @@ export PROJECTROOT=`pwd`
 echo "PROJECTROOT=$PROJECTROOT"
 popd
 . $PROJECTROOT/build/common/env.sh
-#export ScaledMarketsRegistryNamespace=scaledmarkets
-#export ScaledMarketsRegistryNamespace=500058573678.dkr.ecr.us-east-1.amazonaws.com
-#export SafeHarborImageName=$ScaledMarketsRegistryNamespace/safeharborserver
+export ScaledMarketsRegistryNamespace=scaledmarkets
+export SafeHarborImageName=$ScaledMarketsRegistryNamespace/safeharborserver
 export TARGET_ENV_CONFIGURED=yes
