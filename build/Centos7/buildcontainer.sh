@@ -1,14 +1,9 @@
 #!/bin/sh
 # Compile the source code and package it as a container image.
-# Run this on the machine that hosts the containers under test.
+# Run this on a target architecture machine.
 # Arguments:
 #	$1 - Optional. If the first argument equals "TEST", then the code will be
 #		compiled for testing, with full instrumentation, including code coverage.
-# 
-# MANUAL STEP:
-# Log into AWS container registry:
-# Get the AWS container registry login command by executing "aws ecr get-login" locally.
-# Then paste that command into the build env shell.
 
 pushd $PROJECTROOT
 

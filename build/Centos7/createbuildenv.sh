@@ -1,6 +1,6 @@
 #!/bin/sh
 # Configure a build and test environment.
-# Run this on the machine that hosts the containers under test (this script does not create that machine).
+# Run this on a target architecture machine.
 # The machine must have docker and docker Compose installed on Centos7.
 # For Docker, see https://docs.docker.com/engine/installation/linux/centos/
 # For Compose, see https://github.com/docker/compose/releases

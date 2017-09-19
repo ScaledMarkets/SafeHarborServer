@@ -1,4 +1,10 @@
 
+
+pushd $( dirname "${BASH_SOURCE[0]}" )/../..
+export PROJECTROOT=`pwd`
+echo "PROJECTROOT=$PROJECTROOT"
+popd
+
 export ScaledMarketsCredentialsDir=~/Documents/ScaledMarkets/Credentials
 export SafeHarborCredentialDir=$PROJECTROOT/Credentials
 
