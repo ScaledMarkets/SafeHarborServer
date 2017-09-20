@@ -29,7 +29,7 @@
 	
 	"EmailService": {
 		"SES_SMTP_hostname": "email-smtp.us-west-2.amazonaws.com",
-		"SES_SMTP_Port": 25,
+		"SES_SMTP_Port": "25",
 		"SenderAddress": "cliff_test@cliffberg.com",
 		"SenderUserId": "AKIAI2FOYVEKGEZXKX6A",
 		"SenderPassword": "$EmailServicePassword"
