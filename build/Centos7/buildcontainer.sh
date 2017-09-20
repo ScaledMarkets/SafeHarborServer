@@ -23,14 +23,14 @@ cd build/Centos7
 
 if [ $1 -eq 'TEST' ]
 then
-	docker build --file Dockerfile.test --tag=$SafeHarborImageName .
+	sudo docker build --file Dockerfile.test --tag=$SafeHarborImageName .
 else
-	docker build --tag=$SafeHarborImageName .
+	sudo docker build --tag=$SafeHarborImageName .
 fi
 
 # Push safeharborserver image to registry:
-docker login -u $DockerhubUserId -p $DockerhubPassword
-docker push $SafeHarborImageName
-docker logout
+sudo docker login -u $DockerhubUserId -p $DockerhubPassword
+sudo docker push $SafeHarborImageName
+sudo docker logout
 
 popd
