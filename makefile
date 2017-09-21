@@ -21,10 +21,10 @@ SRCDIR := $(PROJECTROOT)/src
 BUILDDIR := $(PROJECTROOT)/bin
 PKGDIR := $(PROJECTROOT)/pkg
 STATUSDIR := $(PROJECTROOT)/status
-UTILITIESDIR:=$(realpath $(PROJECTROOT)/../utilities/utils)
-RESTDIR:=$(realpath $(PROJECTROOT)/../utilities/rest)
-SCANNERSDIR:=$(realpath $(PROJECTROOT)/../scanners)
-DOCKERDIR:=$(realpath $(PROJECTROOT)/../docker)
+UTILITIESDIR := $(realpath $(PROJECTROOT)/../utilities/utils)
+RESTDIR := $(realpath $(PROJECTROOT)/../utilities/rest)
+SCANNERSDIR := $(realpath $(PROJECTROOT)/../scanners)
+DOCKERDIR := $(realpath $(PROJECTROOT)/../docker)
 
 # Tools: -----------------------------------------------------------------------
 SHELL := /bin/sh
