@@ -29,7 +29,7 @@ import (
 	"safeharbor/apitypes"
 	"docker"
 	"scanners"
-	"utilities/utils"
+	"utilities"
 )
 
 /*******************************************************************************
@@ -46,7 +46,7 @@ type Server struct {
 	authService *AuthService
 	DockerServices *docker.DockerServices
 	ScanServices []scanners.ScanService
-	EmailService *utils.EmailService
+	EmailService *utilities.EmailService
 	dispatcher *Dispatcher
 	sessions map[string]*apitypes.Credentials  // map session key to Credentials.
 	Authorize bool
@@ -82,7 +82,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 	if publicHostname != "" { config.PublicHostname = publicHostname }
 	
 	// Determine the IP address.
-	config.ipaddr, err = utils.DetermineIPAddress(config.netIntfName)
+	config.ipaddr, err = utilities.DetermineIPAddress(config.netIntfName)
 	if err != nil { return nil, err }
 	if config.ipaddr == "" {
 		fmt.Println("Did not find an IP4 address for network interface " + config.netIntfName)
@@ -250,8 +250,8 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 			AbortStartup("Email service is not configured")
 		}
 	} else {
-		var emailService *utils.EmailService
-		emailService, err = utils.CreateEmailService(config.EmailService)
+		var emailService *utilities.EmailService
+		emailService, err = utilities.CreateEmailService(config.EmailService)
 		if err != nil { AbortStartup("When instantiating email service: " + err.Error()) }
 		server.EmailService = emailService
 	}

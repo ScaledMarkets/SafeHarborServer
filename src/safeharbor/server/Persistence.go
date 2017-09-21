@@ -26,7 +26,7 @@ import (
 	
 	//"safeharbor/apitypes"
 	//"docker"
-	"utilities/utils"
+	"utilities"
 )
 
 const (
@@ -109,7 +109,7 @@ func (persist *Persistence) NewTxnContext() (TxnContext, error) {
 	var err error
 	
 	if ! persist.InMemoryOnly {
-	if persist.RedisClient == nil { return nil, utils.ConstructServerError("Redis not configured") }
+	if persist.RedisClient == nil { return nil, utilities.ConstructServerError("Redis not configured") }
 		goRedisTxn, err = persist.RedisClient.Transaction()
 		if err != nil { return nil, err }
 	}
@@ -165,7 +165,7 @@ func (persist *Persistence) addIdentityValidationInfo(token, infoObjId string) e
 		added, err = persist.RedisClient.HSet(EmailTokenHashName, token, infoObjId)
 		if err != nil { debug.PrintStack() }
 		if err != nil { return err }
-		if ! added { return utils.ConstructServerError("Unable to add email token") }
+		if ! added { return utilities.ConstructServerError("Unable to add email token") }
 	}
 	return nil
 }
@@ -205,15 +205,15 @@ func (persist *Persistence) remIdentityValidationInfo(token string) error {
 		var err error
 		bytes, err = persist.RedisClient.HGet(EmailTokenHashName, token)
 		if err != nil { return err }
-		if bytes == nil { return utils.ConstructServerError("Token not found") }
-		if len(bytes) == 0 { return utils.ConstructServerError("Obj Id has zero length") }
+		if bytes == nil { return utilities.ConstructServerError("Token not found") }
+		if len(bytes) == 0 { return utilities.ConstructServerError("Obj Id has zero length") }
 		var infoObjId = string(bytes)
 		
 		// Remove from database.
 		var numDeleted int64
 		numDeleted, err = persist.RedisClient.HDel(EmailTokenHashName, token)
 		if err != nil { return err }
-		if numDeleted != 1 { return utils.ConstructServerError("Unable to delete token info") }
+		if numDeleted != 1 { return utilities.ConstructServerError("Unable to delete token info") }
 		persist.emailTokenMap[token] = ""
 		persist.allObjects[infoObjId] = nil
 	}
@@ -425,7 +425,7 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 		var persistObj PersistObj
 		var isType bool
 		persistObj, isType = obj.(PersistObj)
-		if ! isType { return nil, utils.ConstructServerError("Object is not a PersistObj") }
+		if ! isType { return nil, utilities.ConstructServerError("Object is not a PersistObj") }
 		
 		return persistObj, nil
 	}
@@ -438,7 +438,7 @@ func (persist *Persistence) getObject(txn TxnContext, factory interface{}, id st
 func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 	if persist.InMemoryOnly {
 		var r = persist.realmMap[newRealm.getName()]
-		if r != "" { return utils.ConstructUserError(
+		if r != "" { return utilities.ConstructUserError(
 			"A realm with name '" + newRealm.getName() + "' already exists")
 		}
 		persist.realmMap[newRealm.getName()] = newRealm.getId()
@@ -450,7 +450,7 @@ func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 		realmObjId, err = persist.GetRealmObjIdByRealmName(newRealm.getName())
 		if err != nil { return err }
 		if realmObjId != "" {
-			return utils.ConstructUserError(
+			return utilities.ConstructUserError(
 				"A realm with name '" + newRealm.getName() + "' already exists")
 		}
 
@@ -459,7 +459,7 @@ func (persist *Persistence) addRealm(txn TxnContext, newRealm Realm) error {
 		added, err = persist.RedisClient.HSet(RealmHashName, newRealm.getName(), newRealm.getId())
 		if err != nil { debug.PrintStack() }
 		if err != nil { return err }
-		if ! added { return utils.ConstructServerError("Unable to add realm " + newRealm.getName()) }
+		if ! added { return utilities.ConstructServerError("Unable to add realm " + newRealm.getName()) }
 		
 		persist.realmMap[newRealm.getName()] = newRealm.getId()
 		err = persist.updateObject(txn, newRealm)
@@ -493,7 +493,7 @@ func (persist *Persistence) addUser(txn TxnContext, user User) error {
 	if persist.InMemoryOnly {
 		var u = persist.allUserIds[user.getUserId()]
 		if u != "" {
-			return utils.ConstructUserError(
+			return utilities.ConstructUserError(
 				"A user with user Id '" + user.getUserId() + "' already exists")
 		}
 		persist.allUserIds[user.getUserId()] = user.getId()
@@ -507,7 +507,7 @@ func (persist *Persistence) addUser(txn TxnContext, user User) error {
 		userObjId, err = persist.GetUserObjIdByUserId(txn, user.getUserId())
 		if err != nil { return err }
 		if userObjId != "" {
-			return utils.ConstructUserError(
+			return utilities.ConstructUserError(
 				"A user with name '" + user.getName() + "' already exists")
 		}
 		
@@ -515,7 +515,7 @@ func (persist *Persistence) addUser(txn TxnContext, user User) error {
 		var added bool
 		added, err = persist.RedisClient.HSet(UserHashName, user.getUserId(), user.getId())
 		if err != nil { return err }
-		if ! added { return utils.ConstructServerError("Unable to add user " + user.getName()) }
+		if ! added { return utilities.ConstructServerError("Unable to add user " + user.getName()) }
 		
 		// Write user object to database.
 		err = persist.updateObject(txn, user)
@@ -535,7 +535,7 @@ func (persist *Persistence) init() error {
 	
 	if persist.InMemoryOnly {
 		var err = persist.loadCoreData()
-		if err != nil { return utils.ConstructServerError("Unable to load database state: " + err.Error()) }
+		if err != nil { return utilities.ConstructServerError("Unable to load database state: " + err.Error()) }
 	}
 	
 	/*
@@ -635,7 +635,7 @@ func (persist *Persistence) clearDatabase() error {
 	nkeys, err = persist.RedisClient.DBSize()
 	if err != nil { return err }
 	if nkeys == 0 { fmt.Println("All database keys successfully deleted") } else {
-		return utils.ConstructServerError(fmt.Sprintf(
+		return utilities.ConstructServerError(fmt.Sprintf(
 			"Database not deleted: %d keys remain", nkeys))
 	}
 	return nil
@@ -664,7 +664,7 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 	var methodName = "Reconstitute" + typeName
 	var method = reflect.ValueOf(factory).MethodByName(methodName)
 	if err != nil { return typeName, nil, err }
-	if ! method.IsValid() { return typeName, nil, utils.ConstructServerError(
+	if ! method.IsValid() { return typeName, nil, utilities.ConstructServerError(
 		"Method " + methodName + " is unknown") }
 	
 	var actArgAr []reflect.Value
@@ -683,7 +683,7 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 		for _, v := range actArgAr {
 			fmt.Println("\t" + v.Type().String())
 		}
-		return typeName, nil, utils.ConstructServerError(fmt.Sprintf(
+		return typeName, nil, utilities.ConstructServerError(fmt.Sprintf(
 			"For " + typeName + ", number of actual args (%d) does not match number of formal args (%d)",
 			len(actArgAr), noOfFormalArgs))
 	}
@@ -722,7 +722,7 @@ func ReconstituteObject(factory interface{}, json string) (string, interface{}, 
 		
 		// Check that arg types match.
 		if ! actArgAr[a].Type().AssignableTo(methodType.In(a)) {
-			return typeName, nil, utils.ConstructServerError(fmt.Sprintf(
+			return typeName, nil, utilities.ConstructServerError(fmt.Sprintf(
 				"For argument #%d, type of actual arg, %s, " +
 				"is not assignable to the required type, %s. JSON=%s",
 				(a+1), actArgAr[a].Type().String(), methodType.In(a).String(), json))

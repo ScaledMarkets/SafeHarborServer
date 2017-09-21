@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 	"net/url"
-	"utilities/utils"
+	"utilities"
 )
 
 const (
@@ -15,14 +15,14 @@ const (
  * Store EmailAddress in Joe’s account, and flag it as unverified.
  * This method does not commit the transaction.
  */
-func EstablishEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.EmailService,
+func EstablishEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utilities.EmailService,
 	userId string, emailAddress string) error {
 	
 	var user User
 	var err error
 	user, err = dbClient.dbGetUserByUserId(userId)
 	if err != nil { return err } // invalid user Id
-	if user == nil { return utils.ConstructUserError("Unrecognized user Id") }
+	if user == nil { return utilities.ConstructUserError("Unrecognized user Id") }
 	err = user.setUnverifiedEmailAddress(dbClient, emailAddress)  // sets a unvalidated
 	if err != nil { return err }
 	
@@ -39,7 +39,7 @@ func EstablishEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.Ema
  * Embed unforgeable, token containing a digest of the email address and a unique
  * token Id.
  */
-func ValidateEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utils.EmailService,
+func ValidateEmail(authSvc *AuthService, dbClient DBClient, emailSvc *utilities.EmailService,
 	userId, emailAddress string) error {
 	
 	var token string
@@ -67,7 +67,7 @@ func ValidateEmailToken(dbClient DBClient, authSvc *AuthService,
 	token string) (userId string, emailAddress string, err error) {
 	
 	if ! authSvc.validateSessionId(token) {
-		return "", "", utils.ConstructUserError("Token is not valid")
+		return "", "", utilities.ConstructUserError("Token is not valid")
 	}
 	
 	// Check if it is in the map of pending tokens.
@@ -81,18 +81,18 @@ func ValidateEmailToken(dbClient DBClient, authSvc *AuthService,
 		var user User
 		user, err = dbClient.dbGetUserByUserId(info.getUserId())
 		if err != nil { return "", "", err }
-		if user == nil { return "", "", utils.ConstructUserError("User not found") }
+		if user == nil { return "", "", utilities.ConstructUserError("User not found") }
 		userId = user.getUserId()
 		emailAddress = user.getEmailAddress()
 		
 	} else {
-		return "", "", utils.ConstructUserError("Token not recognized")
+		return "", "", utilities.ConstructUserError("Token not recognized")
 	}
 	
 	// Check if the token is expired.
 	var duration = time.Duration(IdentityVerificationTokenLifespanInHours)*time.Hour
 	if time.Now().After(info.getCreationTime().Add(duration)) {
-		return "", "", utils.ConstructUserError("Token expired")
+		return "", "", utilities.ConstructUserError("Token expired")
 	}
 		
 	// Remove from map of pending tokens.

@@ -22,7 +22,7 @@ import (
 	// SafeHarbor packages:
 	"safeharbor/apitypes"
 	"docker"
-	"utilities/utils"
+	"utilities"
 )
 
 /*******************************************************************************
@@ -37,7 +37,7 @@ func createUniqueFilename(dir string, basename string) (string, error) {
 			return p, nil
 		}
 	}
-	return "", utils.ConstructServerError("Unable to create unique file name in directory " + dir)
+	return "", utilities.ConstructServerError("Unable to create unique file name in directory " + dir)
 }
 
 /*******************************************************************************
@@ -85,7 +85,7 @@ func printFileMap(m map[string][]*multipart.FileHeader) {
 func nameConformsToSafeHarborImageNameRules(name string) error {
 	var err error = docker.NamePartConformsToDockerRules(name)
 	if err != nil { return err }
-	if strings.Contains(name, ".") { return utils.ConstructUserError(
+	if strings.Contains(name, ".") { return utilities.ConstructUserError(
 		"SafeHarbor does not allow periods in names: " + name)
 	}
 	return nil
@@ -184,7 +184,7 @@ func getCurrentUser(dbClient DBClient, sessionToken *apitypes.SessionToken) (Use
 	if sessionToken == nil { return nil, nil }
 	
 	if ! dbClient.getServer().authService.sessionIdIsValid(sessionToken.UniqueSessionId) {
-		return nil, utils.ConstructUserError("Session is not valid")
+		return nil, utilities.ConstructUserError("Session is not valid")
 	}
 	
 	var userId string = sessionToken.AuthenticatedUserid
@@ -193,7 +193,7 @@ func getCurrentUser(dbClient DBClient, sessionToken *apitypes.SessionToken) (Use
 	user, err = dbClient.dbGetUserByUserId(userId)
 	if err != nil { return nil, err }
 	if user == nil {
-		return nil, utils.ConstructUserError("user object cannot be identified from user id " + userId)
+		return nil, utilities.ConstructUserError("user object cannot be identified from user id " + userId)
 	}
 	
 	return user, nil
@@ -259,19 +259,19 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 	var err error
 	var headers []*multipart.FileHeader = files["filename"]
 	if len(headers) == 0 { return "", "", nil }
-	if len(headers) > 1 { return "", "", utils.ConstructUserError("Too many files posted") }
+	if len(headers) > 1 { return "", "", utilities.ConstructUserError("Too many files posted") }
 	var header *multipart.FileHeader = headers[0]
 	var filename string = header.Filename	
 	fmt.Println("Filename:", filename)
 	
 	// Validate syntax of filename: must be a simple name - no slashes, and a valid file name
 	err = validateSimpleFileNameSyntax(filename)
-	if err != nil { return "", "", utils.ConstructServerError(err.Error()) }
+	if err != nil { return "", "", utilities.ConstructServerError(err.Error()) }
 	
 	var file multipart.File
 	file, err = header.Open()
-	if err != nil { return "", "", utils.ConstructServerError(err.Error()) }
-	if file == nil { return "", "", utils.ConstructServerError("Internal Error") }	
+	if err != nil { return "", "", utilities.ConstructServerError(err.Error()) }
+	if file == nil { return "", "", utilities.ConstructServerError("Internal Error") }	
 	
 	// Create a filename for the new file.
 	var filepath = repo.getFileDirectory() + "/" + filename
@@ -279,12 +279,12 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 		filepath, err = createUniqueFilename(repo.getFileDirectory(), filename)
 		if err != nil {
 			fmt.Println(err.Error())
-			return "", "", utils.ConstructServerError(err.Error())
+			return "", "", utilities.ConstructServerError(err.Error())
 		}
 	}
 	if fileExists(filepath) {
 		fmt.Println("********Internal error: file exists but it should not:" + filepath)
-		return "", "", utils.ConstructServerError("********Internal error: file exists but it should not:" + filepath)
+		return "", "", utilities.ConstructServerError("********Internal error: file exists but it should not:" + filepath)
 	}
 	
 	// Save the file data to a permanent file.
@@ -297,7 +297,7 @@ func captureFile(repo Repo, files map[string][]*multipart.FileHeader) (string, s
 		err = ioutil.WriteFile(filepath, buf, os.ModeAppend | os.ModePerm)
 		if err != nil {
 			fmt.Println(err.Error())
-			return "", "", utils.ConstructServerError("While writing file, " + err.Error())
+			return "", "", utilities.ConstructServerError("While writing file, " + err.Error())
 		}
 		size = size + int64(n)
 		if n < 100000 { break }
@@ -345,14 +345,14 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		paramValues = make([]string, len(paramPairs))
 		for i, paramPair := range paramPairs {
 			var parts = strings.Split(paramPair, ":")
-			if len(parts) != 2 { return nil, utils.ConstructUserError(
+			if len(parts) != 2 { return nil, utilities.ConstructUserError(
 				"Ill-formed param string: '" + paramString + "'") }
 			paramNames[i] = parts[0]
 			paramValues[i] = parts[1]
 			_, err = apitypes.Sanitize(paramNames[i])
-			if err != nil { return nil, utils.ConstructUserError(err.Error()) }
+			if err != nil { return nil, utilities.ConstructUserError(err.Error()) }
 			_, err = apitypes.Sanitize(paramValues[i])
-			if err != nil { return nil, utils.ConstructUserError(err.Error()) }
+			if err != nil { return nil, utilities.ConstructUserError(err.Error()) }
 		}
 	}
 	
@@ -404,7 +404,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var imageVersion DockerImageVersion
 	imageVersion, err = dbClient.dbCreateDockerImageVersion(version, dockerImage.getId(),
 		time.Now(), outputStr, digest, signature)
-	if imageVersion.getId() == "" { return nil, utils.ConstructServerError("imageVersion.getId() is nil") }
+	if imageVersion.getId() == "" { return nil, utilities.ConstructServerError("imageVersion.getId() is nil") }
 	if err != nil { return nil, err }
 		
 	// Create an event to record that this happened.
@@ -447,7 +447,7 @@ func getDefaultRepoForUser(dbClient DBClient, userId string) (Repo, error) {
 	user, err = dbClient.dbGetUserByUserId(userId)
 	if err != nil { return nil, err }
 	if user == nil {
-		return nil, utils.ConstructUserError("user object cannot be identified from user id " + userId)
+		return nil, utilities.ConstructUserError("user object cannot be identified from user id " + userId)
 	}
 	
 	var repoId string = user.getDefaultRepoId()
@@ -508,7 +508,7 @@ func getLeafResources(dbClient DBClient, user User,
 			case DockerImage: if leafType == ADockerImage { leaves[v.getId()] = v }
 			case ScanConfig: if leafType == AScanConfig { leaves[v.getId()] = v }
 			case Flag: if leafType == AFlag { leaves[v.getId()] = v }
-			default: return nil, utils.ConstructServerError("Internal error: unexpected repository object type")
+			default: return nil, utilities.ConstructServerError("Internal error: unexpected repository object type")
 		}
 	}
 	// Create composite list of repos that the user has access to, either directly
@@ -521,7 +521,7 @@ func getLeafResources(dbClient DBClient, user User,
 			var err error
 			r, err = dbClient.getRepo(repoId)
 			if err != nil { return nil, err }
-			if r == nil { return nil, utils.ConstructServerError("No repo found for Id " + repoId) }
+			if r == nil { return nil, utilities.ConstructServerError("No repo found for Id " + repoId) }
 			repos[repoId] = r
 		}
 	}
@@ -532,7 +532,7 @@ func getLeafResources(dbClient DBClient, user User,
 			case ADockerImage: err = mapRepoDockerImageIds(dbClient, repo, leaves)
 			case AScanConfig: err = mapRepoScanConfigIds(dbClient, repo, leaves)
 			case AFlag: err = mapRepoFlagIds(dbClient, repo, leaves)
-			default: return nil, utils.ConstructServerError("Internal error: unexpected repository object type")
+			default: return nil, utilities.ConstructServerError("Internal error: unexpected repository object type")
 		}
 		if err != nil { return nil, err }
 	}
@@ -550,7 +550,7 @@ func mapRepoDockerfileIds(dbClient DBClient, repo Repo, leaves map[string]Resour
 		var err error
 		d, err = dbClient.getDockerfile(dockerfileId)
 		if err != nil { return err }
-		if d == nil { return utils.ConstructServerError("Internal Error: No dockerfile found for Id " + dockerfileId) }
+		if d == nil { return utilities.ConstructServerError("Internal Error: No dockerfile found for Id " + dockerfileId) }
 		leaves[dockerfileId] = d
 	}
 	return nil
@@ -566,7 +566,7 @@ func mapRepoDockerImageIds(dbClient DBClient, repo Repo, leaves map[string]Resou
 		var err error
 		d, err = dbClient.getDockerImage(id)
 		if err != nil { return err }
-		if d == nil { return utils.ConstructServerError("Internal Error: No docker image found for Id " + id) }
+		if d == nil { return utilities.ConstructServerError("Internal Error: No docker image found for Id " + id) }
 		leaves[id] = d
 	}
 	return nil
@@ -582,7 +582,7 @@ func mapRepoScanConfigIds(dbClient DBClient, repo Repo, leaves map[string]Resour
 		var err error
 		d, err = dbClient.getScanConfig(id)
 		if err != nil { return err }
-		if d == nil { return utils.ConstructServerError("Internal Error: No scan config found for Id " + id) }
+		if d == nil { return utilities.ConstructServerError("Internal Error: No scan config found for Id " + id) }
 		leaves[id] = d
 	}
 	return nil
@@ -598,7 +598,7 @@ func mapRepoFlagIds(dbClient DBClient, repo Repo, leaves map[string]Resource) er
 		var err error
 		d, err = dbClient.getFlag(id)
 		if err != nil { return err }
-		if d == nil { return utils.ConstructServerError("Internal Error: No flag found for Id " + id) }
+		if d == nil { return utilities.ConstructServerError("Internal Error: No flag found for Id " + id) }
 		leaves[id] = d
 	}
 	return nil

@@ -21,7 +21,7 @@ import (
 	//"encoding/hex"
 	
 	"safeharbor/apitypes"
-	"utilities/utils"
+	"utilities"
 )
 
 type AuthService struct {
@@ -179,7 +179,7 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 		Delete - The party can Delete the target resource.
 	*/
 	
-	if sessionToken == nil { return false, utils.ConstructServerError("No session token") }
+	if sessionToken == nil { return false, utilities.ConstructServerError("No session token") }
 	
 	// Identify the user.
 	var userId string = sessionToken.AuthenticatedUserid
@@ -188,7 +188,7 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 	var err error
 	user, err = dbClient.dbGetUserByUserId(userId)
 	if user == nil {
-		return false, utils.ConstructServerError("user object cannot be identified from user id " + userId)
+		return false, utilities.ConstructServerError("user object cannot be identified from user id " + userId)
 	}
 	
 	// Special case: Allow user all capabilities for their own user object.
@@ -199,7 +199,7 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 	for _, b := range actionMask {
 		if b {
 			if nTrue == 1 {
-				return false, utils.ConstructUserError("More than one field in mask may not be true")
+				return false, utilities.ConstructUserError("More than one field in mask may not be true")
 			}
 			nTrue++
 		}
@@ -212,7 +212,7 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
 	resource, err = dbClient.getResource(resourceId)
 	if err != nil { return false, err }
 	if resource == nil {
-		return false, utils.ConstructUserError("Resource with Id " + resourceId + " not found")
+		return false, utilities.ConstructUserError("Resource with Id " + resourceId + " not found")
 	}
 	var groupIds []string = user.getGroupIds()
 	var groupIndex = -1
@@ -252,7 +252,7 @@ func (authService *AuthService) authorized(dbClient DBClient, sessionToken *apit
  */
 func (authSvc *AuthService) ComputeFileDigest(filepath string) ([]byte, error) {
 	
-	return utils.ComputeFileDigest(sha256.New(), filepath)
+	return utilities.ComputeFileDigest(sha256.New(), filepath)
 }
 
 /*******************************************************************************
@@ -294,7 +294,7 @@ func (authSvc *AuthService) partyHasAccess(dbClient DBClient, party Party,
 	var action int = -1
 	for i, entry := range actionMask {
 		if entry {
-			if action != -1 { return false, utils.ConstructUserError("More than one field set in action mask") }
+			if action != -1 { return false, utilities.ConstructUserError("More than one field set in action mask") }
 			action = i
 		}
 	}

@@ -31,11 +31,11 @@ import (
 	"runtime/debug"
 	
 	// SafeHarbor packages:
-	"utilities/utils"
+	"utilities"
 	"scanners"
 	"docker"
 	
-	"utilities/rest"
+	"rest"
 )
 
 /*******************************************************************************
@@ -162,7 +162,7 @@ func NewFailureDesc(httpErrorCode int, reason string) *FailureDesc {
 
 func NewFailureDescFromError(err error) *FailureDesc {
 	if err == nil { panic("err is nil") }
-	if utils.IsUserErr(err) {
+	if utilities.IsUserErr(err) {
 		return NewFailureDesc(http.StatusBadRequest, err.Error())
 	}
 	return NewFailureDesc(http.StatusInternalServerError, err.Error())
@@ -498,8 +498,8 @@ type RealmInfo struct {
 }
 
 func NewRealmInfo(realmName string, orgName string, desc string) (*RealmInfo, error) {
-	if realmName == "" { return nil, utils.ConstructUserError("realmName is empty") }
-	if orgName == "" { return nil, utils.ConstructUserError("orgName is empty") }
+	if realmName == "" { return nil, utilities.ConstructUserError("realmName is empty") }
+	if orgName == "" { return nil, utilities.ConstructUserError("orgName is empty") }
 	return &RealmInfo{
 		ResponseType: *NewResponseType(200, "OK", "RealmInfo"),
 		RealmName: realmName,
@@ -1323,7 +1323,7 @@ func GetRequiredHTTPParameterValue(sanitize bool, values url.Values, name string
 	var err error
 	value, err = GetHTTPParameterValue(sanitize, values, name)
 	if err != nil { return "", err }
-	if value == "" { return "", utils.ConstructUserError(fmt.Sprintf("POST field not found: %s", name)) }
+	if value == "" { return "", utilities.ConstructUserError(fmt.Sprintf("POST field not found: %s", name)) }
 	return value, nil
 }
 
@@ -1342,7 +1342,7 @@ func (mask *PermissionMask) ToStringArray() []string {
  * 
  */
 func ToBoolAr(mask []string) ([]bool, error) {
-	if len(mask) != 5 { return nil, utils.ConstructUserError("Length of mask != 5") }
+	if len(mask) != 5 { return nil, utilities.ConstructUserError("Length of mask != 5") }
 	var boolAr []bool = make([]bool, 5)
 	for i, val := range mask {
 		if val == "true" { boolAr[i] = true } else { boolAr[i] = false }
@@ -1399,5 +1399,5 @@ func Sanitize(value string) (string, error) {
 	
 	var allowed string = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-@:/"
 	if len(strings.TrimLeft(value, allowed)) == 0 { return value, nil }
-	return "", utils.ConstructUserError("Value '" + value + "' may only have letters, numbers, and .-_@:/")
+	return "", utilities.ConstructUserError("Value '" + value + "' may only have letters, numbers, and .-_@:/")
 }

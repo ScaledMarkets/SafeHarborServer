@@ -30,10 +30,10 @@ import (
 	
 	"safeharbor/apitypes"
 	"docker"
-	"utilities/utils"
+	"utilities"
 	"scanners"
 	
-	"utilities/rest"
+	"rest"
 )
 
 const (
@@ -44,14 +44,14 @@ const (
  * Implements DataError.
  */
 type PersistDataError struct {
-	utils.ServerError
+	utilities.ServerError
 }
 
 var _ DataError = &PersistDataError{}
 
 func NewPersistDataError(msg string) *PersistDataError {
 	return &PersistDataError{
-		ServerError: *utils.ConstructServerError(msg),
+		ServerError: *utilities.ConstructServerError(msg),
 	}
 }
 
@@ -130,7 +130,7 @@ func (client *InMemClient) abort() error {
 
 func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
 	
-	if id == "" { return nil, utils.ConstructServerError("Object Id is empty") }
+	if id == "" { return nil, utilities.ConstructServerError("Object Id is empty") }
 	
 	var cachedObj PersistObj = client.objectsCache[id]
 	if cachedObj != nil { return cachedObj, nil }
@@ -139,7 +139,7 @@ func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
 	var err error
 	obj, err = client.Persistence.getObject(client.txn, client, id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Object with Id " + id + " not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("Object with Id " + id + " not found") }
 	client.objectsCache[id] = obj
 	return obj, nil
 }
@@ -147,8 +147,8 @@ func (client *InMemClient) getPersistentObject(id string) (PersistObj, error) {
 func (client *InMemClient) updateObject(obj PersistObj) error {
 	
 	// Checks that can be removed after testing.
-	if obj == nil { return utils.ConstructServerError("Object is nil") }
-	if client.objectIsAbstract(obj) { return utils.ConstructServerError(
+	if obj == nil { return utilities.ConstructServerError("Object is nil") }
+	if client.objectIsAbstract(obj) { return utilities.ConstructServerError(
 		"Abstract object: " + reflect.TypeOf(obj).String())
 	}
 	
@@ -220,12 +220,12 @@ func (client *InMemClient) addRealm(newRealm Realm) error {
 	var err error
 	rid, err = client.Persistence.GetRealmObjIdByRealmName(newRealm.getName())
 	if err != nil { return err }
-	if rid != "" { return utils.ConstructUserError(
+	if rid != "" { return utilities.ConstructUserError(
 		"A realm with name " + newRealm.getName() + " already exists")
 	}
 	
 	var cachedRealm Realm = client.realmMapCache[newRealm.getId()]
-	if cachedRealm != nil { return utils.ConstructUserError("Realm already exists") }
+	if cachedRealm != nil { return utilities.ConstructUserError("Realm already exists") }
 	client.realmMapCache[newRealm.getId()] = newRealm  // Add the realm to the cache.
 	client.objectsCache[newRealm.getId()] = newRealm  // Add object to cache
 	return client.Persistence.addRealm(client.txn, newRealm)  // Add to database.
@@ -234,7 +234,7 @@ func (client *InMemClient) addRealm(newRealm Realm) error {
 func (client *InMemClient) addUser(user User) error {
 	
 	var cachedUser User = client.usersCache[user.getId()]
-	if cachedUser != nil { return utils.ConstructUserError("User already exists") }
+	if cachedUser != nil { return utilities.ConstructUserError("User already exists") }
 	client.usersCache[user.getId()] = user  // Add the user to the cache.
 	client.objectsCache[user.getId()] = user  // Add object to cache
 	
@@ -357,9 +357,9 @@ func (client *InMemClient) getIdentityValidationInfo(objId string) (IdentityVali
 	var err error
 	obj, err = client.getPersistentObject(objId)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("IdentityValidationInfo not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("IdentityValidationInfo not found") }
 	info, isType = obj.(IdentityValidationInfo)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + objId + " is not a IdentityValidationInfo") }
+	if ! isType { return nil, utilities.ConstructUserError("Object with Id " + objId + " is not a IdentityValidationInfo") }
 	return info, nil
 }
 
@@ -542,7 +542,7 @@ func (client *InMemClient) deleteAccess(resource Resource, party Party) error {
 		if aclEntry.getPartyId() == party.getId() {
 			// ACL entry's resource id and party id both match.
 			if aclEntry.getResourceId() != resource.getId() {
-				return utils.ConstructServerError("Internal error: an ACL entry's resource Id does not match the resource whose list it is a member of")
+				return utilities.ConstructServerError("Internal error: an ACL entry's resource Id does not match the resource whose list it is a member of")
 			}
 			
 			// Remove from party's list.
@@ -562,7 +562,7 @@ func (client *InMemClient) deleteAccess(resource Resource, party Party) error {
 }
 
 func (resource *InMemResource) removeACLEntryIdAt(index int) {
-	resource.ACLEntryIds = utils.RemoveAt(index, resource.ACLEntryIds)
+	resource.ACLEntryIds = utilities.RemoveAt(index, resource.ACLEntryIds)
 }
 
 func (resource *InMemResource) printACLs(dbClient DBClient, party Party) {
@@ -730,13 +730,13 @@ func (client *InMemClient) getResource(resourceId string) (Resource, error) {
 	obj, err = client.getPersistentObject(resourceId)
 	if err != nil { return nil, err }
 	if obj == nil {
-		var err = utils.ConstructUserError("Resource with Id " + resourceId + " not found")
+		var err = utilities.ConstructUserError("Resource with Id " + resourceId + " not found")
 		fmt.Println(err.Error())
 		debug.PrintStack()
 		return nil, err
 	}
 	resource, isType = obj.(Resource)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + resourceId + " is not a Resource") }
+	if ! isType { return nil, utilities.ConstructUserError("Object with Id " + resourceId + " is not a Resource") }
 	return resource, nil
 }
 
@@ -900,9 +900,9 @@ func (client *InMemClient) getParty(partyId string) (Party, error) {
 	var err error
 	obj, err = client.getPersistentObject(partyId)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Party not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("Party not found") }
 	party, isType = obj.(Party)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + partyId + " is not a Party") }
+	if ! isType { return nil, utilities.ConstructUserError("Object with Id " + partyId + " is not a Party") }
 	return party, nil
 }
 
@@ -933,7 +933,7 @@ func (client *InMemClient) deleteACLEntryForParty(party Party, entry ACLEntry) e
 }
 
 func (party *InMemParty) deleteACLEntry(dbClient DBClient, entry ACLEntry) error {
-	party.ACLEntryIds = utils.RemoveFrom(entry.getId(), party.ACLEntryIds)
+	party.ACLEntryIds = utilities.RemoveFrom(entry.getId(), party.ACLEntryIds)
 	var err error = dbClient.deleteObject(entry)
 	return err
 }
@@ -1025,13 +1025,13 @@ func (client *InMemClient) dbCreateGroup(realmId string, name string,
 	var err error
 	realm, err = client.getRealm(realmId)
 	if err != nil { return nil, err }
-	if realm == nil { return nil, utils.ConstructUserError(fmt.Sprintf(
+	if realm == nil { return nil, utilities.ConstructUserError(fmt.Sprintf(
 		"Unidentified realm for realm Id %s", realmId))
 	}
 	var g Group
 	g, err = realm.getGroupByName(client, name)
 	if err != nil { return nil, err }
-	if g != nil { return nil, utils.ConstructUserError(
+	if g != nil { return nil, utilities.ConstructUserError(
 		fmt.Sprintf("Group named %s already exists within realm %s", name,
 			realm.getName()))
 	}
@@ -1059,9 +1059,9 @@ func (client *InMemClient) getGroup(id string) (Group, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Group not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("Group not found") }
 	group, isType = obj.(Group)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + id + " is not a Group") }
+	if ! isType { return nil, utilities.ConstructUserError("Object with Id " + id + " is not a Group") }
 	return group, nil
 }
 
@@ -1089,7 +1089,7 @@ func (group *InMemGroup) hasUserWithId(dbClient DBClient, userObjId string) bool
 func (group *InMemGroup) addUserId(dbClient DBClient, userObjId string) error {
 	
 	if group.hasUserWithId(dbClient, userObjId) {
-		return utils.ConstructUserError(fmt.Sprintf(
+		return utilities.ConstructUserError(fmt.Sprintf(
 			"User with object Id %s is already in group", userObjId))
 	}
 	
@@ -1118,7 +1118,7 @@ func (group *InMemGroup) removeUser(dbClient DBClient, user User) error {
 			return nil
 		}
 	}
-	return utils.ConstructUserError("Did not find user in this group")
+	return utilities.ConstructUserError("Did not find user in this group")
 }
 
 func (group *InMemGroup) addUser(dbClient DBClient, user User) error {
@@ -1211,13 +1211,13 @@ func (client *InMemClient) dbCreateUser(userId string, name string,
 	user, err = client.dbGetUserByUserId(userId)
 	if err != nil { return nil, err }
 	if user != nil {
-		return nil, utils.ConstructUserError("A user with Id " + userId + " already exists")
+		return nil, utilities.ConstructUserError("A user with Id " + userId + " already exists")
 	}
 	
 	var realm Realm
 	realm, err = client.getRealm(realmId)
 	if err != nil { return nil, err }
-	if realm == nil { return nil, utils.ConstructUserError("Realm with Id " + realmId + " not found") }
+	if realm == nil { return nil, utilities.ConstructUserError("Realm with Id " + realmId + " not found") }
 	
 	//var userObjId string = createUniqueDbObjectId()
 	var newUser *InMemUser
@@ -1255,9 +1255,9 @@ func (client *InMemClient) getUser(id string) (User, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("User with Id " + id + " not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("User with Id " + id + " not found") }
 	user, isType = obj.(User)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + id + " is not a User") }
+	if ! isType { return nil, utilities.ConstructUserError("Object with Id " + id + " is not a User") }
 	return user, nil
 }
 
@@ -1314,7 +1314,7 @@ func (user *InMemUser) setUnverifiedEmailAddress(dbClient DBClient, emailAddress
 }
 
 func (user *InMemUser) flagEmailAsVerified(dbClient DBClient, emailAddress string) error {
-	if user.EmailAddress == "" { return utils.ConstructUserError("No email address set") }
+	if user.EmailAddress == "" { return utilities.ConstructUserError("No email address set") }
 	user.EmailIsVerified = true
 	return dbClient.updateObject(user)
 }
@@ -1337,7 +1337,7 @@ func (user *InMemUser) hasGroupWithId(dbClient DBClient, groupId string) bool {
 
 func (user *InMemUser) addGroupIdDeferredUpdate(dbClient DBClient, groupId string) error {
 	
-	if user.hasGroupWithId(dbClient, groupId) { return utils.ConstructUserError(fmt.Sprintf(
+	if user.hasGroupWithId(dbClient, groupId) { return utilities.ConstructUserError(fmt.Sprintf(
 		"Group with object Id %s is already in User's set of groups", groupId))
 	}
 	
@@ -1345,11 +1345,11 @@ func (user *InMemUser) addGroupIdDeferredUpdate(dbClient DBClient, groupId strin
 	var err error
 	obj, err = dbClient.getPersistentObject(groupId)
 	if err != nil { return err }
-	if obj == nil { return utils.ConstructUserError(fmt.Sprintf(
+	if obj == nil { return utilities.ConstructUserError(fmt.Sprintf(
 		"Object with Id %s does not exist", groupId))
 	}
 	_, isGroup := obj.(Group)
-	if ! isGroup { return utils.ConstructUserError(fmt.Sprintf(
+	if ! isGroup { return utilities.ConstructUserError(fmt.Sprintf(
 		"Object with Id %s is not a Group", groupId))
 	}
 	user.GroupIds = append(user.GroupIds, groupId)
@@ -1371,13 +1371,13 @@ func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) ([]stri
 	obj, err = client.getPersistentObject(userObjId)
 	if err != nil { return nil, err }
 	if obj == nil {
-		return nil, utils.ConstructUserError("Object with Id " + userObjId + " not found")
+		return nil, utilities.ConstructUserError("Object with Id " + userObjId + " not found")
 	}
 	var user User
 	var isType bool
 	user, isType = obj.(User)
 	if ! isType {
-		return nil, utils.ConstructServerError("Internal error: object with Id " + userObjId + " is not a User")
+		return nil, utilities.ConstructServerError("Internal error: object with Id " + userObjId + " is not a User")
 	}
 	
 	// Identify those ACLEntries that are for realms and for which the user has write access.
@@ -1386,7 +1386,7 @@ func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) ([]stri
 		entry, err = client.getACLEntry(entryId)
 		if err != nil { return nil, err }
 		if entry == nil {
-			err = utils.ConstructServerError("Internal error: object with Id " + entryId + " is not an ACLEntry")
+			err = utilities.ConstructServerError("Internal error: object with Id " + entryId + " is not an ACLEntry")
 			continue
 		}
 		var resourceId string = entry.getResourceId()
@@ -1394,7 +1394,7 @@ func (client *InMemClient) getRealmsAdministeredByUser(userObjId string) ([]stri
 		resource, err = client.getResource(resourceId)
 		if err != nil { return nil, err }
 		if resource == nil {
-			err = utils.ConstructServerError("Internal error: resource with Id " + resourceId + " not found")
+			err = utilities.ConstructServerError("Internal error: resource with Id " + resourceId + " not found")
 			continue
 		}
 		if resource.isRealm() {
@@ -1447,7 +1447,7 @@ func (user *InMemUser) deleteEvent(dbClient DBClient, event Event) error {
 		if err != nil { return err }
 	}
 	
-	user.EventIds = utils.RemoveFrom(event.getId(), user.EventIds)
+	user.EventIds = utilities.RemoveFrom(event.getId(), user.EventIds)
 	
 	var err error = dbClient.deleteObject(event)
 	if err != nil { return err }
@@ -1554,8 +1554,8 @@ func (client *InMemClient) NewInMemACLEntry(resourceId string, partyId string,
 func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	permissionMask []bool) (ACLEntry, error) {
 	
-	if resourceId == "" { return nil, utils.ConstructServerError("Internal error: resourceId is empty") }
-	if partyId == "" { return nil, utils.ConstructServerError("Internal error: partyId is empty") }
+	if resourceId == "" { return nil, utilities.ConstructServerError("Internal error: resourceId is empty") }
+	if partyId == "" { return nil, utilities.ConstructServerError("Internal error: partyId is empty") }
 	var resource Resource
 	var party Party
 	var isType bool
@@ -1563,15 +1563,15 @@ func (client *InMemClient) dbCreateACLEntry(resourceId string, partyId string,
 	var err error
 	obj, err = client.getPersistentObject(resourceId)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructServerError("Internal error: cannot identify resource: obj with Id '" + resourceId + "' not found") }
+	if obj == nil { return nil, utilities.ConstructServerError("Internal error: cannot identify resource: obj with Id '" + resourceId + "' not found") }
 	resource, isType = obj.(Resource)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is not a Resource - it is a " +
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is not a Resource - it is a " +
 		reflect.TypeOf(obj).String()) }
 	obj, err = client.getPersistentObject(partyId)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructServerError("Internal error: cannot identify party: obj with Id '" + partyId + "' not found") }
+	if obj == nil { return nil, utilities.ConstructServerError("Internal error: cannot identify party: obj with Id '" + partyId + "' not found") }
 	party, isType = obj.(Party)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is not a Party - it is a " +
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is not a Party - it is a " +
 		reflect.TypeOf(obj).String()) }
 	var newACLEntry ACLEntry
 	newACLEntry, err = client.NewInMemACLEntry(resourceId, partyId, permissionMask)
@@ -1595,9 +1595,9 @@ func (client *InMemClient) getACLEntry(id string) (ACLEntry, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("ACLEntry with Id " + id + " not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("ACLEntry with Id " + id + " not found") }
 	aclEntry, isType = obj.(ACLEntry)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is an unexpected type") }
 	return aclEntry, nil
 }
 
@@ -1615,10 +1615,10 @@ func (entry *InMemACLEntry) getParty(dbClient DBClient) (Party, error) {
 	var err error
 	obj, err = dbClient.getPersistentObject(entry.PartyId)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Party with Id " + entry.PartyId + " not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("Party with Id " + entry.PartyId + " not found") }
 	var isType bool
 	party, isType = obj.(Party)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is not a Party") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is not a Party") }
 	return party, nil
 }
 
@@ -1711,7 +1711,7 @@ func (client *InMemClient) dbCreateRealm(realmInfo *apitypes.RealmInfo, adminUse
 	realmId, err = client.getRealmIdByName(realmInfo.RealmName)
 	if err != nil { return nil, err }
 	if realmId != "" {
-		return nil, utils.ConstructUserError("A realm with name " + realmInfo.RealmName + " already exists")
+		return nil, utilities.ConstructUserError("A realm with name " + realmInfo.RealmName + " already exists")
 	}
 	
 	err = nameConformsToSafeHarborImageNameRules(realmInfo.RealmName)
@@ -1853,12 +1853,12 @@ func (client *InMemClient) getRealm(id string) (Realm, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Realm not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("Realm not found") }
 	realm, isType = obj.(Realm)
 	if ! isType {
 		fmt.Println("Not a realm")
 		debug.PrintStack()
-		return nil, utils.ConstructUserError(
+		return nil, utilities.ConstructUserError(
 		"Object with Id " + id + " is not a Realm - it is a " + reflect.TypeOf(obj).String()) }
 	return realm, nil
 }
@@ -1877,16 +1877,16 @@ func (realm *InMemRealm) addUserId(dbClient DBClient, userObjId string) error {
 	var err error
 	user, err = dbClient.getUser(userObjId)
 	if err != nil { return err }
-	if user == nil { return utils.ConstructUserError("Could not identify user with obj Id " + userObjId) }
+	if user == nil { return utilities.ConstructUserError("Could not identify user with obj Id " + userObjId) }
 	if user.getRealmId() != "" {
-		return utils.ConstructUserError("User with obj Id " + userObjId + " belongs to another realm")
+		return utilities.ConstructUserError("User with obj Id " + userObjId + " belongs to another realm")
 	}
 	
 	// Check if user with same name already exists within the realm.
 	var u User
 	u, err = realm.getUserByName(dbClient, user.getName())
 	if err != nil { return err }
-	if u != nil { return utils.ConstructUserError(
+	if u != nil { return utilities.ConstructUserError(
 		"A user with name " + user.getName() + " already exists in realm " + realm.getName())
 	}
 	
@@ -1905,11 +1905,11 @@ func (realm *InMemRealm) removeUserId(dbClient DBClient, userObjId string) (User
 	var err error
 	user, err = dbClient.getUser(userObjId)
 	if err != nil { return nil, err }
-	if user == nil { return nil, utils.ConstructUserError("User with obj Id " + userObjId + " not found") }
+	if user == nil { return nil, utilities.ConstructUserError("User with obj Id " + userObjId + " not found") }
 	if user.getRealmId() != realm.getId() {
-		return nil, utils.ConstructUserError("User with obj Id " + userObjId + " belongs to another realm")
+		return nil, utilities.ConstructUserError("User with obj Id " + userObjId + " belongs to another realm")
 	}
-	realm.UserObjIds = utils.RemoveFrom(userObjId, realm.UserObjIds)
+	realm.UserObjIds = utilities.RemoveFrom(userObjId, realm.UserObjIds)
 	var inMemUser = user.(*InMemUser)
 	inMemUser.RealmId = ""
 	err = dbClient.writeBack(realm)
@@ -1941,7 +1941,7 @@ func (realm *InMemRealm) addUser(dbClient DBClient, user User) error {
 	var err error
 	u, err = realm.getUserByName(dbClient, user.getName())
 	if err != nil { return err }
-	if u != nil { return utils.ConstructUserError(
+	if u != nil { return utilities.ConstructUserError(
 		"A user with name " + user.getName() + " already exists in realm " + realm.getName())
 	}
 	
@@ -1958,7 +1958,7 @@ func (realm *InMemRealm) addGroup(dbClient DBClient, group Group) error {
 	var err error
 	g, err = realm.getGroupByName(dbClient, group.getName())
 	if err != nil { return err }
-	if g != nil { return utils.ConstructUserError(
+	if g != nil { return utilities.ConstructUserError(
 		"A group with name " + group.getName() + " already exists in realm " + realm.getName())
 	}
 	
@@ -1973,7 +1973,7 @@ func (realm *InMemRealm) addRepo(dbClient DBClient, repo Repo) error {
 	var err error
 	r, err = realm.getRepoByName(dbClient, repo.getName())
 	if err != nil { return err }
-	if r != nil { return utils.ConstructUserError(
+	if r != nil { return utilities.ConstructUserError(
 		"A repo with name " + repo.getName() + " already exists in realm " + realm.getName())
 	}
 	
@@ -2036,11 +2036,11 @@ func (realm *InMemRealm) getUserByName(dbClient DBClient, userName string) (User
 		var err error
 		obj, err = dbClient.getPersistentObject(id)
 		if err != nil { return nil, err }
-		if obj == nil { return nil, utils.ConstructServerError(fmt.Sprintf(
+		if obj == nil { return nil, utilities.ConstructServerError(fmt.Sprintf(
 			"Internal error: obj with Id %s does not exist", id))
 		}
 		user, isUser := obj.(User)
-		if ! isUser { return nil, utils.ConstructServerError(fmt.Sprintf(
+		if ! isUser { return nil, utilities.ConstructServerError(fmt.Sprintf(
 			"Internal error: obj with Id %s is not a User", id))
 		}
 		if user.getName() == userName { return user, nil }
@@ -2054,11 +2054,11 @@ func (realm *InMemRealm) getUserByUserId(dbClient DBClient, userId string) (User
 		var err error
 		obj, err = dbClient.getPersistentObject(id)
 		if err != nil { return nil, err }
-		if obj == nil { return nil, utils.ConstructServerError(fmt.Sprintf(
+		if obj == nil { return nil, utilities.ConstructServerError(fmt.Sprintf(
 			"Internal error: obj with Id %s does not exist", id))
 		}
 		user, isUser := obj.(User)
-		if ! isUser { return nil, utils.ConstructServerError(fmt.Sprintf(
+		if ! isUser { return nil, utilities.ConstructServerError(fmt.Sprintf(
 			"Internal error: obj with Id %s is not a User", id))
 		}
 		if user.getUserId() == userId { return user, nil }
@@ -2072,11 +2072,11 @@ func (realm *InMemRealm) getGroupByName(dbClient DBClient, groupName string) (Gr
 		var err error
 		obj, err = dbClient.getPersistentObject(id)
 		if err != nil { return nil, err }
-		if obj == nil { return nil, utils.ConstructServerError(fmt.Sprintf(
+		if obj == nil { return nil, utilities.ConstructServerError(fmt.Sprintf(
 			"Internal error: obj with Id %s does not exist", id))
 		}
 		group, isGroup := obj.(Group)
-		if ! isGroup { return nil, utils.ConstructServerError(fmt.Sprintf(
+		if ! isGroup { return nil, utilities.ConstructServerError(fmt.Sprintf(
 			"Internal error: obj with Id %s is not a Group", id))
 		}
 		if group.getName() == groupName { return group, nil }
@@ -2090,11 +2090,11 @@ func (realm *InMemRealm) getRepoByName(dbClient DBClient, repoName string) (Repo
 		var err error
 		obj, err = dbClient.getPersistentObject(id)
 		if err != nil { return nil, err }
-		if obj == nil { return nil, utils.ConstructServerError(fmt.Sprintf(
+		if obj == nil { return nil, utilities.ConstructServerError(fmt.Sprintf(
 			"Internal error: obj with Id %s does not exist", id))
 		}
 		repo, isRepo := obj.(Repo)
-		if ! isRepo { return nil, utils.ConstructServerError(fmt.Sprintf(
+		if ! isRepo { return nil, utilities.ConstructServerError(fmt.Sprintf(
 			"Internal error: obj with Id %s is not a Repo", id))
 		}
 		if repo.getName() == repoName { return repo, nil }
@@ -2106,7 +2106,7 @@ func (realm *InMemRealm) deleteGroup(dbClient DBClient, group Group) error {
 	
 	// Remove the group from its realm. Do this first so that no new actions
 	// will be taken on the group.
-	realm.GroupIds = utils.RemoveFrom(group.getId(), realm.GroupIds)
+	realm.GroupIds = utilities.RemoveFrom(group.getId(), realm.GroupIds)
 	var err error
 	err = dbClient.writeBack(realm)
 	if err != nil { return err }
@@ -2147,7 +2147,7 @@ func (realm *InMemRealm) deleteRepo(dbClient DBClient, repo Repo) error {
 	
 	// Remove the Repo from its Realm. Do this first so that no new actions
 	// will be taken on the Repo.
-	realm.RepoIds = utils.RemoveFrom(repo.getId(), realm.RepoIds)
+	realm.RepoIds = utilities.RemoveFrom(repo.getId(), realm.RepoIds)
 	var err error
 	err = dbClient.writeBack(realm)
 	if err != nil { return err }
@@ -2176,7 +2176,7 @@ func (realm *InMemRealm) createUniqueRepoName(dbClient DBClient, prefix string) 
 	var i = 1
 	for {
 		if i > 1000 { return "",
-			utils.ConstructUserError("Unable to create a unique repo name")
+			utilities.ConstructUserError("Unable to create a unique repo name")
 		}
 		name = fmt.Sprintf("%s_%d", prefix, i)
 		var repo Repo
@@ -2318,9 +2318,9 @@ func (client *InMemClient) getRepo(id string) (Repo, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Repo not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("Repo not found") }
 	repo, isType = obj.(Repo)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + id + " is not a Repo") }
+	if ! isType { return nil, utilities.ConstructUserError("Object with Id " + id + " is not a Repo") }
 	return repo, nil
 }
 
@@ -2332,10 +2332,10 @@ func (repo *InMemRepo) getRealm(dbClient DBClient) (Realm, error) {
 	var obj PersistObj
 	obj, err = dbClient.getPersistentObject(repo.getRealmId())
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructServerError("Realm with Id " + repo.getRealmId() + " not found") }
+	if obj == nil { return nil, utilities.ConstructServerError("Realm with Id " + repo.getRealmId() + " not found") }
 	var isType bool
 	realm, isType = obj.(Realm)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is an unexpected type") }
 	return realm, nil
 }
 
@@ -2344,11 +2344,11 @@ func (repo *InMemRepo) getDefaultUserIds() []string {
 }
 
 func (repo *InMemRepo) addDefaultUserIdDeferredUpdate(userObjId string) {
-	repo.DefaultUserIds = utils.AddUniquely(userObjId, repo.DefaultUserIds)
+	repo.DefaultUserIds = utilities.AddUniquely(userObjId, repo.DefaultUserIds)
 }
 
 func (repo *InMemRepo) remDefaultUserIdDeferredUpdate(userObjId string) {
-	repo.DefaultUserIds = utils.RemoveFrom(userObjId, repo.DefaultUserIds)
+	repo.DefaultUserIds = utilities.RemoveFrom(userObjId, repo.DefaultUserIds)
 }
 
 func (repo *InMemRepo) addDefaultUser(dbClient DBClient, user User) error {
@@ -2394,7 +2394,7 @@ func (repo *InMemRepo) addDockerfile(dbClient DBClient, dockerfile Dockerfile) e
 	var err error
 	d, err = repo.getDockerfileByName(dbClient, dockerfile.getName())
 	if err != nil { return err }
-	if d != nil { return utils.ConstructUserError(
+	if d != nil { return utilities.ConstructUserError(
 		"A dockerfile with name " + d.getName() + " already exists in repo " + repo.getName())
 	}
 	
@@ -2409,7 +2409,7 @@ func (repo *InMemRepo) addDockerImage(dbClient DBClient, image DockerImage) erro
 	var err error
 	d, err = repo.getDockerImageByName(dbClient, image.getName())
 	if err != nil { return err }
-	if d != nil { return utils.ConstructUserError(
+	if d != nil { return utilities.ConstructUserError(
 		"A docker image with name " + d.getName() + " already exists in repo " + repo.getName())
 	}
 	
@@ -2424,7 +2424,7 @@ func (repo *InMemRepo) addScanConfig(dbClient DBClient, config ScanConfig) error
 	var err error
 	s, err = repo.getScanConfigByName(dbClient, config.getName())
 	if err != nil { return err }
-	if s != nil { return utils.ConstructUserError(
+	if s != nil { return utilities.ConstructUserError(
 		"A scan config with name " + s.getName() + " already exists in repo " + repo.getName())
 	}
 	
@@ -2467,7 +2467,7 @@ func (repo *InMemRepo) deleteScanConfig(dbClient DBClient, config ScanConfig) er
 	}
 
 	// Remove from repo.
-	repo.ScanConfigIds = utils.RemoveFrom(config.getId(), repo.ScanConfigIds)
+	repo.ScanConfigIds = utilities.RemoveFrom(config.getId(), repo.ScanConfigIds)
 
 	// Remove ACL entries.
 	var err error = dbClient.deleteAllAccessToResource(config)
@@ -2486,7 +2486,7 @@ func (repo *InMemRepo) deleteFlag(dbClient DBClient, flag Flag) error {
 		var err error
 		sc, err = dbClient.getScanConfig(flag.usedByScanConfigIds()[0])
 		if err != nil { return err }
-		return utils.ConstructUserError(
+		return utilities.ConstructUserError(
 			"Cannot remove Flag: it is referenced by one or more ScanConfigs, " +
 			"including " + sc.getName() + " (" + sc.getId() + ")")
 	}
@@ -2497,7 +2497,7 @@ func (repo *InMemRepo) deleteFlag(dbClient DBClient, flag Flag) error {
 	if err != nil { return err }
 	
 	// Remove from repo.
-	repo.FlagIds = utils.RemoveFrom(flag.getId(), repo.FlagIds)
+	repo.FlagIds = utilities.RemoveFrom(flag.getId(), repo.FlagIds)
 	
 	// Remove ACL entries.
 	err = dbClient.deleteAllAccessToResource(flag)
@@ -2523,7 +2523,7 @@ func (repo *InMemRepo) deleteDockerfile(dbClient DBClient, dockerfile Dockerfile
 		var dockerfileExecEvent DockerfileExecEvent
 		var isType bool
 		dockerfileExecEvent, isType = event.(DockerfileExecEvent)
-		if ! isType { return utils.ConstructServerError("Unexpected event type for dockerfile") }
+		if ! isType { return utilities.ConstructServerError("Unexpected event type for dockerfile") }
 		dockerfileExecEvent.nullifyDockerfile(dbClient)
 	}
 	
@@ -2563,7 +2563,7 @@ func (repo *InMemRepo) deleteDockerImage(dbClient DBClient, image DockerImage) e
 	}
 	
 	// Remove from repo.
-	repo.DockerImageIds = utils.RemoveFrom(image.getId(), repo.DockerImageIds)
+	repo.DockerImageIds = utilities.RemoveFrom(image.getId(), repo.DockerImageIds)
 	
 	// Remove from database.
 	err = dbClient.deleteObject(image)
@@ -2578,7 +2578,7 @@ func (repo *InMemRepo) addFlag(dbClient DBClient, flag Flag) error {
 	var err error
 	f, err = repo.getFlagByName(dbClient, flag.getName())
 	if err != nil { return err }
-	if f != nil { return utils.ConstructUserError(
+	if f != nil { return utilities.ConstructUserError(
 		"A flag with name " + f.getName() + " already exists in repo " + repo.getName())
 	}
 	
@@ -2593,7 +2593,7 @@ func (repo *InMemRepo) getDockerfileByName(dbClient DBClient, name string) (Dock
 		dockerfile, err = dbClient.getDockerfile(dockerfileId)
 		if err != nil { return nil, err }
 		if dockerfile == nil {
-			return nil, utils.ConstructServerError("Internal error: list DockerfileIds contains an invalid entry")
+			return nil, utilities.ConstructServerError("Internal error: list DockerfileIds contains an invalid entry")
 		}
 		if dockerfile.getName() == name { return dockerfile, nil }
 	}
@@ -2607,7 +2607,7 @@ func (repo *InMemRepo) getFlagByName(dbClient DBClient, name string) (Flag, erro
 		flag, err = dbClient.getFlag(flagId)
 		if err != nil { return nil, err }
 		if flag == nil {
-			return nil, utils.ConstructServerError("Internal error: list FlagIds contains an invalid entry")
+			return nil, utilities.ConstructServerError("Internal error: list FlagIds contains an invalid entry")
 		}
 		if flag.getName() == name { return flag, nil }
 	}
@@ -2621,7 +2621,7 @@ func (repo *InMemRepo) getDockerImageByName(dbClient DBClient, name string) (Doc
 		dockerImage, err = dbClient.getDockerImage(dockerImageId)
 		if err != nil { return nil, err }
 		if dockerImage == nil {
-			return nil, utils.ConstructServerError("List DockerImageIds contains an invalid entry")
+			return nil, utilities.ConstructServerError("List DockerImageIds contains an invalid entry")
 		}
 		if dockerImage.getName() == name { return dockerImage, nil }
 	}
@@ -2635,7 +2635,7 @@ func (repo *InMemRepo) getScanConfigByName(dbClient DBClient, name string) (Scan
 		config, err = dbClient.getScanConfig(configId)
 		if err != nil { return nil, err }
 		if config == nil {
-			return nil, utils.ConstructServerError("Internal error: list ScanConfigIds contains an invalid entry")
+			return nil, utilities.ConstructServerError("Internal error: list ScanConfigIds contains an invalid entry")
 		}
 		if config.getName() == name { return config, nil }
 	}
@@ -2651,7 +2651,7 @@ func (repo *InMemRepo) createUniqueDockerImageName(dbClient DBClient, prefix str
 	var i = 1
 	for {
 		if i > 1000 { return "",
-			utils.ConstructUserError("Unable to create a unique image name")
+			utilities.ConstructUserError("Unable to create a unique image name")
 		}
 		name = fmt.Sprintf("%s_%d", prefix, i)
 		var image Image
@@ -2854,7 +2854,7 @@ func (client *InMemClient) dbCreateDockerfile(repoId, name,
 	if err != nil { return nil, err }
 	if repo == nil {
 		fmt.Println("Repo with Id " + repoId + " not found")
-		return nil, utils.ConstructUserError(fmt.Sprintf("Repo with Id %s not found", repoId))
+		return nil, utilities.ConstructUserError(fmt.Sprintf("Repo with Id %s not found", repoId))
 	}
 	err = repo.addDockerfile(client, newDockerfile)
 	if err != nil { return nil, err }
@@ -2869,9 +2869,9 @@ func (client *InMemClient) getDockerfile(id string) (Dockerfile, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Dockerfile not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("Dockerfile not found") }
 	dockerfile, isType = obj.(Dockerfile)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + id + " is not a Dockerfile") }
+	if ! isType { return nil, utilities.ConstructUserError("Object with Id " + id + " is not a Dockerfile") }
 	return dockerfile, nil
 }
 
@@ -2904,10 +2904,10 @@ func (dockerfile *InMemDockerfile) getRepo(dbClient DBClient) (Repo, error) {
 	var err error
 	obj, err = dbClient.getPersistentObject(dockerfile.getRepoId())
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Could not find obj with Id " + dockerfile.getRepoId()) }
+	if obj == nil { return nil, utilities.ConstructUserError("Could not find obj with Id " + dockerfile.getRepoId()) }
 	var isType bool
 	repo, isType = obj.(Repo)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is an unexpected type") }
 	return repo, nil
 }
 
@@ -3014,9 +3014,9 @@ func (client *InMemClient) getImage(id string) (Image, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Image not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("Image not found") }
 	image, isType = obj.(Image)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + id + " is not an Image") }
+	if ! isType { return nil, utilities.ConstructUserError("Object with Id " + id + " is not an Image") }
 	return image, nil
 }
 
@@ -3038,10 +3038,10 @@ func (image *InMemImage) getRepo(dbClient DBClient) (Repo, error) {
 	var err error
 	obj, err = dbClient.getPersistentObject(image.getRepoId())
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Could not find obj with Id " + image.getRepoId()) }
+	if obj == nil { return nil, utilities.ConstructUserError("Could not find obj with Id " + image.getRepoId()) }
 	var isType bool
 	repo, isType = obj.(Repo)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is an unexpected type") }
 	return repo, nil
 }
 
@@ -3154,9 +3154,9 @@ func (client *InMemClient) getDockerImage(id string) (DockerImage, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("DockerImage not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("DockerImage not found") }
 	image, isType = obj.(DockerImage)
-	if ! isType { return nil, utils.ConstructUserError(
+	if ! isType { return nil, utilities.ConstructUserError(
 		"Object with Id " + id + " is not a DockerImage: it is a " + reflect.TypeOf(obj).String()) }
 	return image, nil
 }
@@ -3173,7 +3173,7 @@ func (image *InMemDockerImage) deleteImageVersion(dbClient DBClient, imageVersio
 	var dockerImageVersion DockerImageVersion
 	var isType bool
 	dockerImageVersion, isType = imageVersion.(DockerImageVersion)
-	if ! isType { return utils.ConstructUserError("Image is not a docker image") }
+	if ! isType { return utilities.ConstructUserError("Image is not a docker image") }
 	
 	// Nullify Image in ImageCreationEvent.
 	var imageCreationEventId string = dockerImageVersion.getImageCreationEventId()
@@ -3182,9 +3182,9 @@ func (image *InMemDockerImage) deleteImageVersion(dbClient DBClient, imageVersio
 	event, err = dbClient.getEvent(imageCreationEventId)
 	if err != nil { return err }
 	var imageCreationEvent ImageCreationEvent
-	if event == nil { return utils.ConstructServerError("Event is nil") }
+	if event == nil { return utilities.ConstructServerError("Event is nil") }
 	imageCreationEvent, isType = event.(ImageCreationEvent)
-	if ! isType { return utils.ConstructServerError(
+	if ! isType { return utilities.ConstructServerError(
 		"Internal error: Expected event to be an ImageCreationEvent: it is a " +
 			reflect.TypeOf(event).String())
 	}
@@ -3216,7 +3216,7 @@ func (image *InMemDockerImage) deleteImageVersion(dbClient DBClient, imageVersio
 	if err != nil { return err }
 	
 	// Remove from image's list of versions.
-	image.VersionIds = utils.RemoveFrom(imageVersion.getId(), image.VersionIds)
+	image.VersionIds = utilities.RemoveFrom(imageVersion.getId(), image.VersionIds)
 	
 	// Remove from database.
 	dbClient.deleteObject(imageVersion)
@@ -3230,11 +3230,11 @@ func (image *InMemDockerImage) getScanConfigsToUse() []string {
 }
 
 func (image *InMemDockerImage) addScanConfigIdToList(scanConfigId string) {
-	image.ScanConfigsToUse = utils.AddUniquely(scanConfigId, image.ScanConfigsToUse)
+	image.ScanConfigsToUse = utilities.AddUniquely(scanConfigId, image.ScanConfigsToUse)
 }
 
 func (image *InMemDockerImage) remScanConfigIdFromList(scanConfigId string) {
-	image.ScanConfigsToUse = utils.RemoveFrom(scanConfigId, image.ScanConfigsToUse)
+	image.ScanConfigsToUse = utilities.RemoveFrom(scanConfigId, image.ScanConfigsToUse)
 }
 
 func (image *InMemDockerImage) asDockerImageDesc() *apitypes.DockerImageDesc {
@@ -3315,9 +3315,9 @@ func (client *InMemClient) getImageVersion(id string) (ImageVersion, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("ImageVersion not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("ImageVersion not found") }
 	imageVersion, isType = obj.(ImageVersion)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + id + " is not a ImageVersion") }
+	if ! isType { return nil, utilities.ConstructUserError("Object with Id " + id + " is not a ImageVersion") }
 	return imageVersion, nil
 }
 
@@ -3493,9 +3493,9 @@ func (client *InMemClient) getDockerImageVersion(id string) (DockerImageVersion,
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("DockerImageVersion not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("DockerImageVersion not found") }
 	dockerImageVersion, isType = obj.(DockerImageVersion)
-	if ! isType { return nil, utils.ConstructUserError("Object with Id " + id + " is not a DockerImageVersion") }
+	if ! isType { return nil, utilities.ConstructUserError("Object with Id " + id + " is not a DockerImageVersion") }
 	return dockerImageVersion, nil
 }
 
@@ -3626,9 +3626,9 @@ func (client *InMemClient) getParameterValue(id string) (ParameterValue, error) 
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("ParameterValue not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("ParameterValue not found") }
 	pv, isType = obj.(ParameterValue)
-	if ! isType { return nil, utils.ConstructServerError("Object with Id " + id + " is not a ParameterValue") }
+	if ! isType { return nil, utilities.ConstructServerError("Object with Id " + id + " is not a ParameterValue") }
 	return pv, nil
 }
 
@@ -3726,13 +3726,13 @@ func (client *InMemClient) dbCreateScanConfig(name, desc, repoId,
 	var err error
 	repo, err = client.getRepo(repoId)
 	if err != nil { return nil, err }
-	if repo == nil { return nil, utils.ConstructServerError(fmt.Sprintf(
+	if repo == nil { return nil, utilities.ConstructServerError(fmt.Sprintf(
 		"Unidentified repo for repo Id %s", repoId))
 	}
 	var sc ScanConfig
 	sc, err = repo.getScanConfigByName(client, name)
 	if err != nil { return nil, err }
-	if sc != nil { return nil, utils.ConstructUserError(
+	if sc != nil { return nil, utilities.ConstructUserError(
 		fmt.Sprintf("ScanConfig named %s already exists within repo %s", name,
 			repo.getName()))
 	}
@@ -3765,9 +3765,9 @@ func (client *InMemClient) getScanConfig(id string) (ScanConfig, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("ScanConfig not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("ScanConfig not found") }
 	scanConfig, isType = obj.(ScanConfig)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is an unexpected type") }
 	return scanConfig, nil
 }
 
@@ -3858,13 +3858,13 @@ func (scanConfig *InMemScanConfig) deleteParameterValue(dbClient DBClient, name 
 			continue
 		}
 		if pv.getName() == name {
-			scanConfig.ParameterValueIds = utils.RemoveAt(i, scanConfig.ParameterValueIds)
+			scanConfig.ParameterValueIds = utilities.RemoveAt(i, scanConfig.ParameterValueIds)
 			err = dbClient.deleteObject(pv)
 			if err != nil { return err }
 			return dbClient.writeBack(scanConfig)
 		}
 	}
-	return utils.ConstructUserError("Did not find parameter named '" + name + "'")
+	return utilities.ConstructUserError("Did not find parameter named '" + name + "'")
 }
 
 func (scanConfig *InMemScanConfig) deleteAllParameterValues(dbClient DBClient) error {
@@ -3928,13 +3928,13 @@ func (scanConfig *InMemScanConfig) getScanEventIds() []string {
 }
 
 func (scanConfig *InMemScanConfig) deleteScanEventId(dbClient DBClient, eventId string) error {
-	scanConfig.ScanEventIds = utils.RemoveFrom(eventId, scanConfig.ScanEventIds)
+	scanConfig.ScanEventIds = utilities.RemoveFrom(eventId, scanConfig.ScanEventIds)
 	return dbClient.writeBack(scanConfig)
 }
 
 func (scanConfig *InMemScanConfig) addDockerImage(dbClient DBClient, dockerImageId string) error {
 	
-	scanConfig.DockerImageIdsThatUse = utils.AddUniquely(dockerImageId, scanConfig.DockerImageIdsThatUse)
+	scanConfig.DockerImageIdsThatUse = utilities.AddUniquely(dockerImageId, scanConfig.DockerImageIdsThatUse)
 	var dockerImage DockerImage
 	var err error
 	dockerImage, err = dbClient.getDockerImage(dockerImageId)
@@ -3947,7 +3947,7 @@ func (scanConfig *InMemScanConfig) addDockerImage(dbClient DBClient, dockerImage
 
 func (scanConfig *InMemScanConfig) remDockerImage(dbClient DBClient, dockerImageId string) error {
 	
-	scanConfig.DockerImageIdsThatUse = utils.RemoveFrom(dockerImageId, scanConfig.DockerImageIdsThatUse)
+	scanConfig.DockerImageIdsThatUse = utilities.RemoveFrom(dockerImageId, scanConfig.DockerImageIdsThatUse)
 	var dockerImage DockerImage
 	var err error
 	dockerImage, err = dbClient.getDockerImage(dockerImageId)
@@ -4084,7 +4084,7 @@ func (client *InMemClient) getScanParameterValue(id string) (ScanParameterValue,
 	var scanpv ScanParameterValue
 	var isType bool
 	scanpv, isType = pv.(ScanParameterValue)
-	if ! isType { return nil, utils.ConstructServerError("ParameterValue is not a ScanParameterValue") }
+	if ! isType { return nil, utilities.ConstructServerError("ParameterValue is not a ScanParameterValue") }
 	return scanpv, nil
 }
 
@@ -4182,9 +4182,9 @@ func (client *InMemClient) getFlag(id string) (Flag, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Flag not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("Flag not found") }
 	flag, isType = obj.(Flag)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is an unexpected type") }
 	return flag, nil
 }
 
@@ -4207,12 +4207,12 @@ func (flag *InMemFlag) getSuccessImageURL() string {
 }
 
 func (flag *InMemFlag) addScanConfigRef(dbClient DBClient, scanConfigId string) error {
-	flag.UsedByScanConfigIds = utils.AddUniquely(scanConfigId, flag.UsedByScanConfigIds)
+	flag.UsedByScanConfigIds = utilities.AddUniquely(scanConfigId, flag.UsedByScanConfigIds)
 	return dbClient.writeBack(flag)
 }
 
 func (flag *InMemFlag) removeScanConfigRef(dbClient DBClient, scanConfigId string) error {
-	flag.UsedByScanConfigIds = utils.RemoveFrom(scanConfigId, flag.UsedByScanConfigIds)
+	flag.UsedByScanConfigIds = utilities.RemoveFrom(scanConfigId, flag.UsedByScanConfigIds)
 	
 	return dbClient.writeBack(flag)
 }
@@ -4298,9 +4298,9 @@ func (client *InMemClient) getEvent(id string) (Event, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructUserError("Event not found") }
+	if obj == nil { return nil, utilities.ConstructUserError("Event not found") }
 	event, isType = obj.(Event)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is an unexpected type") }
 	return event, nil
 }
 
@@ -4450,9 +4450,9 @@ func (client *InMemClient) getScanEvent(id string) (ScanEvent, error) {
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructServerError("ScanEvent not found") }
+	if obj == nil { return nil, utilities.ConstructServerError("ScanEvent not found") }
 	scanEvent, isType = obj.(ScanEvent)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is an unexpected type") }
 	return scanEvent, nil
 }
 
@@ -4638,9 +4638,9 @@ func (client *InMemClient) getImageCreationEvent(id string) (ImageCreationEvent,
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructServerError("ImageCreationEvent not found") }
+	if obj == nil { return nil, utilities.ConstructServerError("ImageCreationEvent not found") }
 	imageCreationEvent, isType = obj.(ImageCreationEvent)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is an unexpected type") }
 	return imageCreationEvent, nil
 }
 
@@ -4820,9 +4820,9 @@ func (client *InMemClient) getDockerfileExecEvent(id string) (DockerfileExecEven
 	var err error
 	obj, err = client.getPersistentObject(id)
 	if err != nil { return nil, err }
-	if obj == nil { return nil, utils.ConstructServerError("DockerfileExecEvent not found") }
+	if obj == nil { return nil, utilities.ConstructServerError("DockerfileExecEvent not found") }
 	dockerfileExecEvent, isType = obj.(DockerfileExecEvent)
-	if ! isType { return nil, utils.ConstructServerError("Internal error: object is an unexpected type") }
+	if ! isType { return nil, utilities.ConstructServerError("Internal error: object is an unexpected type") }
 	return dockerfileExecEvent, nil
 }
 
@@ -4883,7 +4883,7 @@ func (client *InMemClient) getDockerfileExecParameterValue(id string) (Dockerfil
 	var depv DockerfileExecParameterValue
 	var isType bool
 	depv, isType = pv.(DockerfileExecParameterValue)
-	if ! isType { return nil, utils.ConstructServerError("ParameterValue is not a DockerfileExecParameterValue") }
+	if ! isType { return nil, utilities.ConstructServerError("ParameterValue is not a DockerfileExecParameterValue") }
 	return depv, nil
 }
 
