@@ -21,8 +21,8 @@ SRCDIR := $(PROJECTROOT)/src
 BUILDDIR := $(PROJECTROOT)/bin
 PKGDIR := $(PROJECTROOT)/pkg
 STATUSDIR := $(PROJECTROOT)/status
-UTILITIESDIR := $(realpath $(PROJECTROOT)/../utilities/utils)
-RESTDIR := $(realpath $(PROJECTROOT)/../utilities/rest)
+UTILITIESDIR := $(realpath $(PROJECTROOT)/../utilities/pkg/linux_amd64/utilities/utils.a)
+RESTDIR := $(realpath $(PROJECTROOT)/../utilities/pkg/linux_amd64/utilities/rest.a)
 SCANNERSDIR := $(realpath $(PROJECTROOT)/../scanners)
 DOCKERDIR := $(realpath $(PROJECTROOT)/../docker)
 
