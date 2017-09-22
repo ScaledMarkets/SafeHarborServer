@@ -320,10 +320,12 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var realm Realm
 	realm, err = repo.getRealm(dbClient)
 	if err != nil { return nil, err }
+	fmt.Println("A")  // debug
 	
 	var user User
 	user, err = getCurrentUser(dbClient, sessionToken)
 	if err != nil { return nil, err }
+	fmt.Println("B")  // debug
 
 	var imageName string
 	imageName, err = apitypes.GetHTTPParameterValue(true, values, "ImageName")
@@ -332,6 +334,7 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		imageName, err = repo.createUniqueDockerImageName(dbClient, "image")
 		if err != nil { return nil, err }
 	}
+	fmt.Println("C")  // debug
 	
 	// Retrieve dockerfile build parameters.
 	var paramNames = make([]string, 0)
@@ -355,10 +358,12 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 			if err != nil { return nil, utilities.ConstructUserError(err.Error()) }
 		}
 	}
+	fmt.Println("D")  // debug
 	
 	var outputStr string
 	err = nameConformsToSafeHarborImageNameRules(imageName)
 	if err != nil { return nil, err }
+	fmt.Println("E")  // debug
 	
 	// Retrieve the Image, or if it does not exist, create it.
 	var dockerImage DockerImage
@@ -369,16 +374,19 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 			dockerfile.getDescription())
 		if err != nil { return nil, err }
 	}
+	fmt.Println("F")  // debug
 	
 	// Create a unique version.
 	var version string
 	version, err = dockerImage.getUniqueVersion(dbClient)
 	if err != nil { return nil, err }
+	fmt.Println("G")  // debug
 	
 	// Check if an image with that name already exists.
 	var dockerImageName, tag string
 	dockerImageName, tag = docker.ConstructDockerImageName(
 		realm.getName(), repo.getName(), imageName, version)
+	fmt.Println("H")  // debug
 	
 	// Access the docker dameon to perform the BUILD operation.
 	var dockerSvcs = dbClient.getServer().DockerServices
@@ -386,30 +394,36 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 		dockerfile.getExternalFilePath(), dockerfile.getName(),
 		dockerImageName, tag, paramNames, paramValues)
 	if err != nil { return nil, err }
+	fmt.Println("I")  // debug
 	
 	var dockerBuildOutput *docker.DockerBuildOutput
 	dockerBuildOutput, err = docker.ParseBuildRESTOutput(outputStr)
 	if err != nil { return nil, err }
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
+	fmt.Println("J")  // debug
 	
 	var digest []byte
 	//digest, err = dbClient.getServer().DockerServices.GetDigest(dockerImageId)
 	digest, err = computeDockerImageDigest(dbClient, dockerImageName, tag, dockerSvcs)
 	if err != nil { return nil, err }
+	fmt.Println("K")  // debug
 	
 	var signature []byte
 	signature, err = docker.GetSignature(dockerImageId)
 	if err != nil { return nil, err }
+	fmt.Println("L")  // debug
 	
 	var imageVersion DockerImageVersion
 	imageVersion, err = dbClient.dbCreateDockerImageVersion(version, dockerImage.getId(),
 		time.Now(), outputStr, digest, signature)
 	if imageVersion.getId() == "" { return nil, utilities.ConstructServerError("imageVersion.getId() is nil") }
 	if err != nil { return nil, err }
+	fmt.Println("M")  // debug
 		
 	// Create an event to record that this happened.
 	_, err = dbClient.dbCreateDockerfileExecEvent(dockerfile.getId(), 
 		paramNames, paramValues, imageVersion.getId(), user.getId())
+	fmt.Println("N")  // debug
 	
 	return imageVersion, err
 }
