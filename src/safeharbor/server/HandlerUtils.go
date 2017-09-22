@@ -399,8 +399,9 @@ func buildDockerfile(dbClient DBClient, dockerfile Dockerfile, sessionToken *api
 	var dockerBuildOutput *docker.DockerBuildOutput
 	dockerBuildOutput, err = docker.ParseBuildRESTOutput(outputStr)
 	if err != nil { return nil, err }
+	fmt.Println("J.1")  // debug
 	var dockerImageId string = dockerBuildOutput.GetFinalDockerImageId()
-	fmt.Println("J")  // debug
+	fmt.Println("J.2")  // debug
 	
 	var digest []byte
 	//digest, err = dbClient.getServer().DockerServices.GetDigest(dockerImageId)
