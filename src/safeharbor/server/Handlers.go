@@ -1512,10 +1512,13 @@ func execDockerfile(dbClient *InMemClient, sessionToken *apitypes.SessionToken, 
 	var imageVersion DockerImageVersion
 	imageVersion, err = buildDockerfile(dbClient, dockerfile, sessionToken, values)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	fmt.Println("Built from dockerfile")
 	
 	var imageVersionDesc *apitypes.DockerImageVersionDesc
 	imageVersionDesc, err = imageVersion.asDockerImageVersionDesc(dbClient)
 	if err != nil { return apitypes.NewFailureDescFromError(err) }
+	fmt.Println("Returning image description")
+	
 	return imageVersionDesc
 }
 
