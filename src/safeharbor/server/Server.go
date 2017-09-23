@@ -218,7 +218,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		if stubScanners {
 			twistlockScanSvc, err = scanners.CreateTwistlockServiceStub(twistlockConfig) // for testing only
 		} else {
-	//		twistlockScanSvc, err = scanners.CreateTwistlockService(twistlockConfig)
+			twistlockScanSvc, err = scanners.CreateTwistlockService(twistlockConfig)
 		}
 		if err != nil { AbortStartup("When instantiating Twistlock scan service: " + err.Error()) }
 	}
