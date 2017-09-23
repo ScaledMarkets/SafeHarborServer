@@ -62,8 +62,8 @@ type Server struct {
 /*******************************************************************************
  * Create a Server structure. This includes reading in the auth server cert.
  */
-func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
-	allowToggleEmailVerification bool, publicHostname string, port int,
+func NewServer(debug bool, nocache bool, stubScanners bool, useStubScannerFor map[string]*struct{},
+	noauthor bool, allowToggleEmailVerification bool, publicHostname string, port int,
 	adapter string, secretSalt string, inMemOnly bool, noRegistry bool) (*Server, error) {
 	
 	// Read configuration. (Defined in a JSON file.)
@@ -201,7 +201,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		clairConfig, isType = obj.(map[string]interface{})
 		if ! isType { AbortStartup("Configuration of clair services is ill-formed:") }
 		clairConfig["LocalIPAddress"] = config.ipaddr
-		if stubScanners {
+		if stubScanners || useStubScannerFor["clair"] != nil {
 			clairScanSvc, err = scanners.CreateClairServiceStub(clairConfig) // for testing only
 		} else {
 			clairScanSvc, err = scanners.CreateClairService(clairConfig)
@@ -215,7 +215,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		twistlockConfig, isType = obj.(map[string]interface{})
 		if ! isType { AbortStartup("Configuration of twistlock services is ill-formed:") }
 		twistlockConfig["LocalIPAddress"] = config.ipaddr
-		if stubScanners {
+		if stubScanners || useStubScannerFor["twistlock"] != nil {
 			twistlockScanSvc, err = scanners.CreateTwistlockServiceStub(twistlockConfig) // for testing only
 		} else {
 			twistlockScanSvc, err = scanners.CreateTwistlockService(twistlockConfig)
@@ -229,7 +229,7 @@ func NewServer(debug bool, nocache bool, stubScanners bool, noauthor bool,
 		openscapConfig, isType = obj.(map[string]interface{})
 		if ! isType { AbortStartup("Configuration of openscap services is ill-formed:") }
 		openscapConfig["LocalIPAddress"] = config.ipaddr
-		if stubScanners {
+		if stubScanners || useStubScannerFor["openscap"] != nil {
 			openscapScanSvc, err = scanners.CreateOpenScapServiceStub(openscapConfig) // for testing only
 		} else {
 	//		openscapScanSvc, err = scanners.CreateOpenScapService(openscapConfig)

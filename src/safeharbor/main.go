@@ -17,6 +17,9 @@ import (
 
 func main() {
 	
+	var useStubForAr multipleValues
+	flag.Var(&useStubForAr, "stub", "Use a stub for the specified scanner")
+	
 	var help *bool = flag.Bool("help", false, "Provide help instructions.")
 	var debug *bool = flag.Bool("debug", false, "Run in debug mode: this enables the clearAll REST method.")
 	var nocache *bool = flag.Bool("nocache", false, "Always refresh objects from the database.")
@@ -48,10 +51,16 @@ func main() {
 		os.Exit(2)
 	}
 	
+	var stubMap map[string]*struct{}
+	var emptyObject *struct{}
+	for _, stubName := range useStubForAr {
+		stubMap[stubName] = emptyObject
+	}
+	
 	fmt.Println("Creating SafeHarbor server...")
 	var svr *server.Server
 	var err error
-	svr, err = server.NewServer(*debug, *nocache, *stubScanners,
+	svr, err = server.NewServer(*debug, *nocache, *stubScanners, stubMap,
 		*noauthor, *allowToggleEmailVerification,
 		*publicHostname, *port, *adapter, *secretSalt, *inMemoryOnly, *noRegistry)
 	if err != nil {
@@ -87,3 +96,16 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: %s [options]\n", os.Args[0])
 	flag.PrintDefaults()
 }
+
+type multipleValues []string
+
+func (values *multipleValues) Set(newValue string) error {
+	
+	*values = append(*values, newValue)
+	return nil
+}
+
+func (values *multipleValues) String() string {
+	return fmt.Sprint(*values)
+}
+	
