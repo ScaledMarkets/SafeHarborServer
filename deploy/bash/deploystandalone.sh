@@ -23,8 +23,8 @@ sudo docker run --name safeharbor \
 	$SafeHarborImageName /safeharbor/safeharbor \
 	-debug -port=$SafeHarborPort -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host=$SafeHarborServerHost
 
-sudo docker run --name safeharbor -d -e RandomString="$RandomString" -e SafeHarborPublicHostname="127.0.0.1" -p $SafeHarborPort:$SafeHarborPort -v $DataVolMountPoint:/safeharbor/data -v /var/run/docker.sock:/var/run/docker.sock $SafeHarborImageName /safeharbor/safeharbor -debug -port=$SafeHarborPort -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host=$SafeHarborServerHost
-sudo docker run -it --name safeharbor -e RandomString="$RandomString" -e SafeHarborPublicHostname="127.0.0.1" -p $SafeHarborPort:$SafeHarborPort -v $DataVolMountPoint:/safeharbor/data -v /var/run/docker.sock:/var/run/docker.sock $SafeHarborImageName bash
+sudo docker run --rm --name safeharbor -d -e RandomString="$RandomString" -e SafeHarborPublicHostname="127.0.0.1" -p $SafeHarborPort:$SafeHarborPort -v $DataVolMountPoint:/safeharbor/data -v /var/run/docker.sock:/var/run/docker.sock $SafeHarborImageName /safeharbor/safeharbor -debug -port=$SafeHarborPort -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host=$SafeHarborServerHost
+sudo docker run --rm -it --name safeharbor -e RandomString="$RandomString" -e SafeHarborPublicHostname="127.0.0.1" -p $SafeHarborPort:$SafeHarborPort -v $DataVolMountPoint:/safeharbor/data -v /var/run/docker.sock:/var/run/docker.sock $SafeHarborImageName bash
 
 ./safeharbor -debug -port=6000 -secretkey=jafakeu9s3ls -toggleemail -stubs -noregistry -inmem -host="127.0.0.1"
 ./safeharbor -debug -port=6000 -secretkey=jafakeu9s3ls -toggleemail -stub clair -stub openscap -noregistry -inmem -host="127.0.0.1"

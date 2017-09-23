@@ -51,7 +51,7 @@ func main() {
 		os.Exit(2)
 	}
 	
-	var stubMap map[string]*struct{}
+	var stubMap = make(map[string]*struct{})
 	var emptyObject *struct{}
 	for _, stubName := range useStubForAr {
 		stubMap[stubName] = emptyObject
