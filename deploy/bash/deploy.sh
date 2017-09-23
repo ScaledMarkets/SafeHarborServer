@@ -19,8 +19,8 @@ fi
 . $SafeHarborCredentialDir/SetPostgresPassword.sh
 . $SafeHarborCredentialDir/SetRedisPassword.sh
 . $SafeHarborCredentialDir/SetRegistryPassword.sh
-. $SafeHarborCredentialDir/SetTwistlockBearerToken.sh
 . $SafeHarborCredentialDir/SetSafeHarborRandomString.sh
+. $SafeHarborCredentialDir/SetTwistlockCredentials.sh
 
 # Start redis (needed by SafeHarborServer).
 cp $PROJECTROOT/deploy/all/redis.conf $RedisConfigDir

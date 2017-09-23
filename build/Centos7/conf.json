@@ -20,6 +20,8 @@
 		"twistlock": {
 			"Host": "localhost",
 			"Port": "8083"
+			"UserId": "$TwistlockUserId"
+			"Password": "$TwistlockPassword"
 		},
 		"openscap": {
 			"Host": "localhost",
