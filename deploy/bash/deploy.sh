@@ -3,7 +3,10 @@
 # DEPLOY SAFE HARBOR SERVER AND ITS COMPONENTS----------------------------------
 # This script uses docker directly. One can instead use the deploy script in
 # deploy/Compose.
-
+#
+# IMPORTANT: This script does not produce a secure deployment - it is for
+# testing only. Use one of the orchestration scripts for production deployment.
+#
 # Parameter (optional): 'native' - If specified, then run SafeHarborServer as an
 # ordinary application instead of as a container.
 
@@ -14,6 +17,7 @@ then
 fi
 
 # Add credentials to environment.
+# To do: This is very insecure. This is why this script should only be used for testing.
 . $ScaledMarketsCredentialsDir/SetDockerhubCredentials.sh
 . $SafeHarborCredentialDir/SetEmailServicePassword.sh
 . $SafeHarborCredentialDir/SetPostgresPassword.sh

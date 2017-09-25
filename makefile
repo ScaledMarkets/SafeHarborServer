@@ -1,6 +1,7 @@
-# Makefile for compiling the Safe Harbor Server.
+# Makefile for compiling and containerizing the Safe Harbor Server.
 # Testing is not done by this makefile - see separate project "TestSafeHarborServer".
-
+# Before running this makefile, the build environment must have been created
+# using the createbuildenv.sh script for the target environment.
 # To do: Incorporate https://github.com/awslabs/git-secrets
 
 
@@ -32,14 +33,13 @@ SHELL := /bin/sh
 
 # Tasks: ----------------------------------------------------------------
 
-.DEFAULT_GOAL: all
-.DEFAULT: compilego
+.DEFAULT_GOAL: build
 .PHONY: all compile clean info
 .DELETE_ON_ERROR:
 .ONESHELL:
 .NOTPARALLEL:
 .SUFFIXES:
-.PHONY: compile cover docs clean info
+.PHONY: compile cover docs build clean info
 
 $(BUILDDIR):
 	mkdir $(BUILDDIR)
@@ -62,7 +62,17 @@ cover: $(BUILDDIR)
 # http://apidocjs.com/
 # https://howtonode.org/introduction-to-npm
 docs: compile
-	
+
+build: compile
+	if [ -z $DockerhubUserId ] then echo "Dockerhub credentials not set"; exit 1; fi
+	. $BUILDDIR/common/env.sh
+	cp bin/safeharbor $BUILDDIR/Centos7
+	pushd build/Centos7
+	sudo docker build --tag=$SafeHarborImageName $BUILDDIR/Centos7
+	sudo docker login -u $DockerhubUserId -p $DockerhubPassword
+	sudo docker push $SafeHarborImageName
+	sudo docker logout
+
 clean:
 	rm -r -f $(BUILDDIR)/$(PACKAGENAME)
 
