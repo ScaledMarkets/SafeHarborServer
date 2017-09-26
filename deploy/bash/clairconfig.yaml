@@ -1,6 +1,7 @@
-# See https://github.com/coreos/clair/blob/master/config.yaml.sample
+# See https://raw.githubusercontent.com/coreos/clair/master/config.yaml.sample
 clair:
   database:
+    # Database driver
     type: pgsql
     options:
       # PostgreSQL Connection string
@@ -8,11 +9,11 @@ clair:
       source: host=localhost port=5432 user=postgres sslmode=disable statement_timeout=60000
       #source: postgresql://postgres:4word2day@postgres:5432/postgres?connect_timeout=10&sslmode=disable
       cacheSize: 16384
+      paginationkey: 
   api:
-    port: 6060
-    healthport: 6061
+    addr: "127.0.0.1:6060"
+    healthaddr: "0.0.0.0:6061"
     timeout: 900s
-    paginationkey:
     servername:
     cafile:
     keyfile:
@@ -21,6 +22,12 @@ clair:
     # Frequency the database will be updated with vulnerabilities from the default data sources
     # The value 0 disables the updater entirely.
     interval: 2h
+    enabledupdaters: 
+      - debian
+      - ubuntu
+      - rhel
+      - oracle
+      - alpine
 
   notifier:
     # Number of attempts before the notification is marked as failed to be sent

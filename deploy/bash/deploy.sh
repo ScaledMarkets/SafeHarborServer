@@ -32,12 +32,14 @@ sudo docker run --name redis --net=host -d -v $RedisConfigDir:/config -v $RedisD
 
 # Start postgres (needed by Clair).
 cp $PROJECTROOT/deploy/all/postgresql.conf $PostgresDir
-sudo docker run --name postgres -p 5432:5432 --net=host -d -v $PostgresDir:/config -e POSTGRES_PASSWORD=$postgresPassword -e PGPASSWORD=$postgresPassword -d postgres
+#sudo docker run -d -p 5432:5432 --net=host -v $PostgresDir:/config -e POSTGRES_PASSWORD=$postgresPassword -e PGPASSWORD=$postgresPassword postgres
+sudo docker run -d --name postgres -e POSTGRES_PASSWORD="" -p 5432:5432 postgres:9.6
 
 # Start Clair (needed by SafeHarborServer).
 # https://github.com/coreos/clair/tree/release-2.0#docker
 cp $PROJECTROOT/deploy/all/clairconfig.yaml $ClairDir
-sudo docker run --name clair --net=host -e POSTGRES_PASSWORD=$postgresPassword -p 6060:6060 -p 6061:6061 -v $ClairDir:/config:ro quay.io/coreos/clair:latest -config=/config/clairconfig.yaml
+#sudo docker run --name clair --net=host -p 6060:6060 -p 6061:6061 -v $ClairDir:/config:ro -e POSTGRES_PASSWORD=$postgresPassword quay.io/coreos/clair:latest -config=/config/clairconfig.yaml
+sudo docker run -d --name clair -p 6060-6061:6060-6061 -v `pwd`:/config quay.io/coreos/clair-git:latest -config=/config/clairconfig.yaml
 
 # Start Twistlock server and provide bearer token to activate license.
 sudo $TwistlockDir/twistlock.sh -s onebox
