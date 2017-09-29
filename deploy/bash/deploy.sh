@@ -37,6 +37,7 @@ sudo docker run -d --name postgres -e POSTGRES_PASSWORD="" -p 5432:5432 postgres
 
 # Start Clair (needed by SafeHarborServer).
 # https://github.com/coreos/clair/tree/release-2.0#docker
+# https://github.com/coreos/clair/blob/master/Documentation/running-clair.md#docker
 cp $PROJECTROOT/deploy/all/clairconfig.yaml $ClairDir
 #sudo docker run --name clair --net=host -p 6060:6060 -p 6061:6061 -v $ClairDir:/config:ro -e POSTGRES_PASSWORD=$postgresPassword quay.io/coreos/clair:latest -config=/config/clairconfig.yaml
 sudo docker run -d --name clair -p 6060-6061:6060-6061 -v `pwd`:/config quay.io/coreos/clair-git:latest -config=/config/clairconfig.yaml

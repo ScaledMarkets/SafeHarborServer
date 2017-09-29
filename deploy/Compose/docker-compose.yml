@@ -8,7 +8,7 @@ services:
       - clair
       - registry
     image: ${SafeHarborImageName}
-    network_mode: "host"
+    #network_mode: "host"
     ports:
       - ${SafeHarborPort}:${SafeHarborPort}
     volumes:
@@ -16,24 +16,36 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     links:
       - redis
+
   redis:
     image: docker.io/redis
     command: redis-server --appendonly yes /config/redis.conf
     volumes:
       - /home/centos/SafeHarborServer/build/Centos7:/config
       - /home/centos/safeharbordata:/data
-    network_mode: "host"
+    #network_mode: "host"
+
   clair:
+    container_name: clair
     depends_on:
       - postgres
-    image: quay.io/coreos/clair
-    command: --config=/config/clairconfig.yaml
-    network_mode: "host"
+    image: quay.io/coreos/clair-git:latest
+    #image: quay.io/coreos/clair
+    restart: unless-stopped
+    ports:
+      - "6060-6061:6060-6061"
+    command: [-config, /config/clairconfig.yaml
+    #command: --config=/config/clairconfig.yaml
+    #network_mode: "host"
+    links:
+      - postgres
     volumes:
-      - /home/centos/SafeHarborServer/build/Centos7:/config:ro
+      - /tmp:/tmp
+      - /home/centos/SafeHarborServer/deploy/Compose:/config:ro
+
   registry:
     image: docker.io/registry:2
-    network_mode: "host"
+    #network_mode: "host"
     ports:
       - ${RegistryPort}:${RegistryPort}
     volumes:
@@ -43,8 +55,11 @@ services:
       REGISTRY_AUTH: htpasswd
       REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
       REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+
   postgres:
-    image: docker.io/postgres
-    network_mode: "host"
+    container_name: postgres
+    image: postgres:latest
+    restart: unless-stopped
+    #network_mode: "host"
     environment:
       POSTGRES_PASSWORD: ${postgresPassword}
